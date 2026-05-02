@@ -30,6 +30,7 @@ logs/
 *.log
 
 # Testing & Coverage
+.benchmarks
 .pytest_cache/
 .coverage
 .coverage.*
@@ -91,3 +92,5 @@ ideas/
 ideas.txt
 archive.zip
 citizen.zip
+.qwen/
+QWEN.md

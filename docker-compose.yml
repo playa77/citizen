@@ -1,0 +1,70 @@
+services:
+  # ------------------------------------------------
+  # PostgreSQL 16 with pgvector extension
+  # ------------------------------------------------
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: citizen-postgres
+    environment:
+      POSTGRES_USER: local_user
+      POSTGRES_PASSWORD: local_pass
+      POSTGRES_DB: citizen_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U local_user -d citizen_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ------------------------------------------------
+  # FastAPI application (Citizen)
+  # ------------------------------------------------
+  fastapi-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: citizen-app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://local_user:local_pass@postgres:5432/citizen_db
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      PRIMARY_MODEL: qwen/qwen3.6-plus
+      FALLBACK_MODEL_1: openai/gpt-5.4-nano
+      FALLBACK_MODEL_2: /openrouter/free
+      MAX_RETRIES: "3"
+      REQUEST_TIMEOUT: "45.0"
+      MAX_FILE_SIZE_MB: "25"
+      OCR_DPI: "300"
+      OCR_JPG_QUALITY: "84"
+      EMBEDDING_MODEL: text-embedding-3-small
+      VECTOR_DIM: "1536"
+      TOP_K_RETRIEVAL: "12"
+      DIVERSITY_THRESHOLD: "0.75"
+      PIPELINE_TIMEOUT_SEC: "120"
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: '["http://localhost:8000"]'
+      DISCLAIMER_VERSION: v1.0.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - salt-data:/app
+    # Auto-run migrations on start so the container is fully ready
+    command: >
+      bash -c "
+        if ! grep -q 'alembic' /app/.env 2>/dev/null; then
+          alembic upgrade head 2>/dev/null || true
+        fi
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+
+volumes:
+  pgdata:
+    driver: local
+  salt-data:
+    driver: local
