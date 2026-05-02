@@ -17,7 +17,12 @@ from uuid import uuid4
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.core.router import OpenRouterClient
+from app.db.models import ChunkEmbedding, LegalChunk, LegalSource
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -355,3 +360,171 @@ def _make_chunk(
         "version_hash": _compute_version_hash(text),
         "chunk_id": str(uuid4()),
     }
+
+
+# ---------------------------------------------------------------------------
+# Embedding generation & vector upsert (WP-006)
+# ---------------------------------------------------------------------------
+
+
+async def generate_embeddings(
+    chunks: list[dict[str, Any]],
+    *,
+    client: OpenRouterClient | None = None,
+) -> list[dict[str, Any]]:
+    """Generate embeddings for each chunk and attach them to the chunk dict.
+
+    Mutates each input dict in-place by adding an ``embedding`` key with a
+    ``list[float]`` of length ``settings.VECTOR_DIM``.
+
+    Args:
+        chunks: List of chunk dicts produced by ``scrape_and_chunk`` (must
+            contain ``text_content`` and ``chunk_id``).
+        client: Optional pre-instantiated ``OpenRouterClient``.  A new
+            client is created if none is provided.
+
+    Returns:
+        The same list, now enriched with ``embedding`` keys.
+    """
+    if not chunks:
+        return chunks
+
+    async with client or OpenRouterClient() as router:
+        texts = [c["text_content"] for c in chunks]
+        embeddings = await router.get_embeddings_batch(texts)
+
+    for chunk, embedding in zip(chunks, embeddings, strict=True):
+        chunk["embedding"] = embedding
+
+    logger.info("Generated %d embeddings with model=%s", len(chunks), settings.EMBEDDING_MODEL)
+    return chunks
+
+
+async def upsert_chunks(
+    session: AsyncSession,
+    chunks: list[dict[str, Any]],
+) -> None:
+    """Persist legal chunks and their embeddings, de-duplicating on ``version_hash``.
+
+    For each chunk dict the function:
+    1. Looks up (or creates) a :class:`LegalSource` by
+       ``source_type + version_hash``.
+    2. Creates a :class:`LegalChunk` under that source, keyed on
+       ``hierarchy_path + text_content`` (ON CONFLICT skip).
+    3. Upserts a :class:`ChunkEmbedding` row with ``ON CONFLICT DO UPDATE``
+       to refresh the embedding vector when the model or text changes.
+
+    Args:
+        session: An active async DB session.
+        chunks: List of chunk dicts as returned by ``generate_embeddings``
+            (must contain ``embedding``, ``source_type``, ``title``,
+            ``hierarchy_path``, ``text_content``, ``effective_date``,
+            ``source_url``, ``version_hash``, ``unit_type``).
+    """
+    for chunk in chunks:
+        source = await _get_or_create_source(session, chunk)
+        lc = await _get_or_create_legal_chunk(session, source, chunk)
+        await _upsert_embedding(session, lc, chunk)
+
+    await session.commit()
+    logger.info("Upserted %d chunks with embeddings", len(chunks))
+
+
+# ---------------------------------------------------------------------------
+# Internal DB helpers
+# ---------------------------------------------------------------------------
+
+
+async def _get_or_create_source(
+    session: AsyncSession,
+    chunk: dict[str, Any],
+) -> LegalSource:
+    """Return an existing LegalSource or create a new one."""
+    source_type = chunk["source_type"]
+    version_hash = chunk["version_hash"]
+
+    stmt = select(LegalSource).where(
+        LegalSource.source_type == source_type,
+        LegalSource.version_hash == version_hash,
+    )
+    result = await session.execute(stmt)
+    source = result.scalar_one_or_none()
+
+    if source is None:
+        source = LegalSource(
+            source_type=source_type,
+            title=chunk.get("title", source_type.upper()),
+            jurisdiction="DE",
+            effective_date=date.fromisoformat(chunk["effective_date"]),
+            source_url=chunk.get("source_url", ""),
+            version_hash=version_hash,
+            is_active=True,
+        )
+        session.add(source)
+        await session.flush()
+
+    return source
+
+
+async def _get_or_create_legal_chunk(
+    session: AsyncSession,
+    source: LegalSource,
+    chunk: dict[str, Any],
+) -> LegalChunk:
+    """Return an existing LegalChunk or create a new one."""
+    hierarchy_path = chunk["hierarchy_path"]
+    text_content = chunk["text_content"]
+
+    stmt = select(LegalChunk).where(
+        LegalChunk.source_id == source.id,
+        LegalChunk.hierarchy_path == hierarchy_path,
+        LegalChunk.text_content == text_content,
+    )
+    result = await session.execute(stmt)
+    lc = result.scalar_one_or_none()
+
+    if lc is None:
+        lc = LegalChunk(
+            source_id=source.id,
+            unit_type=chunk.get("unit_type", "satz"),
+            hierarchy_path=hierarchy_path,
+            text_content=text_content,
+            effective_date=date.fromisoformat(chunk["effective_date"]),
+        )
+        session.add(lc)
+        await session.flush()
+
+    return lc
+
+
+async def _upsert_embedding(
+    session: AsyncSession,
+    legal_chunk: LegalChunk,
+    chunk: dict[str, Any],
+) -> None:
+    """Insert or update a ChunkEmbedding row for the given legal chunk.
+
+    Uses ``ON CONFLICT`` on ``chunk_id + model_name`` to keep the vector
+    in sync when the embedding model is upgraded.
+    """
+    embedding_vec = chunk["embedding"]
+    model_name = settings.EMBEDDING_MODEL
+    chunk_uuid = legal_chunk.id
+
+    stmt = select(ChunkEmbedding).where(
+        ChunkEmbedding.chunk_id == chunk_uuid,
+        ChunkEmbedding.model_name == model_name,
+    )
+    result = await session.execute(stmt)
+    existing = result.scalar_one_or_none()
+
+    if existing is None:
+        session.add(
+            ChunkEmbedding(
+                chunk_id=legal_chunk.id,
+                embedding=embedding_vec,
+                model_name=model_name,
+            )
+        )
+    else:
+        existing.embedding = embedding_vec
