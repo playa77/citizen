@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 45.0
     MAX_FILE_SIZE_MB: int = 25
+    DB_POOL_SIZE: int = 10
     OCR_DPI: int = 300
     OCR_JPG_QUALITY: int = 84
     EMBEDDING_MODEL: str = "text-embedding-3-small"

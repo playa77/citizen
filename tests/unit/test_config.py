@@ -96,16 +96,17 @@ class TestSettingsValidation:
     def test_valid_env_creates_settings(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings
 
+        # Override the host env DATABASE_URL (set by conftest.py)
+        # so the _env_file value is the only source.
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/test")
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+
         env_file = tmp_path / ".env"
         env_file.write_text(
             "DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/test\n"
             "OPENROUTER_API_KEY=sk-test-key\n",
             encoding="utf-8",
         )
-
-        # Host env may contain OPENROUTER_API_KEY — suppress it so the .env
-        # file value is the only source.
-        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
         s = Settings(_env_file=env_file)
 
@@ -115,8 +116,11 @@ class TestSettingsValidation:
         assert s.MAX_FILE_SIZE_MB == 25
         assert s.PIPELINE_TIMEOUT_SEC == 120
 
-    def test_default_values_applied(self, tmp_path, _isolate_salt_file):
+    def test_default_values_applied(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@h/d")
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
         env_file = tmp_path / ".env"
         env_file.write_text(
@@ -135,8 +139,11 @@ class TestSettingsValidation:
         assert s.LOG_LEVEL == "INFO"
         assert s.DISCLAIMER_VERSION == "v1.0.0"
 
-    def test_cors_origins_parses_json_list(self, tmp_path, _isolate_salt_file):
+    def test_cors_origins_parses_json_list(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@h/d")
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
         env_file = tmp_path / ".env"
         env_file.write_text(
@@ -150,8 +157,13 @@ class TestSettingsValidation:
 
         assert s.CORS_ORIGINS == ["http://localhost:3000", "http://localhost:8000"]
 
-    def test_disclaimer_salt_property_triggers_salt_creation(self, tmp_path, _isolate_salt_file):
+    def test_disclaimer_salt_triggers_salt_creation(
+        self, tmp_path, _isolate_salt_file, monkeypatch
+    ):
         from app.core.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@h/d")
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
         env_file = tmp_path / ".env"
         env_file.write_text(
