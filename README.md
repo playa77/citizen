@@ -23,6 +23,77 @@ The system is built on a modern, asynchronous Python stack:
 * **ORM & Migrations:** SQLAlchemy 2.0 (asyncio), Alembic
 * **Frontend:** Vanilla HTML/JS/CSS (Server-Sent Events for streaming)
 
+## Directory Structure
+
+```
+citizen/
+├── alembic/                          # Database migrations
+│   ├── versions/
+│   │   └── 001_init_schema.py        # Initial schema (7 tables)
+│   ├── env.py
+│   └── script.py.mako
+├── app/                              # Application source
+│   ├── api/
+│   │   └── routes/                   # API route handlers
+│   │       └── __init__.py
+│   │   └── __init__.py
+│   ├── core/
+│   │   ├── config.py                 # Settings & validation (Pydantic)
+│   │   ├── pipeline.py               # 7-stage orchestrator
+│   │   └── router.py                 # LLM router + fallback chain
+│   ├── db/
+│   │   ├── models.py                 # SQLAlchemy ORM models
+│   │   └── session.py                # Async DB session factory
+│   ├── middleware/                   # ASGI middleware
+│   │   └── __init__.py
+│   ├── services/
+│   │   ├── corpus.py                 # Legal corpus scraper & chunker
+│   │   ├── ocr.py                    # 3-tier OCR fallback pipeline
+│   │   ├── reasoning.py              # LLM-based reasoning service
+│   │   └── retrieval.py              # pgvector similarity search
+│   ├── utils/
+│   │   ├── image.py                  # Image normalization (300dpi JPG)
+│   │   ├── pdf.py                    # PDF extraction utilities
+│   │   └── text.py                   # Text normalization helpers
+│   ├── __init__.py
+│   └── main.py                       # FastAPI app entry point
+├── devdocs/                          # Architecture documentation
+│   ├── design_document.md
+│   ├── roadmap.md                    # Work packages & milestones
+│   ├── SYSTEM_PROMPT_FOR_CODING_AGENT.md
+│   └── technical_specification.md
+├── logs/                             # Application logs
+│   └── .gitkeep
+├── static/                           # Frontend assets (HTML/JS/CSS)
+│   └── .gitkeep
+├── tests/                            # pytest suite
+│   ├── integration/
+│   │   ├── test_corpus.py
+│   │   └── test_retrieval.py
+│   ├── unit/
+│   │   ├── alembic/
+│   │   │   └── test_alembic_config.py
+│   │   ├── test_db/
+│   │   │   └── test_models.py
+│   │   ├── test_chunker.py
+│   │   ├── test_config.py
+│   │   ├── test_ocr.py
+│   │   ├── test_pdf.py
+│   │   ├── test_pipeline.py
+│   │   ├── test_reasoning.py
+│   │   ├── test_router.py
+│   │   └── test_session.py
+│   ├── conftest.py                   # Shared fixtures
+│   └── __init__.py
+├── alembic.ini                       # Alembic configuration
+├── deploy_db.sh                      # Database deployment helper
+├── DISCLAIMER.md                     # Liability disclaimer (bilingual)
+├── docker-compose.yml                # Docker orchestration
+├── Dockerfile                        # Application container
+├── pyproject.toml                    # Project metadata & dependencies
+└── README.md                         # This file
+```
+
 ## Prerequisites
 
 * **Docker & Docker Compose** (for containerized deployment)
