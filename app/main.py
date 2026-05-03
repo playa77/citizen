@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.routes import analyze, corpus, ingest
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -30,6 +32,11 @@ app.add_middleware(
 
 # Serve static frontend (will be populated in WP-014).
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Register API routers
+app.include_router(ingest.router, prefix="/api/v1", tags=["ingest"])
+app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
+app.include_router(corpus.router, prefix="/api/v1", tags=["corpus"])
 
 
 @app.get("/health")

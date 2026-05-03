@@ -48,8 +48,25 @@ coverage.xml
 
 # Database / State
 *.sqlite3
+*.sqlite
 *.db
-# (Note: alembic.ini is tracked, do not ignore it)
+*.db-journal
+*.db-wal
+*.db-shm
+
+# PostgreSQL local development / testing
+postgresql.conf
+pg_hba.conf
+pgdata/
+postgres_data/
+postgresql/data/
+.pgpass
+.pg_service.conf
+*.pid
+postmaster.pid
+.s.PGSQL.*
+
+# (Note: alembic.ini and alembic/versions/ are tracked, do not ignore them)
 
 # OS / IDE Files
 .DS_Store
