@@ -6,10 +6,12 @@ Uses asyncpg and runs migrations via asyncio.
 from __future__ import annotations
 
 import asyncio
+import os
 from logging.config import fileConfig
+from typing import Any
 
 from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 
@@ -19,12 +21,13 @@ from app.db.models import Base
 config = context.config
 
 # Override sqlalchemy.url with the runtime DATABASE_URL if present.
-default_url = "postgresql+asyncpg://user:pass@localhost:5432/legal_engine_db"
-if config.get_main_option("sqlalchemy.url") == default_url:
-    import os
-
-    if os.getenv("DATABASE_URL"):
-        config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+DB_URL = os.getenv("DATABASE_URL")
+if not DB_URL:
+    default_url = "postgresql+asyncpg://user:pass@localhost:5432/legal_engine_db"
+    if config.get_main_option("sqlalchemy.url") == default_url:
+        DB_URL = default_url
+    else:
+        DB_URL = str(config.get_main_option("sqlalchemy.url", ""))
 
 if config.config_file_name:
     fileConfig(config.config_file_name)
@@ -43,38 +46,28 @@ def run_migrations_offline() -> None:
     )
 
 
-def do_run_migration(
-    connectable: async_engine_from_config,
-) -> None:
+def _do_run_migrations(connection: Any) -> None:
     """Run migrations within a single DB connection."""
     context.configure(
-        connection=connectable,
+        connection=connection,
         target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-async def run_async_migrations() -> None:
+async def _run_async_migrations(url: str) -> None:
     """Create an async engine and run migrations."""
-    connectable = async_engine_from_config(
-        config.config_ini_section,
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migration)
-
-    await connectable.dispose()
+    engine = create_async_engine(url, poolclass=pool.NullPool)
+    async with engine.connect() as connection:
+        await connection.run_sync(_do_run_migrations)
+    await engine.dispose()
 
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode using async engine."""
-    asyncio.run(run_async_migrations())
+    asyncio.run(_run_async_migrations(DB_URL))
 
 
 if context.is_offline_mode():

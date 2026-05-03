@@ -217,6 +217,7 @@ STAGE_NAME_ALLOWED = (
     "construction",
     "verification",
     "generation",
+    "disclaimer_ack",
 )
 
 

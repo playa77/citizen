@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -77,7 +78,7 @@ class DisclaimerMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app: Callable[[Request], Awaitable[Response]],
+        app: Any,
         settings: Settings | None = None,
     ) -> None:
         super().__init__(app)

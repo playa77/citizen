@@ -161,7 +161,8 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "stage_name IN ("
             "'normalization', 'classification', 'decomposition', "
-            "'retrieval', 'construction', 'verification', 'generation'"
+            "'retrieval', 'construction', 'verification', 'generation', "
+            "'disclaimer_ack'"
             ")",
             name="ck_pipeline_stage_log_stage_name",
         ),

@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 # -------------------------------------------------------------------
 # TestClient fixture
 # -------------------------------------------------------------------
@@ -35,7 +34,9 @@ class TestDisclaimerMiddleware:
 
     def test_disclaimer_required_without_header(self, client: TestClient) -> None:
         """Request without X-Disclaimer-Ack header returns 403."""
-        response = client.post("/api/v1/ingest", files={"file": ("test.pdf", b"dummy", "application/pdf")})
+        response = client.post(
+            "/api/v1/ingest", files={"file": ("test.pdf", b"dummy", "application/pdf")}
+        )
 
         assert response.status_code == 403
         data = response.json()
