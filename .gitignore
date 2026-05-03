@@ -94,3 +94,5 @@ archive.zip
 citizen.zip
 .qwen/
 QWEN.md
+docker-compose.yml  # take out before release
+deploy_db.sh
