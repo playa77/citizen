@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citizen — Legal Reasoning Engine</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Disclaimer Modal -->
+    <div id="disclaimer-modal" class="modal">
+        <div class="modal-content">
+            <h2>Rechtlicher Hinweis</h2>
+            <div id="disclaimer-text" class="disclaimer-text"></div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="disclaimer-checkbox">
+                <label for="disclaimer-checkbox">Ich habe den Haftungsausschluss gelesen und verstanden.</label>
+            </div>
+            <button id="acknowledge-btn" class="btn btn-primary" disabled>Acknowledge</button>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="hidden">
+        <header>
+            <h1>Citizen</h1>
+            <p class="subtitle">Legal Reasoning Engine für deutsches Sozialrecht</p>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <section id="upload-section" class="section">
+                <h2>Dokument hochladen</h2>
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                    <div class="upload-prompt">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>PDF, JPG oder PNG hier ablegen oder klicken</p>
+                        <small>Max. 25 MB</small>
+                    </div>
+                </div>
+                <div id="file-info" class="file-info hidden">
+                    <span id="filename"></span>
+                    <button id="remove-file" class="btn btn-small">Entfernen</button>
+                </div>
+                <button id="upload-btn" class="btn btn-primary" disabled>Text extrahieren</button>
+            </section>
+
+            <!-- Analysis Section -->
+            <section id="analysis-section" class="section hidden">
+                <h2>Analyse</h2>
+                <div id="text-preview" class="text-preview"></div>
+                <button id="analyze-btn" class="btn btn-primary">Analyse starten</button>
+            </section>
+
+            <!-- Progress Section -->
+            <section id="progress-section" class="section hidden">
+                <h2>Fortschritt</h2>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="stage-list" id="stage-list">
+                    <div class="stage" data-stage="normalization">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name">Normalisierung</span>
+                    </div>
+                    <div class="stage" data-stage="classification">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name"> Klassifikation</span>
+                    </div>
+                    <div class="stage" data-stage="decomposition">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name">Fragezerlegung</span>
+                    </div>
+                    <div class="stage" data-stage="retrieval">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name">Retrieval</span>
+                    </div>
+                    <div class="stage" data-stage="claims">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name">Anspruchsaufbau</span>
+                    </div>
+                    <div class="stage" data-stage="verification">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name">Verifikation</span>
+                    </div>
+                    <div class="stage" data-stage="generation">
+                        <span class="stage-icon">○</span>
+                        <span class="stage-name">Ausgabe</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="results-section" class="section hidden">
+                <h2>Ergebnis</h2>
+                <div class="results-container" id="results-container">
+                    <!-- 6 sections will be rendered here -->
+                </div>
+            </section>
+
+            <!-- Error Display -->
+            <div id="error-display" class="error-display hidden"></div>
+        </main>
+
+        <footer>
+            <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
