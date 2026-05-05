@@ -1,1 +1,1 @@
-# Citizen (v1.0) — Local-first legal reasoning engine
+# Citizen — Local-first legal reasoning engine

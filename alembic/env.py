@@ -1,4 +1,4 @@
-"""Alembic async environment configuration for Citizen (v1.0).
+"""Alembic async environment configuration for Citizen.
 
 Uses asyncpg and runs migrations via asyncio.
 """

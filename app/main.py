@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import analyze, corpus, ingest, meta
-from app.core.config import settings
+from app.core.config import get_app_version, get_app_version_tag, settings
 from app.middleware.disclaimer import DisclaimerMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 
@@ -23,16 +23,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     logger = logging.getLogger(__name__)
-    logger.info("Citizen v1.0 starting up — LOG_LEVEL=%s", settings.LOG_LEVEL)
+    logger.info("Citizen %s starting up — LOG_LEVEL=%s", get_app_version_tag(), settings.LOG_LEVEL)
     yield
     # Shutdown
-    logger.info("Citizen v1.0 shutting down")
+    logger.info("Citizen %s shutting down", get_app_version_tag())
 
 
 app = FastAPI(
-    title="Citizen (v1.0)",
+    title=f"Citizen ({get_app_version_tag()})",
     description="Local-first, evidence-constrained legal reasoning engine for German social law",
-    version="1.0.0",
+    version=get_app_version(),
     lifespan=lifespan,
 )
 
@@ -63,7 +63,7 @@ app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
 @app.get("/health")
 async def health() -> dict[str, str]:
     """Liveness probe — docker-compose healthcheck and DevOps monitoring."""
-    return {"status": "ok", "version": "v1.0.0"}
+    return {"status": "ok", "version": get_app_version_tag()}
 
 
 @app.get("/")

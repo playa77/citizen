@@ -1,4 +1,4 @@
-"""SQLAlchemy 2.0 declarative ORM models for Citizen (v1.0).
+"""SQLAlchemy 2.0 declarative ORM models for Citizen.
 
 Mirrors the DDL from Technical Specification §4.1 exactly:
   legal_source → legal_chunk → chunk_embedding

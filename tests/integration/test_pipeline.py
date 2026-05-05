@@ -24,6 +24,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config import get_app_version_tag
 from app.main import app
 
 # -------------------------------------------------------------------
@@ -68,7 +69,7 @@ SAMPLE_LEGAL_TEXT = (
     "Jobcenter Musterstadt"
 )
 
-DISCLAIMER_HEADER = {"X-Disclaimer-Ack": "v1.0.0"}
+DISCLAIMER_HEADER = {"X-Disclaimer-Ack": get_app_version_tag()}
 
 # -------------------------------------------------------------------
 # Helpers

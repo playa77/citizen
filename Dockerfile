@@ -1,5 +1,5 @@
 # ==========================================
-# Citizen (v1.0) - Multi-stage Dockerfile
+# Citizen — Multi-stage Dockerfile
 # Targets: Ubuntu (primary), also builds on Win/Mac via Docker
 # ==========================================
 

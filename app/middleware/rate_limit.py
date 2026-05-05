@@ -1,7 +1,7 @@
 """In-memory rate limiting middleware for the local FastAPI application.
 
-Implements a simple token-bucket-style limiter per client IP (127.0.0.1 in v1
-local deployment) that guards against runaway or bug-induced request floods.
+Implements a simple token-bucket-style limiter per client IP that
+guards against runaway or bug-induced request floods.
 """
 
 from __future__ import annotations

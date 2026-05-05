@@ -137,7 +137,7 @@ class TestSettingsValidation:
         assert s.TOP_K_RETRIEVAL == 12
         assert s.DIVERSITY_THRESHOLD == 0.75
         assert s.LOG_LEVEL == "INFO"
-        assert s.DISCLAIMER_VERSION == "v1.0.0"
+        assert s.DISCLAIMER_VERSION == "v0.1.0"
 
     def test_cors_origins_parses_json_list(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings

@@ -1,4 +1,4 @@
-# Citizen (v1.0) - German Social Law Reasoning & Drafting System
+# Citizen — German Social Law Reasoning & Drafting System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -18,10 +18,183 @@ Citizen is a local-first, evidence-constrained legal reasoning engine designed t
 ## Architecture
 
 The system is built on a modern, asynchronous Python stack:
+
 * **Backend:** FastAPI, Uvicorn
 * **Database:** PostgreSQL 16 with `pgvector` extension
 * **ORM & Migrations:** SQLAlchemy 2.0 (asyncio), Alembic
 * **Frontend:** Vanilla HTML/JS/CSS (Server-Sent Events for streaming)
+
+## Prerequisites
+
+Before you begin, install these dependencies on your system:
+
+### Required for local development
+
+| Dependency | Version | Install (Ubuntu/Debian) |
+|---|---|---|
+| Python | 3.11+ | `sudo apt install python3.11 python3.11-venv` |
+| Tesseract OCR | 5.x | `sudo apt install tesseract-ocr libtesseract-dev tesseract-ocr-deu` |
+| PostgreSQL | 16 | `sudo apt install postgresql-16` |
+| pgvector extension | 0.7.x | `sudo apt install postgresql-16-pgvector` |
+| OpenRouter API key | — | Sign up at [openrouter.ai](https://openrouter.ai) |
+
+### Required for Docker-only deployment
+
+* [Docker](https://docs.docker.com/engine/install/) & [Docker Compose](https://docs.docker.com/compose/install/)
+* OpenRouter API key
+
+---
+
+## Quickstart: Run with Docker Compose
+
+The fastest way to get Citizen running. Provisions the FastAPI app and a PostgreSQL 16 + pgvector database in two containers.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-org/citizen.git
+cd citizen
+
+# 2. Create your environment file
+cp .env.example .env
+
+# 3. Edit .env and insert your OpenRouter API key
+#    Open .env in any editor and set:
+#    OPENROUTER_API_KEY=sk-or-v1-...
+
+# 4. Start the stack (builds the image + starts PostgreSQL)
+docker compose up -d --build
+
+# 5. Wait ~10 seconds for the database to be ready, then run migrations
+docker compose exec -it citizen-app alembic upgrade head
+
+# 6. Open the application
+#    http://localhost:8000
+```
+
+The app is now running. Interactive API docs are at:
+
+* **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+To stop everything:
+
+```bash
+docker compose down
+```
+
+---
+
+## Local Development Setup
+
+For active development, run the app directly on your machine while the database runs in Docker.
+
+### Step 1 — Start the database
+
+```bash
+# From the project root, start PostgreSQL + pgvector in Docker
+docker compose up -d db
+
+# Verify the database is accepting connections
+docker compose ps
+# Look for: db   running (healthy)
+```
+
+### Step 2 — Set up the Python environment
+
+```bash
+# Create a virtual environment (Python 3.11+)
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# Install the project and all dev dependencies in editable mode
+pip install -e ".[dev]"
+
+# Alternatively, if you use uv:
+# uv sync --all-extras
+```
+
+### Step 3 — Configure environment variables
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and set:
+#   DATABASE_URL=postgresql+asyncpg://testuser:testpassword@localhost:5432/testdb
+#   OPENROUTER_API_KEY=sk-or-v1-...
+#
+# The DATABASE_URL above matches the docker-compose.yml defaults.
+```
+
+### Step 4 — Run database migrations
+
+```bash
+alembic upgrade head
+```
+
+Verify the schema was created:
+
+```bash
+psql -h localhost -U testuser -d testdb -c "\dt"
+# Should list 7 tables: case_run, claim, evidence_binding,
+#   legal_chunk, legal_source, pipeline_stage_log, user_session
+```
+
+### Step 5 — Start the development server
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser.
+
+---
+
+## Running Tests
+
+### Unit tests (no database required)
+
+These tests use mocks and stubs — they run anywhere, no connection needed:
+
+```bash
+# Run all unit tests
+pytest tests/unit/ -v
+
+# Run a specific test file
+pytest tests/unit/test_middleware.py -v
+
+# Run with coverage report
+pytest tests/unit/ -v --cov=app --cov-report=term-missing
+```
+
+### Integration tests (requires a running database)
+
+These tests exercise the full pipeline against a live PostgreSQL instance:
+
+```bash
+# 1. Make sure the database is running
+docker compose up -d db
+# Wait for the health check to pass: docker compose ps
+
+# 2. Run migrations (if you haven't already)
+alembic upgrade head
+
+# 3. Run all integration tests
+pytest tests/integration/ -v
+
+# 4. Run a specific test
+pytest tests/integration/test_pipeline.py::TestFullPipelineExecution::test_full_pipeline_execution -v
+```
+
+### All tests at once
+
+```bash
+# Database must be running and migrated
+alembic upgrade head
+pytest -v
+```
+
+---
 
 ## Directory Structure
 
@@ -35,8 +208,6 @@ citizen/
 ├── app/                              # Application source
 │   ├── api/
 │   │   └── routes/                   # API route handlers
-│   │       └── __init__.py
-│   │   └── __init__.py
 │   ├── core/
 │   │   ├── config.py                 # Settings & validation (Pydantic)
 │   │   ├── pipeline.py               # 7-stage orchestrator
@@ -44,8 +215,9 @@ citizen/
 │   ├── db/
 │   │   ├── models.py                 # SQLAlchemy ORM models
 │   │   └── session.py                # Async DB session factory
-│   ├── middleware/                   # ASGI middleware
-│   │   └── __init__.py
+│   ├── middleware/
+│   │   ├── disclaimer.py             # Consent enforcement middleware
+│   │   └── rate_limit.py             # Token-bucket rate limiter
 │   ├── services/
 │   │   ├── corpus.py                 # Legal corpus scraper & chunker
 │   │   ├── ocr.py                    # 3-tier OCR fallback pipeline
@@ -58,90 +230,18 @@ citizen/
 │   ├── __init__.py
 │   └── main.py                       # FastAPI app entry point
 ├── devdocs/                          # Architecture documentation
-│   ├── design_document.md
-│   ├── roadmap.md                    # Work packages & milestones
-│   ├── SYSTEM_PROMPT_FOR_CODING_AGENT.md
-│   └── technical_specification.md
-├── logs/                             # Application logs
-│   └── .gitkeep
 ├── static/                           # Frontend assets (HTML/JS/CSS)
-│   └── .gitkeep
-├── tests/                            # pytest suite
-│   ├── integration/
-│   │   ├── test_corpus.py
-│   │   └── test_retrieval.py
-│   ├── unit/
-│   │   ├── alembic/
-│   │   │   └── test_alembic_config.py
-│   │   ├── test_db/
-│   │   │   └── test_models.py
-│   │   ├── test_chunker.py
-│   │   ├── test_config.py
-│   │   ├── test_ocr.py
-│   │   ├── test_pdf.py
-│   │   ├── test_pipeline.py
-│   │   ├── test_reasoning.py
-│   │   ├── test_router.py
-│   │   └── test_session.py
-│   ├── conftest.py                   # Shared fixtures
-│   └── __init__.py
+├── tests/
+│   ├── unit/                         # Unit tests (no DB needed)
+│   ├── integration/                  # Integration tests (DB required)
+│   └── conftest.py                   # Shared fixtures
 ├── alembic.ini                       # Alembic configuration
-├── deploy_db.sh                      # Database deployment helper
+├── deploy_db.sh                      # Database reconciliation helper
 ├── DISCLAIMER.md                     # Liability disclaimer (bilingual)
-├── docker-compose.yml                # Docker orchestration
+├── docker-compose.yml                # Docker Compose stack
 ├── Dockerfile                        # Application container
 ├── pyproject.toml                    # Project metadata & dependencies
 └── README.md                         # This file
-```
-
-## Prerequisites
-
-* **Docker & Docker Compose** (for containerized deployment)
-* **Python 3.11+** (for local development)
-* **Tesseract OCR** (`tesseract-ocr`, `libtesseract-dev`)
-* **PostgreSQL 16** with `pgvector` (if running outside of Docker)
-
-## Quickstart (Docker Compose)
-
-The easiest way to run Citizen is via Docker Compose, which provisions both the FastAPI application and the PostgreSQL database.
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-org/citizen.git
-   cd citizen
-   ```
-
-2. **Configure the environment:**
-   ```bash
-   cp .env.example .env
-   ```
-   *Edit `.env` and insert your `OPENROUTER_API_KEY`. (Note: Cryptographic salts for GDPR-compliant audit logging are generated automatically by the application on first boot and saved to `.secret_salt`).*
-
-3. **Start the system:**
-   ```bash
-   docker compose up -d --build
-   ```
-
-4. **Access the application:**
-   Open `http://localhost:8000` in your browser.
-
-## Local Development Setup
-
-For active development, run the application locally against a containerized or local database.
-
-```bash
-# 1. Create and activate a virtual environment
-python3.11 -m venv .venv
-source .venv/bin/activate
-
-# 2. Install dependencies
-pip install -e ".[dev]"
-
-# 3. Run database migrations
-alembic upgrade head
-
-# 4. Start the development server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ## Security & Privacy Posture
@@ -153,11 +253,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## API Documentation
 
 Once the server is running, interactive API documentation is available at:
-* **Swagger UI:** `http://localhost:8000/docs`
-* **ReDoc:** `http://localhost:8000/redoc`
+
+* **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ## License
 
-This project is licensed under the MIT License - see the[LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 **Disclaimer:** This software provides automated legal reasoning based on provided texts. It does not constitute binding legal advice. Users must acknowledge the liability disclaimer before utilizing the API or UI.

@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import get_app_version_tag
 from app.main import app
 
 # -------------------------------------------------------------------
@@ -42,7 +43,7 @@ class TestDisclaimerMiddleware:
         data = response.json()
         assert data["error"] == "disclaimer_required"
         assert "required_version" in data
-        assert data["required_version"] == "v1.0.0"
+        assert data["required_version"] == get_app_version_tag()
 
     def test_disclaimer_wrong_version(self, client: TestClient) -> None:
         """Request with wrong version returns 403 with version mismatch."""
@@ -55,7 +56,7 @@ class TestDisclaimerMiddleware:
         assert response.status_code == 403
         data = response.json()
         assert data["error"] == "disclaimer_version_mismatch"
-        assert data["required_version"] == "v1.0.0"
+        assert data["required_version"] == get_app_version_tag()
         assert data["acknowledged_version"] == "v0.9.0"
 
     def test_disclaimer_passes_with_correct_header(self, client: TestClient) -> None:
@@ -64,7 +65,7 @@ class TestDisclaimerMiddleware:
         response = client.post(
             "/api/v1/ingest",
             files={"file": ("test.pdf", b"dummy", "application/pdf")},
-            headers={"X-Disclaimer-Ack": "v1.0.0"},
+            headers={"X-Disclaimer-Ack": get_app_version_tag()},
         )
 
         # Should NOT be 403 from middleware - could be 400 from OCR or other
@@ -101,7 +102,7 @@ class TestMetaEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["version"] == "v1.0.0"
+        assert data["version"] == get_app_version_tag()
 
     def test_disclaimer_text_endpoint(self, client: TestClient) -> None:
         """GET /api/v1/meta/disclaimer/text returns disclaimer text."""
@@ -119,8 +120,8 @@ class TestMetaEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["api_version"] == "1.0.0"
-        assert data["disclaimer_version"] == "v1.0.0"
+        assert data["api_version"] == get_app_version_tag().lstrip("v")
+        assert data["disclaimer_version"] == get_app_version_tag()
 
     def test_meta_endpoints_bypass_disclaimer(self, client: TestClient) -> None:
         """Meta endpoints work without X-Disclaimer-Ack header."""
@@ -150,7 +151,7 @@ def test_disclaimer_block() -> None:
     assert response.status_code == 403
     data = response.json()
     assert data["error"] == "disclaimer_required"
-    assert data["required_version"] == "v1.0.0"
+    assert data["required_version"] == get_app_version_tag()
 
 
 def test_disclaimer_pass() -> None:
@@ -166,7 +167,7 @@ def test_disclaimer_pass() -> None:
     response = client.post(
         "/api/v1/ingest",
         files={"file": ("dummy.pdf", b"not-a-real-pdf", "application/pdf")},
-        headers={"X-Disclaimer-Ack": "v1.0.0"},
+        headers={"X-Disclaimer-Ack": get_app_version_tag()},
     )
 
     assert response.status_code != 403, (

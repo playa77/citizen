@@ -1,4 +1,6 @@
 import secrets
+import tomllib
+from importlib import metadata as _importlib_metadata
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,7 +45,7 @@ class Settings(BaseSettings):
     PIPELINE_TIMEOUT_SEC: int = 120
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
-    DISCLAIMER_VERSION: str = "v1.0.0"
+    DISCLAIMER_VERSION: str = "v0.1.0"
     RATE_LIMIT_REQUESTS: int = 60
     RATE_LIMIT_WINDOW: int = 60
 
@@ -58,6 +60,26 @@ def _get_settings() -> "Settings":
     if _SETTINGS is None:
         _SETTINGS = Settings()  # type: ignore[call-arg]
     return _SETTINGS
+
+
+def get_app_version() -> str:
+    """Return the canonical application version from package metadata (e.g. '0.1.0').
+
+    Prefers importlib.metadata (works when the package is installed via pip).
+    Falls back to reading pyproject.toml directly (useful during development
+    before the package has been installed).
+    """
+    try:
+        return _importlib_metadata.version("citizen")
+    except _importlib_metadata.PackageNotFoundError:
+        pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        return str(data["project"]["version"])
+
+
+def get_app_version_tag() -> str:
+    """Return the application version with 'v' prefix (e.g. 'v0.1.0')."""
+    return f"v{get_app_version()}"
 
 
 def __getattr__(name: str) -> "Settings":

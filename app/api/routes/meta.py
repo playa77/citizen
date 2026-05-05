@@ -10,12 +10,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.config import _get_settings
+from app.core.config import _get_settings, get_app_version, get_app_version_tag
 
 router = APIRouter()
 
-# Disclaimer text (German) — loaded from config or hardcoded for v1.0.0
-_DISCLAIMER_TEXT_V1 = """
+# Disclaimer text (German) — loaded from config; version inserted at runtime
+
+_DISCLAIMER_TEXT = f"""
 **Rechtlicher Hinweis und Haftungsausschluss**
 
 Dieses Tool dient ausschließlich zu Informationszwecken und ersetzt keine rechtliche Beratung.
@@ -35,7 +36,7 @@ und Gesetzes_texten und können fehlerhaft, unvollständig oder veraltet sein.
 - IP-Adressen werden anonymisiert protokolliert.
 - Es werden keine personenbezogenen Daten an Dritte weitergegeben.
 
-**Version:** v1.0.0
+**Version:** {get_app_version_tag()}
 """.strip()
 
 
@@ -49,7 +50,7 @@ async def get_disclaimer_version() -> dict[str, str]:
 @router.get("/meta/disclaimer/text")
 async def get_disclaimer_text() -> dict[str, str]:
     """Return the full disclaimer text (German)."""
-    return {"text": _DISCLAIMER_TEXT_V1, "version": _get_settings().DISCLAIMER_VERSION}
+    return {"text": _DISCLAIMER_TEXT, "version": _get_settings().DISCLAIMER_VERSION}
 
 
 @router.get("/meta/version")
@@ -57,6 +58,6 @@ async def get_api_version() -> dict[str, str]:
     """Return API version information."""
     settings = _get_settings()
     return {
-        "api_version": "1.0.0",
+        "api_version": get_app_version(),
         "disclaimer_version": settings.DISCLAIMER_VERSION,
     }
