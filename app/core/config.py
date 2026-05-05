@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v1.0.0"
+    RATE_LIMIT_REQUESTS: int = 60
+    RATE_LIMIT_WINDOW: int = 60
 
     @property
     def DISCLAIMER_SALT(self) -> str:

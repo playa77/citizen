@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing & coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+.benchmarks/
+
+# Type checking
+.mypy_cache/
+
+# Linting
+.ruff_cache/
+
+# Git
+.git/
+.gitignore
+
+# Environment & secrets
+.env
+.secret_salt
+
+# Docker
+.dockerignore
+docker-compose.yml
+
+# Runtime
+logs/
+uploads/
+
+# Documentation
+devdocs/
+
+# Node (if using JS tooling)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

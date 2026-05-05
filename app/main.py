@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -8,14 +9,24 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import analyze, corpus, ingest, meta
+from app.core.config import settings
 from app.middleware.disclaimer import DisclaimerMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup: DB init, router warmup, salt generation will live here.
+    # Startup: configure logging, DB init, router warmup, salt generation.
+    logging.basicConfig(
+        level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("Citizen v1.0 starting up — LOG_LEVEL=%s", settings.LOG_LEVEL)
     yield
     # Shutdown
+    logger.info("Citizen v1.0 shutting down")
 
 
 app = FastAPI(
@@ -25,13 +36,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — restricted to localhost:8000 by default; overridden by settings later.
+# CORS — restricted to localhost:8000 by default; overridden via settings.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting — in-memory sliding window, guards against runaway requests.
+app.add_middleware(RateLimitMiddleware)
 
 # Disclaimer acceptance middleware — must be added AFTER CORS
 app.add_middleware(DisclaimerMiddleware)
