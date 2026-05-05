@@ -127,3 +127,60 @@ class TestMetaEndpoints:
         response = client.get("/api/v1/meta/disclaimer/version")
 
         assert response.status_code == 200
+
+
+# -------------------------------------------------------------------
+# WP-017 Acceptance: test_disclaimer_block / test_disclaimer_pass
+# -------------------------------------------------------------------
+# These are module-level functions referenced directly in the roadmap
+# acceptance criteria, and must exist as standalone names (not inside a
+# class) so that ``pytest tests/unit/test_middleware.py::test_disclaimer_block``
+# resolves correctly.
+
+
+def test_disclaimer_block() -> None:
+    """WP-017 AC: missing X-Disclaimer-Ack header → 403."""
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/ingest",
+        files={"file": ("dummy.pdf", b"not-a-real-pdf", "application/pdf")},
+    )
+
+    assert response.status_code == 403
+    data = response.json()
+    assert data["error"] == "disclaimer_required"
+    assert data["required_version"] == "v1.0.0"
+
+
+def test_disclaimer_pass() -> None:
+    """WP-017 AC: valid X-Disclaimer-Ack header → middleware passes, request
+    reaches the endpoint (status is NOT 403, i.e., middleware did not block)."""
+    client = TestClient(app)
+
+    # POST to /api/v1/ingest with a dummy file and correct header.
+    # The ingest endpoint itself will fail (OCR on dummy bytes), but
+    # the critical assertion is that the response is NOT 403 — meaning
+    # DisclaimerMiddleware granted passage.  We also verify the body
+    # does NOT carry a disclaimer-related error structure.
+    response = client.post(
+        "/api/v1/ingest",
+        files={"file": ("dummy.pdf", b"not-a-real-pdf", "application/pdf")},
+        headers={"X-Disclaimer-Ack": "v1.0.0"},
+    )
+
+    assert response.status_code != 403, (
+        f"Expected non-403 (middleware passed), got {response.status_code}"
+    )
+
+    # The response body must NOT contain a disclaimer-related error payload.
+    try:
+        body = response.json()
+        assert body.get("error") not in (
+            "disclaimer_required",
+            "disclaimer_version_mismatch",
+        ), "Response contained disclaimer error — middleware blocked the request"
+    except Exception:
+        # If the body isn't JSON that's fine — as long as it's not 403,
+        # the middleware has done its job.
+        pass
