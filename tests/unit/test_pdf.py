@@ -1,5 +1,7 @@
 """Unit tests for app/utils/pdf.py — PDF text extraction fallback chain."""
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch

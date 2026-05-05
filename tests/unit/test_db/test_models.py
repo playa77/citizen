@@ -6,6 +6,8 @@ Tests that do NOT require a live database:
 - Alembic env.py imports models correctly
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 from sqlalchemy import CheckConstraint

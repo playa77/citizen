@@ -3,13 +3,15 @@
 Given a list of legal questions, this module:
 1. Generates an embedding for each question via the OpenRouter embedding API.
 2. Queries ``chunk_embedding`` using the ``<->`` cosine distance operator.
-3. Filters results by ``DIVERSITY_THRESHOLD`` (cosine distance < threshold).
+3. Filters results by ``MAX_COSINE_DISTANCE`` (cosine distance < threshold).
 4. Enforces ``TOP_K_RETRIEVAL`` per question.
 5. Joins with ``legal_chunk`` to fetch ``text_content``, ``hierarchy_path``,
    ``source_type``, and other metadata.
 6. Deduplicates by ``chunk_id`` and sorts by aggregate relevance.
 7. Returns a list of rich dictionaries.
 """
+
+# Semantic Version: 0.1.0
 
 from __future__ import annotations
 
@@ -35,7 +37,6 @@ async def retrieve_chunks(
     questions: list[str],
     *,
     client: OpenRouterClient | None = None,
-    session_factory: None = None,  # unused, kept for interface compatibility
 ) -> list[dict[str, Any]]:
     """Retrieve diverse, ranked legal chunks for each question.
 
@@ -59,7 +60,7 @@ async def retrieve_chunks(
         return []
 
     top_k = settings.TOP_K_RETRIEVAL
-    threshold = settings.DIVERSITY_THRESHOLD
+    threshold = settings.MAX_COSINE_DISTANCE
 
     # Step 1 — generate question embeddings
     async with client or OpenRouterClient() as router:
@@ -162,7 +163,7 @@ async def retrieve_chunks_for_question(
         Maximum number of chunks to return (defaults to ``settings.TOP_K_RETRIEVAL``).
     threshold :
         Maximum cosine distance for diversity filtering
-        (defaults to ``settings.DIVERSITY_THRESHOLD``).
+        (defaults to ``settings.MAX_COSINE_DISTANCE``).
     session :
         Optional ``AsyncSession``. When *None*, opens a new session via
         ``get_async_session``.
@@ -176,7 +177,7 @@ async def retrieve_chunks_for_question(
     if top_k is None:
         top_k = settings.TOP_K_RETRIEVAL
     if threshold is None:
-        threshold = settings.DIVERSITY_THRESHOLD
+        threshold = settings.MAX_COSINE_DISTANCE
 
     # Step 1 — embed the question
     async with client or OpenRouterClient() as router:
@@ -218,7 +219,7 @@ async def _execute_query(
     top_k :
         Maximum results per question.
     threshold :
-        Cosine distance threshold for diversity filtering.
+        Cosine distance threshold for relevance filtering.
 
     Returns
     -------

@@ -8,6 +8,8 @@ Acceptance criteria covered:
 - settings singleton loads with valid env.
 """
 
+# Semantic Version: 0.1.0
+
 import re
 
 import pytest
@@ -81,14 +83,14 @@ class TestGetOrCreateSalt:
 
 
 class TestSettingsValidation:
-    def test_missing_database_url_raises_validation_error(self, monkeypatch, _isolate_salt_file):
+    def test_missing_database_url_raises_validation_error(self, tmp_path, monkeypatch, _isolate_salt_file):
         monkeypatch.delenv("DATABASE_URL", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
         from app.core.config import Settings
 
         with pytest.raises(ValidationError) as exc_info:
-            Settings()
+            Settings(_env_file=tmp_path / ".env.does.not.exist")
 
         errors = str(exc_info.value)
         assert "DATABASE_URL" in errors
@@ -112,7 +114,7 @@ class TestSettingsValidation:
 
         assert s.DATABASE_URL == "postgresql+asyncpg://user:pass@localhost:5432/test"
         assert s.OPENROUTER_API_KEY == "sk-test-key"
-        assert s.PRIMARY_MODEL == "qwen/qwen3.6-plus"
+        assert s.PRIMARY_MODEL == "openrouter/auto"
         assert s.MAX_FILE_SIZE_MB == 25
         assert s.PIPELINE_TIMEOUT_SEC == 120
 
@@ -135,7 +137,7 @@ class TestSettingsValidation:
         assert s.OCR_DPI == 300
         assert s.OCR_JPG_QUALITY == 84
         assert s.TOP_K_RETRIEVAL == 12
-        assert s.DIVERSITY_THRESHOLD == 0.75
+        assert s.MAX_COSINE_DISTANCE == 0.75
         assert s.LOG_LEVEL == "INFO"
         assert s.DISCLAIMER_VERSION == "v0.1.0"
 

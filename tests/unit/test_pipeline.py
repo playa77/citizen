@@ -6,6 +6,8 @@ patch those functions with lightweight async stubs so the orchestrator loop
 can be exercised in isolation.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import asyncio

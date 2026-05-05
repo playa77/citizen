@@ -14,6 +14,8 @@ Each stage yields an SSE-formatted event:
 
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import asyncio
@@ -108,7 +110,7 @@ def _sse_event(stage: str, status: str, payload: dict[str, Any]) -> str:
 
     Returns a string of the form::
 
-        data: {"stage": "...", "status": "...", "payload": {...}}\\n\\n
+        data: {"stage": "...", "status": "...", "payload": {...}}\n\n
     """
     data = {
         "stage": stage,
@@ -272,10 +274,13 @@ async def _pipeline_all(state: PipelineState) -> AsyncGenerator[str, None]:
             yield event
 
 
-async def _collect_events(state: PipelineState) -> list[str]:
-    """Materialise the full pipeline into a list of SSE event strings."""
+async def _collect_single_stage(
+    stage_name: str,
+    state: PipelineState,
+) -> list[str]:
+    """Execute a single stage and collect its SSE events into a list."""
     events: list[str] = []
-    async for event in _pipeline_all(state):
+    async for event in execute_stage(stage_name, state):
         events.append(event)
     return events
 
@@ -284,6 +289,8 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     """Execute the full 7-stage reasoning pipeline with timeout enforcement.
 
     Yields SSE-formatted progress events after each stage.
+    If the retrieval stage returns no chunks, the pipeline stops early
+    with a safe output instead of producing hallucinated legal advice.
 
     Parameters
     ----------
@@ -295,7 +302,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     str
         SSE data lines in the format::
 
-            data: {"stage": "...", "status": "complete", "payload": {...}}\\n\\n
+            data: {"stage": "...", "status": "complete", "payload": {...}}\n\n
 
     Raises
     ------
@@ -307,16 +314,50 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     timeout_sec = cfg._get_settings().PIPELINE_TIMEOUT_SEC
     logger.info("Starting pipeline (timeout=%ds)", timeout_sec)
 
-    try:
-        events: list[str] = await asyncio.wait_for(
-            _collect_events(state),
-            timeout=timeout_sec,
-        )
-    except TimeoutError:
-        logger.error("Pipeline timed out after %ds", timeout_sec)
-        raise PipelineTimeoutError(f"Pipeline execution exceeded {timeout_sec}s timeout") from None
+    started = time.monotonic()
 
-    for event in events:
-        yield event
+    for stage_name in _STAGES:
+        # Check remaining time budget
+        elapsed = time.monotonic() - started
+        remaining = timeout_sec - elapsed
+        if remaining <= 0:
+            raise PipelineTimeoutError(f"Pipeline execution exceeded {timeout_sec}s timeout")
+
+        try:
+            events = await asyncio.wait_for(
+                _collect_single_stage(stage_name, state),
+                timeout=max(remaining, 5.0),
+            )
+        except TimeoutError:
+            raise PipelineTimeoutError(
+                f"Pipeline execution exceeded {timeout_sec}s timeout"
+            ) from None
+
+        for event in events:
+            yield event
+
+        # No-evidence guard: if retrieval returned nothing, stop safely
+        if stage_name == "retrieval" and not state.retrieved_chunks:
+            logger.warning(
+                "No legal chunks retrieved — stopping pipeline with safe output"
+            )
+            state.final_output = {
+                "sachverhalt": state.normalized_text[:500] if state.normalized_text else "",
+                "rechtliche_wuerdigung": (
+                    "Keine belastbare rechtliche Würdigung möglich, "
+                    "da keine passenden Rechtsquellen im lokalen Corpus gefunden wurden."
+                ),
+                "ergebnis": "Keine evidenzbasierte Einschätzung möglich.",
+                "handlungsempfehlung": (
+                    "Bitte stellen Sie sicher, dass der Corpus aktualisiert wurde "
+                    "und relevante Rechtsquellen enthält."
+                ),
+                "entwurf": "",
+                "unsicherheiten": (
+                    "Keine passenden Rechtsquellen im lokalen Corpus gefunden. "
+                    "Eine Corpus-Aktualisierung über /api/v1/corpus/update wird empfohlen."
+                ),
+            }
+            return
 
     logger.info("Pipeline completed successfully.")

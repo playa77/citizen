@@ -2,6 +2,7 @@
 # Citizen — Multi-stage Dockerfile
 # Targets: Ubuntu (primary), also builds on Win/Mac via Docker
 # ==========================================
+# Semantic Version: 0.1.0
 
 # ---- Stage 1: Install system-level dependencies ----
 FROM python:3.11-slim-bookworm AS base

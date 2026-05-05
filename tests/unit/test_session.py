@@ -1,5 +1,7 @@
 """Unit tests for app.db.session — WP-003."""
 
+# Semantic Version: 0.1.0
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_session

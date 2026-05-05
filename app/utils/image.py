@@ -1,5 +1,7 @@
 """Image standardization — DPI normalization, JPEG conversion, EXIF stripping."""
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import io

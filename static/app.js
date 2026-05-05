@@ -1,5 +1,6 @@
 /**
  * Citizen — Legal Reasoning Engine Frontend
+ * @version 0.1.0
  *
  * Handles:
  * - Disclaimer acceptance modal with localStorage persistence

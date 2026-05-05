@@ -3,6 +3,8 @@
 Covers the internal ``_run_corpus_update`` function in ``app.api.routes.corpus``.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import logging

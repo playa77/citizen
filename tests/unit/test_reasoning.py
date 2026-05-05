@@ -14,6 +14,8 @@ Acceptance criteria
 - ``mypy app/services/reasoning.py`` returns 0 errors.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,5 @@
+# Semantic Version: 0.1.0
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -26,6 +28,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Citizen %s starting up — LOG_LEVEL=%s", get_app_version_tag(), settings.LOG_LEVEL)
     yield
     # Shutdown
+    from app.services.reasoning import close_client as close_reasoning_client
+    try:
+        await close_reasoning_client()
+    except Exception:
+        logging.getLogger(__name__).warning("Failed to close reasoning client gracefully")
     logger.info("Citizen %s shutting down", get_app_version_tag())
 
 

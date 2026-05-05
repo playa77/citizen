@@ -9,6 +9,8 @@ and exercise:
   rows with proper ON CONFLICT semantics.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import os

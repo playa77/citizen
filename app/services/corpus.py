@@ -5,6 +5,8 @@ structure into ``§ → Absatz → Satz`` units, generates metadata, and returns
 normalised :class:`dict` objects ready for embedding and DB insertion.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import hashlib
@@ -504,27 +506,20 @@ async def _upsert_embedding(
 ) -> None:
     """Insert or update a ChunkEmbedding row for the given legal chunk.
 
-    Uses ``ON CONFLICT`` on ``chunk_id + model_name`` to keep the vector
-    in sync when the embedding model is upgraded.
+    Uses PostgreSQL ``ON CONFLICT DO UPDATE`` on ``chunk_id + model_name``
+    to atomically upsert the embedding vector.
     """
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
     embedding_vec = chunk["embedding"]
     model_name = settings.EMBEDDING_MODEL
-    chunk_uuid = legal_chunk.id
 
-    stmt = select(ChunkEmbedding).where(
-        ChunkEmbedding.chunk_id == chunk_uuid,
-        ChunkEmbedding.model_name == model_name,
+    stmt = pg_insert(ChunkEmbedding).values(
+        chunk_id=legal_chunk.id,
+        embedding=embedding_vec,
+        model_name=model_name,
+    ).on_conflict_do_update(
+        index_elements=["chunk_id", "model_name"],
+        set_={"embedding": embedding_vec},
     )
-    result = await session.execute(stmt)
-    existing = result.scalar_one_or_none()
-
-    if existing is None:
-        session.add(
-            ChunkEmbedding(
-                chunk_id=legal_chunk.id,
-                embedding=embedding_vec,
-                model_name=model_name,
-            )
-        )
-    else:
-        existing.embedding = embedding_vec
+    await session.execute(stmt)

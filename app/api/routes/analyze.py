@@ -17,6 +17,8 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import json
@@ -133,12 +135,9 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                                 for idx, vc in enumerate(
                                     parsed.get("payload", {}).get("verified_claims", [])
                                 ):
-                                    # Attach evidence bindings from verified claims.
-                                    chunk = (
-                                        state.retrieved_chunks[idx % len(state.retrieved_chunks)]
-                                        if state.retrieved_chunks
-                                        else {}
-                                    )
+                                    # Only create evidence bindings when the claim
+                                    # explicitly references a chunk_id.
+                                    ref_chunk_id = vc.get("evidence_chunk_id")
                                     evidence_entries.append(
                                         {
                                             "claim_index": idx,
@@ -146,10 +145,12 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                                                 vc.get("confidence_score", 0.5)
                                             ),
                                             "quote_excerpt": str(
-                                                chunk.get("text_content", "")[:500]
+                                                vc.get("evidence_quote", "")[:500]
                                             ),
-                                            "chunk_hierarchy": str(chunk.get("hierarchy_path", "")),
-                                            "chunk_id": str(chunk.get("chunk_id", "")),
+                                            "chunk_hierarchy": str(
+                                                vc.get("evidence_hierarchy", "")
+                                            ),
+                                            "chunk_id": str(ref_chunk_id) if ref_chunk_id else "",
                                         }
                                     )
                     except (json.JSONDecodeError, IndexError, KeyError):
@@ -172,7 +173,32 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                 "session_id": session_id,
             }
             yield _sse_format(error_payload)
-            # Do not persist audit trail on failure — keep status as "failed".
+
+            # Persist a failed audit record for observability.
+            latency_ms = int((time.monotonic() - start) * 1000)
+            failed_audit = AuditRecord(
+                session_id=session_id,
+                input_text=input_text,
+                status="failed",
+                latency_ms=latency_ms,
+                stage_logs=stage_log_entries,
+                claims=[],
+                evidence_bindings=[],
+                disclaimer_ack={
+                    "input_snapshot": {"session_id": session_id},
+                    "output_snapshot": {"acknowledged": False},
+                    "duration_ms": 0,
+                },
+            )
+            try:
+                async for db_session in get_async_session():
+                    await persist_audit_record(db_session, failed_audit)
+                    await db_session.close()
+                    break
+            except Exception:
+                logger.exception(
+                    "Failed to persist failed audit trail for session %s", session_id
+                )
             return
 
         # Persist the audit trail in the background after streaming completes.

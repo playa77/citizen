@@ -4,6 +4,8 @@ Implements a simple token-bucket-style limiter per client IP that
 guards against runaway or bug-induced request floods.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import logging

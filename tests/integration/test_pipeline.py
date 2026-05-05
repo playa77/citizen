@@ -10,6 +10,8 @@ Tests cover:
   per run (7 stages + 1 disclaimer_ack).
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import json

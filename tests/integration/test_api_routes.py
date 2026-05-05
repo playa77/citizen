@@ -10,6 +10,8 @@ dependencies (OCR, LLM, DB) to ensure deterministic, fast execution while
 still validating HTTP layer behavior, response codes, and payload shapes.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import json
@@ -21,6 +23,14 @@ from fastapi.testclient import TestClient
 from starlette.background import BackgroundTask
 
 from app.main import app
+from app.core.config import get_app_version_tag
+
+# -------------------------------------------------------------------
+# Helper — disclaimer header that all tests need to bypass middleware
+# -------------------------------------------------------------------
+
+DISCLAIMER_HEADERS = {"X-Disclaimer-Ack": get_app_version_tag()}
+
 
 # -------------------------------------------------------------------
 # TestClient fixture
@@ -50,6 +60,7 @@ class TestIngestEndpoint:
             response = client.post(
                 "/api/v1/ingest",
                 files={"file": ("test.pdf", fake_pdf, "application/pdf")},
+                headers=DISCLAIMER_HEADERS,
             )
 
         assert response.status_code == 200
@@ -63,6 +74,7 @@ class TestIngestEndpoint:
         response = client.post(
             "/api/v1/ingest",
             files={"file": ("test.txt", fake_txt, "text/plain")},
+            headers=DISCLAIMER_HEADERS,
         )
         assert response.status_code == 415
         body = response.json()
@@ -79,6 +91,7 @@ class TestIngestEndpoint:
             response = client.post(
                 "/api/v1/ingest",
                 files={"file": ("huge.pdf", large_content, "application/pdf")},
+                headers=DISCLAIMER_HEADERS,
             )
         assert response.status_code == 400
         body = response.json()
@@ -94,6 +107,7 @@ class TestIngestEndpoint:
             response = client.post(
                 "/api/v1/ingest",
                 files={"file": ("blank.pdf", fake_pdf, "application/pdf")},
+                headers=DISCLAIMER_HEADERS,
             )
         assert response.status_code == 400
         body = response.json()
@@ -162,6 +176,7 @@ class TestAnalyzeEndpoint:
             "POST",
             "/api/v1/analyze",
             json={"text": "Dies ist ein Testdokument vom Jobcenter."},
+            headers=DISCLAIMER_HEADERS,
         ) as response:
             assert response.status_code == 200
             assert response.headers["content-type"].startswith("text/event-stream")
@@ -190,7 +205,7 @@ class TestAnalyzeEndpoint:
 
     def test_analyze_missing_text_returns_400(self, client: TestClient) -> None:
         """Request body without 'text' field is rejected."""
-        response = client.post("/api/v1/analyze", json={})
+        response = client.post("/api/v1/analyze", json={}, headers=DISCLAIMER_HEADERS)
         assert response.status_code == 400
         body = response.json()
         assert "detail" in body
@@ -198,7 +213,7 @@ class TestAnalyzeEndpoint:
 
     def test_analyze_empty_text_returns_400(self, client: TestClient) -> None:
         """Request body with empty string is rejected."""
-        response = client.post("/api/v1/analyze", json={"text": "   "})
+        response = client.post("/api/v1/analyze", json={"text": "   "}, headers=DISCLAIMER_HEADERS)
         assert response.status_code == 400
 
     @patch("app.api.routes.analyze.run_pipeline")
@@ -212,6 +227,7 @@ class TestAnalyzeEndpoint:
             "POST",
             "/api/v1/analyze",
             json={"text": "trigger failure"},
+            headers=DISCLAIMER_HEADERS,
         ) as response:
             assert response.status_code == 200
             events = self._consume_sse(response)
@@ -234,7 +250,7 @@ class TestCorpusUpdateEndpoint:
     @patch("app.api.routes.corpus._run_corpus_update")
     def test_corpus_update_returns_202_and_job_id(self, mock_bg_task, client: TestClient) -> None:
         """Endpoint accepts request and immediately returns a job identifier."""
-        response = client.post("/api/v1/corpus/update")
+        response = client.post("/api/v1/corpus/update", headers=DISCLAIMER_HEADERS)
         assert response.status_code == 202
         data = response.json()
         assert "job_id" in data
@@ -244,7 +260,7 @@ class TestCorpusUpdateEndpoint:
     def test_corpus_update_background_task_failure_returns_500(self, client: TestClient) -> None:
         """If the background task cannot be scheduled, endpoint returns 500."""
         with patch("fastapi.BackgroundTasks.add_task", side_effect=RuntimeError("scheduler down")):
-            response = client.post("/api/v1/corpus/update")
+            response = client.post("/api/v1/corpus/update", headers=DISCLAIMER_HEADERS)
             assert response.status_code == 500
             body = response.json()
             assert "detail" in body

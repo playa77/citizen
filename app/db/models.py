@@ -5,7 +5,9 @@ Mirrors the DDL from Technical Specification §4.1 exactly:
   case_run → pipeline_stage_log, claim → evidence_binding
 """
 
-from datetime import datetime
+# Semantic Version: 0.1.0
+
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -18,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    UniqueConstraint,
     String,
     Text,
     func,
@@ -32,6 +35,11 @@ from sqlalchemy.orm import (
 )
 
 VECTOR_DIM = 1536  # Default embedding dimension
+
+
+def _sql_in(values: tuple[str, ...]) -> str:
+    """Build a comma-separated list of SQL-safe single-quoted values."""
+    return ", ".join(f"'{value}'" for value in values)
 
 
 class Base(DeclarativeBase):
@@ -58,7 +66,7 @@ class LegalSource(Base):
     source_type: Mapped[str] = mapped_column(String(50), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     jurisdiction: Mapped[str] = mapped_column(String(100), nullable=False, server_default="DE")
-    effective_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     version_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
@@ -72,10 +80,11 @@ class LegalSource(Base):
 
     __table_args__ = (
         CheckConstraint(
-            f"source_type IN ('{",".join(SOURCE_TYPE_ALLOWED)}')",
+            f"source_type IN ({_sql_in(SOURCE_TYPE_ALLOWED)})",
             name="ck_legal_source_source_type",
         ),
         Index("idx_source_type_active", "source_type", "is_active"),
+        UniqueConstraint("source_type", "version_hash", name="uq_legal_source_type_version"),
     )
 
 
@@ -104,7 +113,7 @@ class LegalChunk(Base):
     unit_type: Mapped[str] = mapped_column(String(20), nullable=False)
     hierarchy_path: Mapped[str] = mapped_column(Text, nullable=False)
     text_content: Mapped[str] = mapped_column(Text, nullable=False)
-    effective_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     # Relationships
@@ -118,11 +127,12 @@ class LegalChunk(Base):
 
     __table_args__ = (
         CheckConstraint(
-            f"unit_type IN ('{",".join(UNIT_TYPE_ALLOWED)}')",
+            f"unit_type IN ({_sql_in(UNIT_TYPE_ALLOWED)})",
             name="ck_legal_chunk_unit_type",
         ),
         Index("idx_chunk_source", "source_id"),
         Index("idx_chunk_hierarchy", "hierarchy_path"),
+        UniqueConstraint("source_id", "hierarchy_path", "text_content", name="uq_legal_chunk_source_hierarchy_text"),
     )
 
 
@@ -161,6 +171,7 @@ class ChunkEmbedding(Base):
             postgresql_with={"lists": 100},
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        UniqueConstraint("chunk_id", "model_name", name="uq_chunk_embedding_chunk_model"),
     )
 
 
@@ -198,7 +209,7 @@ class CaseRun(Base):
 
     __table_args__ = (
         CheckConstraint(
-            f"status IN ('{",".join(CASE_STATUS_ALLOWED)}')",
+            f"status IN ({_sql_in(CASE_STATUS_ALLOWED)})",
             name="ck_case_run_status",
         ),
         Index("idx_case_session", "session_id"),
@@ -248,7 +259,7 @@ class PipelineStageLog(Base):
 
     __table_args__ = (
         CheckConstraint(
-            f"stage_name IN ('{",".join(STAGE_NAME_ALLOWED)}')",
+            f"stage_name IN ({_sql_in(STAGE_NAME_ALLOWED)})",
             name="ck_pipeline_stage_log_stage_name",
         ),
         Index("idx_stage_case", "case_run_id"),
@@ -290,7 +301,7 @@ class Claim(Base):
 
     __table_args__ = (
         CheckConstraint(
-            f"claim_type IN ('{",".join(CLAIM_TYPE_ALLOWED)}')",
+            f"claim_type IN ({_sql_in(CLAIM_TYPE_ALLOWED)})",
             name="ck_claim_claim_type",
         ),
         CheckConstraint(

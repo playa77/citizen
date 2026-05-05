@@ -13,6 +13,8 @@ Acceptance criteria
 - Logs contain ``fallback_event`` (logged via ``logger.info``) with model names.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import json

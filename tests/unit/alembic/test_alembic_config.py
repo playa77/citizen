@@ -7,6 +7,8 @@ Tests that do NOT require a live database:
 - Migration contains expected table creation
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import ast

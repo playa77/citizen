@@ -144,7 +144,7 @@ citizen/
 | `EMBEDDING_MODEL` | `str` | No | `text-embedding-3-small` | OpenRouter-compatible embedding model |
 | `VECTOR_DIM` | `int` | No | `1536` | Embedding vector dimension |
 | `TOP_K_RETRIEVAL` | `int` | No | `12` | Max chunks retrieved per question |
-| `DIVERSITY_THRESHOLD` | `float` | No | `0.75` | Cosine similarity threshold for diversity filtering |
+| `MAX_COSINE_DISTANCE` | `float` | No | `0.75` | Cosine similarity threshold for diversity filtering |
 | `PIPELINE_TIMEOUT_SEC` | `int` | No | `120` | Hard timeout for full 7-stage execution |
 | `LOG_LEVEL` | `str` | No | `INFO` | Python logging level |
 | `CORS_ORIGINS` | `str` | No | `["http://localhost:8000"]` | Allowed frontend origins |
@@ -165,7 +165,7 @@ OCR_JPG_QUALITY=84
 EMBEDDING_MODEL=text-embedding-3-small
 VECTOR_DIM=1536
 TOP_K_RETRIEVAL=12
-DIVERSITY_THRESHOLD=0.75
+MAX_COSINE_DISTANCE=0.75
 PIPELINE_TIMEOUT_SEC=120
 LOG_LEVEL=INFO
 CORS_ORIGINS=["http://localhost:8000"]
@@ -309,7 +309,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 12
-    DIVERSITY_THRESHOLD: float = 0.75
+    MAX_COSINE_DISTANCE: float = 0.75
     PIPELINE_TIMEOUT_SEC: int = 120
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: List[str] = ["http://localhost:8000"]
@@ -457,7 +457,7 @@ async def retrieve_chunks(questions: List[str]) -> List[Dict[str, Any]]:
 **Internal Behavior:**
 1. Generate embeddings for each question via OpenRouter embedding endpoint.
 2. For each question embedding, query `chunk_embedding` table using `<->` cosine distance operator.
-3. Apply `DIVERSITY_THRESHOLD`: Filter results where `cosine_distance < threshold`.
+3. Apply `MAX_COSINE_DISTANCE`: Filter results where `cosine_distance < threshold`.
 4. Enforce `TOP_K_RETRIEVAL` per question.
 5. Join with `legal_chunk` to fetch `text_content`, `hierarchy_path`, `source_type`.
 6. Aggregate, deduplicate by `chunk_id`, sort by relevance.

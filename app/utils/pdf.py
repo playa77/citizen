@@ -1,5 +1,7 @@
 """PDF text extraction with local fallback chain."""
 
+# Semantic Version: 0.1.0
+
 import io
 import logging
 

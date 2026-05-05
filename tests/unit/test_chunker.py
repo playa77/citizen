@@ -1,5 +1,7 @@
 """Unit tests for the corpus scraper and hierarchical chunker."""
 
+# Semantic Version: 0.1.0
+
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,9 +21,10 @@ class TestNormalizeText:
     def test_strips_extra_whitespace(self) -> None:
         assert normalize_text("  hello    world  ") == "hello world"
 
-    def test_removes_blank_lines(self) -> None:
+    def test_preserves_paragraph_breaks(self) -> None:
+        """Blank lines collapse into a single paragraph break (two newlines)."""
         raw = "para one\n\n\n\npara two"
-        assert normalize_text(raw) == "para one\npara two"
+        assert normalize_text(raw) == "para one\n\npara two"
 
     def test_removes_zero_width_chars(self) -> None:
         raw = "hello\u200bworld\ufefftest"
@@ -385,10 +388,9 @@ class TestNormalizeEdgeCases:
     """Edge cases for normalize_text."""
 
     def test_collapse_excessive_newlines(self) -> None:
-        """Blank lines are removed; remaining newlines collapse to single."""
+        """Three or more consecutive newlines collapse to two (preserve paragraph breaks)."""
         raw = "line one\n\n\n\n\nline two"
-        # All blank lines stripped, leaving one remaining newline
-        assert normalize_text(raw) == "line one\nline two"
+        assert normalize_text(raw) == "line one\n\nline two"
 
     def test_strip_leading_trailing_ws(self) -> None:
         assert normalize_text("  \n\t  hello  \n\t  ") == "hello"

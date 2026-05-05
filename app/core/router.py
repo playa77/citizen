@@ -1,5 +1,7 @@
 """OpenRouter client with deterministic fallback chain and embedding support."""
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import asyncio
@@ -16,12 +18,15 @@ logger = logging.getLogger(__name__)
 _API_URL = "https://openrouter.ai/api/v1/chat/completions"
 _EMBEDDING_URL = "https://openrouter.ai/api/v1/embeddings"
 
-_HEADERS = {
-    "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-    "HTTP-Referer": "http://localhost:8000",
-    "X-Title": "Citizen Legal Engine",
-    "Content-Type": "application/json",
-}
+def _headers() -> dict[str, str]:
+    """Build headers dynamically so settings are not frozen at import time."""
+    settings_now = settings  # triggers lazy load via __getattr__
+    return {
+        "Authorization": f"Bearer {settings_now.OPENROUTER_API_KEY}",
+        "HTTP-Referer": "http://localhost:8000",
+        "X-Title": "Citizen Legal Engine",
+        "Content-Type": "application/json",
+    }
 
 
 class RouterExhaustedError(Exception):
@@ -82,7 +87,7 @@ class OpenRouterClient:
                     resp = await self._client.post(
                         _API_URL,
                         json=payload,
-                        headers=_HEADERS,
+                        headers=_headers(),
                     )
                     resp.raise_for_status()
                     body = resp.json()
@@ -139,7 +144,7 @@ class OpenRouterClient:
             resp = await self._client.post(
                 _EMBEDDING_URL,
                 json=payload,
-                headers=_HEADERS,
+                headers=_headers(),
             )
             resp.raise_for_status()
             body = resp.json()
@@ -162,17 +167,28 @@ class OpenRouterClient:
         texts: Sequence[str],
         *,
         model: str | None = None,
+        concurrency: int = 8,
     ) -> list[list[float]]:
-        """Generate embeddings for multiple texts in parallel.
+        """Generate embeddings for multiple texts with bounded concurrency.
 
         Args:
             texts: Sequence of input strings.
             model: Override the default embedding model.
+            concurrency: Maximum number of simultaneous requests (default 8).
 
         Returns:
             A list of embedding vectors (same order as *texts*).
         """
-        tasks = [self.get_embedding(t, model=model) for t in texts]
+        if not texts:
+            return []
+
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def embed_one(text: str) -> list[float]:
+            async with semaphore:
+                return await self.get_embedding(text, model=model)
+
+        tasks = [embed_one(t) for t in texts]
         results = await asyncio.gather(*tasks)
         return list(results)
 

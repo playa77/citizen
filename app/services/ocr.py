@@ -11,6 +11,8 @@ Pipeline
 4. Return UTF-8 string.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import io

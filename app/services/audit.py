@@ -10,6 +10,8 @@ trail so that WP-015 acceptance criteria can be verified:
 - ``claim`` and ``evidence_binding`` tables are populated
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import logging

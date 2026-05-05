@@ -6,6 +6,8 @@ Requests without this header (or with a mismatched version) receive a 403 respon
 with a JSON payload describing the error.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import hashlib
@@ -91,6 +93,10 @@ class DisclaimerMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         # Skip excluded paths
         if _is_excluded_path(request.url.path):
+            return await call_next(request)
+
+        # CORS preflight requests do not carry custom headers — let them through.
+        if request.method == "OPTIONS":
             return await call_next(request)
 
         # Only apply to /api/* routes

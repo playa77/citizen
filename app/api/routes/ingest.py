@@ -7,6 +7,8 @@ Provides a single endpoint:
 The endpoint enforces the ``MAX_FILE_SIZE_MB`` limit and validates MIME type.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import logging

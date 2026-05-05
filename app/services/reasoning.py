@@ -12,10 +12,13 @@ directive embedded in the system prompt. Malformed JSON triggers one automatic
 retry with a stricter prompt before raising ``JSONParseError``.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
 from app.core.router import OpenRouterClient
 
@@ -51,11 +54,12 @@ def _get_client() -> OpenRouterClient:
 _STRICT_SUFFIX = (
     "\n\nIMPORTANT: Respond with *only* valid JSON matching the schema above. "
     "No prose, no markdown fences, no explanation. If you cannot produce "
-    "valid JSON, return an empty JSON object {}."
+    "valid JSON matching the schema, return an empty array [] for array "
+    "schemas or an empty object {} for object schemas."
 )
 
 
-def _parse_json_response(raw: str, *, context: str) -> dict[str, object]:
+def _parse_json_response(raw: str, *, context: str) -> Any:
     """Attempt to parse ``raw`` as JSON; retry once with a stricter prompt on failure.
 
     Parameters
@@ -533,3 +537,14 @@ def reset_client() -> None:
     """Reset the module-level ``_client`` singleton. Useful in unit tests."""
     global _client
     _client = None
+
+
+async def close_client() -> None:
+    """Close the module-level OpenRouter client and free resources.
+
+    For use in application shutdown hooks.
+    """
+    global _client
+    if _client is not None:
+        await _client.close()
+        _client = None

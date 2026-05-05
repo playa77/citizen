@@ -10,6 +10,8 @@ a job identifier. Status can be tracked via application logs or future
 extensions (not in WP-013 scope).
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import logging
@@ -19,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from app.db.session import get_session_factory
-from app.services.corpus import scrape_and_chunk, upsert_chunks
+from app.services.corpus import generate_embeddings, scrape_and_chunk, upsert_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +47,43 @@ async def _run_corpus_update(job_id: str) -> None:
         logger.info("Corpus update job started: job_id=%s", job_id)
         _job_store[job_id]["status"] = "running"
 
-        # Stage 1 — scrape & chunk
-        chunks = await scrape_and_chunk(source_type="all")
-        logger.info("Corpus job %s: scraped %d chunks", job_id, len(chunks))
+        # Stage 1 — scrape & chunk for each valid source type
+        chunks: list[dict[str, Any]] = []
+        for source_type in ("sgb2", "sgbx", "weisung", "bsg"):
+            try:
+                source_chunks = await scrape_and_chunk(source_type=source_type)
+                chunks.extend(source_chunks)
+                logger.info(
+                    "Corpus job %s: scraped %d chunks for source_type=%s",
+                    job_id,
+                    len(source_chunks),
+                    source_type,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Corpus job %s: failed to scrape source_type=%s: %s",
+                    job_id,
+                    source_type,
+                    exc,
+                )
 
-        # Stage 2 — upsert to DB
+        if not chunks:
+            logger.warning("Corpus job %s: no chunks scraped from any source", job_id)
+            _job_store[job_id]["status"] = "completed"
+            _job_store[job_id]["chunks_processed"] = 0
+            return
+
+        logger.info("Corpus job %s: scraped %d chunks total", job_id, len(chunks))
+
+        # Stage 2 — generate embeddings
+        chunks = await generate_embeddings(chunks)
+        logger.info("Corpus job %s: generated embeddings for %d chunks", job_id, len(chunks))
+
+        # Stage 3 — upsert to DB
         session_factory = get_session_factory()
         async with session_factory() as session:
             await upsert_chunks(session, chunks)
+            # upsert_chunks already commits internally, but we commit here too for safety
             await session.commit()
 
         _job_store[job_id]["status"] = "completed"

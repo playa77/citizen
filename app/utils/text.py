@@ -1,5 +1,7 @@
 """Text normalisation, regex cleaning, and chunking helpers."""
 
+# Semantic Version: 0.1.0
+
 import re
 import unicodedata
 
@@ -24,12 +26,12 @@ def normalize_text(raw: str) -> str:
     2. Strip invisible / OCR artefact characters
     3. Collapse horizontal whitespace within each line
     4. Remove lines that are entirely blank
-    5. Collapse excessive newline runs into a single newline
+    5. Collapse excessive newline runs into two newlines (preserve paragraph breaks)
     6. Strip leading / trailing whitespace from the entire string
     """
     text = unicodedata.normalize("NFC", raw)
     text = _INVISIBLE_RE.sub("", text)
     text = _HORIZONTAL_WS_RE.sub(" ", text)
-    text = _BLANK_LINE_RE.sub("", text)
-    text = _EXCESS_NEWLINES_RE.sub("\n", text)
+    text = _BLANK_LINE_RE.sub("\n", text)
+    text = _EXCESS_NEWLINES_RE.sub("\n\n", text)
     return text.strip()

@@ -5,6 +5,8 @@ Revises:
 Create Date: 2026-05-02 00:00:00.000000
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -52,6 +54,7 @@ def _ts() -> sa.Column:
 def upgrade() -> None:
     # --- pgvector extension ---
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
 
     # --- 1. legal_source ---
     op.create_table(
@@ -74,6 +77,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "source_type IN ('sgb2', 'sgbx', 'weisung', 'bsg')",
             name="ck_legal_source_source_type",
+        ),
+        sa.UniqueConstraint(
+            "source_type", "version_hash",
+            name="uq_legal_source_type_version",
         ),
     )
     op.create_index(
@@ -101,6 +108,10 @@ def upgrade() -> None:
             "unit_type IN ('statute', 'paragraph', 'absatz', 'satz')",
             name="ck_legal_chunk_unit_type",
         ),
+        sa.UniqueConstraint(
+            "source_id", "hierarchy_path", "text_content",
+            name="uq_legal_chunk_source_hierarchy_text",
+        ),
     )
     op.create_index("idx_chunk_source", "legal_chunk", ["source_id"])
     op.create_index("idx_chunk_hierarchy", "legal_chunk", ["hierarchy_path"])
@@ -119,6 +130,10 @@ def upgrade() -> None:
         sa.Column("embedding", Vector(dim=vector_dim), nullable=False),
         sa.Column("model_name", sa.String(100), nullable=False),
         _ts(),
+        sa.UniqueConstraint(
+            "chunk_id", "model_name",
+            name="uq_chunk_embedding_chunk_model",
+        ),
     )
     op.execute(
         "CREATE INDEX idx_embedding_vector ON chunk_embedding "

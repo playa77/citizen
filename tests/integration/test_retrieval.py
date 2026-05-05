@@ -11,6 +11,8 @@ These tests require a live PostgreSQL instance with ``pgvector`` extension.
 Set ``SKIP_LIVE_DB=1`` to skip DB-dependent tests.
 """
 
+# Semantic Version: 0.1.0
+
 from __future__ import annotations
 
 import math
@@ -44,7 +46,7 @@ from app.services.retrieval import (
 
 _DIM = settings.VECTOR_DIM
 _TOP_K = settings.TOP_K_RETRIEVAL
-_THRESHOLD = settings.DIVERSITY_THRESHOLD
+_THRESHOLD = settings.MAX_COSINE_DISTANCE
 
 
 def _fake_embedding(dim: int = _DIM) -> list[float]:
@@ -198,7 +200,7 @@ class TestRetrieveChunks:
     )
     @pytest.mark.asyncio
     async def test_diversity_filter(self, db_session: AsyncSession) -> None:
-        """Every returned chunk must have cosine distance < DIVERSITY_THRESHOLD."""
+        """Every returned chunk must have cosine distance < MAX_COSINE_DISTANCE."""
         await _seed_database(db_session, n_chunks=20)
         mock_client = MockOpenRouterClient()
         result = await retrieve_chunks(

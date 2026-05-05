@@ -1,3 +1,5 @@
+# Semantic Version: 0.1.0
+
 import secrets
 import tomllib
 from importlib import metadata as _importlib_metadata
@@ -29,19 +31,19 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     OPENROUTER_API_KEY: str
-    PRIMARY_MODEL: str = "qwen/qwen3.6-plus"
-    FALLBACK_MODEL_1: str = "openai/gpt-5.4-nano"
-    FALLBACK_MODEL_2: str = "/openrouter/free"
+    PRIMARY_MODEL: str = "openrouter/auto"  # Override in .env with a real model ID
+    FALLBACK_MODEL_1: str = ""  # Optional fallback — set in .env if desired
+    FALLBACK_MODEL_2: str = ""  # Optional fallback — set in .env if desired
     MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 45.0
     MAX_FILE_SIZE_MB: int = 25
     DB_POOL_SIZE: int = 10
     OCR_DPI: int = 300
     OCR_JPG_QUALITY: int = 84
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 12
-    DIVERSITY_THRESHOLD: float = 0.75
+    MAX_COSINE_DISTANCE: float = 0.75
     PIPELINE_TIMEOUT_SEC: int = 120
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
