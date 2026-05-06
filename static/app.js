@@ -548,6 +548,7 @@
 
         // Show app if disclaimer was already accepted
         if (accepted) {
+            elements.disclaimerModal.classList.add('hidden');
             elements.app.classList.remove('hidden');
         }
     }
