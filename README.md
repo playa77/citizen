@@ -8,21 +8,24 @@ Citizen is a local-first, evidence-constrained legal reasoning engine designed t
 
 ## Core Features
 
-* **Local-First OCR Pipeline:** Fully local document ingestion (PDF/JPG/PNG) up to 25MB, utilizing a deterministic fallback chain (`pdfplumber` → `PyMuPDF` → `Tesseract`).
-* **Hierarchical Legal Corpus:** Automated chunking of German legal texts (Statute → § → Absatz → Satz) to preserve exact legal boundaries for precise citation.
-* **7-Stage Reasoning Pipeline:** A deterministic orchestrator that enforces a strict sequence: Normalization → Classification → Decomposition → Retrieval → Construction → Verification → Generation.
-* **Evidence-Bound Output:** Every factual assertion and legal interpretation is explicitly bound to retrieved legal sources via `pgvector` similarity search.
-* **Deterministic LLM Routing:** Fault-tolerant OpenRouter client with an automated fallback chain (`qwen3.6-plus` → `gpt-5.4-nano` → `free`).
-* **Zero-Friction Compliance:** GDPR-compliant audit logging with automatically generated, persistent cryptographic salts. No manual security configuration required.
+* **Local-First OCR Pipeline:** Fully local document ingestion (PDF/JPG/PNG) up to 25 MB, utilizing a deterministic fallback chain (`pdfplumber` → `PyMuPDF` → `Tesseract`) with image preprocessing (conversion to 300 dpi JPG, contrast enhancement, optional binarization).
+* **Hierarchical Legal Corpus:** Automated scraping of German legal texts from gesetze-im-internet.de, chunked at four granularity levels (Statute → § → Absatz → Satz) to preserve exact legal boundaries for precise citation. Includes statutes (SGB II, SGB X), administrative directives (Weisungen), and case law (BSG decisions).
+* **7-Stage Reasoning Pipeline:** A deterministic orchestrator enforcing a strict, sequential analysis flow: Normalization → Classification → Decomposition → Retrieval → Construction → Verification → Generation. Each stage is streamed in real time via Server-Sent Events (SSE).
+* **Evidence-Bound Output:** Every factual assertion and legal interpretation is explicitly bound to retrieved legal sources through `pgvector` similarity search, with confidence scoring and direct quote excerpts stored in the database.
+* **Deterministic LLM Routing:** Fault-tolerant OpenRouter client with an automated fallback chain (`deepseek/deepseek-v4-flash` → `deepseek/deepseek-v4-flash` → `/openrouter/free`), configurable via environment variables.
+* **Audit Trail:** Full pipeline execution auditing — every case run, stage log, claim, and evidence binding is persisted to PostgreSQL for traceability and compliance.
+* **Zero-Friction Compliance:** GDPR-compliant audit logging with automatically generated, persistent cryptographic salts on first boot. No manual security configuration required.
+* **Browser-Based UI:** Vanilla HTML/CSS/JS frontend with disclaimer acceptance, drag-and-drop document upload, corpus management controls, real-time pipeline progress visualization, and structured result display.
 
 ## Architecture
 
 The system is built on a modern, asynchronous Python stack:
 
 * **Backend:** FastAPI, Uvicorn
-* **Database:** PostgreSQL 16 with `pgvector` extension
+* **Database:** PostgreSQL 16 with `pgvector` extension for vector similarity search
 * **ORM & Migrations:** SQLAlchemy 2.0 (asyncio), Alembic
 * **Frontend:** Vanilla HTML/JS/CSS (Server-Sent Events for streaming)
+* **Tooling:** ruff (formatting & linting), mypy (strict type checking), pytest (unit & integration tests with coverage)
 
 ## Prerequisites
 
@@ -61,10 +64,10 @@ cp .env.example .env
 #    Open .env in any editor and set:
 #    OPENROUTER_API_KEY=sk-or-v1-...
 
-# 4. Start the stack (builds the image + starts PostgreSQL)
+# 4. Start the stack (builds the multi-stage image + starts PostgreSQL)
 docker compose up -d --build
 
-# 5. Wait ~10 seconds for the database to be ready, then run migrations
+# 5. Wait for the database health check to pass, then run migrations
 docker compose exec -it citizen-app alembic upgrade head
 
 # 6. Open the application
@@ -136,8 +139,8 @@ Verify the schema was created:
 
 ```bash
 psql -h localhost -U testuser -d testdb -c "\dt"
-# Should list 7 tables: case_run, claim, evidence_binding,
-#   legal_chunk, legal_source, pipeline_stage_log, user_session
+# Should list 7 tables: case_run, chunk_embedding, claim,
+#   evidence_binding, legal_chunk, legal_source, pipeline_stage_log
 ```
 
 ### Step 5 — Start the development server
@@ -151,6 +154,8 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 ---
 
 ## Running Tests
+
+The project includes an extensive test suite (~4300 lines) with unit and integration tests, plus benchmarking support.
 
 ### Unit tests (no database required)
 
@@ -166,6 +171,21 @@ pytest tests/unit/test_middleware.py -v
 # Run with coverage report
 pytest tests/unit/ -v --cov=app --cov-report=term-missing
 ```
+
+Unit test files:
+| File | Covers |
+|---|---|
+| `test_chunker.py` | Legal text hierarchical chunking |
+| `test_config.py` | Settings validation and salt generation |
+| `test_corpus_endpoint.py` | Corpus API route logic |
+| `test_db/test_models.py` | ORM model constraints and relationships |
+| `test_middleware.py` | Disclaimer and rate-limiting middleware |
+| `test_ocr.py` | 3-tier OCR fallback pipeline |
+| `test_pdf.py` | PDF extraction utilities |
+| `test_pipeline.py` | 7-stage pipeline orchestrator |
+| `test_reasoning.py` | LLM reasoning service |
+| `test_router.py` | OpenRouter client and fallback chain |
+| `test_session.py` | Async database session factory |
 
 ### Integration tests (requires a running database)
 
@@ -186,6 +206,14 @@ pytest tests/integration/ -v
 pytest tests/integration/test_pipeline.py::TestFullPipelineExecution::test_full_pipeline_execution -v
 ```
 
+Integration test files:
+| File | Covers |
+|---|---|
+| `test_api_routes.py` | Full API endpoint round-trips |
+| `test_corpus.py` | Corpus scraping, chunking, and embedding |
+| `test_pipeline.py` | End-to-end pipeline with live DB |
+| `test_retrieval.py` | pgvector similarity search |
+
 ### All tests at once
 
 ```bash
@@ -193,6 +221,32 @@ pytest tests/integration/test_pipeline.py::TestFullPipelineExecution::test_full_
 alembic upgrade head
 pytest -v
 ```
+
+### Code quality
+
+```bash
+# Formatting & linting
+ruff check app/ tests/
+ruff format --check app/ tests/
+
+# Type checking (strict mode)
+mypy app/
+
+# Benchmarking
+pytest --benchmark-only tests/
+```
+
+---
+
+## API Endpoints
+
+| Group | Prefix | Endpoints | Description |
+|---|---|---|---|
+| **ingest** | `/api/v1` | `POST /ingest` | Upload and OCR a document (PDF/JPG/PNG) |
+| **analyze** | `/api/v1` | `POST /analyze` | Execute the full 7-stage pipeline, streaming SSE |
+| **corpus** | `/api/v1` | `POST /corpus/update`, `GET /corpus/status/{job_id}` | Trigger legal corpus scrape & embedding, check progress |
+| **meta** | `/api/v1` | `GET /meta/disclaimer/version`, `GET /meta/disclaimer/text`, `GET /meta/version` | Disclaimer and version metadata |
+| **health** | `/` | `GET /health` | Liveness probe |
 
 ---
 
@@ -207,48 +261,62 @@ citizen/
 │   └── script.py.mako
 ├── app/                              # Application source
 │   ├── api/
-│   │   └── routes/                   # API route handlers
+│   │   └── routes/
+│   │       ├── analyze.py            # POST /analyze (SSE pipeline streaming)
+│   │       ├── corpus.py             # POST /corpus/update, GET /corpus/status
+│   │       ├── ingest.py             # POST /ingest (document upload & OCR)
+│   │       └── meta.py               # GET /meta/* (disclaimer, version)
 │   ├── core/
 │   │   ├── config.py                 # Settings & validation (Pydantic)
 │   │   ├── pipeline.py               # 7-stage orchestrator
 │   │   └── router.py                 # LLM router + fallback chain
 │   ├── db/
-│   │   ├── models.py                 # SQLAlchemy ORM models
+│   │   ├── models.py                 # SQLAlchemy ORM models (7 tables)
 │   │   └── session.py                # Async DB session factory
 │   ├── middleware/
 │   │   ├── disclaimer.py             # Consent enforcement middleware
 │   │   └── rate_limit.py             # Token-bucket rate limiter
 │   ├── services/
-│   │   ├── corpus.py                 # Legal corpus scraper & chunker
+│   │   ├── audit.py                  # Audit trail persistence (case runs, claims, evidence)
+│   │   ├── corpus.py                 # Legal corpus scraper, chunker & embedder
 │   │   ├── ocr.py                    # 3-tier OCR fallback pipeline
 │   │   ├── reasoning.py              # LLM-based reasoning service
 │   │   └── retrieval.py              # pgvector similarity search
 │   ├── utils/
-│   │   ├── image.py                  # Image normalization (300dpi JPG)
+│   │   ├── image.py                  # Image normalization (300 dpi JPG)
 │   │   ├── pdf.py                    # PDF extraction utilities
 │   │   └── text.py                   # Text normalization helpers
 │   ├── __init__.py
-│   └── main.py                       # FastAPI app entry point
+│   └── main.py                       # FastAPI app entry point (lifespan, middleware, routers)
 ├── devdocs/                          # Architecture documentation
-├── static/                           # Frontend assets (HTML/JS/CSS)
+│   ├── design_document.md            # High-level design
+│   ├── roadmap.md                    # Work packages & milestones
+│   └── technical_specification.md    # Detailed technical spec
+├── static/                           # Frontend assets
+│   ├── index.html                    # Main application page
+│   ├── app.js                        # SSE streaming client, corpus UI, pipeline UI
+│   └── style.css                     # Responsive styles
 ├── tests/
-│   ├── unit/                         # Unit tests (no DB needed)
-│   ├── integration/                  # Integration tests (DB required)
+│   ├── unit/                         # Unit tests (12 files, no DB needed)
+│   ├── integration/                  # Integration tests (4 files, DB required)
 │   └── conftest.py                   # Shared fixtures
 ├── alembic.ini                       # Alembic configuration
-├── deploy_db.sh                      # Database reconciliation helper
-├── DISCLAIMER.md                     # Liability disclaimer (bilingual)
-├── docker-compose.yml                # Docker Compose stack
-├── Dockerfile                        # Application container
+├── DISCLAIMER.md                     # Liability disclaimer (bilingual EN/DE)
+├── docker-compose.yml                # Docker Compose stack (db + citizen-app)
+├── Dockerfile                        # Multi-stage application container
+├── LICENSE                           # MIT license
 ├── pyproject.toml                    # Project metadata & dependencies
+├── .env.example                      # Environment variable template
 └── README.md                         # This file
 ```
 
 ## Security & Privacy Posture
 
 * **Data Locality:** All document processing, OCR, and database operations run locally. Only normalized text (stripped of EXIF/metadata) is transmitted to OpenRouter for LLM inference.
-* **Consent Enforcement:** The API and UI mandate explicit acknowledgment of a liability disclaimer before execution.
+* **Consent Enforcement:** The API and UI mandate explicit acknowledgment of a liability disclaimer before execution. The disclaimer is versioned and the frontend persists acknowledgment in `localStorage`.
 * **Data Minimization:** To comply with DSGVO/GDPR, IP addresses are never stored in plain text. The system automatically generates a local `.secret_salt` file on first boot to securely hash session data in the audit logs.
+* **Port Binding:** All services bind to `127.0.0.1` (localhost) by default, preventing external network access.
+* **Rate Limiting:** An in-memory sliding-window rate limiter is enabled by default (configurable requests/window), guarding against runaway or abusive requests.
 
 ## API Documentation
 

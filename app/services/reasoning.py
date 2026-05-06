@@ -211,6 +211,7 @@ async def classify_issues(normalized_text: str) -> list[str]:
     list[str]
         A list of identified legal issue labels.
     """
+    logger.info("classify_issues: starting (input=%d chars)", len(normalized_text))
     client = _get_client()
     messages = [
         {"role": "system", "content": _CLASSIFICATION_SYSTEM + _STRICT_SUFFIX},
@@ -268,6 +269,7 @@ async def decompose_questions(normalized_text: str) -> list[str]:
     list[str]
         A list of extracted legal questions.
     """
+    logger.info("decompose_questions: starting (input=%d chars)", len(normalized_text))
     client = _get_client()
     messages = [
         {"role": "system", "content": _DECOMPOSITION_SYSTEM + _STRICT_SUFFIX},
@@ -336,6 +338,7 @@ async def construct_claims(
         A list of claim dicts with keys: ``claim_text``, ``confidence_score``,
         ``claim_type``, ``question``.
     """
+    logger.info("construct_claims: starting (%d chunks, %d questions)", len(chunks), len(questions))
     client = _get_client()
 
     chunk_context = "\n\n---\n\n".join(
@@ -445,6 +448,7 @@ async def verify_claims(
     if not claims:
         return []
 
+    logger.info("verify_claims: starting (%d claims, %d chunks)", len(claims), len(chunks))
     client = _get_client()
 
     chunk_text = "\n\n---\n\n".join(
@@ -556,6 +560,7 @@ async def generate_output(
         A dict with keys: ``sachverhalt``, ``rechtliche_wuerdigung``,
         ``ergebnis``, ``handlungsempfehlung``, ``entwurf``, ``unsicherheiten``.
     """
+    logger.info("generate_output: starting (%d verified claims)", len(verified_claims))
     client = _get_client()
 
     claims_text = "\n".join(

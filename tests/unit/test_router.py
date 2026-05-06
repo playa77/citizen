@@ -144,7 +144,8 @@ class TestFallbackChain:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """When the primary model returns 429, the client retries then falls
-        through to FALLBACK_MODEL_1, which succeeds."""
+        through to FALLBACK_MODEL_1. Since PRIMARY_MODEL and FALLBACK_MODEL_1
+        may be the same, the chain falls through to FALLBACK_MODEL_2."""
         from app.core.config import settings
 
         _call_count = {"n": 0}
@@ -153,14 +154,14 @@ class TestFallbackChain:
             _call_count["n"] += 1
             model_used = kwargs["json"]["model"]
 
-            # Primary model always returns 429.
-            if model_used == settings.PRIMARY_MODEL:
+            # Primary and fallback_1 both return 429 (same model).
+            if model_used in (settings.PRIMARY_MODEL, settings.FALLBACK_MODEL_1):
                 return httpx.Response(
                     status_code=429,
                     request=httpx.Request("POST", "https://example.com"),
                     content=b"Rate limited",
                 )
-            # Fallback 1 succeeds.
+            # Fallback 2 succeeds.
             return httpx.Response(
                 status_code=200,
                 request=httpx.Request("POST", "https://example.com"),
@@ -172,8 +173,9 @@ class TestFallbackChain:
         result = await client.chat_completion(_MESSAGES)
 
         assert result == "fallback answer"
-        # Primary should have been attempted MAX_RETRIES times, then fallback_1 once.
-        assert mock_httpx_client.post.call_count == settings.MAX_RETRIES + 1
+        # Primary retried MAX_RETRIES, fallback_1 retried MAX_RETRIES,
+        # fallback_2 succeeds on first attempt.
+        assert mock_httpx_client.post.call_count == settings.MAX_RETRIES * 2 + 1
 
 
 # ===========================================================================

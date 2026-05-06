@@ -133,8 +133,8 @@ citizen/
 |----------|------|----------|---------|-------------|
 | `DATABASE_URL` | `str` | Yes | `postgresql+asyncpg://user:pass@localhost:5432/legal_engine` | Async SQLAlchemy connection string |
 | `OPENROUTER_API_KEY` | `str` | Yes | `""` | OpenRouter authentication token |
-| `PRIMARY_MODEL` | `str` | No | `qwen/qwen3.6-plus` | First-attempt LLM identifier |
-| `FALLBACK_MODEL_1` | `str` | No | `openai/gpt-5.4-nano` | Secondary fallback |
+| `PRIMARY_MODEL` | `str` | No | `deepseek/deepseek-v4-flash` | First-attempt LLM identifier |
+| `FALLBACK_MODEL_1` | `str` | No | `deepseek/deepseek-v4-flash` | Secondary fallback |
 | `FALLBACK_MODEL_2` | `str` | No | `/openrouter/free` | Ultimate fallback |
 | `MAX_RETRIES` | `int` | No | `3` | Max retry attempts per model before fallback |
 | `REQUEST_TIMEOUT` | `float` | No | `45.0` | Seconds before HTTP timeout |
@@ -145,7 +145,7 @@ citizen/
 | `VECTOR_DIM` | `int` | No | `1536` | Embedding vector dimension |
 | `TOP_K_RETRIEVAL` | `int` | No | `12` | Max chunks retrieved per question |
 | `MAX_COSINE_DISTANCE` | `float` | No | `0.75` | Cosine similarity threshold for diversity filtering |
-| `PIPELINE_TIMEOUT_SEC` | `int` | No | `120` | Hard timeout for full 7-stage execution |
+| `PIPELINE_TIMEOUT_SEC` | `int` | No | `300` | Hard timeout for full 7-stage execution |
 | `LOG_LEVEL` | `str` | No | `INFO` | Python logging level |
 | `CORS_ORIGINS` | `str` | No | `["http://localhost:8000"]` | Allowed frontend origins |
 | `DISCLAIMER_VERSION` | `str` | No | `v1.0.0` | Current disclaimer version for client validation |
@@ -154,8 +154,8 @@ citizen/
 ```env
 DATABASE_URL=postgresql+asyncpg://legal_user:secure_password_123@localhost:5432/citizen_db
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-PRIMARY_MODEL=qwen/qwen3.6-plus
-FALLBACK_MODEL_1=openai/gpt-5.4-nano
+PRIMARY_MODEL=deepseek/deepseek-v4-flash
+FALLBACK_MODEL_1=deepseek/deepseek-v4-flash
 FALLBACK_MODEL_2=/openrouter/free
 MAX_RETRIES=3
 REQUEST_TIMEOUT=45.0
@@ -166,7 +166,7 @@ EMBEDDING_MODEL=text-embedding-3-small
 VECTOR_DIM=1536
 TOP_K_RETRIEVAL=12
 MAX_COSINE_DISTANCE=0.75
-PIPELINE_TIMEOUT_SEC=120
+PIPELINE_TIMEOUT_SEC=300
 LOG_LEVEL=INFO
 CORS_ORIGINS=["http://localhost:8000"]
 ```
@@ -298,8 +298,8 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str
     OPENROUTER_API_KEY: str
-    PRIMARY_MODEL: str = "qwen/qwen3.6-plus"
-    FALLBACK_MODEL_1: str = "openai/gpt-5.4-nano"
+    PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
+    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
     FALLBACK_MODEL_2: str = "/openrouter/free"
     MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 45.0
@@ -310,7 +310,7 @@ class Settings(BaseSettings):
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 12
     MAX_COSINE_DISTANCE: float = 0.75
-    PIPELINE_TIMEOUT_SEC: int = 120
+    PIPELINE_TIMEOUT_SEC: int = 300
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: List[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v1.0.0"

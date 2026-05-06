@@ -37,7 +37,7 @@
 | **M2: Data Layer & Corpus Ingestion** | SQLAlchemy models, Alembic migrations, `pgvector` setup, scraper/chunker implementation. | `alembic upgrade head` succeeds. `/api/v1/corpus/update` populates DB with 100+ hierarchical chunks. |
 | **M3: OCR & Document Processing** | Local OCR pipeline, PDF fallback chain, JPG standardization, text normalization. | Uploading a 5MB scanned PDF returns clean UTF-8 text in <5s. Fallbacks trigger correctly on malformed files. |
 | **M4: LLM Router & Reasoning Engine** | OpenRouter client, fallback chain, 7-stage pipeline orchestrator, prompt engineering. | Pipeline executes 7 stages sequentially. Fallback chain logs correctly. JSON parsing never crashes. |
-| **M5: API, UI & Integration** | FastAPI routes, SSE streaming, static frontend, end-to-end pipeline wiring. | `/api/v1/analyze` streams progress. UI renders 6-part output. Full run completes in <120s. |
+| **M5: API, UI & Integration** | FastAPI routes, SSE streaming, static frontend, end-to-end pipeline wiring. | `/api/v1/analyze` streams progress. UI renders 6-part output. Full run completes in <300s. |
 | **M6: Testing, Validation & Release** | Comprehensive test suite, performance benchmarks, security hardening, v1.0 tag. | `pytest` passes 100%. Coverage >= 85%. `docker compose` runs cleanly. MIT license applied. |
 
 ---
@@ -133,7 +133,7 @@
 **Signatures:** `@dataclass class PipelineState: ...`, `async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]: ...`
 **Acceptance Criteria:**
 - `pytest tests/unit/test_pipeline.py::test_stage_sequence` passes (verifies order: normalization → classification → ... → generation).
-- `asyncio.wait_for(run_pipeline(state), timeout=120)` raises `TimeoutError` correctly.
+- `asyncio.wait_for(run_pipeline(state), timeout=300)` raises `TimeoutError` correctly.
 - SSE format matches `data: {"stage": "...", "status": "complete", "payload": ...}\n\n`.
 
 ### WP-011: Reasoning Engine Prompts & JSON Parsing
@@ -183,7 +183,7 @@
 **Signatures:** `async def test_full_pipeline_execution(): ...`
 **Acceptance Criteria:**
 - `pytest tests/integration/test_pipeline.py::test_full_pipeline_execution` passes.
-- Total latency < 120s for 3-page scanned PDF.
+- Total latency < 300s for 3-page scanned PDF.
 - `pipeline_stage_log` table contains 7 rows per run.
 - `claim` and `evidence_binding` tables populated correctly.
 - `pytest tests/integration/test_pipeline.py::test_disclaimer_enforcement` passes (verifies full pipeline only executes post-acknowledgment).

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Sequence
 from typing import Any
 
@@ -89,20 +90,35 @@ class OpenRouterClient:
                         "messages": messages,
                         "temperature": temperature,
                     }
+                    logger.info(
+                        "chat_completion → sending (model=%s, attempt=%d, msg_chars=%d)",
+                        current_model,
+                        attempt,
+                        sum(len(m.get("content", "")) for m in messages),
+                    )
+                    req_start = time.monotonic()
                     resp = await self._client.post(
                         _API_URL,
                         json=payload,
                         headers=_headers(),
                     )
+                    req_elapsed = time.monotonic() - req_start
                     resp.raise_for_status()
                     body = resp.json()
                     content: str = body["choices"][0]["message"]["content"]
+                    logger.info(
+                        "chat_completion OK (model=%s, attempt=%d, %.1fs)",
+                        current_model,
+                        attempt,
+                        req_elapsed,
+                    )
                     return content
                 except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
                     logger.warning(
-                        "chat_completion failed (model=%s, attempt=%d): %s",
+                        "chat_completion FAILED (model=%s, attempt=%d, elapsed=%.1fs): %s",
                         current_model,
                         attempt,
+                        time.monotonic() - req_start,
                         exc,
                     )
                     if attempt < settings.MAX_RETRIES:
@@ -110,9 +126,10 @@ class OpenRouterClient:
                     continue
                 except (KeyError, IndexError) as exc:
                     logger.warning(
-                        "Malformed API response (model=%s, attempt=%d): %s",
+                        "Malformed API response (model=%s, attempt=%d, elapsed=%.1fs): %s",
                         current_model,
                         attempt,
+                        time.monotonic() - req_start,
                         exc,
                     )
                     if attempt < settings.MAX_RETRIES:

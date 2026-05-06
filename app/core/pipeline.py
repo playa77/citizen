@@ -235,6 +235,7 @@ async def execute_stage(
     if stage_name not in _STAGE_MAP:
         raise StageExecutionError(f"Unknown stage: {stage_name!r}")
 
+    logger.info("  → entering stage: %s", stage_name)
     start = time.monotonic()
     try:
         await _STAGE_MAP[stage_name](state)
@@ -256,6 +257,7 @@ async def execute_stage(
         raise StageExecutionError(f"Stage {stage_name!r} failed: {exc}") from exc
 
     duration_ms = int((time.monotonic() - start) * 1000)
+    logger.info("  ← stage %s finished in %dms", stage_name, duration_ms)
     yield _sse_event(
         stage=stage_name,
         status="complete",
@@ -320,18 +322,39 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
         # Check remaining time budget
         elapsed = time.monotonic() - started
         remaining = timeout_sec - elapsed
+        logger.info(
+            "▶ Stage %-14s | elapsed=%5.1fs | remaining=%5.1fs | budget=%ds",
+            stage_name,
+            elapsed,
+            remaining,
+            timeout_sec,
+        )
         if remaining <= 0:
             raise PipelineTimeoutError(f"Pipeline execution exceeded {timeout_sec}s timeout")
 
+        stage_start = time.monotonic()
         try:
             events = await asyncio.wait_for(
                 _collect_single_stage(stage_name, state),
                 timeout=max(remaining, 5.0),
             )
         except TimeoutError:
+            logger.error(
+                "✗ Stage %-14s TIMED OUT after %.1fs (budget %.1fs remaining)",
+                stage_name,
+                time.monotonic() - stage_start,
+                remaining,
+            )
             raise PipelineTimeoutError(
                 f"Pipeline execution exceeded {timeout_sec}s timeout"
             ) from None
+
+        stage_dur = time.monotonic() - stage_start
+        logger.info(
+            "✓ Stage %-14s completed in %.1fs",
+            stage_name,
+            stage_dur,
+        )
 
         for event in events:
             yield event

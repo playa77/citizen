@@ -114,9 +114,9 @@ class TestSettingsValidation:
 
         assert s.DATABASE_URL == "postgresql+asyncpg://user:pass@localhost:5432/test"
         assert s.OPENROUTER_API_KEY == "sk-test-key"
-        assert s.PRIMARY_MODEL == "openrouter/auto"
+        assert s.PRIMARY_MODEL == "deepseek/deepseek-v4-flash"
         assert s.MAX_FILE_SIZE_MB == 25
-        assert s.PIPELINE_TIMEOUT_SEC == 120
+        assert s.PIPELINE_TIMEOUT_SEC == 300
 
     def test_default_values_applied(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings

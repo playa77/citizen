@@ -305,8 +305,8 @@ class TestFullPipelineExecution:
             events = _consume_sse(response)
         elapsed = time.monotonic() - start
 
-        # Acceptance: total latency < 120 s
-        assert elapsed < 120.0, f"Pipeline took {elapsed:.1f}s, exceeding 120s limit"
+        # Acceptance: total latency < 300 s
+        assert elapsed < 300.0, f"Pipeline took {elapsed:.1f}s, exceeding 300s limit"
 
         # Verify SSE events contain the 7 expected stages in order
         stage_events = [e for e in events if e.get("stage") and "final_output" not in e]

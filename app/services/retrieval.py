@@ -59,6 +59,7 @@ async def retrieve_chunks(
     if not questions:
         return []
 
+    logger.info("retrieve_chunks: starting (%d questions)", len(questions))
     top_k = settings.TOP_K_RETRIEVAL
     threshold = settings.MAX_COSINE_DISTANCE
 

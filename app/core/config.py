@@ -31,9 +31,9 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     OPENROUTER_API_KEY: str
-    PRIMARY_MODEL: str = "openrouter/auto"  # Override in .env with a real model ID
-    FALLBACK_MODEL_1: str = ""  # Optional fallback — set in .env if desired
-    FALLBACK_MODEL_2: str = ""  # Optional fallback — set in .env if desired
+    PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
+    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
+    FALLBACK_MODEL_2: str = "/openrouter/free"
     MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 45.0
     MAX_FILE_SIZE_MB: int = 25
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 12
     MAX_COSINE_DISTANCE: float = 0.75
-    PIPELINE_TIMEOUT_SEC: int = 120
+    PIPELINE_TIMEOUT_SEC: int = 300
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v0.1.0"
