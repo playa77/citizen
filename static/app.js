@@ -5,6 +5,7 @@
  * Handles:
  * - Disclaimer acceptance modal with localStorage persistence
  * - Document upload and OCR via /api/v1/ingest
+ * - Corpus update via /api/v1/corpus/update with status polling
  * - SSE streaming analysis via /api/v1/analyze
  * - 6-section output rendering
  */
@@ -39,6 +40,13 @@
         resultsSection: document.getElementById('results-section'),
         resultsContainer: document.getElementById('results-container'),
         errorDisplay: document.getElementById('error-display'),
+        // Corpus management
+        corpusUpdateBtn: document.getElementById('corpus-update-btn'),
+        corpusProgress: document.getElementById('corpus-progress'),
+        corpusProgressFill: document.getElementById('corpus-progress-fill'),
+        corpusSubstage: document.getElementById('corpus-substage'),
+        corpusChunksCount: document.getElementById('corpus-chunks-count'),
+        corpusResult: document.getElementById('corpus-result'),
     };
 
     // State
@@ -48,6 +56,9 @@
         disclaimerVersion: null,
         sessionId: null,
         hasExtracted: false,
+        // Corpus update tracking
+        corpusJobId: null,
+        corpusPollingTimer: null,
     };
 
     // Stage name mapping (for display)
@@ -518,6 +529,196 @@
     }
 
     // =========================================================================
+    // Corpus Management
+    // =========================================================================
+
+    /**
+     * Mapping of substage values to user-visible German labels
+     */
+    const substageLabels = {
+        scraping: 'Rechtsquellen werden abgerufen und aufbereitet …',
+        embedding: 'Vektordarstellungen (Embeddings) werden generiert …',
+        upserting: 'Einträge werden in der Datenbank gespeichert …',
+    };
+
+    /**
+     * Handle corpus update button click
+     */
+    async function handleCorpusUpdate() {
+        // Prevent double-trigger
+        if (state.corpusJobId) return;
+
+        // Clear any previous result
+        elements.corpusResult.classList.add('hidden');
+        elements.corpusResult.textContent = '';
+        elements.corpusResult.className = 'corpus-result hidden';
+
+        // Show progress area
+        elements.corpusProgress.classList.remove('hidden');
+        elements.corpusSubstage.textContent = 'Auftrag wird eingereiht …';
+        elements.corpusChunksCount.textContent = '';
+        elements.corpusProgressFill.classList.remove('indeterminate');
+        elements.corpusProgressFill.style.width = '0%';
+
+        // Disable button
+        elements.corpusUpdateBtn.disabled = true;
+        elements.corpusUpdateBtn.textContent = 'Corpus-Aktualisierung läuft …';
+
+        try {
+            const response = await fetch('/api/v1/corpus/update', {
+                method: 'POST',
+                headers: buildHeaders(),
+            });
+
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+
+            const data = await response.json();
+            state.corpusJobId = data.job_id;
+
+            // Start polling
+            elements.corpusSubstage.textContent = 'Auftrag gestartet — warte auf erste Rückmeldung …';
+            pollCorpusStatus(data.job_id);
+        } catch (err) {
+            showCorpusError(err.message);
+        }
+    }
+
+    /**
+     * Poll GET /api/v1/corpus/status/{job_id} until the job completes or fails
+     */
+    function pollCorpusStatus(jobId) {
+        if (state.corpusPollingTimer) {
+            clearTimeout(state.corpusPollingTimer);
+        }
+
+        state.corpusPollingTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/v1/corpus/status/${jobId}`, {
+                    method: 'GET',
+                    headers: buildHeaders(),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showCorpusError('Auftrag nicht mehr im Speicher — bitte erneut versuchen.');
+                        return;
+                    }
+                    await handleApiError(response);
+                    return;
+                }
+
+                const job = await response.json();
+                updateCorpusProgress(job);
+
+                if (job.status === 'completed' || job.status === 'failed') {
+                    finishCorpusUpdate(job);
+                } else {
+                    // Continue polling
+                    pollCorpusStatus(jobId);
+                }
+            } catch (err) {
+                showCorpusError(err.message);
+            }
+        }, 2000);
+    }
+
+    /**
+     * Update the UI based on current job status
+     */
+    function updateCorpusProgress(job) {
+        // Update substage label
+        if (job.substage && substageLabels[job.substage]) {
+            elements.corpusSubstage.textContent = substageLabels[job.substage];
+        }
+
+        // Build chunks status line
+        if (job.substage === 'scraping' && job.chunks_scraped > 0) {
+            elements.corpusChunksCount.textContent =
+                `${job.chunks_scraped} Textblöcke bisher abgerufen`;
+        } else if (job.substage === 'embedding' && job.chunks_scraped > 0) {
+            elements.corpusChunksCount.textContent =
+                `${job.chunks_scraped} Textblöcke werden verarbeitet`;
+        } else if (job.substage === 'upserting' && job.chunks_scraped > 0) {
+            elements.corpusChunksCount.textContent =
+                `${job.chunks_scraped} Textblöcke in DB`;
+        }
+
+        // Update progress bar style
+        if (job.status === 'running') {
+            // Indeterminate shimmer — we don't know exact progress within the 3 stages
+            elements.corpusProgressFill.classList.add('indeterminate');
+        }
+    }
+
+    /**
+     * Handle job completion or failure
+     */
+    function finishCorpusUpdate(job) {
+        // Stop polling
+        if (state.corpusPollingTimer) {
+            clearTimeout(state.corpusPollingTimer);
+            state.corpusPollingTimer = null;
+        }
+        state.corpusJobId = null;
+
+        // Hide progress
+        elements.corpusProgress.classList.add('hidden');
+
+        // Re-enable button
+        elements.corpusUpdateBtn.disabled = false;
+        elements.corpusUpdateBtn.textContent = 'Corpus aktualisieren';
+
+        // Show result
+        elements.corpusResult.classList.remove('hidden');
+
+        if (job.status === 'completed') {
+            const count = job.chunks_processed || 0;
+            if (count > 0) {
+                elements.corpusResult.className = 'corpus-result success';
+                elements.corpusResult.textContent =
+                    `Corpus-Aktualisierung abgeschlossen: ${count} Texteinträge wurden verarbeitet und gespeichert.`;
+            } else {
+                elements.corpusResult.className = 'corpus-result warning';
+                elements.corpusResult.textContent =
+                    'Corpus-Aktualisierung abgeschlossen, aber es wurden keine Einträge gefunden. ' +
+                    'Bitte prüfen Sie die Netzwerkverbindung und die Verfügbarkeit von gesetze-im-internet.de.';
+            }
+        } else if (job.status === 'failed') {
+            const errMsg = job.error || 'Unbekannter Fehler';
+            elements.corpusResult.className = 'corpus-result error';
+            elements.corpusResult.textContent =
+                `Corpus-Aktualisierung fehlgeschlagen: ${errMsg}`;
+        }
+    }
+
+    /**
+     * Show a corpus update error and reset UI
+     */
+    function showCorpusError(message) {
+        // Stop polling
+        if (state.corpusPollingTimer) {
+            clearTimeout(state.corpusPollingTimer);
+            state.corpusPollingTimer = null;
+        }
+        state.corpusJobId = null;
+
+        // Hide progress
+        elements.corpusProgress.classList.add('hidden');
+
+        // Re-enable button
+        elements.corpusUpdateBtn.disabled = false;
+        elements.corpusUpdateBtn.textContent = 'Corpus aktualisieren';
+
+        // Show error
+        elements.corpusResult.classList.remove('hidden');
+        elements.corpusResult.className = 'corpus-result error';
+        elements.corpusResult.textContent = `Fehler: ${message}`;
+    }
+
+    // =========================================================================
     // Initialization
     // =========================================================================
 
@@ -545,6 +746,7 @@
         elements.removeFile.addEventListener('click', handleRemoveFile);
         elements.uploadBtn.addEventListener('click', handleUpload);
         elements.analyzeBtn.addEventListener('click', handleAnalyze);
+        elements.corpusUpdateBtn.addEventListener('click', handleCorpusUpdate);
 
         // Show app if disclaimer was already accepted
         if (accepted) {

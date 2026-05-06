@@ -212,13 +212,14 @@ class TestInferLawName:
         assert result == "SGB II"
 
     def test_uses_title_from_html(self) -> None:
-        html = """<html><head><title>SGB II Gesetz</title></head>
+        """For unknown source types, name is extracted from HTML title."""
+        html = """<html><head><title>Unbekanntes Gesetz</title></head>
         <body><p>Test</p></body></html>"""
         soup = BeautifulSoup(html, "lxml")
         p_tag = soup.find("p")
         assert isinstance(p_tag, BeautifulSoup) or p_tag is not None
-        result = corpus_mod._infer_law_name(p_tag, "sgb2")
-        assert result == "SGB II Gesetz"
+        result = corpus_mod._infer_law_name(p_tag, "unknown_type")
+        assert result == "Unbekanntes Gesetz"
 
 
 # ===================================================================
@@ -255,26 +256,53 @@ class TestScrapeAndChunk:
 
     @pytest.mark.asyncio
     async def test_successful_scrape_returns_chunks(self) -> None:
-        """Mock a successful HTTP response and verify chunk production."""
-        mock_html = """
+        """Mock index + consolidated HTML responses and verify chunk production."""
+        mock_index_html = """
+        <html><body>
+            <h2><a href="BJNR1234.html">HTML</a></h2>
+        </body></html>
+        """
+        mock_consolidated_html = """
         <html>
         <head><title>SGB II</title></head>
         <body>
-            <content>
-                <p>§ 31 Abs. 1 Satz 1 Der Anspruch besteht.</p>
-                <p>§ 31 Abs. 1 Satz 2 Er wird gewährt.</p>
-                <p>Allgemeiner Text ohne Struktur.</p>
-            </content>
+          <div class="jnnorm" title="Einzelnorm">
+            <div class="jnheader">
+              <h3><span class="jnenbez">§ 31</span>
+              <span class="jnentitel">Pflichten</span></h3>
+            </div>
+            <div class="jnhtml">
+              <div class="jurAbsatz">(1) Der Anspruch besteht.</div>
+              <div class="jurAbsatz">(2) Er wird gewahrt.</div>
+            </div>
+          </div>
+          <div class="jnnorm" title="Einzelnorm">
+            <div class="jnheader">
+              <h3><span class="jnenbez">§ 32</span>
+              <span class="jnentitel">Sanktionen</span></h3>
+            </div>
+            <div class="jnhtml">
+              <div class="jurAbsatz">(1) Bei Pflichtverletzung.</div>
+            </div>
+          </div>
         </body>
         </html>
         """
 
-        mock_response = MagicMock()
-        mock_response.text = mock_html
-        mock_response.raise_for_status = MagicMock()
+        mock_index_resp = MagicMock()
+        mock_index_resp.text = mock_index_html
+        mock_index_resp.status_code = 200
+        mock_index_resp.raise_for_status = MagicMock()
+
+        mock_consol_resp = MagicMock()
+        mock_consol_resp.text = mock_consolidated_html
+        mock_consol_resp.status_code = 200
+        mock_consol_resp.raise_for_status = MagicMock()
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_client.get = AsyncMock(
+            side_effect=[mock_index_resp, mock_consol_resp]
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
@@ -282,7 +310,7 @@ class TestScrapeAndChunk:
             chunks = await corpus_mod.scrape_and_chunk("sgb2")
 
         assert isinstance(chunks, list)
-        assert len(chunks) >= 2
+        assert len(chunks) == 3
 
         # Verify required output keys
         for chunk in chunks:
@@ -290,11 +318,19 @@ class TestScrapeAndChunk:
             assert "hierarchy_path" in chunk
             assert "text_content" in chunk
 
+        # Verify hierarchy
+        paths = [c["hierarchy_path"] for c in chunks]
+        assert any("§ 31" in p for p in paths)
+        assert any("§ 32" in p for p in paths)
+
     @pytest.mark.asyncio
     async def test_empty_body_returns_no_chunks(self) -> None:
-        """If the page has no paragraph content, return empty list."""
+        """If the page has no consolidated HTML link, return empty list."""
+        mock_index_html = "<html><body><p>Just an index page with no BJNR link.</p></body></html>"
+
         mock_response = MagicMock()
-        mock_response.text = "<html><body></body></html>"
+        mock_response.text = mock_index_html
+        mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
@@ -311,6 +347,7 @@ class TestScrapeAndChunk:
     async def test_http_error_propagates(self) -> None:
         """A non-2xx response should raise via httpx.Response.raise_for_status."""
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock(
             side_effect=httpx.HTTPStatusError(
                 "500", request=MagicMock(), response=MagicMock(status_code=500)
@@ -333,6 +370,7 @@ class TestScrapeAndChunk:
         """Verify scrape_and_chunk accepts an externally provided client."""
         mock_response = MagicMock()
         mock_response.text = "<html><body><p>§ 5 Test.</p></body></html>"
+        mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
@@ -345,20 +383,43 @@ class TestScrapeAndChunk:
 
 
 class TestScrapeAllSourceTypes:
-    """Ensure all four source types are accepted without error."""
+    """Ensure all valid source types are accepted without error."""
 
     @pytest.mark.asyncio
     async def test_all_source_types_accepted(self) -> None:
-        mock_response = MagicMock()
-        mock_response.text = "<html><body><p>§ 1 Inhalt.</p></body></html>"
-        mock_response.raise_for_status = MagicMock()
+        mock_index_html = """
+        <html><body>
+            <h2><a href="BJNR1234.html">HTML</a></h2>
+        </body></html>
+        """
+        mock_consol_html = """
+        <html><body>
+          <div class="jnnorm" title="Einzelnorm">
+            <div class="jnheader">
+              <h3><span class="jnenbez">§ 1</span></h3>
+            </div>
+            <div class="jnhtml">
+              <div class="jurAbsatz">(1) Inhalt.</div>
+            </div>
+          </div>
+        </body></html>
+        """
 
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_index = MagicMock()
+        mock_index.text = mock_index_html
+        mock_index.status_code = 200
+        mock_index.raise_for_status = MagicMock()
 
-        for st in ("sgb2", "sgbx", "weisung", "bsg"):
+        mock_consol = MagicMock()
+        mock_consol.text = mock_consol_html
+        mock_consol.status_code = 200
+        mock_consol.raise_for_status = MagicMock()
+
+        for st in ("sgb2", "sgbx"):
+            mock_client = AsyncMock(spec=httpx.AsyncClient)
+            mock_client.get = AsyncMock(side_effect=[mock_index, mock_consol])
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
             with patch("httpx.AsyncClient", return_value=mock_client):
                 chunks = await corpus_mod.scrape_and_chunk(st)
             assert isinstance(chunks, list)

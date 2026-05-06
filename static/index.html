@@ -51,6 +51,33 @@
                 <button id="upload-btn" class="btn btn-primary" disabled>Text extrahieren</button>
             </section>
 
+            <!-- Corpus Management Section -->
+            <section id="corpus-section" class="section">
+                <h2>Corpus-Verwaltung</h2>
+                <p class="corpus-description">
+                    Das lokale Rechtsquellen-Corpus enthält die paragraphenweise aufbereiteten
+                    Gesetzestexte von gesetze-im-internet.de. Vor der ersten Analyse muss das
+                    Corpus einmalig aktualisiert werden; danach kann es bei Gesetzesänderungen
+                    manuell neu geladen werden. Die Aktualisierung umfasst folgende Schritte:
+                </p>
+                <ul class="corpus-steps">
+                    <li><strong>Scraping:</strong> Abruf und hierarchische Zerlegung der Gesetzestexte (SGB II, SGB X, Weisungen, BSG-Rechtsprechung)</li>
+                    <li><strong>Embedding:</strong> Erzeugung von Vektordarstellungen für jede Texteinheit (§, Absatz, Satz)</li>
+                    <li><strong>Speicherung:</strong> Upsert aller Einträge in die PostgreSQL/pgvector-Datenbank</li>
+                </ul>
+                <div class="corpus-controls">
+                    <button id="corpus-update-btn" class="btn btn-primary">Corpus aktualisieren</button>
+                    <div id="corpus-progress" class="corpus-progress hidden">
+                        <div class="corpus-progress-bar">
+                            <div class="corpus-progress-fill" id="corpus-progress-fill"></div>
+                        </div>
+                        <div class="corpus-substage" id="corpus-substage"></div>
+                        <div class="corpus-chunks-count" id="corpus-chunks-count"></div>
+                    </div>
+                    <div id="corpus-result" class="corpus-result hidden"></div>
+                </div>
+            </section>
+
             <!-- Analysis Section -->
             <section id="analysis-section" class="section hidden">
                 <h2>Analyse</h2>

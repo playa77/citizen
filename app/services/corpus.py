@@ -9,6 +9,7 @@ normalised :class:`dict` objects ready for embedding and DB insertion.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -30,15 +31,33 @@ from app.utils.text import normalize_text
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# HTTP client limits — be a good netizen
+# ---------------------------------------------------------------------------
+# Never open more than 4 concurrent connections to the same host.
+_HTTP_LIMITS = httpx.Limits(max_connections=4, max_keepalive_connections=2)
+
+# Minimum delay between consecutive requests to the same host (seconds).
+_POLITENESS_DELAY = 1.0
+
+# Exponential backoff: initial delay, max delay, max retry count.
+_BACKOFF_INITIAL = 1.0      # seconds
+_BACKOFF_MAX = 10.0         # seconds
+_BACKOFF_MAX_RETRIES = 3
+
+# HTTP status codes considered transient (worth retrying).
+_TRANSIENT_CODES = frozenset({429, 500, 502, 503, 504})
+
+# Prevent overlapping scrape operations (e.g. double-click of Corpus aktualisieren).
+_SCRAPE_SEMAPHORE = asyncio.Semaphore(1)
+
+# ---------------------------------------------------------------------------
 # Source URL prefixes (gesetze-im-internet.de official XML/HTML endpoints)
 # ---------------------------------------------------------------------------
 _BASE = "https://www.gesetze-im-internet.de"
 
 _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb2": "/sgb_2/",
-    "sgbx": "/sgb_x/",
-    "weisung": "/faw/",  # Fachliche Anweisungen / Weisungen
-    "bsg": "/bsg/",  # Bundessozialgericht decisions (future extension)
+    "sgbx": "/sgb_10/",  # SGB X = Zehntes Buch → sgb_10
 }
 
 # Regex for paragraph references, e.g. "§ 31"
@@ -53,8 +72,55 @@ _SATZ_RE = re.compile(r"Satz\s*(\d+)")
 _ENUM_SENTENCE_RE = re.compile(r"^(\d+)\.\s+")
 
 # ---------------------------------------------------------------------------
-# Core public API
+# Polite HTTP helper with exponential backoff
 # ---------------------------------------------------------------------------
+
+
+async def _http_get_with_backoff(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    delay: float = _POLITENESS_DELAY,
+) -> httpx.Response:
+    """GET *url* with exponential backoff on transient failures.
+
+    Only retries on connection errors, timeouts, and 5xx / 429 responses.
+    Respects a minimum politeness delay between the previous request and
+    this one (the caller must manage the shared clock; this function only
+    enforces the backoff on retries).
+    """
+    last_exc: Exception | None = None
+
+    for attempt in range(_BACKOFF_MAX_RETRIES + 1):
+        try:
+            resp = await client.get(url)
+        except (httpx.ConnectError, httpx.ReadError, httpx.TimeoutException) as exc:
+            last_exc = exc
+        else:
+            if resp.status_code < 500 and resp.status_code not in _TRANSIENT_CODES:
+                return resp  # success or non-retryable client error
+            # Transient status – treat as retryable
+            last_exc = httpx.HTTPStatusError(
+                f"Transient {resp.status_code}",
+                request=resp.request,
+                response=resp,
+            )
+
+        if attempt == _BACKOFF_MAX_RETRIES:
+            break
+
+        sleep_s = min(delay * (2 ** attempt), _BACKOFF_MAX)
+        logger.warning(
+            "HTTP GET %s failed (attempt %d/%d): %s – retrying in %.1fs",
+            url,
+            attempt + 1,
+            _BACKOFF_MAX_RETRIES + 1,
+            last_exc,
+            sleep_s,
+        )
+        await asyncio.sleep(sleep_s)
+
+    raise last_exc  # type: ignore[misc]
 
 
 async def scrape_and_chunk(
@@ -65,7 +131,7 @@ async def scrape_and_chunk(
     """Scrape a legal corpus from gesetze-im-internet.de and return hierarchical chunks.
 
     Args:
-        source_type: One of ``sgb2``, ``sgbx``, ``weisung``, ``bsg``.
+        source_type: One of ``sgb2``, ``sgbx``.
 
     Returns:
         List of dicts with keys: ``id``, ``source_type``, ``title``,
@@ -80,48 +146,141 @@ async def scrape_and_chunk(
     prefix = _SOURCE_TYPE_PREFIX[source_type]
     index_url = urljoin(_BASE, prefix)
 
-    async with client or httpx.AsyncClient(follow_redirects=True, timeout=30.0) as c:
-        resp = await c.get(index_url)
-        resp.raise_for_status()
+    async with _SCRAPE_SEMAPHORE:
+        async with client or httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=30.0,
+            limits=_HTTP_LIMITS,
+        ) as c:
+            # Step 1: Fetch index page to find consolidated HTML link
+            resp = await _http_get_with_backoff(c, index_url)
+            resp.raise_for_status()
+            index_soup = BeautifulSoup(resp.text, "lxml")
 
-    soup = BeautifulSoup(resp.text, "lxml")
-    paragraphs = _extract_paragraph_nodes(soup, source_type)
+            # Step 2: Find consolidated HTML link (BJNR*.html in same directory)
+            consolidated_href = _find_consolidated_href(index_soup)
+            if not consolidated_href:
+                logger.warning(
+                    "No consolidated HTML found for source_type=%s at %s", source_type, index_url
+                )
+                return []
 
-    chunks: list[dict[str, Any]] = []
+            consolidated_url = urljoin(index_url, consolidated_href)
+            logger.info("Fetching consolidated HTML: %s", consolidated_url)
 
-    for para_el in paragraphs:
-        hierarchy, text = _parse_paragraph_element(para_el, source_type)
-        if not text or not text.strip():
-            continue
+            # Politeness delay between requests to the same host.
+            await asyncio.sleep(_POLITENESS_DELAY)
 
-        norm_text = normalize_text(text)
-        if not norm_text:
-            continue
+            # Step 3: Fetch consolidated HTML
+            resp = await _http_get_with_backoff(c, consolidated_url)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
 
-        hierarchy_path = " > ".join(hierarchy)
+        # Step 4: Extract metadata (outside the HTTP client context but inside semaphore)
+        law_name = _infer_law_name(soup, source_type)
         effective_date = _infer_effective_date(soup)
 
-        chunks.append(
-            {
-                "id": str(uuid4()),
-                "source_type": source_type,
-                "title": hierarchy[0],
-                "unit_type": "satz",
-                "hierarchy_path": hierarchy_path,
-                "text_content": norm_text,
-                "effective_date": effective_date.isoformat(),
-                "source_url": urljoin(_BASE, prefix),
-                "version_hash": _compute_version_hash(norm_text),
-                "chunk_id": str(uuid4()),
-            }
-        )
+        # Step 5: Parse law structure (§ → Absatz)
+        chunks = _parse_law_sections(soup, source_type, law_name, effective_date, prefix)
 
     logger.info("Scraped %d chunks for source_type=%s", len(chunks), source_type)
     return chunks
 
 
+def _find_consolidated_href(soup: BeautifulSoup) -> str | None:
+    """Find the consolidated HTML link (BJNR<digits>.html) on the index page."""
+    for a_tag in soup.find_all("a", href=True):
+        href = str(a_tag["href"])
+        if re.match(r"^BJNR\d+\.html$", href):
+            return href
+    return None
+
+
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Consolidated HTML parser
+# ---------------------------------------------------------------------------
+
+
+def _parse_law_sections(
+    soup: BeautifulSoup,
+    source_type: str,
+    law_name: str,
+    effective_date: date,
+    prefix: str,
+) -> list[dict[str, Any]]:
+    """Parse consolidated HTML (BJNR*.html) into Absatz-level chunks.
+
+    Scans ``div.jnnorm`` elements for ``span.jnenbez`` containing a § reference,
+    then extracts ``div.jurAbsatz`` children as individual paragraphs.
+
+    Returns one chunk per ``jurAbsatz`` with hierarchy: Law > § N > Abs. X.
+    """
+    chunks: list[dict[str, Any]] = []
+    source_url = urljoin(_BASE, prefix)
+
+    for jnnorm in soup.find_all("div", class_="jnnorm"):
+        if not isinstance(jnnorm, Tag):
+            continue
+
+        jnenbez_span = jnnorm.find("span", class_="jnenbez")
+        if not jnenbez_span or not isinstance(jnenbez_span, Tag):
+            continue
+
+        jnenbez_text = jnenbez_span.get_text(strip=True)
+        para_match = _PARA_TAG_RE.search(jnenbez_text)
+        if not para_match:
+            continue
+
+        para_label = f"§ {para_match.group(1)}"
+
+        # Collect all jurAbsatz divs within this jnnorm
+        for jur_absatz in jnnorm.find_all("div", class_="jurAbsatz"):
+            if not isinstance(jur_absatz, Tag):
+                continue
+
+            # Skip synthetic jurAbsatz that only contain tables of contents
+            if jur_absatz.find("table") is not None:
+                continue
+
+            raw_text = jur_absatz.get_text(separator=" ", strip=True)
+            if not raw_text:
+                continue
+
+            raw_text = _clean_ocr_artefacts(raw_text)
+            norm_text = normalize_text(raw_text)
+            if not norm_text:
+                continue
+
+            # Detect Absatz number from text pattern like "(1)", "(2)", etc.
+            absatz_label = ""
+            abs_match = re.match(r"\((\d+[a-z]?)\)\s+", norm_text)
+            if abs_match:
+                absatz_label = f"Abs. {abs_match.group(1)}"
+
+            hierarchy = [law_name, para_label]
+            if absatz_label:
+                hierarchy.append(absatz_label)
+
+            chunks.append(
+                {
+                    "id": str(uuid4()),
+                    "source_type": source_type,
+                    "title": law_name,
+                    "unit_type": "satz",
+                    "hierarchy_path": " > ".join(hierarchy),
+                    "text_content": norm_text,
+                    "effective_date": effective_date.isoformat(),
+                    "source_url": source_url,
+                    "version_hash": _compute_version_hash(norm_text),
+                    "chunk_id": str(uuid4()),
+                }
+            )
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers (legacy — retained for compatibility)
 # ---------------------------------------------------------------------------
 
 
@@ -196,25 +355,35 @@ def _split_into_sentences(text: str) -> list[str]:
 
 
 def _infer_law_name(element: Tag, source_type: str) -> str:
-    """Derive the law name from surrounding HTML structure or source_type."""
-    # Check for <title> or <h1> within the same document
-    doc = element.find_parent("html") or element
-    if isinstance(doc, Tag):
-        title_tag = doc.find("title")
-        if title_tag and title_tag.get_text(strip=True):
-            return str(title_tag.get_text(strip=True))
+    """Derive the law name from surrounding HTML structure or source_type.
 
-        h1_tag = doc.find("h1")
-        if h1_tag and h1_tag.get_text(strip=True):
-            return str(h1_tag.get_text(strip=True))
-
+    Prefers clean mapped names for known source types; falls back to
+    HTML title/h1 extraction for unknown types.
+    """
     _LAW_NAME_DEFAULT: dict[str, str] = {
         "sgb2": "SGB II",
         "sgbx": "SGB X",
         "weisung": "Fachliche Weisung",
         "bsg": "BSG Urteil",
     }
-    return _LAW_NAME_DEFAULT.get(source_type, source_type.upper())
+
+    # For known source types, prefer the clean default.
+    if source_type in _LAW_NAME_DEFAULT:
+        return _LAW_NAME_DEFAULT[source_type]
+
+    # Fallback: extract from HTML metadata
+    doc = element.find_parent("html") or element
+    if isinstance(doc, Tag):
+        h1_tag = doc.find("h1")
+        if h1_tag and h1_tag.get_text(strip=True):
+            # Extract a concise name from the first part of the h1
+            return str(h1_tag.get_text(strip=True))
+
+        title_tag = doc.find("title")
+        if title_tag and title_tag.get_text(strip=True):
+            return str(title_tag.get_text(strip=True))
+
+    return source_type.upper()
 
 
 def _infer_effective_date(soup: BeautifulSoup) -> date:
