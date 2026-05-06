@@ -242,7 +242,7 @@ class TestSingleStageExecution:
         data = json.loads(events[0][len("data: ") :].strip())
         assert data["stage"] == "normalization"
         assert data["status"] == "complete"
-        assert state.normalized_text == "Hallo\nWelt"
+        assert state.normalized_text == "Hallo\n\nWelt"
 
     @pytest.mark.asyncio
     async def test_unknown_stage_raises(self) -> None:
@@ -316,11 +316,11 @@ class TestPipelineTimeout:
         PipelineTimeoutError.
         """
 
-        async def _slow_collect(state: PipelineState) -> list[str]:
+        async def _slow_collect(stage_name: str, state: PipelineState) -> list[str]:
             await asyncio.sleep(10)  # far exceeds the timeout
             return []
 
-        monkeypatch.setattr("app.core.pipeline._collect_events", _slow_collect)
+        monkeypatch.setattr("app.core.pipeline._collect_single_stage", _slow_collect)
         monkeypatch.setattr(
             "app.core.pipeline.cfg._get_settings",
             lambda: type("Settings", (), {"PIPELINE_TIMEOUT_SEC": 1})(),

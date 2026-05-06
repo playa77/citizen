@@ -1,3 +1,9 @@
+# ==========================================
+# Citizen — Docker Compose Orchestration
+# Services: PostgreSQL 16 + pgvector (db), citizen-app
+# ==========================================
+# Semantic Version: 0.1.0
+
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -12,3 +18,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  citizen-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      # Override DATABASE_URL to use the compose db service hostname.
+      DATABASE_URL: postgresql+asyncpg://testuser:testpassword@db:5432/testdb
+    env_file:
+      # Load all remaining env vars (OPENROUTER_API_KEY, model config, etc.) from .env.
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads

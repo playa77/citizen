@@ -140,7 +140,7 @@ All `/api/v1/*` endpoints require explicit disclaimer acknowledgment prior to ex
 - Liability Containment: Acknowledgment does not waive statutory rights under German law (BGB § 309 Nr. 7), but establishes informed consent for AI-generated outputs and third-party LLM routing.
 
 ### 5.2 Deployment Targets & Resource Requirements
-- **Primary Target:** Ubuntu 22.04/24.04 LTS. Docker Compose for local orchestration (`fastapi-app`, `postgres-16`).
+- **Primary Target:** Ubuntu 22.04/24.04 LTS. Docker Compose for local orchestration (`citizen-app`, `postgres-16`).
 - **Secondary Targets:** Windows 10/11 (WSL2 recommended), macOS 13+ (Apple Silicon supported via `pgvector` ARM builds).
 - **Minimum Resources:** 8GB RAM, 4 CPU cores, 20GB SSD. PostgreSQL requires ~4GB for initial corpus + embeddings. OCR pipeline peaks at ~2GB RAM during Tesseract execution.
 - **Network:** Outbound HTTPS to OpenRouter API. Inbound HTTP/WS to `localhost:8000`. No inbound ports exposed externally.

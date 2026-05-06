@@ -63,12 +63,16 @@ class OpenRouterClient:
         messages: list[dict[str, str]],
         *,
         temperature: float = 0.1,
+        model: str | None = None,
     ) -> str:
         """Return the assistant's final text response or raise on exhaustion.
 
         Args:
             messages: OpenAI-style message history.
             temperature: Sampling temperature (low = deterministic).
+            model: Override the fallback chain with a single specific model.
+                   When provided, only that model is used (no fallback, no retries
+                   across models).
 
         Returns:
             The parsed ``content`` string from the response.
@@ -76,11 +80,12 @@ class OpenRouterClient:
         Raises:
             RouterExhaustedError: If every model / retry attempt fails.
         """
-        for model in self.models:
+        models: list[str] = [model] if model else self.models
+        for current_model in models:
             for attempt in range(1, settings.MAX_RETRIES + 1):
                 try:
                     payload: dict[str, Any] = {
-                        "model": model,
+                        "model": current_model,
                         "messages": messages,
                         "temperature": temperature,
                     }
@@ -96,7 +101,7 @@ class OpenRouterClient:
                 except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
                     logger.warning(
                         "chat_completion failed (model=%s, attempt=%d): %s",
-                        model,
+                        current_model,
                         attempt,
                         exc,
                     )
@@ -106,7 +111,7 @@ class OpenRouterClient:
                 except (KeyError, IndexError) as exc:
                     logger.warning(
                         "Malformed API response (model=%s, attempt=%d): %s",
-                        model,
+                        current_model,
                         attempt,
                         exc,
                     )
@@ -116,11 +121,11 @@ class OpenRouterClient:
 
             logger.info(
                 "Model %s exhausted after %d retries, trying next fallback.",
-                model,
+                current_model,
                 settings.MAX_RETRIES,
             )
 
-        raise RouterExhaustedError(f"All models exhausted: {self.models}")
+        raise RouterExhaustedError(f"All models exhausted: {models}")
 
     async def get_embedding(self, text: str, *, model: str | None = None) -> list[float]:
         """Generate an embedding vector for *text* via the OpenRouter embeddings endpoint.

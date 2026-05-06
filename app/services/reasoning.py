@@ -1,4 +1,5 @@
-"""Reasoning engine: LLM-driven claim construction, verification, and output formatting.
+"""Reasoning engine: LLM-driven claim construction, verification, output formatting,
+and OCR result synthesis with spell/grammar correction.
 
 Implements stages 2-3 and 5-7 of the 7-stage pipeline:
     2. Issue Classification          → classify_issues()
@@ -6,6 +7,9 @@ Implements stages 2-3 and 5-7 of the 7-stage pipeline:
     5. Claim Construction             → construct_claims()
     6. Verification Pass              → verify_claims()
     7. Output Generation              → generate_output()
+
+Plus an OCR post-processing stage that runs before the pipeline:
+    OCR Synthesis & Correction        → synthesize_and_correct_text()
 
 Every function enforces a strict JSON output schema via a ``response_format``
 directive embedded in the system prompt. Malformed JSON triggers one automatic
@@ -62,6 +66,11 @@ _STRICT_SUFFIX = (
 def _parse_json_response(raw: str, *, context: str) -> Any:
     """Attempt to parse ``raw`` as JSON; retry once with a stricter prompt on failure.
 
+    Tries several extraction strategies in order:
+    1. Parse the whole (optionally fenced) string as JSON.
+    2. Find the first ``{`` or ``[`` and extract a balanced JSON segment.
+       This handles LLMs that sprinkle prose before/after the JSON payload.
+
     Parameters
     ----------
     raw :
@@ -88,17 +97,89 @@ def _parse_json_response(raw: str, *, context: str) -> Any:
         stripped = stripped.rsplit("\n", 1)[0] if "\n" in stripped else stripped[:-3]
     stripped = stripped.strip()
 
+    # Strategy 1: whole string is JSON.
     try:
         parsed: dict[str, object] = json.loads(stripped)
         return parsed
     except (json.JSONDecodeError, ValueError):
         pass
 
+    # Strategy 2: find a balanced JSON segment in the response.
+    # Many LLMs return prose like "Here is the result:\n{ ... }\nHope this helps!"
+    extracted = _extract_json_segment(stripped)
+    if extracted is not None:
+        try:
+            parsed = json.loads(extracted)
+            return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+
     # One retry — the LLM will be re-invoked with a stricter prompt by the
     # caller. We re-raise so the caller can handle the retry logic.
     raise JSONParseError(
-        f"LLM returned malformed JSON for {context}. " f"Raw output (truncated): {raw[:300]!r}"
+        f"LLM returned malformed JSON for {context}. "
+        f"Raw output (truncated): {raw[:300]!r}"
     )
+
+
+def _extract_json_segment(text: str) -> str | None:
+    """Find and extract the first balanced JSON object or array in *text*.
+
+    Returns the extracted segment, or ``None`` if no valid opener is found
+    or braces/brackets cannot be balanced.
+    """
+    # Find the first JSON opener.
+    obj_start = text.find("{")
+    arr_start = text.find("[")
+
+    if obj_start == -1 and arr_start == -1:
+        return None
+
+    if obj_start == -1:
+        start = arr_start
+        opener = "["
+        closer = "]"
+    elif arr_start == -1:
+        start = obj_start
+        opener = "{"
+        closer = "}"
+    else:
+        # Both present — use whichever comes first.
+        if obj_start < arr_start:
+            start = obj_start
+            opener = "{"
+            closer = "}"
+        else:
+            start = arr_start
+            opener = "["
+            closer = "]"
+
+    # Walk through the string to find the matching closer, respecting
+    # nested structures and string literals.
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape:
+            escape = False
+            continue
+        if ch == "\\" and in_string:
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == opener:
+            depth += 1
+        elif ch == closer:
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+
+    return None  # unbalanced
 
 
 # ---------------------------------------------------------------------------
@@ -526,6 +607,117 @@ async def generate_output(
         output = {key: "" for key in required_keys}
 
     return output
+
+
+# ---------------------------------------------------------------------------
+# OCR Synthesis & Correction — pre-pipeline stage
+# ---------------------------------------------------------------------------
+
+_OCR_SYNTHESIS_SYSTEM = (
+    "Du bist ein Experte für deutsche Texterkennung und -korrektur. "
+    "Dir werden zwei OCR-Texte desselben Dokuments vorgelegt, die von "
+    "unterschiedlich vorverarbeiteten Versionen stammen. "
+    "Deine Aufgabe:\n\n"
+    "1. Vergleiche beide Versionen und erstelle eine bestmögliche Synthese — "
+    "   wo beide Versionen übereinstimmen, übernimmt den Text. "
+    "   Wo Versionen voneinander abweichen, entscheide anhand des Kontexts, "
+    "   welche Version wahrscheinlicher korrekt ist.\n"
+    "2. Führe eine Rechtschreib- und Grammatikprüfung durch. "
+    "   Korrigiere offensichtliche OCR-Fehler (wie falsch erkannte Buchstaben, "
+    "   verschobene Zeilen, fehlende Leerzeichen).\n"
+    "3. Gib NUR den endgültigen, korrigierten deutschen Text zurück. "
+    "   Keine Erklärungen, keine Metadaten, keine Markdown-Formatierung.\n"
+    "4. Der ausgegebene Text muss ein vollständiges, zusammenhängendes "
+    "   Dokument sein. Keine Sätze dürfen fehlen. Der gesamte Inhalt beider "
+    "   OCR-Ergebnisse muss im Ergebnis enthalten sein (ggf. korrigiert)."
+)
+
+
+async def synthesize_and_correct_text(
+    ocr_version_a: str,
+    ocr_version_b: str,
+    *,
+    max_input_chars: int = 12000,
+) -> str:
+    """Compare two OCR results and produce a single corrected text.
+
+    Uses the configured ``OCR_SYNTHESIS_MODEL`` (default:
+    ``deepseek/deepseek-v4-flash``) via OpenRouter to:
+
+    1. Compare both OCR versions and reconcile differences.
+    2. Apply spell-checking and grammar correction.
+    3. Return the final, corrected German text.
+
+    Parameters
+    ----------
+    ocr_version_a : str
+        OCR output from greyscale + contrast preprocessed image.
+    ocr_version_b : str
+        OCR output from black-and-white thresholded image.
+    max_input_chars : int
+        Maximum characters to send per version (truncated per-version
+        to stay within model context limits).
+
+    Returns
+    -------
+    str
+        The synthesized, spell- and grammar-checked corrected text.
+    """
+    from app.core.config import settings as s
+
+    client = _get_client()
+
+    # Truncate each version to stay within context limits.
+    a_text = ocr_version_a[:max_input_chars]
+    b_text = ocr_version_b[:max_input_chars]
+
+    user_message = (
+        f"=== OCR-Version A (Graustufen + Kontrast) ===\n\n"
+        f"{a_text}\n\n"
+        f"=== OCR-Version B (Schwarz/Weiß) ===\n\n"
+        f"{b_text}"
+    )
+
+    messages = [
+        {"role": "system", "content": _OCR_SYNTHESIS_SYSTEM},
+        {"role": "user", "content": user_message},
+    ]
+
+    synthesis_model = s.OCR_SYNTHESIS_MODEL
+    logger.info(
+        "Sending dual-OCR results to %s for synthesis and correction "
+        "(A: %d chars, B: %d chars)",
+        synthesis_model,
+        len(a_text),
+        len(b_text),
+    )
+
+    try:
+        raw = await client.chat_completion(
+            messages,
+            temperature=0.1,
+            model=synthesis_model,
+        )
+    except Exception as exc:
+        logger.error(
+            "OCR synthesis LLM call failed: %s. Falling back to version A.",
+            exc,
+        )
+        # Fall back to version A (greyscale + contrast, which is usually better)
+        return ocr_version_a
+
+    corrected = raw.strip()
+    if not corrected:
+        logger.warning("OCR synthesis returned empty; falling back to version A")
+        return ocr_version_a
+
+    logger.info(
+        "OCR synthesis complete — %d chars (input was %d + %d chars)",
+        len(corrected),
+        len(a_text),
+        len(b_text),
+    )
+    return corrected
 
 
 # ---------------------------------------------------------------------------

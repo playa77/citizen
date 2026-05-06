@@ -551,7 +551,7 @@ class TestJSONParsingRetry:
         mock = AsyncMock()
         mock.chat_completion = AsyncMock(
             side_effect=[
-                "broken{}",
+                "Here is some prose without any JSON at all.",
                 _VALID_OUTPUT_JSON,
             ]
         )

@@ -550,9 +550,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ### 7.2 Docker Compose (Production-Ready Local)
 ```bash
 docker compose up -d --build
-# Services: postgres-16, fastapi-app
+# Services: postgres-16, citizen-app
 # Access: http://localhost:8000
-# Logs: docker compose logs -f fastapi-app
+# Logs: docker compose logs -f citizen-app
 ```
 
 ### 7.3 Deployment Checklist

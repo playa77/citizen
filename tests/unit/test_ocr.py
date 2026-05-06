@@ -18,8 +18,9 @@ import pytest
 from fastapi import UploadFile
 from PIL import Image
 
-from app.services.ocr import OCRFailedError, process_document
-from app.utils.image import standardize_to_jpg
+from app.core import config
+from app.services.ocr import DualOCRResult, OCRFailedError, _run_dual_ocr_on_image, process_document
+from app.utils.image import PreprocessedPair, preprocess_for_ocr, standardize_to_jpg
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -266,3 +267,103 @@ class TestProcessDocumentPdfText:
             ),
         ):
             await process_document(upload)
+
+
+# ===========================================================================
+# 7. preprocess_for_ocr — dual preprocessing pipeline
+# ===========================================================================
+
+
+class TestPreprocessForOCR:
+    """Verify the OCR preprocessing pipeline produces correct modes and values."""
+
+    def test_returns_preprocessed_pair(self) -> None:
+        img = _build_image()
+        result = preprocess_for_ocr(img)
+        assert isinstance(result, PreprocessedPair)
+
+    def test_greyscale_contrast_is_mode_l(self) -> None:
+        img = _build_image()
+        result = preprocess_for_ocr(img)
+        assert result.greyscale_contrast.mode == "L"
+
+    def test_black_white_is_mode_1(self) -> None:
+        img = _build_image()
+        result = preprocess_for_ocr(img)
+        assert result.black_white.mode == "1"
+
+    def test_black_white_only_has_two_colors(self) -> None:
+        img = _build_image()
+        result = preprocess_for_ocr(img)
+        # Convert to "L" to read pixel values reliably, then check only 0 or 255.
+        pixels = set(result.black_white.convert("L").getdata())
+        assert pixels <= {0, 255}
+
+    def test_custom_contrast_factor(self) -> None:
+        img = _build_image()
+        result = preprocess_for_ocr(img, contrast_factor=3.0)
+        assert isinstance(result, PreprocessedPair)
+
+
+# ===========================================================================
+# 8. _run_dual_ocr_on_image — dual Tesseract invocation
+# ===========================================================================
+
+
+class TestRunDualOCROnImage:
+    """Verify dual-OCR function produces correct result type and calls Tesseract twice."""
+
+    def test_returns_dual_ocr_result(self) -> None:
+        img = _build_image()
+        cfg = config._get_settings()
+        with patch("app.services.ocr.pytesseract.image_to_string", return_value="dummy"):
+            result = _run_dual_ocr_on_image(img, cfg)
+        assert isinstance(result, DualOCRResult)
+        assert isinstance(result.greyscale_contrast, str)
+        assert isinstance(result.black_white, str)
+
+    def test_calls_tesseract_twice(self) -> None:
+        img = _build_image()
+        cfg = config._get_settings()
+        with patch(
+            "app.services.ocr.pytesseract.image_to_string", return_value="dummy"
+        ) as mock_ts:
+            _run_dual_ocr_on_image(img, cfg)
+        assert mock_ts.call_count == 2
+
+
+# ===========================================================================
+# 9. process_document — synthesis on/off paths
+# ===========================================================================
+
+
+class TestProcessDocumentWithSynthesis:
+    """Verify that synthesis=False concatenates and synthesis=True uses LLM."""
+
+    async def test_synthesis_off_concatenates_results(self) -> None:
+        upload = _make_upload("image/png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+        with patch(
+            "app.services.ocr._process_image",
+            return_value="result",
+        ):
+            text = await process_document(upload, synthesize=False)
+        assert "result" in text
+
+    async def test_synthesis_on_uses_llm(self) -> None:
+        import io
+        buf = io.BytesIO()
+        _build_image().save(buf, format="PNG")
+        png_bytes = buf.getvalue()
+        upload = _make_upload("image/png", png_bytes)
+        with (
+            patch(
+                "app.services.ocr._run_dual_ocr_on_image",
+                return_value=DualOCRResult("text_a", "text_b"),
+            ),
+            patch(
+                "app.services.ocr._synthesize_ocr_text",
+                return_value="corrected",
+            ),
+        ):
+            text = await process_document(upload, synthesize=True)
+        assert text == "corrected"

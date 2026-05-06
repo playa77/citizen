@@ -47,6 +47,7 @@
         extractedText: null,
         disclaimerVersion: null,
         sessionId: null,
+        hasExtracted: false,
     };
 
     // Stage name mapping (for display)
@@ -108,8 +109,8 @@
                 elements.disclaimerText.textContent = 'Fehler beim Laden des Disclaimer-Textes.';
                 return;
             }
-            const data = await response.text();
-            elements.disclaimerText.textContent = data.text || data;
+            const data = await response.json();
+            elements.disclaimerText.innerHTML = data.text;
         } catch (err) {
             elements.disclaimerText.textContent = 'Fehler beim Laden des Disclaimer-Textes.';
         }
@@ -270,9 +271,11 @@
     function handleRemoveFile() {
         state.file = null;
         state.extractedText = null;
+        state.hasExtracted = false;
         elements.fileInput.value = '';
         elements.fileInfo.classList.add('hidden');
         elements.uploadBtn.disabled = true;
+        elements.uploadBtn.textContent = 'Text extrahieren';
         elements.analysisSection.classList.add('hidden');
         elements.resultsSection.classList.add('hidden');
     }
@@ -285,7 +288,7 @@
 
         showError(null);
         elements.uploadBtn.disabled = true;
-        elements.uploadBtn.textContent = 'Wird extrahiert...';
+        elements.uploadBtn.textContent = state.hasExtracted ? 'Wird erneut extrahiert...' : 'Wird extrahiert...';
 
         try {
             const formData = new FormData();
@@ -304,16 +307,20 @@
 
             const data = await response.json();
             state.extractedText = data.text;
+            state.hasExtracted = true;
 
-            // Show analysis section
-            elements.textPreview.textContent = truncateText(state.extractedText, 500);
+            // Show analysis section with character count
+            const fullLength = state.extractedText.length;
+            elements.textPreview.innerHTML =
+                truncateText(state.extractedText, 500)
+                + `\n\n<span class="char-count">(${fullLength} Zeichen extrahiert — Vorschau zeigt erste 500)</span>`;
             elements.analysisSection.classList.remove('hidden');
             elements.resultsSection.classList.add('hidden');
         } catch (err) {
             showError(err.message);
         } finally {
             elements.uploadBtn.disabled = false;
-            elements.uploadBtn.textContent = 'Text extrahieren';
+            elements.uploadBtn.textContent = state.hasExtracted ? 'Erneut extrahieren' : 'Text extrahieren';
         }
     }
 
@@ -518,17 +525,19 @@
      * Initialize the application
      */
     async function init() {
+        // Always register disclaimer event listeners — needed even on first visit
+        elements.disclaimerCheckbox.addEventListener('change', handleDisclaimerCheckbox);
+        elements.acknowledgeBtn.addEventListener('click', handleAcknowledge);
+
         // Check disclaimer status
         const accepted = await checkDisclaimerStatus();
         if (!accepted) {
             showDisclaimerModal();
-            return;
+            // Fall through — register remaining listeners even when modal is shown,
+            // so they're ready once the user accepts and the app becomes visible.
         }
 
-        // Setup event listeners
-        elements.disclaimerCheckbox.addEventListener('change', handleDisclaimerCheckbox);
-        elements.acknowledgeBtn.addEventListener('click', handleAcknowledge);
-
+        // Setup all other event listeners (always registered, UI stays hidden until accepted)
         elements.fileInput.addEventListener('change', handleFileSelect);
         elements.uploadArea.addEventListener('click', () => elements.fileInput.click());
         elements.uploadArea.addEventListener('drop', handleFileDrop);
@@ -537,8 +546,10 @@
         elements.uploadBtn.addEventListener('click', handleUpload);
         elements.analyzeBtn.addEventListener('click', handleAnalyze);
 
-        // Show app (disclaimer already accepted)
-        elements.app.classList.remove('hidden');
+        // Show app if disclaimer was already accepted
+        if (accepted) {
+            elements.app.classList.remove('hidden');
+        }
     }
 
     // Start app when DOM is ready

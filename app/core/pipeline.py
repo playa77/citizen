@@ -342,7 +342,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
                 "No legal chunks retrieved — stopping pipeline with safe output"
             )
             state.final_output = {
-                "sachverhalt": state.normalized_text[:500] if state.normalized_text else "",
+                "sachverhalt": state.normalized_text if state.normalized_text else "",
                 "rechtliche_wuerdigung": (
                     "Keine belastbare rechtliche Würdigung möglich, "
                     "da keine passenden Rechtsquellen im lokalen Corpus gefunden wurden."

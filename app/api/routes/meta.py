@@ -19,26 +19,30 @@ router = APIRouter()
 # Disclaimer text (German) — loaded from config; version inserted at runtime
 
 _DISCLAIMER_TEXT = f"""
-**Rechtlicher Hinweis und Haftungsausschluss**
+<h3>Rechtlicher Hinweis und Haftungsausschluss</h3>
 
-Dieses Tool dient ausschließlich zu Informationszwecken und ersetzt keine rechtliche Beratung.
+<p>Dieses Tool dient ausschließlich zu Informationszwecken und ersetzt keine rechtliche Beratung.
 Die bereitgestellten Informationen basieren auf einer automatisierten Analyse von Dokumenten
-und Gesetzes_texten und können fehlerhaft, unvollständig oder veraltet sein.
+und Gesetzestexten und können fehlerhaft, unvollständig oder veraltet sein.</p>
 
-**Nutzungsbedingungen:**
-1. Dieses Tool darf nicht als唯一 Rechtsquelle verwendet werden.
-2. Die Ergebnisse stellen keine rechtliche Beratung dar und begründen kein Mandatsverhältnis.
-3. Für Entscheidungen auf Basis der Tool-Ausgaben wird keine Haftung übernommen.
-4. Nutzer sollten stets einen zugelassenen Rechtsanwalt oder eine anerkannte
-   Beratungsstelle (z.B. Arbeitsagentur, Sozialamt) konsultieren.
-5. Die Nutzung erfolgt auf eigene Verantwortung.
+<h3>Nutzungsbedingungen:</h3>
+<ol>
+<li>Dieses Tool darf nicht als einzige Rechtsquelle verwendet werden.</li>
+<li>Die Ergebnisse stellen keine rechtliche Beratung dar und begründen kein Mandatsverhältnis.</li>
+<li>Für Entscheidungen auf Basis der Tool-Ausgaben wird keine Haftung übernommen.</li>
+<li>Nutzer sollten stets einen zugelassenen Rechtsanwalt oder eine anerkannte
+   Beratungsstelle (z.B. Arbeitsagentur, Sozialamt) konsultieren.</li>
+<li>Die Nutzung erfolgt auf eigene Verantwortung.</li>
+</ol>
 
-**Datenschutz:**
-- Hochgeladene Dokumente werden temporär verarbeitet und nicht dauerhaft gespeichert.
-- IP-Adressen werden anonymisiert protokolliert.
-- Es werden keine personenbezogenen Daten an Dritte weitergegeben.
+<h3>Datenschutz:</h3>
+<ul>
+<li>Hochgeladene Dokumente werden temporär verarbeitet und nicht dauerhaft gespeichert.</li>
+<li>IP-Adressen werden anonymisiert protokolliert.</li>
+<li>Es werden keine personenbezogenen Daten an Dritte weitergegeben.</li>
+</ul>
 
-**Version:** {get_app_version_tag()}
+<p><strong>Version:</strong> {get_app_version_tag()}</p>
 """.strip()
 
 

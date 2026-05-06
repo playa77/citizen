@@ -49,7 +49,7 @@
 **Files Created/Modified:** `pyproject.toml`, `.env.example`, `Dockerfile`, `docker-compose.yml`, `README.md`
 **Acceptance Criteria:**
 - `docker compose up -d` exits with code 0.
-- `docker compose ps` shows `postgres-16` and `fastapi-app` running.
+- `docker compose ps` shows `postgres-16` and `citizen-app` running.
 - `cat .env.example | wc -l` >= 15.
 
 ### WP-002: Configuration, Settings Validation & Auto-Salting

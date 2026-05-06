@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 10
     OCR_DPI: int = 300
     OCR_JPG_QUALITY: int = 84
+    OCR_CONTRAST_FACTOR: float = 2.0
+    OCR_BW_THRESHOLD: int = 128
+    OCR_SYNTHESIS_MODEL: str = "deepseek/deepseek-v4-flash"  # LLM for comparing & correcting dual-OCR results
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 12
