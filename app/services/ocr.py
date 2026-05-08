@@ -63,23 +63,24 @@ _TESSERACT_LANG = "deu"
 _MAX_IMAGE_DIMENSION = 5000
 
 
-async def process_document(file: UploadFile, *, synthesize: bool = True) -> str:
+async def process_document(file: UploadFile, *, synthesize: bool | None = None) -> str:
     """Extract and normalize text from a scanned document or image.
 
     Uses dual preprocessing (greyscale+contrast AND black/white thresholded)
-    for every image-based OCR pass, then feeds both Tesseract results to the
-    configured ``OCR_SYNTHESIS_MODEL`` LLM for comparison, reconciliation,
-    and spell/grammar correction.
+    for every image-based OCR pass. When ``ENABLE_OCR_LLM_SYNTHESIS`` is
+    true (or *synthesize* is explicitly passed), feeds both Tesseract results
+    to the configured ``OCR_SYNTHESIS_MODEL`` LLM for comparison,
+    reconciliation, and spell/grammar correction.
 
     Parameters
     ----------
     file : UploadFile
         Uploaded file (PDF, JPG, PNG, etc.). Must be smaller than
         ``settings.MAX_FILE_SIZE_MB``.
-    synthesize : bool
-        If True (default), run LLM synthesis on dual-OCR results.
-        If False, fall back to basic normalization of both OCR outputs
-        combined (useful when LLM is unavailable).
+    synthesize : bool | None
+        If True, run LLM synthesis on dual-OCR results.
+        If False, combine both OCR outputs and normalize locally.
+        If None (default), use ``settings.ENABLE_OCR_LLM_SYNTHESIS``.
 
     Returns
     -------
@@ -94,6 +95,10 @@ async def process_document(file: UploadFile, *, synthesize: bool = True) -> str:
         If all extraction tiers yield empty text.
     """
     cfg = config._get_settings()
+
+    # Gate LLM synthesis on config unless explicitly overridden.
+    if synthesize is None:
+        synthesize = cfg.ENABLE_OCR_LLM_SYNTHESIS
 
     # Enforce size limit (SpooledTemporaryFile has sync seek/tell).
     file.file.seek(0, 2)
@@ -110,8 +115,8 @@ async def process_document(file: UploadFile, *, synthesize: bool = True) -> str:
     raw_bytes = file.file.read()
 
     logger.info(
-        "Ingestion: content_type=%s, size=%d bytes",
-        content_type, len(raw_bytes),
+        "Ingestion: content_type=%s size=%d bytes ocr_llm_synthesis=%s",
+        content_type, len(raw_bytes), synthesize,
     )
 
     # Route by MIME type.
@@ -227,17 +232,37 @@ def _run_dual_ocr_on_image(image: Image.Image, cfg: config.Settings) -> DualOCRR
 
 
 async def _ocr_pdf_pages(raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True) -> str:  # pragma: no cover
-    """Render PDF pages to images, run dual-OCR per page, combine and synthesize."""
+    """Render PDF pages to images, run dual-OCR per page, combine and synthesize.
+
+    Respects ``OCR_MAX_PAGES``: only the first N pages are processed via OCR.
+    A warning is logged if the PDF has more pages than the configured limit.
+    Set ``OCR_MAX_PAGES`` to 0 for unlimited processing.
+    """
     doc = fitz.open(stream=raw_bytes, filetype="pdf")
     try:
         pages_text_a: list[str] = []
         pages_text_b: list[str] = []
 
-        logger.info("PDF has %d pages — running dual-OCR on each", len(doc))
+        total_pages = len(doc)
+        max_pages = cfg.OCR_MAX_PAGES
+
+        if max_pages > 0 and total_pages > max_pages:
+            logger.warning(
+                "PDF has %d pages but OCR_MAX_PAGES is %d — only processing first %d pages. "
+                "Set OCR_MAX_PAGES=0 to process all pages.",
+                total_pages, max_pages, max_pages,
+            )
+            pages_to_process = max_pages
+        else:
+            pages_to_process = total_pages
+
+        logger.info("PDF has %d total pages — running dual-OCR on %d", total_pages, pages_to_process)
 
         # Run page OCR in a thread pool — pytesseract is CPU-bound and
         # blocks the GIL, so offloading prevents event-loop stalls.
         for i, page in enumerate(doc):
+            if i >= pages_to_process:
+                break
             pixmap = page.get_pixmap(dpi=cfg.OCR_DPI)
             img = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
             result = await asyncio.to_thread(_run_dual_ocr_on_image, img, cfg)
@@ -245,7 +270,7 @@ async def _ocr_pdf_pages(raw_bytes: bytes, cfg: config.Settings, *, synthesize: 
             pages_text_b.append(result.black_white)
             logger.debug(
                 "PDF page %d/%d OCR done: A=%d chars, B=%d chars",
-                i + 1, len(doc),
+                i + 1, pages_to_process,
                 len(result.greyscale_contrast),
                 len(result.black_white),
             )

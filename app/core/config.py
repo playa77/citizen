@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     OCR_CONTRAST_FACTOR: float = 2.0
     OCR_BW_THRESHOLD: int = 128
     OCR_SYNTHESIS_MODEL: str = "deepseek/deepseek-v4-flash"  # LLM for comparing & correcting dual-OCR results
+    # OCR performance controls (WP-012)
+    ENABLE_OCR_LLM_SYNTHESIS: bool = False   # If False, skip LLM synthesis and combine OCR outputs locally
+    MAX_OCR_SYNTHESIS_CHARS: int = 6000      # Max chars of combined OCR text sent to LLM synthesis
+    OCR_MAX_PAGES: int = 10                  # Max PDF pages processed by image-based OCR; 0 = unlimited
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 6
