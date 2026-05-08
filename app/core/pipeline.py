@@ -252,10 +252,23 @@ async def _run_classification_and_decomposition_stages(
 
 
 async def _stage_retrieval(state: PipelineState) -> None:
-    """Stage 4 — pgvector similarity search with diversity filter."""
-    from app.services.retrieval import retrieve_chunks
+    """Stage 4 — pgvector similarity search with diversity filter.
 
-    state.retrieved_chunks = await retrieve_chunks(state.questions)
+    Uses combined mode (one embedding for issues+questions+text) when
+    ``settings.RETRIEVAL_MODE == "combined"``, falling back to
+    per-question embeddings otherwise.
+    """
+    from app.services.retrieval import retrieve_chunks, retrieve_chunks_combined
+
+    if cfg._get_settings().RETRIEVAL_MODE == "combined":
+        state.retrieved_chunks = await retrieve_chunks_combined(
+            state.issues,
+            state.questions,
+            state.normalized_text,
+        )
+    else:
+        state.retrieved_chunks = await retrieve_chunks(state.questions)
+
     logger.info("Retrieval complete (%d chunks)", len(state.retrieved_chunks))
 
 

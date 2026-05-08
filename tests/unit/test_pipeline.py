@@ -106,9 +106,24 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Create dummy ``app.services.retrieval`` module with async stub."""
+    """Create dummy ``app.services.retrieval`` module with async stubs."""
 
     async def retrieve_chunks(questions: list[str]) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "chunk-1",
+                "text": "§ 31 Abs. 1 SGB II: …",
+                "hierarchy_path": "SGB II > § 31 > Abs. 1",
+            }
+        ]
+
+    async def retrieve_chunks_combined(
+        issues: list[str],
+        questions: list[str],
+        normalized_text: str,
+        *,
+        client=None,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "id": "chunk-1",
@@ -122,6 +137,7 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
 
     mod = types.ModuleType("app.services.retrieval")
     mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
+    mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", mod)
 
 

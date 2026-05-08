@@ -46,7 +46,8 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 6
-    MAX_COSINE_DISTANCE: float = 0.75
+    MAX_COSINE_DISTANCE: float = 0.85
+    RETRIEVAL_MODE: str = "combined"  # "combined" or "per_question"
     PIPELINE_TIMEOUT_SEC: int = 120
     TRIAGE_TIMEOUT_SEC: float = 20.0
     FINAL_TIMEOUT_SEC: float = 75.0

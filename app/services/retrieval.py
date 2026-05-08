@@ -141,6 +141,130 @@ async def retrieve_chunks(
     return all_chunks
 
 
+async def retrieve_chunks_combined(
+    issues: list[str],
+    questions: list[str],
+    normalized_text: str,
+    *,
+    client: OpenRouterClient | None = None,
+) -> list[dict[str, Any]]:
+    """Retrieve legal chunks using a single combined embedding for speed.
+
+    Instead of embedding each question separately (N embedding requests),
+    this builds one rich German search query from issues, questions, and
+    the first 1200 characters of the normalized document text, then
+    generates one embedding and queries pgvector once.
+
+    Parameters
+    ----------
+    issues :
+        Legal issues / topics identified (stage 2).
+    questions :
+        Explicit legal questions (stage 3).
+    normalized_text :
+        Cleaned / standardised document text (stage 1).
+    client :
+        Optional ``OpenRouterClient`` for embedding generation.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Same dict shape as :func:`retrieve_chunks`.
+        ``question_index`` is always 0 (single combined query).
+    """
+    if not issues and not questions:
+        return []
+
+    top_k = settings.TOP_K_RETRIEVAL
+    threshold = settings.MAX_COSINE_DISTANCE
+
+    # Build the combined German search query
+    parts: list[str] = []
+    if issues:
+        parts.append("Themen:\n" + "\n".join(f"- {issue}" for issue in issues))
+    if questions:
+        parts.append("Rechtsfragen:\n" + "\n".join(f"- {q}" for q in questions))
+    if normalized_text:
+        doc_excerpt = normalized_text[:1200]
+        parts.append(f"Dokumentauszug:\n{doc_excerpt}")
+
+    combined_query = "\n\n".join(parts)
+    logger.info(
+        "retrieve_chunks_combined: built query (%d chars) from %d issues + %d questions",
+        len(combined_query),
+        len(issues),
+        len(questions),
+    )
+
+    # Step 1 — generate one embedding
+    async with client or OpenRouterClient() as router:
+        try:
+            embedding = await router.get_embedding(combined_query)
+        except EmbeddingError as exc:
+            logger.error("Combined embedding generation failed: %s", exc)
+            raise RetrievalError(f"Embedding API failure during combined retrieval: {exc}") from exc
+
+    # Step 2 — query pgvector once
+    all_chunks: list[dict[str, Any]] = []
+    async for session in get_async_session():
+        stmt = (
+            select(
+                ChunkEmbedding.id.label("embedding_id"),
+                ChunkEmbedding.chunk_id,
+                ChunkEmbedding.embedding.cosine_distance(embedding).label("distance"),
+                LegalChunk.id.label("lc_id"),
+                LegalChunk.text_content,
+                LegalChunk.hierarchy_path,
+                LegalChunk.unit_type,
+                LegalChunk.effective_date,
+                LegalSource.source_type,
+                LegalSource.title,
+            )
+            .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
+            .join(LegalSource, LegalSource.id == LegalChunk.source_id)
+            .where(
+                ChunkEmbedding.embedding.cosine_distance(embedding) < threshold,
+                LegalSource.is_active.is_(True),
+            )
+            .order_by(ChunkEmbedding.embedding.cosine_distance(embedding).asc())
+            .limit(top_k)
+        )
+
+        result = await session.execute(stmt)
+        rows = result.mappings().all()
+
+        for row in rows:
+            all_chunks.append(
+                {
+                    "chunk_id": str(row["chunk_id"]),
+                    "text_content": row["text_content"],
+                    "hierarchy_path": row["hierarchy_path"],
+                    "unit_type": row["unit_type"],
+                    "effective_date": str(row["effective_date"])
+                    if row["effective_date"]
+                    else "",
+                    "source_type": row["source_type"],
+                    "title": row["title"],
+                    "distance": float(row["distance"]),
+                    "question_index": 0,
+                }
+            )
+
+        await session.close()
+        break
+
+    # Step 3 — sort by distance ascending
+    all_chunks.sort(key=lambda c: c["distance"])
+
+    logger.info(
+        "Combined retrieval complete: %d unique chunks (threshold=%.2f, top_k=%d)",
+        len(all_chunks),
+        threshold,
+        top_k,
+    )
+    return all_chunks
+
+
 async def retrieve_chunks_for_question(
     question: str,
     *,

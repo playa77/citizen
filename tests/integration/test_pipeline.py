@@ -207,7 +207,26 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
             },
         ]
 
+    async def retrieve_chunks_combined(
+        issues: list[str],
+        questions: list[str],
+        normalized_text: str,
+        *,
+        client=None,
+    ) -> list[dict]:
+        return [
+            {
+                "chunk_id": str(uuid4()),
+                "text_content": "§ 31 Abs. 1 SGB II: Leistungsberechtigte, die ...",
+                "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "source_type": "sgb2",
+                "title": "SGB II",
+                "distance": 0.15,
+            },
+        ]
+
     retrieval_mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
+    retrieval_mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", retrieval_mod)
 
 
