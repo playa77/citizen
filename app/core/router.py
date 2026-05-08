@@ -106,30 +106,40 @@ class OpenRouterClient:
                     resp.raise_for_status()
                     body = resp.json()
                     content: str = body["choices"][0]["message"]["content"]
+                    prompt_chars = sum(len(m.get("content", "")) for m in messages)
+                    response_chars = len(content)
                     logger.info(
-                        "chat_completion OK (model=%s, attempt=%d, %.1fs)",
+                        "chat_completion OK (model=%s, attempt=%d, elapsed=%.2fs, prompt_chars=%d, response_chars=%d)",
                         current_model,
                         attempt,
                         req_elapsed,
+                        prompt_chars,
+                        response_chars,
                     )
                     return content
                 except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
+                    fail_elapsed = time.monotonic() - req_start
+                    fail_reason = type(exc).__name__
+                    if isinstance(exc, httpx.HTTPStatusError):
+                        fail_reason = f"HTTP {exc.response.status_code}"
                     logger.warning(
-                        "chat_completion FAILED (model=%s, attempt=%d, elapsed=%.1fs): %s",
+                        "chat_completion FAILED (model=%s, attempt=%d, elapsed=%.2fs, reason=%s): %s",
                         current_model,
                         attempt,
-                        time.monotonic() - req_start,
+                        fail_elapsed,
+                        fail_reason,
                         exc,
                     )
                     if attempt < settings.MAX_RETRIES:
                         await asyncio.sleep(2 ** (attempt - 1))  # 1, 2, 4, ...
                     continue
                 except (KeyError, IndexError) as exc:
+                    fail_elapsed = time.monotonic() - req_start
                     logger.warning(
-                        "Malformed API response (model=%s, attempt=%d, elapsed=%.1fs): %s",
+                        "Malformed API response (model=%s, attempt=%d, elapsed=%.2fs, reason=malformed_response): %s",
                         current_model,
                         attempt,
-                        time.monotonic() - req_start,
+                        fail_elapsed,
                         exc,
                     )
                     if attempt < settings.MAX_RETRIES:
@@ -158,16 +168,25 @@ class OpenRouterClient:
             EmbeddingError: On HTTP or parsing failure.
         """
         model_name = model or settings.EMBEDDING_MODEL
+        prompt_chars = len(text)
+        req_start: float = 0.0
+        logger.info(
+            "get_embedding → sending (model=%s, input_chars=%d)",
+            model_name,
+            prompt_chars,
+        )
         try:
             payload: dict[str, Any] = {
                 "model": model_name,
                 "input": text,
             }
+            req_start = time.monotonic()
             resp = await self._client.post(
                 _EMBEDDING_URL,
                 json=payload,
                 headers=_headers(),
             )
+            req_elapsed = time.monotonic() - req_start
             resp.raise_for_status()
             body = resp.json()
             embedding: list[float] = body["data"][0]["embedding"]
@@ -176,12 +195,35 @@ class OpenRouterClient:
                     f"Expected embedding dimension {settings.VECTOR_DIM}, "
                     f"got {len(embedding)} from model {model_name!r}"
                 )
+            logger.info(
+                "get_embedding OK (model=%s, elapsed=%.2fs, input_chars=%d, dim=%d)",
+                model_name,
+                req_elapsed,
+                prompt_chars,
+                len(embedding),
+            )
             return embedding
         except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
-            logger.error("Embedding API failed: %s", exc)
+            fail_elapsed = time.monotonic() - req_start
+            fail_reason = type(exc).__name__
+            if isinstance(exc, httpx.HTTPStatusError):
+                fail_reason = f"HTTP {exc.response.status_code}"
+            logger.error(
+                "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=%s): %s",
+                model_name,
+                fail_elapsed,
+                fail_reason,
+                exc,
+            )
             raise EmbeddingError(f"Embedding API error: {exc}") from exc
         except (KeyError, IndexError) as exc:
-            logger.error("Malformed embedding API response: %s", exc)
+            fail_elapsed = time.monotonic() - req_start
+            logger.error(
+                "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=malformed_response): %s",
+                model_name,
+                fail_elapsed,
+                exc,
+            )
             raise EmbeddingError(f"Malformed embedding response: {exc}") from exc
 
     async def get_embeddings_batch(

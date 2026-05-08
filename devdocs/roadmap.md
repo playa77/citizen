@@ -1,226 +1,1196 @@
-# DOCUMENT 3: ROADMAP
-**System:** Citizen (v1.0)
-**Execution Paradigm:** Atomic Work Packages, Machine-Verifiable Acceptance Criteria
-**Alignment:** Strictly consistent with Documents 1 & 2.
+# Target architecture
+
+For `/api/v1/analyze`, aim for this:
+
+```text
+Stage 1: normalize locally                         < 1s
+Stage 2+3: combined triage LLM call                 5–20s
+Stage 4: retrieval                                  2–10s
+Stage 5+6+7: single grounded-answer LLM call        20–70s
+Audit persistence                                   async, after response
+
+Total target:                                      30–100s
+Hard cap:                                          120s
+```
+
+The big change: reduce from 5 sequential chat calls to 2 chat calls.
+
+You can still keep the external 7-stage audit model. Internally, however, you should combine stages:
+
+```text
+classification + decomposition
+construction + verification + generation
+```
+
+Then emit the same SSE stage events for compatibility.
 
 ---
 
-## 1. ENGINEERING STANDARDS
+# Priority roadmap
 
-### 1.1 Toolchain & Formatting
-- **Language:** Python 3.11+
-- **Formatter:** `ruff format` (line length: 100, target-version: py311)
-- **Linter:** `ruff check` (enable: E, F, W, I, UP, B, C4, SIM, RUF)
-- **Type Checker:** `mypy --strict --ignore-missing-imports`
-- **Test Runner:** `pytest -v --tb=short --cov=app --cov-report=term-missing`
-- **Commit Format:** Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`). Max 72 char subject.
-- **Definition of Done (DoD):**
-  1. Code passes `ruff check`, `ruff format --check`, `mypy`.
-  2. Unit/Integration tests pass locally with `pytest`.
-  3. Coverage for modified files >= 85%.
-  4. No unhandled exceptions in logs.
-  5. All environment variables documented in `.env.example`.
+## Phase 1 — Stop the bleeding
 
-### 1.2 Branching & Review
-- **Main Branch:** `main` (protected, requires passing CI).
-- **Feature Branches:** `feat/<wp-id>-<short-desc>`.
-- **Merge Strategy:** Squash & Merge after CI passes.
-- **CI Pipeline:** `ruff` → `mypy` → `pytest` → `docker build` (on push to PR).
+Implement these first:
 
----
+1. WP-001: Add latency instrumentation.
+2. WP-002: Fix timeout/retry/fallback behavior.
+3. WP-003: Parallelize or combine classification/decomposition.
+4. WP-004: Reduce retrieval cost.
+5. WP-005: Move audit persistence truly out of the response path.
 
-## 2. MILESTONES
+This alone should cut many runs from 240s to perhaps 80–160s.
 
-| Milestone | Description | Testable System State |
-|-----------|-------------|------------------------|
-| **M1: Foundation & Infrastructure** | Project scaffolding, dependency management, Docker/DB setup, config validation. | `docker compose up` starts FastAPI + Postgres. `/health` returns 200. `.env` loads correctly. |
-| **M2: Data Layer & Corpus Ingestion** | SQLAlchemy models, Alembic migrations, `pgvector` setup, scraper/chunker implementation. | `alembic upgrade head` succeeds. `/api/v1/corpus/update` populates DB with 100+ hierarchical chunks. |
-| **M3: OCR & Document Processing** | Local OCR pipeline, PDF fallback chain, JPG standardization, text normalization. | Uploading a 5MB scanned PDF returns clean UTF-8 text in <5s. Fallbacks trigger correctly on malformed files. |
-| **M4: LLM Router & Reasoning Engine** | OpenRouter client, fallback chain, 7-stage pipeline orchestrator, prompt engineering. | Pipeline executes 7 stages sequentially. Fallback chain logs correctly. JSON parsing never crashes. |
-| **M5: API, UI & Integration** | FastAPI routes, SSE streaming, static frontend, end-to-end pipeline wiring. | `/api/v1/analyze` streams progress. UI renders 6-part output. Full run completes in <300s. |
-| **M6: Testing, Validation & Release** | Comprehensive test suite, performance benchmarks, security hardening, v1.0 tag. | `pytest` passes 100%. Coverage >= 85%. `docker compose` runs cleanly. MIT license applied. |
+## Phase 2 — Real under-2-minute path
+
+6. WP-006: Add combined triage function.
+7. WP-007: Add combined final-answer function.
+8. WP-008: Replace LLM verification with deterministic quote/citation verification.
+
+This should get you reliably under 120s for 1500 words.
+
+## Phase 3 — Stability and quality
+
+9. WP-009: Add model routing.
+10. WP-010: Add prompt/token budgeting.
+11. WP-011: Add caching.
+12. WP-012: Optimize OCR path separately.
 
 ---
 
-## 3. WORK PACKAGES (WP)
+# WP-001 — Add latency instrumentation
 
-### WP-001: Project Scaffolding & Dependency Lock
-**Scope:** Initialize repo, `pyproject.toml`, `.env.example`, `Dockerfile`, `docker-compose.yml`.
-**Files Created/Modified:** `pyproject.toml`, `.env.example`, `Dockerfile`, `docker-compose.yml`, `README.md`
-**Acceptance Criteria:**
-- `docker compose up -d` exits with code 0.
-- `docker compose ps` shows `postgres-16` and `citizen-app` running.
-- `cat .env.example | wc -l` >= 15.
+## Goal
 
-### WP-002: Configuration, Settings Validation & Auto-Salting
-**Scope:** Implement `app/core/config.py` with `pydantic-settings`. Implement zero-friction `.secret_salt` generation.
-**Files Created/Modified:** `app/__init__.py`, `app/core/__init__.py`, `app/core/config.py`, `.gitignore`
-**Signatures:** `def get_or_create_salt() -> str: ...`, `class Settings(BaseSettings): ...`
-**Acceptance Criteria:**
-- `python -c "from app.core.config import settings; print(settings.DATABASE_URL)"` prints valid string.
-- Missing `DATABASE_URL` raises `pydantic.ValidationError`.
-- On first import, a `.secret_salt` file is created containing a 64-character hex string.
-- Subsequent imports read the existing `.secret_salt` file without modifying it.
-- `.secret_salt` is explicitly added to `.gitignore`.
-- `ruff check app/core/config.py` returns 0.
+Before optimizing, measure where the time goes. You need per-stage timings, per-LLM-call timings, model name, attempt count, timeout events, prompt size, and response size.
 
-### WP-003: Database Engine & Session Factory
-**Scope:** Async SQLAlchemy engine, scoped session provider, connection pooling.
-**Files Created/Modified:** `app/db/__init__.py`, `app/db/session.py`
-**Signatures:** `async def get_async_session() -> AsyncGenerator[AsyncSession, None]: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_session.py::test_session_yields` passes.
-- `mypy app/db/session.py` returns 0 errors.
-- Connection pool size matches `settings.DB_POOL_SIZE` (default 10).
+## Files to modify
 
-### WP-004: ORM Models & Alembic Initialization
-**Scope:** Declarative models matching Doc 2 schema. Alembic `env.py` configured for async.
-**Files Created/Modified:** `app/db/models.py`, `alembic.ini`, `alembic/env.py`, `alembic/versions/001_init_schema.py`
-**Signatures:** `class LegalSource(Base): ...`, `class LegalChunk(Base): ...`, `class ChunkEmbedding(Base): ...`
-**Acceptance Criteria:**
-- `alembic upgrade head` executes without error.
-- `psql -d legal_engine_db -c "\dt"` lists 7 tables.
-- `pgvector` extension verified via `SELECT extname FROM pg_extension WHERE extname='vector';`.
+- `app/core/pipeline.py`
+- `app/core/router.py`
+- optionally `app/api/routes/analyze.py`
+- add `scripts/benchmark_analyze.py`
 
-### WP-005: Corpus Scraper & Hierarchical Chunker
-**Scope:** Fetch `gesetze-im-internet.de` XML, parse structure, chunk by `§/Abs/Satz`, generate metadata.
-**Files Created/Modified:** `app/services/corpus.py`, `app/utils/text.py`
-**Signatures:** `async def scrape_and_chunk(source_type: str) -> List[Dict[str, Any]]: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_chunker.py::test_hierarchical_split` passes (verifies `SGB II > § 31 > Abs. 1 > Satz 2` path).
-- Output contains `unit_type`, `hierarchy_path`, `text_content`.
-- `ruff check app/services/corpus.py` returns 0.
+## Implementation tasks
 
-### WP-006: Embedding Generation & Vector Upsert
-**Scope:** Generate embeddings via OpenRouter, upsert to `chunk_embedding` table with `ON CONFLICT`.
-**Files Created/Modified:** `app/services/corpus.py` (extend), `app/core/router.py` (add embedding method)
-**Signatures:** `async def generate_embeddings(chunks: List[Dict]) -> List[Dict]: ...`, `async def upsert_chunks(session: AsyncSession, chunks: List[Dict]) -> None: ...`
-**Acceptance Criteria:**
-- `pytest tests/integration/test_corpus.py::test_vector_upsert` passes.
-- `SELECT count(*) FROM chunk_embedding;` > 0 after manual trigger.
-- `IVFFlat` index verified via `\di+ idx_embedding_vector`.
+1. Add structured timing logs for every pipeline stage.
+2. Add structured timing logs for every OpenRouter request.
+3. Include:
+   - model
+   - attempt
+   - elapsed seconds
+   - prompt character count
+   - response character count
+   - timeout/failure reason
+4. Add a benchmark script that posts a 1500-word sample to `/api/v1/analyze` and records:
+   - time to first SSE event
+   - time per stage event
+   - time to final event
+   - total connection duration
 
-### WP-007: PDF Text Extraction Fallbacks
-**Scope:** Implement `pdfplumber` → `PyMuPDF` fallback chain.
-**Files Created/Modified:** `app/utils/pdf.py`
-**Signatures:** `def extract_pdf_text(file_bytes: bytes) -> str: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_pdf.py::test_fallback_chain` passes (mocks empty `pdfplumber`, verifies `PyMuPDF` triggers).
-- Returns clean UTF-8 string for digitally generated PDFs.
-- `mypy app/utils/pdf.py` returns 0 errors.
+## Acceptance criteria
 
-### WP-008: Image Standardization & Tesseract OCR
-**Scope:** Convert images/PDF pages to 300dpi JPG (quality 84, strip EXIF), run `pytesseract`.
-**Files Created/Modified:** `app/utils/image.py`, `app/services/ocr.py`
-**Signatures:** `def standardize_to_jpg(image: Image.Image) -> Image.Image: ...`, `async def process_document(file: UploadFile) -> str: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_ocr.py::test_jpg_standardization` passes (verifies DPI=300, quality=84, no EXIF).
-- `pytest tests/unit/test_ocr.py::test_tesseract_fallback` passes.
-- Processing a 5MB scanned PDF completes in <5s.
+- Running one analyze request prints a clear timing breakdown.
+- You can answer: “Which stage consumed the most time?”
+- Benchmark output should look roughly like:
 
-### WP-009: OpenRouter Client & Deterministic Fallback
-**Scope:** Implement `OpenRouterClient` with retry/backoff/fallback chain.
-**Files Created/Modified:** `app/core/router.py`
-**Signatures:** `class OpenRouterClient: ...`, `async def chat_completion(self, messages: List[Dict], temperature: float = 0.1) -> str: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_router.py::test_fallback_chain` passes (mocks 429 on primary, verifies fallback 1 triggers).
-- `pytest tests/unit/test_router.py::test_exhaustion_error` passes (mocks all failures, verifies `RouterExhaustedError`).
-- Logs contain `fallback_event` with model names.
+```text
+normalization:    0.02s
+classification:  11.40s
+decomposition:   10.91s
+retrieval:        7.22s
+construction:    28.40s
+verification:    34.12s
+generation:      42.80s
+total:          134.87s
+```
 
-### WP-010: 7-Stage Pipeline Orchestrator
-**Scope:** Implement `PipelineState`, stage execution loop, SSE streaming, timeout enforcement.
-**Files Created/Modified:** `app/core/pipeline.py`
-**Signatures:** `@dataclass class PipelineState: ...`, `async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_pipeline.py::test_stage_sequence` passes (verifies order: normalization → classification → ... → generation).
-- `asyncio.wait_for(run_pipeline(state), timeout=300)` raises `TimeoutError` correctly.
-- SSE format matches `data: {"stage": "...", "status": "complete", "payload": ...}\n\n`.
+## Prompt for coding model
 
-### WP-011: Reasoning Engine Prompts & JSON Parsing
-**Scope:** Implement `decompose_questions`, `construct_claims`, `verify_claims`, `generate_output`.
-**Files Created/Modified:** `app/services/reasoning.py`
-**Signatures:** `async def decompose_questions(normalized_text: str) -> List[str]: ...`, `async def construct_claims(...) -> List[Dict]: ...`, `async def verify_claims(...) -> List[Dict]: ...`, `async def generate_output(...) -> Dict[str, str]: ...`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_reasoning.py::test_json_parsing` passes (mocks malformed LLM output, verifies retry).
-- Output contains mandatory keys: `sachverhalt`, `rechtliche_wuerdigung`, `ergebnis`, `handlungsempfehlung`, `entwurf`, `unsicherheiten`.
-- `mypy app/services/reasoning.py` returns 0 errors.
+```text
+Implement latency instrumentation for the Citizen FastAPI app.
 
-### WP-012: Retrieval Engine & Diversity Constraints
-**Scope:** Query `pgvector`, apply cosine distance threshold, enforce top-k diversity, join metadata.
-**Files Created/Modified:** `app/services/retrieval.py`
-**Signatures:** `async def retrieve_chunks(questions: List[str]) -> List[Dict[str, Any]]: ...`
-**Acceptance Criteria:**
-- `pytest tests/integration/test_retrieval.py::test_diversity_filter` passes (verifies `cosine_distance < 0.75` filter).
-- Returns exactly `TOP_K_RETRIEVAL` chunks per question.
-- `SELECT count(*) FROM chunk_embedding WHERE embedding <-> query < 0.75;` matches returned count.
+Modify app/core/pipeline.py and app/core/router.py so that every pipeline stage
+and every OpenRouter API call logs structured timing information. Include model,
+attempt, elapsed seconds, prompt character count, response character count, and
+error type if failed.
 
-### WP-013: FastAPI Routes & Payload Validation
-**Scope:** Implement `/api/v1/ingest`, `/api/v1/analyze`, `/api/v1/corpus/update`.
-**Files Created/Modified:** `app/api/routes/ingest.py`, `app/api/routes/analyze.py`, `app/api/routes/corpus.py`, `app/main.py`
-**Signatures:** `@router.post("/ingest") async def ingest(file: UploadFile): ...`, `@router.post("/analyze") async def analyze(payload: AnalyzeRequest): ...`
-**Acceptance Criteria:**
-- `pytest tests/integration/test_api_routes.py::test_ingest_endpoint` passes (returns 200 with text).
-- `pytest tests/integration/test_api_routes.py::test_analyze_endpoint` passes (returns 200 with 6-part JSON).
-- `curl -X POST http://localhost:8000/api/v1/ingest -F "file=@test.pdf"` returns valid JSON.
+Also create scripts/benchmark_analyze.py. The script should POST a sample text
+to /api/v1/analyze with the required X-Disclaimer-Ack header, consume the SSE
+stream, print the time of each stage event, and print total elapsed time.
 
-### WP-014: Static Frontend & SSE Client
-**Scope:** Build `index.html`, `app.js`, `style.css`. Handle upload, progress streaming, output rendering.
-**Files Created/Modified:** `static/index.html`, `static/app.js`, `static/style.css`
-**Signatures:** `function handleUpload(file) { ... }`, `function streamAnalysis(sessionId) { ... }`
-**Acceptance Criteria:**
-**Acceptance Criteria:**
-- `http://localhost:8000` loads without console errors.
-- Modal blocks all interaction until checkbox is checked and "Acknowledge" clicked.
-- `localStorage.getItem("legal_disclaimer_accepted_v1")` returns valid JSON with `version`, `timestamp`, `ip_hash`.
-- `fetch("/api/v1/ingest")` without `X-Disclaimer-Ack` header returns `403` with exact error payload.
-- `fetch("/api/v1/ingest")` with correct header returns `200` and proceeds.
-- Version mismatch triggers modal re-render.
-- Final output renders exactly 6 sections with correct headings.
-
-### WP-015: End-to-End Integration & Performance Validation
-**Scope:** Wire all components, run full pipeline, verify latency, log audit trails.
-**Files Created/Modified:** `tests/integration/test_pipeline.py`, `app/main.py` (middleware)
-**Signatures:** `async def test_full_pipeline_execution(): ...`
-**Acceptance Criteria:**
-- `pytest tests/integration/test_pipeline.py::test_full_pipeline_execution` passes.
-- Total latency < 300s for 3-page scanned PDF.
-- `pipeline_stage_log` table contains 7 rows per run.
-- `claim` and `evidence_binding` tables populated correctly.
-- `pytest tests/integration/test_pipeline.py::test_disclaimer_enforcement` passes (verifies full pipeline only executes post-acknowledgment).
-- `pipeline_stage_log` contains exactly 8 rows per run (7 stages + 1 disclaimer_ack).
-
-### WP-016: Security Hardening & v1.0 Release
-**Scope:** Apply CORS, rate limiting (local), logging, MIT license, Docker optimization, release tag.
-**Files Created/Modified:** `app/main.py`, `Dockerfile`, `LICENSE`, `README.md`
-**Signatures:** `app.add_middleware(CORSMiddleware, ...)`
-**Acceptance Criteria:**
-- `curl -I http://localhost:8000` returns `Access-Control-Allow-Origin: http://localhost:8000`.
-- `docker build -t citizen:v1.0 .` succeeds.
-- `git tag v1.0 && git push origin v1.0` succeeds.
-- `pytest --cov=app` reports >= 85% coverage.
-
-### WP-017: Disclaimer Middleware & Consent Enforcement
-**Scope:** Implement `DisclaimerMiddleware`, integrate into FastAPI app, add `/api/v1/meta/disclaimer/*` endpoints, wire logging.
-**Files Created/Modified:** `app/middleware/disclaimer.py`, `app/api/routes/meta.py`, `app/main.py`
-**Signatures:** `class DisclaimerMiddleware(BaseHTTPMiddleware): ...`, `@router.get("/meta/disclaimer/version")`, `@router.get("/meta/disclaimer/text")`
-**Acceptance Criteria:**
-- `pytest tests/unit/test_middleware.py::test_disclaimer_block` passes (verifies 403 on missing header).
-- `pytest tests/unit/test_middleware.py::test_disclaimer_pass` passes (verifies 200 on valid header).
-- `curl -H "X-Disclaimer-Ack: v1.0.0" http://localhost:8000/api/v1/ingest` returns 200.
-- `pipeline_stage_log` contains `disclaimer_ack` entry with correct version/timestamp.
-- `ruff check app/middleware/disclaimer.py` returns 0.
+Do not change business logic yet. Preserve existing API behavior.
+```
 
 ---
 
-## 4. FUTURE WORK (POST-v1.0)
+# WP-002 — Fix timeout, retry, and fallback behavior
 
-| Feature | Trigger Condition | Architectural Impact |
-|---------|-------------------|----------------------|
-| **Automated Corpus Updates** | User base > 100, legal amendment frequency > 2/month | Add `APScheduler` cron job, implement diff-based chunk invalidation, add `source_version` tracking. |
-| **Multi-Tenant RBAC & Auth** | Monetization phase, SaaS deployment | Add `user`, `role`, `tenant` tables. Implement JWT middleware. Scope `case_run` by `tenant_id`. |
-| **Persistent Case History UI** | User feedback requests > 50% | Enable `case_run` persistence in UI. Add search/filter endpoints. Implement data retention policies. |
-| **Procedural Timeline Engine** | Expansion to SGB III/XII | Add `deadline`, `event_type`, `trigger_date` models. Integrate calendar sync. Add escalation alerts. |
-| **Local LLM Support (Ollama/vLLM)** | Privacy compliance requirements | Add `LocalLLMClient` abstraction. Implement model routing based on `provider` config. Optimize VRAM usage. |
-| **Semi-Automated Case Tracking** | Lawyer/Professional tier launch | Add `case_status`, `agency_response`, `follow_up_date` fields. Implement webhook/email polling. |
+## Goal
+
+Prevent one slow model from consuming the entire 300-second pipeline budget.
+
+## Current problem
+
+In `app/core/router.py`:
+
+```python
+self.models: list[str] = [
+    settings.PRIMARY_MODEL,
+    settings.FALLBACK_MODEL_1,
+    settings.FALLBACK_MODEL_2,
+]
+```
+
+But your config uses the same model twice:
+
+```python
+PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
+FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
+```
+
+Also:
+
+```python
+MAX_RETRIES: int = 3
+REQUEST_TIMEOUT: float = 45.0
+```
+
+This is too generous for a multi-stage pipeline.
+
+## Recommended defaults
+
+For development:
+
+```env
+MAX_RETRIES=1
+REQUEST_TIMEOUT=25
+PIPELINE_TIMEOUT_SEC=120
+TOP_K_RETRIEVAL=6
+```
+
+Later you can use per-stage timeouts.
+
+## Implementation tasks
+
+1. Deduplicate fallback models.
+2. Let `chat_completion()` accept:
+   - `timeout`
+   - `max_retries`
+   - `models`
+3. Add config values:
+
+```python
+TRIAGE_TIMEOUT_SEC: float = 20.0
+FINAL_TIMEOUT_SEC: float = 75.0
+EMBEDDING_TIMEOUT_SEC: float = 15.0
+```
+
+4. Stop retrying slow models too much.
+5. Make fallback chain explicit and non-duplicated.
+
+## Example desired behavior
+
+Instead of:
+
+```text
+model A attempt 1: 45s timeout
+model A attempt 2: 45s timeout
+model A attempt 3: 45s timeout
+model A again attempt 1: 45s timeout
+...
+```
+
+You want:
+
+```text
+triage model A attempt 1: timeout at 20s
+fallback model B attempt 1: success at 8s
+```
+
+## Acceptance criteria
+
+- No duplicated model names in fallback chain.
+- No single triage call can exceed 20–25s.
+- No final generation call can exceed 75–90s.
+- A bad model fails fast and falls back once.
+
+## Prompt for coding model
+
+```text
+Refactor app/core/router.py so OpenRouterClient deduplicates fallback models and
+supports per-call timeout and max_retries parameters.
+
+Add these settings to app/core/config.py:
+- TRIAGE_TIMEOUT_SEC: float = 20.0
+- FINAL_TIMEOUT_SEC: float = 75.0
+- EMBEDDING_TIMEOUT_SEC: float = 15.0
+- TRIAGE_MODEL: str | None = None
+- FINAL_MODEL: str | None = None
+
+Modify OpenRouterClient.chat_completion() so callers can pass:
+- timeout: float | None
+- max_retries: int | None
+- model: str | None
+- models: list[str] | None
+
+If models are provided, use that fallback chain. Deduplicate model names while
+preserving order. Default max_retries should still come from settings, but code
+must support per-call overrides.
+
+Preserve existing behavior for existing callers as much as possible.
+```
 
 ---
+
+# WP-003 — Parallelize classification and decomposition
+
+## Goal
+
+Classification and question decomposition both depend only on normalized text. They do not need to be sequential.
+
+## Current code
+
+In `app/core/pipeline.py`, stages run strictly one after another:
+
+```python
+_STAGES = [
+    "normalization",
+    "classification",
+    "decomposition",
+    "retrieval",
+    "construction",
+    "verification",
+    "generation",
+]
+```
+
+## Short-term fix
+
+Run classification and decomposition concurrently after normalization.
+
+The SSE output can still emit:
+
+```text
+classification complete
+decomposition complete
+```
+
+in the same order after both tasks finish.
+
+## Expected gain
+
+If classification takes 12s and decomposition takes 14s:
+
+- current: 26s
+- parallel: about 14s
+
+## Acceptance criteria
+
+- Classification and decomposition execute concurrently.
+- SSE still includes both stage events.
+- No change to API response schema.
+- Failure in either stage still fails the pipeline clearly.
+
+## Prompt for coding model
+
+```text
+Modify app/core/pipeline.py so classification and decomposition can run
+concurrently after normalization.
+
+Keep the public SSE stage names the same:
+- normalization
+- classification
+- decomposition
+- retrieval
+- construction
+- verification
+- generation
+
+After normalization, run _stage_classification(state) and
+_stage_decomposition(state) using asyncio.gather(). Then emit the classification
+SSE event and decomposition SSE event with correct duration_ms values.
+
+Do not change the endpoint contract. Preserve timeout enforcement.
+```
+
+---
+
+# WP-004 — Reduce retrieval cost
+
+## Goal
+
+Retrieval currently embeds every question. For 3–5 questions, that means 3–5 embedding requests. This is not terrible, but it adds latency and failure surface.
+
+## Better approach
+
+For the first speed target, use one combined retrieval query:
+
+```text
+issues + questions + short normalized document summary
+```
+
+Generate one embedding and retrieve top `K`.
+
+Later, you can support hybrid retrieval or multiple embeddings.
+
+## Files to modify
+
+- `app/services/retrieval.py`
+- `app/core/config.py`
+- possibly `app/core/pipeline.py`
+
+## Implementation tasks
+
+1. Add setting:
+
+```python
+RETRIEVAL_MODE: str = "combined"  # "combined" or "per_question"
+```
+
+2. Implement `retrieve_chunks_combined()`:
+
+```python
+async def retrieve_chunks_combined(
+    issues: list[str],
+    questions: list[str],
+    normalized_text: str,
+    *,
+    client: OpenRouterClient | None = None,
+) -> list[dict[str, Any]]:
+    ...
+```
+
+3. Build query like:
+
+```text
+Themen:
+- issue 1
+- issue 2
+
+Rechtsfragen:
+- question 1
+- question 2
+
+Dokumentauszug:
+first 1200 characters
+```
+
+4. Generate one embedding.
+5. Retrieve `TOP_K_RETRIEVAL` chunks.
+6. Deduplicate and sort as before.
+
+## Recommended settings
+
+```env
+TOP_K_RETRIEVAL=6
+MAX_COSINE_DISTANCE=0.85
+RETRIEVAL_MODE=combined
+```
+
+`0.75` may be too strict depending on embedding quality.
+
+## Acceptance criteria
+
+- Retrieval makes one embedding request in combined mode.
+- Retrieval stage usually completes in under 10s.
+- Existing per-question retrieval still works behind a setting.
+
+## Prompt for coding model
+
+```text
+Add a faster combined retrieval mode.
+
+In app/core/config.py add:
+- RETRIEVAL_MODE: str = "combined"
+
+In app/services/retrieval.py implement retrieve_chunks_combined(issues,
+questions, normalized_text, client=None). It should create one combined German
+search query from issues, questions, and the first 1200 chars of normalized_text,
+generate one embedding, query pgvector once, and return the same chunk dict shape
+as retrieve_chunks().
+
+Modify app/core/pipeline.py retrieval stage so if settings.RETRIEVAL_MODE ==
+"combined", it calls retrieve_chunks_combined(state.issues, state.questions,
+state.normalized_text). Otherwise preserve existing retrieve_chunks(state.questions).
+
+Keep API behavior unchanged.
+```
+
+---
+
+# WP-005 — Move audit persistence out of the response path
+
+## Goal
+
+Right now `analyze.py` persists audit data inside the SSE generator after yielding the final event. Depending on the client, the response may not be considered complete until that DB work finishes.
+
+## Current code
+
+In `event_generator()`:
+
+```python
+yield _sse_format(final_payload)
+
+# then persist audit trail
+...
+await persist_audit_record(db_session, audit_record)
+```
+
+This can delay connection close.
+
+## Better approach
+
+After yielding final output, schedule audit persistence in the background and immediately end the stream.
+
+## Implementation options
+
+Simple option:
+
+```python
+asyncio.create_task(_persist_audit_safely(audit_record))
+return
+```
+
+More structured option:
+
+- Use a small internal queue.
+- Background worker consumes audit records.
+
+For this project, `asyncio.create_task()` is acceptable.
+
+## Acceptance criteria
+
+- Final SSE event is sent as soon as generation completes.
+- Connection closes within about 1s after final event.
+- Audit still gets persisted.
+- Audit failures are logged but never delay the user.
+
+## Prompt for coding model
+
+```text
+Refactor app/api/routes/analyze.py so audit persistence happens outside the SSE
+response path.
+
+Create an async helper _persist_audit_safely(audit_record: AuditRecord) that
+opens a fresh DB session and calls persist_audit_record(), catching and logging
+all exceptions.
+
+In event_generator(), after yielding the final payload, schedule persistence
+with asyncio.create_task(_persist_audit_safely(audit_record)) and then return
+immediately.
+
+Do the same for failed audit records if possible. Preserve existing audit data
+structure.
+```
+
+---
+
+# WP-006 — Combine classification and decomposition into one triage call
+
+## Goal
+
+Instead of two LLM calls:
+
+```text
+classify_issues()
+decompose_questions()
+```
+
+use one:
+
+```text
+triage_document()
+```
+
+that returns both:
+
+```json
+{
+  "issues": ["..."],
+  "questions": ["..."]
+}
+```
+
+## Why this matters
+
+Even with parallelization, you still pay for two remote requests. One combined call is faster and often better because the model sees the task holistically.
+
+## Files to modify
+
+- `app/services/reasoning.py`
+- `app/core/pipeline.py`
+
+## New function
+
+```python
+async def triage_document(normalized_text: str) -> dict[str, list[str]]:
+    ...
+```
+
+## Suggested prompt
+
+The model should return:
+
+```json
+{
+  "issues": ["..."],
+  "questions": ["..."]
+}
+```
+
+Rules:
+
+- German.
+- 1–8 issues.
+- 3–5 questions.
+- Questions must be answerable using German social law.
+- No prose.
+
+## Pipeline compatibility
+
+You can still emit two SSE events:
+
+1. `classification`
+2. `decomposition`
+
+But internally they come from the same LLM result.
+
+## Acceptance criteria
+
+- Stage 2+3 use one LLM call.
+- SSE events remain unchanged.
+- `state.issues` and `state.questions` are populated.
+- Fallback to old separate calls can be enabled via setting if desired.
+
+## Prompt for coding model
+
+```text
+Add a combined triage LLM call.
+
+In app/services/reasoning.py create async function triage_document(normalized_text:
+str) -> dict[str, list[str]]. It should call OpenRouter once and return a dict
+with:
+- issues: list[str]
+- questions: list[str]
+
+Use a strict JSON prompt. Validate that issues is a list and questions is a
+list. Return empty lists on malformed content only after the existing JSON retry
+logic fails.
+
+In app/core/config.py add:
+- COMBINE_TRIAGE_STAGES: bool = True
+
+In app/core/pipeline.py modify classification/decomposition execution. If
+COMBINE_TRIAGE_STAGES is true, call triage_document() once after normalization,
+populate state.issues and state.questions, and emit the existing classification
+and decomposition SSE events. If false, preserve the old behavior.
+
+Use settings.TRIAGE_MODEL if provided, and settings.TRIAGE_TIMEOUT_SEC.
+```
+
+---
+
+# WP-007 — Combine construction, verification, and generation into one grounded answer call
+
+## Goal
+
+This is the biggest win.
+
+Currently you do:
+
+```text
+construct_claims()  -> LLM
+verify_claims()     -> LLM
+generate_output()   -> LLM
+```
+
+Replace with:
+
+```text
+generate_grounded_answer() -> LLM once
+deterministic verification -> local
+```
+
+## New output shape
+
+Ask the LLM to return both the final six sections and claim/evidence metadata:
+
+```json
+{
+  "claims": [
+    {
+      "claim_text": "...",
+      "confidence_score": 0.82,
+      "claim_type": "interpretation",
+      "question": "...",
+      "evidence_chunk_id": "...",
+      "evidence_hierarchy": "SGB II > § 31 > Abs. 1",
+      "evidence_quote": "exact quote copied from source chunk"
+    }
+  ],
+  "sections": {
+    "sachverhalt": "...",
+    "rechtliche_wuerdigung": "...",
+    "ergebnis": "...",
+    "handlungsempfehlung": "...",
+    "entwurf": "...",
+    "unsicherheiten": "..."
+  }
+}
+```
+
+## Why this is safe
+
+You can instruct the LLM:
+
+- Only use provided chunks.
+- Every legal claim must have an evidence quote.
+- If evidence is insufficient, say so.
+- Do not invent statutes.
+- Copy evidence quotes exactly.
+
+Then local code checks whether the quote actually appears in the retrieved chunk.
+
+## Files to modify
+
+- `app/services/reasoning.py`
+- `app/core/pipeline.py`
+- `app/services/audit.py` maybe not necessary, but evidence binding quality improves.
+
+## Acceptance criteria
+
+- After retrieval, the app makes one final LLM call.
+- Pipeline still emits:
+  - construction
+  - verification
+  - generation
+- `state.claims` is populated from the LLM result.
+- `state.verified_claims` is populated by deterministic verification.
+- `state.final_output` is populated from `sections`.
+- Total chat calls per analyze request should be 2:
+  - triage
+  - grounded answer
+
+## Prompt for coding model
+
+```text
+Implement a combined grounded answer generation path.
+
+In app/services/reasoning.py add async function generate_grounded_answer(
+    normalized_text: str,
+    issues: list[str],
+    questions: list[str],
+    chunks: list[dict[str, Any]],
+) -> dict[str, Any].
+
+It should call the LLM once and require strict JSON with this shape:
+{
+  "claims": [
+    {
+      "claim_text": str,
+      "confidence_score": float,
+      "claim_type": "fact" | "interpretation" | "recommendation",
+      "question": str,
+      "evidence_chunk_id": str,
+      "evidence_hierarchy": str,
+      "evidence_quote": str
+    }
+  ],
+  "sections": {
+    "sachverhalt": str,
+    "rechtliche_wuerdigung": str,
+    "ergebnis": str,
+    "handlungsempfehlung": str,
+    "entwurf": str,
+    "unsicherheiten": str
+  }
+}
+
+The prompt must instruct the model in German to use only the provided chunks,
+copy evidence_quote exactly from a chunk, and explicitly state uncertainty when
+sources are insufficient.
+
+Add config setting:
+- COMBINE_FINAL_STAGES: bool = True
+
+In app/core/pipeline.py, if COMBINE_FINAL_STAGES is true, after retrieval call
+generate_grounded_answer() once. Use its claims for construction, run a local
+verification helper for verification, and use sections for generation. Emit the
+same three SSE events as before.
+
+Preserve old construct_claims(), verify_claims(), generate_output() path behind
+COMBINE_FINAL_STAGES=false.
+```
+
+---
+
+# WP-008 — Deterministic quote/evidence verification
+
+## Goal
+
+Replace expensive LLM verification with fast local verification.
+
+## Current issue
+
+Your `verify_claims()` LLM output does not include evidence fields, even though `analyze.py` expects fields like:
+
+```python
+vc.get("evidence_chunk_id")
+vc.get("evidence_quote")
+vc.get("evidence_hierarchy")
+```
+
+So your audit evidence bindings are probably mostly empty.
+
+## New local verifier
+
+For each claim:
+
+1. Find matching chunk by `evidence_chunk_id`.
+2. Check whether `evidence_quote` appears in `chunk["text_content"]`.
+3. If yes:
+   - `verified=True`
+   - keep or slightly increase confidence.
+4. If no:
+   - try normalized substring match.
+5. If still no:
+   - `verified=False`
+   - reduce confidence to max `0.45`.
+6. Preserve evidence fields.
+
+## Files to modify
+
+- `app/services/reasoning.py` or new file `app/services/verification.py`
+- `app/core/pipeline.py`
+
+## Acceptance criteria
+
+- Verification stage takes under 1s.
+- Claims with exact evidence quotes are marked verified.
+- Claims without matching quote are downgraded.
+- Evidence bindings in audit records are populated.
+
+## Prompt for coding model
+
+```text
+Add deterministic evidence verification.
+
+Create app/services/verification.py with function verify_claims_against_chunks(
+claims: list[dict[str, Any]], chunks: list[dict[str, Any]]
+) -> list[dict[str, Any]].
+
+For each claim, use evidence_chunk_id to find the source chunk. Check whether
+evidence_quote appears exactly in text_content. If not, normalize whitespace and
+try again. If matched, set verified=true and preserve confidence_score. If not
+matched, set verified=false and reduce confidence_score to max 0.45.
+
+Preserve these fields:
+- claim_text
+- confidence_score
+- claim_type
+- question
+- evidence_chunk_id
+- evidence_hierarchy
+- evidence_quote
+- verified
+- reasoning
+
+Reasoning should be a short German string explaining whether the quote was found.
+
+Modify the combined final pipeline path to use this verifier for the verification
+stage instead of the LLM verify_claims() call.
+```
+
+---
+
+# WP-009 — Add model routing
+
+## Goal
+
+Do not use the same model for every stage. Use a fast model for triage, and a better model only for the final grounded answer.
+
+## Suggested config
+
+```python
+TRIAGE_MODEL: str = "some-fast-cheap-model"
+FINAL_MODEL: str = "some-balanced-quality-model"
+OCR_SYNTHESIS_MODEL: str = "some-fast-ocr-model"
+```
+
+Keep these generic in code; configure concrete model names in `.env`.
+
+## Example model strategy
+
+```text
+Triage:
+  fast, cheap, low latency, okay reasoning
+
+Final answer:
+  better reasoning model, longer timeout
+
+OCR synthesis:
+  fast model, or disabled unless needed
+```
+
+## Files to modify
+
+- `app/core/config.py`
+- `app/services/reasoning.py`
+
+## Acceptance criteria
+
+- `triage_document()` uses `TRIAGE_MODEL` if set.
+- `generate_grounded_answer()` uses `FINAL_MODEL` if set.
+- Old functions can continue using primary model.
+- Logs show which model was used for each stage.
+
+## Prompt for coding model
+
+```text
+Add model routing.
+
+In app/core/config.py add:
+- TRIAGE_MODEL: str | None = None
+- FINAL_MODEL: str | None = None
+- OCR_SYNTHESIS_MODEL already exists; keep it.
+
+Modify triage_document() to call OpenRouterClient.chat_completion() with
+model=settings.TRIAGE_MODEL if set, timeout=settings.TRIAGE_TIMEOUT_SEC, and
+max_retries=1.
+
+Modify generate_grounded_answer() to call OpenRouterClient.chat_completion() with
+model=settings.FINAL_MODEL if set, timeout=settings.FINAL_TIMEOUT_SEC, and
+max_retries=1.
+
+Ensure logs include the selected model.
+```
+
+---
+
+# WP-010 — Add prompt and token budgeting
+
+## Goal
+
+Prevent accidental giant prompts. Even a 1500-word input can become large after adding questions, chunks, claims, and instructions.
+
+## Files to modify
+
+- `app/services/reasoning.py`
+- maybe new `app/utils/tokens.py`
+
+## Implementation tasks
+
+1. Add helper:
+
+```python
+def trim_text(text: str, max_chars: int) -> str:
+    ...
+```
+
+2. Add settings:
+
+```python
+MAX_TRIAGE_INPUT_CHARS: int = 8000
+MAX_FINAL_INPUT_CHARS: int = 5000
+MAX_CHUNK_CONTEXT_CHARS: int = 7000
+MAX_CHUNKS_FOR_FINAL: int = 6
+```
+
+3. For final answer:
+   - use only top 6 chunks by retrieval score
+   - include chunk id, hierarchy, and text
+   - hard cap total chunk context
+
+## Acceptance criteria
+
+- Logs show prompt size.
+- Final prompt never exceeds configured character budget.
+- Very long documents do not explode latency.
+
+## Prompt for coding model
+
+```text
+Add prompt-size budgeting.
+
+In app/core/config.py add:
+- MAX_TRIAGE_INPUT_CHARS: int = 8000
+- MAX_FINAL_INPUT_CHARS: int = 5000
+- MAX_CHUNK_CONTEXT_CHARS: int = 7000
+- MAX_CHUNKS_FOR_FINAL: int = 6
+
+In app/services/reasoning.py add helpers to trim document input and chunk context.
+Modify triage_document() and generate_grounded_answer() to respect these limits.
+For generate_grounded_answer(), include only the top settings.MAX_CHUNKS_FOR_FINAL
+chunks and cap total chunk text to MAX_CHUNK_CONTEXT_CHARS.
+
+Log final prompt character counts.
+```
+
+---
+
+# WP-011 — Add local caching
+
+## Goal
+
+Avoid paying for repeated work during development and repeated user submissions.
+
+## Best first caches
+
+1. Embedding cache:
+   - key: `sha256(model + text)`
+   - value: vector
+2. Triage cache:
+   - key: `sha256(model + normalized_text)`
+   - value: issues/questions
+3. Retrieval cache:
+   - key: `sha256(questions + corpus_version)`
+   - value: chunk ids/results
+
+## Simple implementation
+
+Use a local SQLite file or a JSONL cache. Since this is local-first, SQLite is fine.
+
+Add table:
+
+```sql
+cache_entry(
+  key text primary key,
+  value_json jsonb/text,
+  created_at timestamp,
+  expires_at timestamp nullable
+)
+```
+
+But to keep it simple, use the existing PostgreSQL database.
+
+## Acceptance criteria
+
+- Repeating the same analyze request skips triage and embeddings.
+- Repeated request should complete dramatically faster.
+- Cache can be disabled via setting.
+
+## Prompt for coding model
+
+```text
+Implement a simple local cache service.
+
+Create app/services/cache.py with async functions:
+- get_json_cache(session, key: str) -> Any | None
+- set_json_cache(session, key: str, value: Any, ttl_sec: int | None = None) -> None
+- make_cache_key(namespace: str, model: str, text: str) -> str
+
+Add SQLAlchemy model CacheEntry in app/db/models.py:
+- key: string primary key
+- value_json: JSONB
+- created_at
+- expires_at nullable
+
+Add setting:
+- ENABLE_CACHE: bool = True
+- CACHE_TTL_SEC: int = 86400
+
+Use the cache in triage_document() and embedding generation if reasonably easy.
+If DB migrations are not present, include a note or helper to create the table.
+```
+
+---
+
+# WP-012 — Optimize OCR separately
+
+## Goal
+
+Your reported issue is for 1500-word text analysis, but ingestion/OCR can also be slow because it may call an LLM for OCR synthesis.
+
+Current OCR path:
+
+```text
+Tesseract A
+Tesseract B
+LLM synthesis
+```
+
+For large PDFs, this can be expensive.
+
+## Recommended settings
+
+Add:
+
+```python
+ENABLE_OCR_LLM_SYNTHESIS: bool = False
+MAX_OCR_SYNTHESIS_CHARS: int = 6000
+OCR_MAX_PAGES: int = 10
+```
+
+Default to no LLM synthesis unless explicitly enabled.
+
+## Acceptance criteria
+
+- OCR works without remote LLM call.
+- User can enable OCR synthesis via config.
+- Large PDFs do not silently process 80 pages.
+
+## Prompt for coding model
+
+```text
+Add OCR performance controls.
+
+In app/core/config.py add:
+- ENABLE_OCR_LLM_SYNTHESIS: bool = False
+- MAX_OCR_SYNTHESIS_CHARS: int = 6000
+- OCR_MAX_PAGES: int = 10
+
+Modify app/services/ocr.py so process_document() only performs LLM OCR synthesis
+when ENABLE_OCR_LLM_SYNTHESIS is true. Otherwise combine the two OCR outputs and
+normalize locally.
+
+For PDFs, process at most OCR_MAX_PAGES pages unless the setting is 0 or None.
+Return a warning in logs if pages were skipped.
+```
+
+---
+
+# Recommended final pipeline after WPs 006–008
+
+Internally:
+
+```python
+normalization
+triage_document()                  # fills issues + questions
+retrieve_chunks_combined()
+generate_grounded_answer()         # fills claims + sections
+verify_claims_against_chunks()     # local
+```
+
+Externally, keep SSE stages:
+
+```text
+normalization
+classification
+decomposition
+retrieval
+construction
+verification
+generation
+final
+```
+
+This gives compatibility without forcing seven expensive operations.
+
+---
+
+# Suggested latency budget
+
+Use this as your performance contract:
+
+| Step | Target | Hard max |
+|---|---:|---:|
+| Normalization | < 1s | 2s |
+| Triage LLM | 5–15s | 25s |
+| Retrieval | 2–8s | 15s |
+| Final grounded answer LLM | 20–60s | 85s |
+| Deterministic verification | < 1s | 2s |
+| Audit scheduling | < 1s | 2s |
+| Total | 30–90s | 120s |
+
+If the final model cannot answer within 85s, fail gracefully with:
+
+```text
+The selected model exceeded the latency budget. Try a faster FINAL_MODEL or reduce context.
+```
+
+Do not let it drift to 300s.
+
+---
+
+# Practical `.env` starting point
+
+After implementing the config changes, try something like:
+
+```env
+PIPELINE_TIMEOUT_SEC=120
+REQUEST_TIMEOUT=25
+MAX_RETRIES=1
+
+COMBINE_TRIAGE_STAGES=true
+COMBINE_FINAL_STAGES=true
+RETRIEVAL_MODE=combined
+
+TRIAGE_TIMEOUT_SEC=20
+FINAL_TIMEOUT_SEC=75
+EMBEDDING_TIMEOUT_SEC=15
+
+TOP_K_RETRIEVAL=6
+MAX_COSINE_DISTANCE=0.85
+
+MAX_TRIAGE_INPUT_CHARS=8000
+MAX_FINAL_INPUT_CHARS=5000
+MAX_CHUNK_CONTEXT_CHARS=7000
+MAX_CHUNKS_FOR_FINAL=6
+
+ENABLE_CACHE=true
+CACHE_TTL_SEC=86400
+```
+
+Also make sure your fallback models are distinct:
+
+```env
+PRIMARY_MODEL=...
+FALLBACK_MODEL_1=...
+FALLBACK_MODEL_2=...
+TRIAGE_MODEL=...
+FINAL_MODEL=...
+```
+
+Do not set `PRIMARY_MODEL` and `FALLBACK_MODEL_1` to the same value.
+
+---
+
+# Suggested implementation order
+
+If you want the shortest path to real improvement:
+
+## Sprint 1
+
+1. WP-001 instrumentation
+2. WP-002 timeout/retry/fallback cleanup
+3. WP-005 async audit persistence
+
+## Sprint 2
+
+4. WP-006 combined triage
+5. WP-004 combined retrieval
+6. WP-009 model routing
+
+## Sprint 3
+
+7. WP-007 combined final generation
+8. WP-008 deterministic verification
+9. WP-010 prompt budgeting
+
+## Sprint 4
+
+10. WP-011 caching
+11. WP-012 OCR performance controls
+
+---
+
+# Definition of done
+
+You should consider the optimization work successful when:
+
+1. A 1500-word text completes in under 120 seconds.
+2. The typical path uses no more than:
+   - 2 chat-completion calls
+   - 1 embedding call
+   - 1 vector DB retrieval
+3. No single LLM call can consume the whole pipeline timeout.
+4. The final output still has the six required sections.
+5. Claims are tied to evidence quotes.
+6. Audit records are still persisted.
+7. The benchmark script produces a clear timing report.
+
+The biggest conceptual shift is this:
+
+> Keep the 7-stage product/audit model, but do not implement it as 7 expensive sequential operations.
+
+You can preserve the stage semantics while collapsing the remote calls.

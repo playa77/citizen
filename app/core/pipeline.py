@@ -317,6 +317,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     logger.info("Starting pipeline (timeout=%ds)", timeout_sec)
 
     started = time.monotonic()
+    stage_timings: dict[str, float] = {}  # collect per-stage elapsed seconds for summary
 
     for stage_name in _STAGES:
         # Check remaining time budget
@@ -350,8 +351,9 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
             ) from None
 
         stage_dur = time.monotonic() - stage_start
+        stage_timings[stage_name] = stage_dur
         logger.info(
-            "✓ Stage %-14s completed in %.1fs",
+            "✓ Stage %-14s completed in %.2fs",
             stage_name,
             stage_dur,
         )
@@ -381,6 +383,29 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
                     "Eine Corpus-Aktualisierung über /api/v1/corpus/update wird empfohlen."
                 ),
             }
-            return
+            break
 
+    total_elapsed = time.monotonic() - started
+
+    # Print a clear per-stage timing summary.
+    logger.info("=" * 55)
+    logger.info("PIPELINE TIMING SUMMARY")
+    logger.info("=" * 55)
+    for stage_name in _STAGES:
+        dur = stage_timings.get(stage_name, None)
+        if dur is not None:
+            logger.info("  %-18s %8.2fs", stage_name, dur)
+        else:
+            logger.info("  %-18s %8s", stage_name, "(skipped)")
+    logger.info("-" * 55)
+    logger.info("  %-18s %8.2fs", "total", total_elapsed)
+    total_staged = sum(stage_timings.values())
+    if total_staged and total_staged > 0:
+        logger.info(
+            "  %-18s %8.2fs (%.1f%% of total)",
+            "staged (sum)",
+            total_staged,
+            (total_staged / total_elapsed) * 100,
+        )
+    logger.info("=" * 55)
     logger.info("Pipeline completed successfully.")
