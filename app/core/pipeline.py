@@ -1,9 +1,9 @@
 """7-Stage reasoning pipeline orchestrator with SSE streaming and timeout enforcement.
 
-Pipeline stages (sequential, non-parallel):
+Pipeline stages:
     1. Input Normalization
-    2. Issue Classification
-    3. Question Decomposition
+    2. Issue Classification   ─┐  concurrent (WP-003)
+    3. Question Decomposition  ─┘
     4. Evidence Retrieval
     5. Claim Construction
     6. Verification Pass
@@ -178,6 +178,79 @@ async def _stage_decomposition(state: PipelineState) -> None:
     logger.info("Decomposition complete (%d questions)", len(state.questions))
 
 
+async def _run_classification_and_decomposition_stages(
+    state: PipelineState,
+) -> AsyncGenerator[str, None]:
+    """Run classification and decomposition concurrently after normalization.
+
+    Both stages only depend on ``state.normalized_text`` and are independent of
+    each other. Executing them via ``asyncio.gather()`` cuts end-to-end latency
+    from ``max(cls, dec) + overhead`` to ``max(cls, dec)``.
+
+    SSE events are emitted in the canonical order: classification first, then
+    decomposition.
+    """
+    from app.services.reasoning import classify_issues, decompose_questions
+
+    t0 = time.monotonic()
+    logger.info("  → launching classification + decomposition in parallel")
+
+    cls_task = asyncio.create_task(
+        classify_issues(state.normalized_text), name="classification"
+    )
+    dec_task = asyncio.create_task(
+        decompose_questions(state.normalized_text), name="decomposition"
+    )
+
+    # Wait for both concurrently.  ``return_exceptions=True`` lets us inspect
+    # each result individually and produce clear failure messages.
+    cls_result, dec_result = await asyncio.gather(
+        cls_task, dec_task, return_exceptions=True
+    )
+
+    cls_dur = int((time.monotonic() - t0) * 1000)
+
+    # -- Classification (always emitted first) ---------------------------------
+    if isinstance(cls_result, BaseException):
+        logger.exception("Stage classification failed in parallel batch")
+        state.errors.append(f"classification: {cls_result}")
+        raise StageExecutionError(
+            f"Stage 'classification' failed: {cls_result}"
+        ) from cls_result
+
+    state.issues = cls_result
+    logger.info("Classification complete (%d issues)", len(state.issues))
+
+    yield _sse_event(
+        stage="classification",
+        status="complete",
+        payload=_stage_payload(
+            state, stage_name="classification", duration_ms=cls_dur,
+        ),
+    )
+
+    # -- Decomposition (emitted second) ----------------------------------------
+    if isinstance(dec_result, BaseException):
+        logger.exception("Stage decomposition failed in parallel batch")
+        state.errors.append(f"decomposition: {dec_result}")
+        raise StageExecutionError(
+            f"Stage 'decomposition' failed: {dec_result}"
+        ) from dec_result
+
+    state.questions = dec_result
+    logger.info("Decomposition complete (%d questions)", len(state.questions))
+
+    dec_dur = int((time.monotonic() - t0) * 1000)
+
+    yield _sse_event(
+        stage="decomposition",
+        status="complete",
+        payload=_stage_payload(
+            state, stage_name="decomposition", duration_ms=dec_dur,
+        ),
+    )
+
+
 async def _stage_retrieval(state: PipelineState) -> None:
     """Stage 4 — pgvector similarity search with diversity filter."""
     from app.services.retrieval import retrieve_chunks
@@ -287,6 +360,16 @@ async def _collect_single_stage(
     return events
 
 
+async def _collect_async_gen(
+    gen: AsyncGenerator[str, None],
+) -> list[str]:
+    """Collect all items from an async generator into a list."""
+    items: list[str] = []
+    async for item in gen:
+        items.append(item)
+    return items
+
+
 async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     """Execute the full 7-stage reasoning pipeline with timeout enforcement.
 
@@ -319,7 +402,15 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     started = time.monotonic()
     stage_timings: dict[str, float] = {}  # collect per-stage elapsed seconds for summary
 
+    # Classification and decomposition run concurrently (WP-003).
+    # When the loop hits "classification", execute both in parallel and
+    # skip the sequential "decomposition" iteration.
+    _skip_stages: set[str] = set()
+
     for stage_name in _STAGES:
+        if stage_name in _skip_stages:
+            continue
+
         # Check remaining time budget
         elapsed = time.monotonic() - started
         remaining = timeout_sec - elapsed
@@ -332,6 +423,41 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
         )
         if remaining <= 0:
             raise PipelineTimeoutError(f"Pipeline execution exceeded {timeout_sec}s timeout")
+
+        # --- WP-003: parallelise classification + decomposition -----------------
+        if stage_name == "classification":
+            stage_start = time.monotonic()
+            try:
+                events = await asyncio.wait_for(
+                    _collect_async_gen(
+                        _run_classification_and_decomposition_stages(state)
+                    ),
+                    timeout=max(remaining, 10.0),
+                )
+            except TimeoutError:
+                logger.error(
+                    "✗ Stage classification+decomposition TIMED OUT after %.1fs "
+                    "(budget %.1fs remaining)",
+                    time.monotonic() - stage_start,
+                    remaining,
+                )
+                raise PipelineTimeoutError(
+                    f"Pipeline execution exceeded {timeout_sec}s timeout"
+                ) from None
+
+            stage_dur = time.monotonic() - stage_start
+            stage_timings["classification+decomposition"] = stage_dur
+            logger.info(
+                "✓ classification+decomposition completed in %.2fs (parallel)",
+                stage_dur,
+            )
+
+            for event in events:
+                yield event
+
+            _skip_stages.add("decomposition")
+            continue
+        # ------------------------------------------------------------------------
 
         stage_start = time.monotonic()
         try:
@@ -391,7 +517,14 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     logger.info("=" * 55)
     logger.info("PIPELINE TIMING SUMMARY")
     logger.info("=" * 55)
+    # Print the parallel classification+decomposition entry if present.
+    comb_dur = stage_timings.get("classification+decomposition", None)
+    if comb_dur is not None:
+        logger.info("  %-18s %8.2fs  (parallel)", "classification", comb_dur)
+        logger.info("  %-18s %8s", "decomposition", "↑")
     for stage_name in _STAGES:
+        if stage_name in ("classification", "decomposition"):
+            continue  # already printed above
         dur = stage_timings.get(stage_name, None)
         if dur is not None:
             logger.info("  %-18s %8.2fs", stage_name, dur)
