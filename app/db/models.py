@@ -381,3 +381,120 @@ class EvidenceBinding(Base):
             unique=True,
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# 9. conversation
+# ---------------------------------------------------------------------------
+
+
+class Conversation(Base):
+    """A multi-turn conversation with the reasoning engine."""
+
+    __tablename__ = "conversation"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(), onupdate=func.now(),
+    )
+
+    # Relationships
+    messages: Mapped[list["ConversationMessage"]] = relationship(
+        "ConversationMessage", back_populates="conversation",
+        cascade="all, delete-orphan", order_by="ConversationMessage.created_at",
+    )
+    documents: Mapped[list["ConversationDocument"]] = relationship(
+        "ConversationDocument", back_populates="conversation",
+        cascade="all, delete-orphan",
+    )
+
+
+# ---------------------------------------------------------------------------
+# 10. conversation_message
+# ---------------------------------------------------------------------------
+
+MESSAGE_ROLE_ALLOWED = ("user", "assistant", "system")
+
+
+class ConversationMessage(Base):
+    """A single message within a conversation."""
+
+    __tablename__ = "conversation_message"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
+    conversation_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("conversation.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(),
+    )
+
+    # Relationships
+    conversation: Mapped["Conversation"] = relationship(
+        "Conversation", back_populates="messages",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            f"role IN ({_sql_in(MESSAGE_ROLE_ALLOWED)})",
+            name="ck_conversation_message_role",
+        ),
+        Index("idx_message_conversation", "conversation_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 11. conversation_document
+# ---------------------------------------------------------------------------
+
+
+class ConversationDocument(Base):
+    """A document attached to a conversation — can optionally link to a case_run."""
+
+    __tablename__ = "conversation_document"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
+    conversation_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("conversation.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    normalized_text: Mapped[str] = mapped_column(Text, nullable=False)
+    case_run_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("case_run.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(),
+    )
+
+    # Relationships
+    conversation: Mapped["Conversation"] = relationship(
+        "Conversation", back_populates="documents",
+    )
+
+    __table_args__ = (
+        Index("idx_document_conversation", "conversation_id"),
+    )

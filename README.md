@@ -15,7 +15,8 @@ Citizen is a local-first, evidence-constrained legal reasoning engine designed t
 * **Deterministic LLM Routing:** Fault-tolerant OpenRouter client with an automated fallback chain (`deepseek/deepseek-v4-flash` → `deepseek/deepseek-v4-flash` → `/openrouter/free`), configurable via environment variables.
 * **Audit Trail:** Full pipeline execution auditing — every case run, stage log, claim, and evidence binding is persisted to PostgreSQL for traceability and compliance.
 * **Zero-Friction Compliance:** GDPR-compliant audit logging with automatically generated, persistent cryptographic salts on first boot. No manual security configuration required.
-* **Browser-Based UI:** Vanilla HTML/CSS/JS frontend with disclaimer acceptance, drag-and-drop document upload, corpus management controls, real-time pipeline progress visualization, and structured result display.
+* **Multi-Turn Conversational Reasoning:** Iterative chat interface for discussing uploaded documents across multiple turns. First message triggers the full pipeline; subsequent messages use focused RAG + conversation history for grounded responses. Conversations and documents persist across sessions.
+* **Browser-Based UI:** Vanilla HTML/CSS/JS frontend with disclaimer acceptance, drag-and-drop document upload, corpus management controls, real-time pipeline progress visualization, structured result display, and a dedicated chat mode with conversation sidebar.
 
 ## Architecture
 
@@ -139,7 +140,8 @@ Verify the schema was created:
 
 ```bash
 psql -h localhost -U testuser -d testdb -c "\dt"
-# Should list 7 tables: case_run, chunk_embedding, claim,
+# Should list 11 tables: cache_entry, case_run, chunk_embedding, claim,
+#   conversation, conversation_document, conversation_message,
 #   evidence_binding, legal_chunk, legal_source, pipeline_stage_log
 ```
 
@@ -243,7 +245,10 @@ pytest --benchmark-only tests/
 | Group | Prefix | Endpoints | Description |
 |---|---|---|---|
 | **ingest** | `/api/v1` | `POST /ingest` | Upload and OCR a document (PDF/JPG/PNG) |
-| **analyze** | `/api/v1` | `POST /analyze` | Execute the full 7-stage pipeline, streaming SSE |
+| **analyze** | `/api/v1` | `POST /analyze` | Execute the full 7-stage pipeline on raw text, streaming SSE |
+| **conversations** | `/api/v1` | `POST /conversations`, `GET /conversations`, `GET /conversations/{id}`, `DELETE /conversations/{id}` | CRUD for multi-turn conversations |
+| **conversations** | `/api/v1` | `POST /conversations/{id}/messages` | Send a message in a conversation, streaming SSE response |
+| **conversations** | `/api/v1` | `POST /GET /DELETE /conversations/{id}/documents` | Attach, list, or remove documents in a conversation |
 | **corpus** | `/api/v1` | `POST /corpus/update`, `GET /corpus/status/{job_id}` | Trigger legal corpus scrape & embedding, check progress |
 | **meta** | `/api/v1` | `GET /meta/disclaimer/version`, `GET /meta/disclaimer/text`, `GET /meta/version` | Disclaimer and version metadata |
 | **health** | `/` | `GET /health` | Liveness probe |
@@ -256,13 +261,16 @@ pytest --benchmark-only tests/
 citizen/
 ├── alembic/                          # Database migrations
 │   ├── versions/
-│   │   └── 001_init_schema.py        # Initial schema (7 tables)
+│   │   ├── 001_init_schema.py        # Initial schema (7 tables)
+│   │   ├── 002_add_cache_entry.py    # Cache entry table
+│   │   └── 003_add_conversations.py  # Conversation, message, document tables
 │   ├── env.py
 │   └── script.py.mako
 ├── app/                              # Application source
 │   ├── api/
 │   │   └── routes/
 │   │       ├── analyze.py            # POST /analyze (SSE pipeline streaming)
+│   │       ├── conversations.py      # POST /conversations/* (chat, documents, SSE)
 │   │       ├── corpus.py             # POST /corpus/update, GET /corpus/status
 │   │       ├── ingest.py             # POST /ingest (document upload & OCR)
 │   │       └── meta.py               # GET /meta/* (disclaimer, version)
@@ -271,17 +279,21 @@ citizen/
 │   │   ├── pipeline.py               # 7-stage orchestrator
 │   │   └── router.py                 # LLM router + fallback chain
 │   ├── db/
-│   │   ├── models.py                 # SQLAlchemy ORM models (7 tables)
+│   │   ├── models.py                 # SQLAlchemy ORM models (11 tables)
 │   │   └── session.py                # Async DB session factory
 │   ├── middleware/
 │   │   ├── disclaimer.py             # Consent enforcement middleware
 │   │   └── rate_limit.py             # Token-bucket rate limiter
 │   ├── services/
 │   │   ├── audit.py                  # Audit trail persistence (case runs, claims, evidence)
+│   │   ├── cache.py                  # Key-value cache for embeddings and triage results
+│   │   ├── chat_reasoning.py         # Conversational reasoning (pipeline + RAG chat)
+│   │   ├── conversation.py           # Conversation CRUD service
 │   │   ├── corpus.py                 # Legal corpus scraper, chunker & embedder
 │   │   ├── ocr.py                    # 3-tier OCR fallback pipeline
 │   │   ├── reasoning.py              # LLM-based reasoning service
-│   │   └── retrieval.py              # pgvector similarity search
+│   │   ├── retrieval.py              # pgvector similarity search
+│   │   └── verification.py           # Deterministic quote/evidence verification
 │   ├── utils/
 │   │   ├── image.py                  # Image normalization (300 dpi JPG)
 │   │   ├── pdf.py                    # PDF extraction utilities
@@ -292,10 +304,10 @@ citizen/
 │   ├── design_document.md            # High-level design
 │   ├── roadmap.md                    # Work packages & milestones
 │   └── technical_specification.md    # Detailed technical spec
-├── static/                           # Frontend assets
-│   ├── index.html                    # Main application page
-│   ├── app.js                        # SSE streaming client, corpus UI, pipeline UI
-│   └── style.css                     # Responsive styles
+├── static/                           # Frontend assets (vanilla HTML/JS/CSS)
+│   ├── index.html                    # Main page (Analyze mode + Chat mode)
+│   ├── app.js                        # SSE streaming, corpus UI, pipeline UI, chat UI
+│   └── style.css                     # Responsive styles (light + chat dark theme)
 ├── tests/
 │   ├── unit/                         # Unit tests (12 files, no DB needed)
 │   ├── integration/                  # Integration tests (4 files, DB required)

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import analyze, corpus, ingest, meta
+from app.api.routes import analyze, conversations, corpus, ingest, meta
 from app.core.config import get_app_version, get_app_version_tag, settings
 from app.middleware.disclaimer import DisclaimerMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -29,10 +29,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Shutdown
     from app.services.reasoning import close_client as close_reasoning_client
+    from app.services.chat_reasoning import close_client as close_chat_client
     try:
         await close_reasoning_client()
     except Exception:
         logging.getLogger(__name__).warning("Failed to close reasoning client gracefully")
+    try:
+        await close_chat_client()
+    except Exception:
+        logging.getLogger(__name__).warning("Failed to close chat reasoning client gracefully")
     logger.info("Citizen %s shutting down", get_app_version_tag())
 
 
@@ -63,6 +68,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Register API routers
 app.include_router(ingest.router, prefix="/api/v1", tags=["ingest"])
 app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
+app.include_router(conversations.router, prefix="/api/v1", tags=["conversations"])
 app.include_router(corpus.router, prefix="/api/v1", tags=["corpus"])
 app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
 

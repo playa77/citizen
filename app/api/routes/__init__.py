@@ -2,6 +2,6 @@
 
 # Semantic Version: 0.1.0
 
-from . import analyze, corpus, ingest, meta
+from . import analyze, conversations, corpus, ingest, meta
 
-__all__ = ["analyze", "corpus", "ingest", "meta"]
+__all__ = ["analyze", "conversations", "corpus", "ingest", "meta"]

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen — Legal Reasoning Engine</title>
-    <!-- Semantic Version: 0.1.0 -->
+    <!-- Semantic Version: 0.2.0 -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -23,121 +23,219 @@
 
     <!-- Main Application -->
     <div id="app" class="hidden">
-        <header>
-            <h1>Citizen</h1>
-            <p class="subtitle">Legal Reasoning Engine für deutsches Sozialrecht</p>
-        </header>
 
-        <main>
-            <!-- Upload Section -->
-            <section id="upload-section" class="section">
-                <h2>Dokument hochladen</h2>
-                <div class="upload-area" id="upload-area">
-                    <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" hidden>
-                    <div class="upload-prompt">
-                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                        <p>PDF, JPG oder PNG hier ablegen oder klicken</p>
-                        <small>Max. 25 MB</small>
+        <!-- Analyze Mode (existing functionality) -->
+        <div id="analyze-mode">
+            <header>
+                <div class="header-top">
+                    <div class="header-brand">
+                        <h1>Citizen</h1>
+                        <p class="subtitle">Legal Reasoning Engine für deutsches Sozialrecht</p>
+                    </div>
+                    <div class="mode-toggle">
+                        <button class="mode-btn active" data-mode="analyze" id="mode-analyze-btn">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Analysieren
+                        </button>
+                        <button class="mode-btn" data-mode="chat" id="mode-chat-btn">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            Chat
+                        </button>
                     </div>
                 </div>
-                <div id="file-info" class="file-info hidden">
-                    <span id="filename"></span>
-                    <button id="remove-file" class="btn btn-small">Entfernen</button>
-                </div>
-                <button id="upload-btn" class="btn btn-primary" disabled>Text extrahieren</button>
-            </section>
+            </header>
 
-            <!-- Corpus Management Section -->
-            <section id="corpus-section" class="section">
-                <h2>Corpus-Verwaltung</h2>
-                <p class="corpus-description">
-                    Das lokale Rechtsquellen-Corpus enthält die paragraphenweise aufbereiteten
-                    Gesetzestexte von gesetze-im-internet.de. Vor der ersten Analyse muss das
-                    Corpus einmalig aktualisiert werden; danach kann es bei Gesetzesänderungen
-                    manuell neu geladen werden. Die Aktualisierung umfasst folgende Schritte:
-                </p>
-                <ul class="corpus-steps">
-                    <li><strong>Scraping:</strong> Abruf und hierarchische Zerlegung der Gesetzestexte (SGB II, SGB X, Weisungen, BSG-Rechtsprechung)</li>
-                    <li><strong>Embedding:</strong> Erzeugung von Vektordarstellungen für jede Texteinheit (§, Absatz, Satz)</li>
-                    <li><strong>Speicherung:</strong> Upsert aller Einträge in die PostgreSQL/pgvector-Datenbank</li>
-                </ul>
-                <div class="corpus-controls">
-                    <button id="corpus-update-btn" class="btn btn-primary">Corpus aktualisieren</button>
-                    <div id="corpus-progress" class="corpus-progress hidden">
-                        <div class="corpus-progress-bar">
-                            <div class="corpus-progress-fill" id="corpus-progress-fill"></div>
+            <main>
+                <!-- Upload Section -->
+                <section id="upload-section" class="section">
+                    <h2>Dokument hochladen</h2>
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                        <div class="upload-prompt">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>PDF, JPG oder PNG hier ablegen oder klicken</p>
+                            <small>Max. 25 MB</small>
                         </div>
-                        <div class="corpus-substage" id="corpus-substage"></div>
-                        <div class="corpus-chunks-count" id="corpus-chunks-count"></div>
                     </div>
-                    <div id="corpus-result" class="corpus-result hidden"></div>
+                    <div id="file-info" class="file-info hidden">
+                        <span id="filename"></span>
+                        <button id="remove-file" class="btn btn-small">Entfernen</button>
+                    </div>
+                    <button id="upload-btn" class="btn btn-primary" disabled>Text extrahieren</button>
+                </section>
+
+                <!-- Corpus Management Section -->
+                <section id="corpus-section" class="section">
+                    <h2>Corpus-Verwaltung</h2>
+                    <p class="corpus-description">
+                        Das lokale Rechtsquellen-Corpus enthält die paragraphenweise aufbereiteten
+                        Gesetzestexte von gesetze-im-internet.de. Vor der ersten Analyse muss das
+                        Corpus einmalig aktualisiert werden; danach kann es bei Gesetzesänderungen
+                        manuell neu geladen werden. Die Aktualisierung umfasst folgende Schritte:
+                    </p>
+                    <ul class="corpus-steps">
+                        <li><strong>Scraping:</strong> Abruf und hierarchische Zerlegung der Gesetzestexte (SGB II, SGB X, Weisungen, BSG-Rechtsprechung)</li>
+                        <li><strong>Embedding:</strong> Erzeugung von Vektordarstellungen für jede Texteinheit (§, Absatz, Satz)</li>
+                        <li><strong>Speicherung:</strong> Upsert aller Einträge in die PostgreSQL/pgvector-Datenbank</li>
+                    </ul>
+                    <div class="corpus-controls">
+                        <button id="corpus-update-btn" class="btn btn-primary">Corpus aktualisieren</button>
+                        <div id="corpus-progress" class="corpus-progress hidden">
+                            <div class="corpus-progress-bar">
+                                <div class="corpus-progress-fill" id="corpus-progress-fill"></div>
+                            </div>
+                            <div class="corpus-substage" id="corpus-substage"></div>
+                            <div class="corpus-chunks-count" id="corpus-chunks-count"></div>
+                        </div>
+                        <div id="corpus-result" class="corpus-result hidden"></div>
+                    </div>
+                </section>
+
+                <!-- Analysis Section -->
+                <section id="analysis-section" class="section hidden">
+                    <h2>Analyse</h2>
+                    <div id="text-preview" class="text-preview"></div>
+                    <button id="analyze-btn" class="btn btn-primary">Analyse starten</button>
+                </section>
+
+                <!-- Progress Section -->
+                <section id="progress-section" class="section hidden">
+                    <h2>Fortschritt</h2>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <div class="stage-list" id="stage-list">
+                        <div class="stage" data-stage="normalization">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Normalisierung</span>
+                        </div>
+                        <div class="stage" data-stage="classification">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name"> Klassifikation</span>
+                        </div>
+                        <div class="stage" data-stage="decomposition">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Fragezerlegung</span>
+                        </div>
+                        <div class="stage" data-stage="retrieval">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Retrieval</span>
+                        </div>
+                        <div class="stage" data-stage="claims">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Anspruchsaufbau</span>
+                        </div>
+                        <div class="stage" data-stage="verification">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Verifikation</span>
+                        </div>
+                        <div class="stage" data-stage="generation">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Ausgabe</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results Section -->
+                <section id="results-section" class="section hidden">
+                    <h2>Ergebnis</h2>
+                    <div class="results-container" id="results-container">
+                        <!-- 6 sections will be rendered here -->
+                    </div>
+                </section>
+
+                <!-- Error Display -->
+                <div id="error-display" class="error-display hidden"></div>
+            </main>
+
+            <footer>
+                <p>Citizen v0.2.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+            </footer>
+        </div>
+
+        <!-- Chat Mode (new conversational interface) -->
+        <div id="chat-mode" class="hidden">
+            <!-- Sidebar -->
+            <aside id="chat-sidebar" class="chat-sidebar">
+                <div class="sidebar-header">
+                    <button id="new-conversation-btn" class="btn btn-chat-primary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Neue Unterhaltung
+                    </button>
                 </div>
-            </section>
-
-            <!-- Analysis Section -->
-            <section id="analysis-section" class="section hidden">
-                <h2>Analyse</h2>
-                <div id="text-preview" class="text-preview"></div>
-                <button id="analyze-btn" class="btn btn-primary">Analyse starten</button>
-            </section>
-
-            <!-- Progress Section -->
-            <section id="progress-section" class="section hidden">
-                <h2>Fortschritt</h2>
-                <div class="progress-container">
-                    <div class="progress-bar" id="progress-bar"></div>
+                <div class="conversation-list" id="conversation-list">
+                    <!-- Conversations populated by JS -->
                 </div>
-                <div class="stage-list" id="stage-list">
-                    <div class="stage" data-stage="normalization">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name">Normalisierung</span>
-                    </div>
-                    <div class="stage" data-stage="classification">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name"> Klassifikation</span>
-                    </div>
-                    <div class="stage" data-stage="decomposition">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name">Fragezerlegung</span>
-                    </div>
-                    <div class="stage" data-stage="retrieval">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name">Retrieval</span>
-                    </div>
-                    <div class="stage" data-stage="claims">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name">Anspruchsaufbau</span>
-                    </div>
-                    <div class="stage" data-stage="verification">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name">Verifikation</span>
-                    </div>
-                    <div class="stage" data-stage="generation">
-                        <span class="stage-icon">○</span>
-                        <span class="stage-name">Ausgabe</span>
+                <div id="conversation-empty" class="conversation-empty">
+                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <p>Noch keine Unterhaltungen</p>
+                </div>
+                <div id="conversation-error" class="conversation-error hidden">
+                    Fehler beim Laden der Unterhaltungen.
+                </div>
+            </aside>
+
+            <!-- Chat Area -->
+            <div class="chat-main" id="chat-main">
+                <!-- Chat Header -->
+                <div class="chat-header" id="chat-header">
+                    <button id="sidebar-toggle" class="sidebar-toggle" title="Seitenleiste umschalten">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <h2 id="chat-title" class="chat-title">Citizen Chat</h2>
+                    <div class="chat-header-actions">
+                        <button id="chat-delete-btn" class="btn-icon-only hidden" title="Unterhaltung löschen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
                     </div>
                 </div>
-            </section>
 
-            <!-- Results Section -->
-            <section id="results-section" class="section hidden">
-                <h2>Ergebnis</h2>
-                <div class="results-container" id="results-container">
-                    <!-- 6 sections will be rendered here -->
+                <!-- Messages Container -->
+                <div class="chat-messages" id="chat-messages">
+                    <div id="chat-empty-state" class="chat-empty-state">
+                        <div class="empty-state-content">
+                            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                            <h3>Starten Sie eine neue Unterhaltung</h3>
+                            <p>oder wählen Sie eine bestehende aus</p>
+                        </div>
+                    </div>
                 </div>
-            </section>
 
-            <!-- Error Display -->
-            <div id="error-display" class="error-display hidden"></div>
-        </main>
+                <!-- Document Chips -->
+                <div id="chat-doc-chips" class="chat-doc-chips hidden"></div>
 
-        <footer>
-            <p>Citizen v0.1.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
-        </footer>
+                <!-- Input Area -->
+                <div class="chat-input-area" id="chat-input-area">
+                    <div class="chat-input-container">
+                        <button id="chat-attach-btn" class="btn-icon-only chat-attach-btn" title="Dokument anhängen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        </button>
+                        <input type="file" id="chat-file-input" accept=".pdf,.jpg,.jpeg,.png" hidden multiple>
+                        <textarea
+                            id="chat-input"
+                            class="chat-input"
+                            placeholder="Nachricht eingeben..."
+                            rows="1"
+                            disabled
+                        ></textarea>
+                        <button id="chat-send-btn" class="btn-icon-only chat-send-btn" disabled title="Senden">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </div>
+                    <p class="chat-disclaimer">Citizen kann Fehler machen. Rechtliche Auskünfte ohne Gewähr.</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="/static/app.js"></script>
