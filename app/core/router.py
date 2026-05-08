@@ -19,6 +19,17 @@ logger = logging.getLogger(__name__)
 _API_URL = "https://openrouter.ai/api/v1/chat/completions"
 _EMBEDDING_URL = "https://openrouter.ai/api/v1/embeddings"
 
+
+def _deduplicate_preserve_order(items: list[str]) -> list[str]:
+    """Remove duplicate model names while preserving first-occurrence order."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            result.append(item)
+    return result
+
 def _headers() -> dict[str, str]:
     """Build headers dynamically so settings are not frozen at import time."""
     settings_now = settings  # triggers lazy load via __getattr__
@@ -47,11 +58,13 @@ class OpenRouterClient:
     """
 
     def __init__(self, *, client: httpx.AsyncClient | None = None) -> None:
-        self.models: list[str] = [
-            settings.PRIMARY_MODEL,
-            settings.FALLBACK_MODEL_1,
-            settings.FALLBACK_MODEL_2,
-        ]
+        self.models: list[str] = _deduplicate_preserve_order(
+            [
+                settings.PRIMARY_MODEL,
+                settings.FALLBACK_MODEL_1,
+                settings.FALLBACK_MODEL_2,
+            ]
+        )
         self._owned = client is None
         self._client = client or httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT)
 
@@ -65,6 +78,9 @@ class OpenRouterClient:
         *,
         temperature: float = 0.1,
         model: str | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        models: list[str] | None = None,
     ) -> str:
         """Return the assistant's final text response or raise on exhaustion.
 
@@ -73,7 +89,13 @@ class OpenRouterClient:
             temperature: Sampling temperature (low = deterministic).
             model: Override the fallback chain with a single specific model.
                    When provided, only that model is used (no fallback, no retries
-                   across models).
+                   across models). Ignored if *models* is also provided.
+            timeout: Per-call HTTP timeout in seconds. Overrides the client-level
+                     ``settings.REQUEST_TIMEOUT`` for this call only.
+            max_retries: Maximum attempts per model (defaults to
+                         ``settings.MAX_RETRIES``).
+            models: Explicit fallback chain (deduplicated, order-preserving). When
+                    provided, *model* is ignored and this chain is used instead.
 
         Returns:
             The parsed ``content`` string from the response.
@@ -81,9 +103,18 @@ class OpenRouterClient:
         Raises:
             RouterExhaustedError: If every model / retry attempt fails.
         """
-        models: list[str] = [model] if model else self.models
-        for current_model in models:
-            for attempt in range(1, settings.MAX_RETRIES + 1):
+        effective_max_retries = max_retries if max_retries is not None else settings.MAX_RETRIES
+        timeout_config = httpx.Timeout(timeout) if timeout is not None else None
+
+        if models is not None:
+            effective_models = _deduplicate_preserve_order(models)
+        elif model is not None:
+            effective_models = [model]
+        else:
+            effective_models = self.models
+
+        for current_model in effective_models:
+            for attempt in range(1, effective_max_retries + 1):
                 try:
                     payload: dict[str, Any] = {
                         "model": current_model,
@@ -91,9 +122,10 @@ class OpenRouterClient:
                         "temperature": temperature,
                     }
                     logger.info(
-                        "chat_completion → sending (model=%s, attempt=%d, msg_chars=%d)",
+                        "chat_completion → sending (model=%s, attempt=%d/%d, msg_chars=%d)",
                         current_model,
                         attempt,
+                        effective_max_retries,
                         sum(len(m.get("content", "")) for m in messages),
                     )
                     req_start = time.monotonic()
@@ -101,6 +133,7 @@ class OpenRouterClient:
                         _API_URL,
                         json=payload,
                         headers=_headers(),
+                        timeout=timeout_config,
                     )
                     req_elapsed = time.monotonic() - req_start
                     resp.raise_for_status()
@@ -109,9 +142,10 @@ class OpenRouterClient:
                     prompt_chars = sum(len(m.get("content", "")) for m in messages)
                     response_chars = len(content)
                     logger.info(
-                        "chat_completion OK (model=%s, attempt=%d, elapsed=%.2fs, prompt_chars=%d, response_chars=%d)",
+                        "chat_completion OK (model=%s, attempt=%d/%d, elapsed=%.2fs, prompt_chars=%d, response_chars=%d)",
                         current_model,
                         attempt,
+                        effective_max_retries,
                         req_elapsed,
                         prompt_chars,
                         response_chars,
@@ -123,36 +157,38 @@ class OpenRouterClient:
                     if isinstance(exc, httpx.HTTPStatusError):
                         fail_reason = f"HTTP {exc.response.status_code}"
                     logger.warning(
-                        "chat_completion FAILED (model=%s, attempt=%d, elapsed=%.2fs, reason=%s): %s",
+                        "chat_completion FAILED (model=%s, attempt=%d/%d, elapsed=%.2fs, reason=%s): %s",
                         current_model,
                         attempt,
+                        effective_max_retries,
                         fail_elapsed,
                         fail_reason,
                         exc,
                     )
-                    if attempt < settings.MAX_RETRIES:
+                    if attempt < effective_max_retries:
                         await asyncio.sleep(2 ** (attempt - 1))  # 1, 2, 4, ...
                     continue
                 except (KeyError, IndexError) as exc:
                     fail_elapsed = time.monotonic() - req_start
                     logger.warning(
-                        "Malformed API response (model=%s, attempt=%d, elapsed=%.2fs, reason=malformed_response): %s",
+                        "Malformed API response (model=%s, attempt=%d/%d, elapsed=%.2fs, reason=malformed_response): %s",
                         current_model,
                         attempt,
+                        effective_max_retries,
                         fail_elapsed,
                         exc,
                     )
-                    if attempt < settings.MAX_RETRIES:
+                    if attempt < effective_max_retries:
                         await asyncio.sleep(2 ** (attempt - 1))
                     continue
 
             logger.info(
                 "Model %s exhausted after %d retries, trying next fallback.",
                 current_model,
-                settings.MAX_RETRIES,
+                effective_max_retries,
             )
 
-        raise RouterExhaustedError(f"All models exhausted: {models}")
+        raise RouterExhaustedError(f"All models exhausted: {effective_models}")
 
     async def get_embedding(self, text: str, *, model: str | None = None) -> list[float]:
         """Generate an embedding vector for *text* via the OpenRouter embeddings endpoint.

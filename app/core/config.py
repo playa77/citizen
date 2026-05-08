@@ -34,8 +34,8 @@ class Settings(BaseSettings):
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
     FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
     FALLBACK_MODEL_2: str = "/openrouter/free"
-    MAX_RETRIES: int = 3
-    REQUEST_TIMEOUT: float = 45.0
+    MAX_RETRIES: int = 1
+    REQUEST_TIMEOUT: float = 25.0
     MAX_FILE_SIZE_MB: int = 25
     DB_POOL_SIZE: int = 10
     OCR_DPI: int = 300
@@ -45,9 +45,14 @@ class Settings(BaseSettings):
     OCR_SYNTHESIS_MODEL: str = "deepseek/deepseek-v4-flash"  # LLM for comparing & correcting dual-OCR results
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
-    TOP_K_RETRIEVAL: int = 12
+    TOP_K_RETRIEVAL: int = 6
     MAX_COSINE_DISTANCE: float = 0.75
-    PIPELINE_TIMEOUT_SEC: int = 300
+    PIPELINE_TIMEOUT_SEC: int = 120
+    TRIAGE_TIMEOUT_SEC: float = 20.0
+    FINAL_TIMEOUT_SEC: float = 75.0
+    EMBEDDING_TIMEOUT_SEC: float = 15.0
+    TRIAGE_MODEL: str | None = None
+    FINAL_MODEL: str | None = None
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v0.1.0"

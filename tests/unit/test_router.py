@@ -137,15 +137,16 @@ class TestChatCompletionHappyPath:
 
 
 class TestFallbackChain:
-    async def test_429_on_primary_triggers_fallback_1(
+    async def test_429_on_primary_triggers_fallback_2(
         self,
         client: OpenRouterClient,
         mock_httpx_client: AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """When the primary model returns 429, the client retries then falls
-        through to FALLBACK_MODEL_1. Since PRIMARY_MODEL and FALLBACK_MODEL_1
-        may be the same, the chain falls through to FALLBACK_MODEL_2."""
+        """When the primary model returns 429, the client falls through to
+        FALLBACK_MODEL_2. Since PRIMARY_MODEL and FALLBACK_MODEL_1 are the
+        same, the deduplicated chain skips the duplicate and falls through
+        directly to FALLBACK_MODEL_2."""
         from app.core.config import settings
 
         _call_count = {"n": 0}
@@ -154,7 +155,7 @@ class TestFallbackChain:
             _call_count["n"] += 1
             model_used = kwargs["json"]["model"]
 
-            # Primary and fallback_1 both return 429 (same model).
+            # Primary and fallback_1 are the same → deduplicated to one entry.
             if model_used in (settings.PRIMARY_MODEL, settings.FALLBACK_MODEL_1):
                 return httpx.Response(
                     status_code=429,
@@ -173,9 +174,10 @@ class TestFallbackChain:
         result = await client.chat_completion(_MESSAGES)
 
         assert result == "fallback answer"
-        # Primary retried MAX_RETRIES, fallback_1 retried MAX_RETRIES,
-        # fallback_2 succeeds on first attempt.
-        assert mock_httpx_client.post.call_count == settings.MAX_RETRIES * 2 + 1
+        # Deduplicated chain: [primary, fallback_2] -> 2 unique models.
+        # Primary fails after 1 attempt (MAX_RETRIES=1), fallback_2 succeeds.
+        unique_models = len(client.models)
+        assert mock_httpx_client.post.call_count == unique_models
 
 
 # ===========================================================================

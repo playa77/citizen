@@ -116,7 +116,7 @@ class TestSettingsValidation:
         assert s.OPENROUTER_API_KEY == "sk-test-key"
         assert s.PRIMARY_MODEL == "deepseek/deepseek-v4-flash"
         assert s.MAX_FILE_SIZE_MB == 25
-        assert s.PIPELINE_TIMEOUT_SEC == 300
+        assert s.PIPELINE_TIMEOUT_SEC == 120
 
     def test_default_values_applied(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings
@@ -132,11 +132,11 @@ class TestSettingsValidation:
 
         s = Settings(_env_file=env_file)
 
-        assert s.MAX_RETRIES == 3
-        assert s.REQUEST_TIMEOUT == 45.0
+        assert s.MAX_RETRIES == 1
+        assert s.REQUEST_TIMEOUT == 25.0
         assert s.OCR_DPI == 300
         assert s.OCR_JPG_QUALITY == 84
-        assert s.TOP_K_RETRIEVAL == 12
+        assert s.TOP_K_RETRIEVAL == 6
         assert s.MAX_COSINE_DISTANCE == 0.75
         assert s.LOG_LEVEL == "INFO"
         assert s.DISCLAIMER_VERSION == "v0.1.0"
