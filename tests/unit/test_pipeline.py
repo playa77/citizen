@@ -102,6 +102,44 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
             "unsicherheiten": "Fehlende Unterlagen.",
         }
 
+    async def generate_grounded_answer(
+        normalized_text: str,
+        issues: list[str],
+        questions: list[str],
+        chunks: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Stub for WP-007 combined final answer."""
+        return {
+            "claims": [
+                {
+                    "claim_text": "Die Kürzung war unverhältnismäßig.",
+                    "confidence_score": 0.82,
+                    "claim_type": "interpretation",
+                    "question": questions[0] if questions else "",
+                    "evidence_chunk_id": "chunk-1",
+                    "evidence_hierarchy": "SGB II > § 31 > Abs. 1",
+                    "evidence_quote": "§ 31 Abs. 1 SGB II: Bei Pflichtverletzung...",
+                },
+                {
+                    "claim_text": "Mitwirkungspflichten nach § 60 SGB I wurden beachtet.",
+                    "confidence_score": 0.65,
+                    "claim_type": "fact",
+                    "question": questions[1] if len(questions) > 1 else "",
+                    "evidence_chunk_id": "chunk-2",
+                    "evidence_hierarchy": "SGB I > § 60",
+                    "evidence_quote": "§ 60 SGB I: Derjenige, der...",
+                },
+            ],
+            "sections": {
+                "sachverhalt": "Der Antragsteller erhielt einen Kürzungsbescheid.",
+                "rechtliche_wuerdigung": "§ 31 SGB II erfordert Prüfung der Verhältnismäßigkeit.",
+                "ergebnis": "Kürzung kann anfechtbar sein.",
+                "handlungsempfehlung": "Widerspruch einlegen.",
+                "entwurf": "Sehr geehrte Damen und Herren, ...",
+                "unsicherheiten": "Fehlende Unterlagen zur Anhörung.",
+            },
+        }
+
     import sys
     import types
 
@@ -112,6 +150,7 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
     mod.construct_claims = construct_claims  # type: ignore[attr-defined]
     mod.verify_claims = verify_claims  # type: ignore[attr-defined]
     mod.generate_output = generate_output  # type: ignore[attr-defined]
+    mod.generate_grounded_answer = generate_grounded_answer  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.reasoning", mod)
 
 
@@ -150,6 +189,31 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
     mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
     mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", mod)
+
+
+@pytest.fixture
+def mock_verification(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Create dummy ``app.services.verification`` module with deterministic stub."""
+
+    def verify_claims_against_chunks(
+        claims: list[dict[str, Any]],
+        chunks: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Stub verifier: marks all claims as verified."""
+        verified = []
+        for c in claims:
+            claim = dict(c)
+            claim["verified"] = True
+            claim["reasoning"] = "Test: quote found in chunk (stub)."
+            verified.append(claim)
+        return verified
+
+    import sys
+    import types
+
+    mod = types.ModuleType("app.services.verification")
+    mod.verify_claims_against_chunks = verify_claims_against_chunks  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "app.services.verification", mod)
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +350,7 @@ class TestSingleStageExecution:
 
 class TestPipelineSequence:
     @pytest.mark.asyncio
-    async def test_stage_sequence(self, mock_reasoning: None, mock_retrieval: None) -> None:
+    async def test_stage_sequence(self, mock_reasoning: None, mock_retrieval: None, mock_verification: None) -> None:
         """Verifies the 7 stages execute in order and produce correct SSE."""
         state = PipelineState(input_text=SAMPLE_INPUT)
         events: list[str] = []
@@ -310,7 +374,7 @@ class TestPipelineSequence:
         assert all(s == "complete" for s in statuses)
 
     @pytest.mark.asyncio
-    async def test_pipeline_mutates_state(self, mock_reasoning: None, mock_retrieval: None) -> None:
+    async def test_pipeline_mutates_state(self, mock_reasoning: None, mock_retrieval: None, mock_verification: None) -> None:
         """After the pipeline runs, each state field should be populated."""
         state = PipelineState(input_text=SAMPLE_INPUT)
         async for _ in run_pipeline(state):

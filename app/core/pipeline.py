@@ -297,6 +297,156 @@ async def _run_classification_and_decomposition_stages(
     )
 
 
+async def _run_final_stages(
+    state: PipelineState,
+) -> AsyncGenerator[str, None]:
+    """Run construction, verification, and generation in a single LLM call.
+
+    When ``COMBINE_FINAL_STAGES`` is ``True`` (WP-007), all three tasks are
+    resolved by a single ``generate_grounded_answer()`` call followed by
+    deterministic local verification. Otherwise each stage runs as a
+    separate LLM call (legacy path).
+
+    SSE events are emitted in the canonical order: construction first, then
+    verification, then generation.
+    """
+    from app.services.reasoning import generate_grounded_answer
+    from app.services.verification import verify_claims_against_chunks
+
+    t0 = time.monotonic()
+
+    # ── WP-007: combined final stages path ────────────────────────────
+    if cfg._get_settings().COMBINE_FINAL_STAGES:
+        logger.info(
+            "  → launching combined grounded answer "
+            "(construction + verification + generation)"
+        )
+        try:
+            grounded = await generate_grounded_answer(
+                state.normalized_text,
+                state.issues,
+                state.questions,
+                state.retrieved_chunks,
+            )
+        except Exception as exc:
+            logger.exception("Combined grounded answer failed")
+            state.errors.append(
+                f"grounded answer (construction+verification+generation): {exc}"
+            )
+            raise StageExecutionError(
+                f"Combined grounded answer failed: {exc}"
+            ) from exc
+
+        llm_claims = grounded["claims"]
+        sections = grounded["sections"]
+
+        # -- Stage 5: Construction (populated from LLM claims) ---------------
+        state.claims = llm_claims
+        construct_dur = int((time.monotonic() - t0) * 1000)
+
+        logger.info(
+            "Construction complete (%d claims, %dms — from grounded answer)",
+            len(state.claims),
+            construct_dur,
+        )
+
+        yield _sse_event(
+            stage="construction",
+            status="complete",
+            payload=_stage_payload(
+                state, stage_name="construction", duration_ms=construct_dur,
+            ),
+        )
+
+        # -- Stage 6: Verification (deterministic local) ---------------------
+        ver_start = time.monotonic()
+        state.verified_claims = verify_claims_against_chunks(
+            state.claims,
+            state.retrieved_chunks,
+        )
+        verify_dur = int((time.monotonic() - ver_start) * 1000)
+
+        logger.info(
+            "Verification complete (%d verified claims, %dms — deterministic local)",
+            len(state.verified_claims),
+            verify_dur,
+        )
+
+        yield _sse_event(
+            stage="verification",
+            status="complete",
+            payload=_stage_payload(
+                state, stage_name="verification", duration_ms=verify_dur,
+            ),
+        )
+
+        # -- Stage 7: Generation (populated from LLM sections) ---------------
+        state.final_output = sections
+        gen_dur = int((time.monotonic() - ver_start) * 1000)
+
+        logger.info(
+            "Generation complete (sections: %s, %dms — from grounded answer)",
+            list(state.final_output.keys()),
+            gen_dur,
+        )
+
+        yield _sse_event(
+            stage="generation",
+            status="complete",
+            payload=_stage_payload(
+                state, stage_name="generation", duration_ms=gen_dur,
+            ),
+        )
+        return
+
+    # ── Legacy: separate LLM calls path (COMBINE_FINAL_STAGES=False) ───
+    # Stage 5 — Construction
+    logger.info("  → launching construction (separate LLM call)")
+    c_start = time.monotonic()
+    await _stage_construction(state)
+    c_dur = int((time.monotonic() - c_start) * 1000)
+    yield _sse_event(
+        stage="construction",
+        status="complete",
+        payload=_stage_payload(
+            state, stage_name="construction", duration_ms=c_dur,
+        ),
+    )
+
+    # Stage 6 — Verification
+    logger.info("  → launching verification (separate LLM call)")
+    v_start = time.monotonic()
+    await _stage_verification(state)
+    v_dur = int((time.monotonic() - v_start) * 1000)
+    yield _sse_event(
+        stage="verification",
+        status="complete",
+        payload=_stage_payload(
+            state, stage_name="verification", duration_ms=v_dur,
+        ),
+    )
+
+    # Stage 7 — Generation
+    logger.info("  → launching generation (separate LLM call)")
+    g_start = time.monotonic()
+    await _stage_generation(state)
+    g_dur = int((time.monotonic() - g_start) * 1000)
+    yield _sse_event(
+        stage="generation",
+        status="complete",
+        payload=_stage_payload(
+            state, stage_name="generation", duration_ms=g_dur,
+        ),
+    )
+    logger.info(
+        "Final stages complete (legacy): construction=%dms, verification=%dms, "
+        "generation=%dms",
+        c_dur,
+        v_dur,
+        g_dur,
+    )
+
+
 async def _stage_retrieval(state: PipelineState) -> None:
     """Stage 4 — pgvector similarity search with diversity filter.
 
@@ -461,9 +611,10 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     started = time.monotonic()
     stage_timings: dict[str, float] = {}  # collect per-stage elapsed seconds for summary
 
-    # Classification and decomposition run concurrently (WP-003).
-    # When the loop hits "classification", execute both in parallel and
-    # skip the sequential "decomposition" iteration.
+    # WP-003: classification + decomposition run concurrently.
+    # WP-007: construction + verification + generation run as one combined call.
+    # When the loop hits "classification" or "construction", execute the
+    # combined handler and skip the child stages.
     _skip_stages: set[str] = set()
 
     for stage_name in _STAGES:
@@ -515,6 +666,42 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
                 yield event
 
             _skip_stages.add("decomposition")
+            continue
+        # ------------------------------------------------------------------------
+
+        # --- WP-007: combined final stages (construction + verification + generation) ---
+        if stage_name == "construction":
+            stage_start = time.monotonic()
+            try:
+                events = await asyncio.wait_for(
+                    _collect_async_gen(
+                        _run_final_stages(state)
+                    ),
+                    timeout=max(remaining, 10.0),
+                )
+            except TimeoutError:
+                logger.error(
+                    "✗ Stage construction+verification+generation TIMED OUT after %.1fs "
+                    "(budget %.1fs remaining)",
+                    time.monotonic() - stage_start,
+                    remaining,
+                )
+                raise PipelineTimeoutError(
+                    f"Pipeline execution exceeded {timeout_sec}s timeout"
+                ) from None
+
+            stage_dur = time.monotonic() - stage_start
+            stage_timings["construction+verification+generation"] = stage_dur
+            logger.info(
+                "✓ construction+verification+generation completed in %.2fs",
+                stage_dur,
+            )
+
+            for event in events:
+                yield event
+
+            _skip_stages.add("verification")
+            _skip_stages.add("generation")
             continue
         # ------------------------------------------------------------------------
 
@@ -576,13 +763,20 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     logger.info("=" * 55)
     logger.info("PIPELINE TIMING SUMMARY")
     logger.info("=" * 55)
-    # Print the parallel classification+decomposition entry if present.
+    # Print the parallel/combined entries if present.
     comb_dur = stage_timings.get("classification+decomposition", None)
     if comb_dur is not None:
         logger.info("  %-18s %8.2fs  (parallel)", "classification", comb_dur)
         logger.info("  %-18s %8s", "decomposition", "↑")
+
+    final_comb_dur = stage_timings.get("construction+verification+generation", None)
+    if final_comb_dur is not None:
+        logger.info("  %-18s %8.2fs  (combined)", "construction", final_comb_dur)
+        logger.info("  %-18s %8s", "verification", "↑")
+        logger.info("  %-18s %8s", "generation", "↑")
+
     for stage_name in _STAGES:
-        if stage_name in ("classification", "decomposition"):
+        if stage_name in ("classification", "decomposition", "construction", "verification", "generation"):
             continue  # already printed above
         dur = stage_timings.get(stage_name, None)
         if dur is not None:

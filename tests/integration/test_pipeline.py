@@ -190,12 +190,50 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
             "unsicherheiten": "Fehlende Unterlagen zur Meldepflicht.",
         }
 
+    async def generate_grounded_answer(
+        normalized_text: str,
+        issues: list[str],
+        questions: list[str],
+        chunks: list[dict],
+    ) -> dict:
+        return {
+            "claims": [
+                {
+                    "claim_text": "Die Kürzung war unverhältnismäßig.",
+                    "confidence_score": 0.82,
+                    "claim_type": "interpretation",
+                    "question": questions[0] if questions else "",
+                    "evidence_chunk_id": str(chunks[0].get("chunk_id", "")) if chunks else "",
+                    "evidence_hierarchy": "SGB II > § 31 > Abs. 1",
+                    "evidence_quote": "§ 31 Abs. 1 SGB II: Leistungsberechtigte, die ...",
+                },
+                {
+                    "claim_text": "Meldepflicht nach § 60 SGB I nicht beachtet.",
+                    "confidence_score": 0.85,
+                    "claim_type": "fact",
+                    "question": questions[1] if len(questions) > 1 else "",
+                    "evidence_chunk_id": str(chunks[0].get("chunk_id", "")) if chunks else "",
+                    "evidence_hierarchy": "SGB I > § 60",
+                    "evidence_quote": "§ 60 SGB I: (1) Wer Sozialleistungen beantragt...",
+                },
+            ],
+            "sections": {
+                "sachverhalt": "Antragsteller erhielt Kürzungsbescheid nach § 31 SGB II.",
+                "rechtliche_wuerdigung": "§ 31 SGB II erfordert eine Einzelfallprüfung.",
+                "ergebnis": "Kürzung kann angefochten werden.",
+                "handlungsempfehlung": "Widerspruch innerhalb eines Monats einlegen.",
+                "entwurf": "Sehr geehrte Damen und Herren, hiermit lege ich Widerspruch ein.",
+                "unsicherheiten": "Fehlende Unterlagen zur Meldepflicht.",
+            },
+        }
+
     reasoning_mod.classify_issues = classify_issues  # type: ignore[attr-defined]
     reasoning_mod.decompose_questions = decompose_questions  # type: ignore[attr-defined]
     reasoning_mod.triage_document = triage_document  # type: ignore[attr-defined]
     reasoning_mod.construct_claims = construct_claims  # type: ignore[attr-defined]
     reasoning_mod.verify_claims = verify_claims  # type: ignore[attr-defined]
     reasoning_mod.generate_output = generate_output  # type: ignore[attr-defined]
+    reasoning_mod.generate_grounded_answer = generate_grounded_answer  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.reasoning", reasoning_mod)
 
     # --- retrieval stub --------------------------------------------------
@@ -239,6 +277,24 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     retrieval_mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
     retrieval_mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", retrieval_mod)
+
+    # --- verification stub (WP-007) -------------------------------------
+    verification_mod = types.ModuleType("app.services.verification")
+
+    def verify_claims_against_chunks(
+        claims: list[dict],
+        chunks: list[dict],
+    ) -> list[dict]:
+        verified = []
+        for c in claims:
+            claim = dict(c)
+            claim["verified"] = True
+            claim["reasoning"] = "Test: quote found in chunk (stub)."
+            verified.append(claim)
+        return verified
+
+    verification_mod.verify_claims_against_chunks = verify_claims_against_chunks  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "app.services.verification", verification_mod)
 
 
 # -------------------------------------------------------------------

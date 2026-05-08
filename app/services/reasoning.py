@@ -403,6 +403,260 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
 
 
 # ---------------------------------------------------------------------------
+# Combined Stages 5+6+7 — Grounded Answer Generation (WP-007)
+# ---------------------------------------------------------------------------
+
+_GROUNDED_ANSWER_SYSTEM = (
+    "Du bist ein Experte für deutsches Sozialrecht (SGB II, SGB X, SGB XII).\n"
+    "Dir werden vorgelegt:\n"
+    "1. Der normalisierte Text eines behördlichen Dokuments.\n"
+    "2. Eine Liste identifizierter rechtlicher Themen.\n"
+    "3. Eine Liste konkreter Rechtsfragen.\n"
+    "4. Eine Sammlung von Rechtsprechungs- und Gesetzes-Chunks aus einer "
+    "Vektordatenbank.\n\n"
+    "Deine Aufgabe:\n\n"
+    "A) **Claims erstellen:** Für jede Rechtsfrage 1–3 rechtliche Aussagen "
+    "(Claims) formulieren. Jeder Claim MUSS:\n"
+    '  - "claim_text" (str): die Aussage selbst, auf Deutsch\n'
+    '  - "confidence_score" (float 0.0–1.0): deine subjektive Sicherheit\n'
+    '  - "claim_type" (str): "fact" | "interpretation" | "recommendation"\n'
+    '  - "question" (str): die Rechtsfrage, auf die sich der Claim bezieht\n'
+    '  - "evidence_chunk_id" (str): die ID des Chunks, aus dem die Evidenz stammt\n'
+    '  - "evidence_hierarchy" (str): die Hierarchie der Rechtsquelle '
+    '(z. B. "SGB II > § 31 > Abs. 1")\n'
+    '  - "evidence_quote" (str): das EXAKTE wörtliche Zitat aus dem Chunk\n\n'
+    "WICHTIGE REGELN:\n"
+    "- Verwende NUR die bereitgestellten Chunks als Quelle.\n"
+    "- Kopiere evidence_quote WÖRTLICH aus dem Chunk-Text (copy-paste, keine "
+    "Paraphrasierung).\n"
+    "- Wenn die Evidenz nicht ausreicht, setze confidence_score niedrig "
+    "(≤ 0.4) und sage dies im claim_text.\n"
+    "- Erfinde KEINE Paragraphen oder Aktenzeichen.\n"
+    "- evidence_chunk_id MUSS exakt die chunk_id aus den bereitgestellten "
+    "Chunks sein.\n\n"
+    "B) **Abschnitte generieren:** Erstelle die folgenden 6 Abschnitte "
+    "auf Deutsch:\n"
+    '  - "sachverhalt": Zusammenfassung des Sachverhalts\n'
+    '  - "rechtliche_wuerdigung": Rechtliche Würdigung mit Zitaten der '
+    "einschlägigen Vorschriften\n"
+    '  - "ergebnis": Ergebnis / Fazit\n'
+    '  - "handlungsempfehlung": Konkrete Handlungsempfehlungen\n'
+    '  - "entwurf": Entwurf eines Antwortschreibens\n'
+    '  - "unsicherheiten": Verbleibende Unsicherheiten oder fehlende '
+    "Informationen\n\n"
+    "Gib NUR ein JSON-Objekt zurück:\n"
+    '{\n'
+    '  "claims": [\n'
+    '    {\n'
+    '      "claim_text": "...",\n'
+    '      "confidence_score": 0.82,\n'
+    '      "claim_type": "interpretation",\n'
+    '      "question": "...",\n'
+    '      "evidence_chunk_id": "...",\n'
+    '      "evidence_hierarchy": "SGB II > § 31 > Abs. 1",\n'
+    '      "evidence_quote": "..."\n'
+    '    }\n'
+    '  ],\n'
+    '  "sections": {\n'
+    '    "sachverhalt": "...",\n'
+    '    "rechtliche_wuerdigung": "...",\n'
+    '    "ergebnis": "...",\n'
+    '    "handlungsempfehlung": "...",\n'
+    '    "entwurf": "...",\n'
+    '    "unsicherheiten": "..."\n'
+    '  }\n'
+    '}\n\n'
+    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences."
+)
+
+
+async def generate_grounded_answer(
+    normalized_text: str,
+    issues: list[str],
+    questions: list[str],
+    chunks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Generate claims and 6-part output in a single grounded LLM call.
+
+    Replaces three sequential LLM calls (``construct_claims()``,
+    ``verify_claims()``, ``generate_output()``) with one combined call
+    that asks the model to produce both evidence-bound claims and the
+    final six output sections.
+
+    The model is instructed to:
+    - Only use the provided chunks as sources.
+    - Copy ``evidence_quote`` exactly from chunk text.
+    - Explicitly state uncertainty when evidence is insufficient.
+    - Return strict JSON with ``claims`` (list) and ``sections`` (dict).
+
+    Parameters
+    ----------
+    normalized_text :
+        Cleaned text from the OCR / ingestion pipeline.
+    issues :
+        Legal topics identified during triage.
+    questions :
+        Explicit legal questions from triage.
+    chunks :
+        Evidence chunks retrieved from pgvector. Each chunk should have
+        ``chunk_id``, ``text_content``, and ``hierarchy_path`` fields.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dict with keys:
+        - ``claims``: ``list[dict]`` — claims with evidence bindings.
+        - ``sections``: ``dict[str, str]`` — the 6 output sections.
+    """
+    from app.core.config import settings as s
+
+    logger.info(
+        "generate_grounded_answer: starting (input=%d chars, %d issues, "
+        "%d questions, %d chunks)",
+        len(normalized_text),
+        len(issues),
+        len(questions),
+        len(chunks),
+    )
+    client = _get_client()
+
+    # Build chunk context (cap to manageable size).
+    max_chunk_chars = 7000
+    chunk_lines: list[str] = []
+    total_chunk_chars = 0
+    for c in chunks[:12]:
+        chunk_id = c.get("chunk_id", "?")
+        hierarchy = c.get("hierarchy_path", "?")
+        text = c.get("text_content", "")
+        line = (
+            f"CHUNK [{chunk_id}] {hierarchy}:\n"
+            f"{text}\n"
+        )
+        if total_chunk_chars + len(line) > max_chunk_chars:
+            remaining = max_chunk_chars - total_chunk_chars
+            if remaining > 100:
+                line = line[:remaining] + "..."
+            else:
+                break
+        chunk_lines.append(line)
+        total_chunk_chars += len(line)
+    chunk_context = "\n---\n".join(chunk_lines)
+
+    # Build the user prompt (German).
+    user_parts: list[str] = []
+
+    user_parts.append("## DOKUMENT\n")
+    user_parts.append(normalized_text[:4000])
+
+    if issues:
+        user_parts.append("\n\n## IDENTIFIZIERTE THEMEN\n")
+        user_parts.append("\n".join(f"- {i}" for i in issues))
+
+    if questions:
+        user_parts.append("\n\n## RECHTSFRAGEN\n")
+        user_parts.append("\n".join(f"- {q}" for q in questions))
+
+    user_parts.append("\n\n## RECHTSQUELLEN (CHUNKS)\n")
+    user_parts.append(chunk_context)
+
+    user_content = "\n".join(user_parts)
+
+    messages = [
+        {"role": "system", "content": _GROUNDED_ANSWER_SYSTEM + _STRICT_SUFFIX},
+        {"role": "user", "content": user_content},
+    ]
+
+    final_model = s.FINAL_MODEL
+    final_timeout = s.FINAL_TIMEOUT_SEC
+
+    raw = await client.chat_completion(
+        messages,
+        temperature=0.1,
+        model=final_model,
+        timeout=final_timeout,
+        max_retries=1,
+    )
+    try:
+        result = _parse_json_response(raw, context="grounded answer (claims + sections)")
+    except JSONParseError:
+        logger.warning(
+            "JSON parse error in generate_grounded_answer, retrying with stricter prompt"
+        )
+        messages_minimal = [
+            {"role": "system", "content": _GROUNDED_ANSWER_SYSTEM + _STRICT_SUFFIX},
+            {"role": "user", "content": user_content[:4000]},
+        ]
+        raw2 = await client.chat_completion(
+            messages_minimal,
+            temperature=0.0,
+            model=final_model,
+            timeout=final_timeout,
+            max_retries=1,
+        )
+        result = _parse_json_response(raw2, context="grounded answer (retry)")
+
+    # --- Extract and validate claims ---
+    raw_claims = result.get("claims", [])
+    if not isinstance(raw_claims, list):
+        logger.warning(
+            "generate_grounded_answer: unexpected 'claims' type: %s", type(raw_claims)
+        )
+        raw_claims = []
+
+    valid_claim_types = {"fact", "interpretation", "recommendation"}
+    claims: list[dict[str, Any]] = []
+    for item in raw_claims:
+        if not isinstance(item, dict):
+            continue
+        ct = item.get("claim_type", "fact")
+        if ct not in valid_claim_types:
+            ct = "fact"
+        cs = item.get("confidence_score", 0.5)
+        try:
+            cs = float(cs)
+        except (TypeError, ValueError):
+            cs = 0.5
+        cs = max(0.0, min(1.0, cs))
+        claims.append({
+            "claim_text": str(item.get("claim_text", "")).strip(),
+            "confidence_score": cs,
+            "claim_type": ct,
+            "question": str(item.get("question", "")).strip(),
+            "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
+            "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
+            "evidence_quote": str(item.get("evidence_quote", "")).strip(),
+        })
+
+    # --- Extract and validate sections ---
+    raw_sections = result.get("sections", {})
+    if not isinstance(raw_sections, dict):
+        logger.warning(
+            "generate_grounded_answer: unexpected 'sections' type: %s",
+            type(raw_sections),
+        )
+        raw_sections = {}
+
+    required_keys = [
+        "sachverhalt",
+        "rechtliche_wuerdigung",
+        "ergebnis",
+        "handlungsempfehlung",
+        "entwurf",
+        "unsicherheiten",
+    ]
+    sections: dict[str, str] = {}
+    for key in required_keys:
+        sections[key] = str(raw_sections.get(key, "")).strip()
+
+    logger.info(
+        "generate_grounded_answer: complete (%d claims, %d sections)",
+        len(claims),
+        len(sections),
+    )
+    return {"claims": claims, "sections": sections}
+
+
+# ---------------------------------------------------------------------------
 # Stage 5 — Claim Construction
 # ---------------------------------------------------------------------------
 
