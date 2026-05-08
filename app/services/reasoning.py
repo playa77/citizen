@@ -342,7 +342,15 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
     """
     from app.core.config import settings as s
 
-    logger.info("triage_document: starting (input=%d chars)", len(normalized_text))
+    triage_model = s.TRIAGE_MODEL or s.PRIMARY_MODEL
+    triage_timeout = s.TRIAGE_TIMEOUT_SEC
+
+    logger.info(
+        "triage_document: starting (input=%d chars, model=%s, timeout=%.1fs)",
+        len(normalized_text),
+        triage_model,
+        triage_timeout,
+    )
     client = _get_client()
 
     messages = [
@@ -352,9 +360,6 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
             "content": normalized_text[:8000],
         },
     ]
-
-    triage_model = s.TRIAGE_MODEL
-    triage_timeout = s.TRIAGE_TIMEOUT_SEC
 
     raw = await client.chat_completion(
         messages,
@@ -395,7 +400,8 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
     clean_questions = [str(q).strip() for q in questions if str(q).strip()]
 
     logger.info(
-        "triage_document: complete (%d issues, %d questions)",
+        "triage_document: complete (model=%s, %d issues, %d questions)",
+        triage_model,
         len(clean_issues),
         len(clean_questions),
     )
@@ -510,13 +516,18 @@ async def generate_grounded_answer(
     """
     from app.core.config import settings as s
 
+    final_model = s.FINAL_MODEL or s.PRIMARY_MODEL
+    final_timeout = s.FINAL_TIMEOUT_SEC
+
     logger.info(
         "generate_grounded_answer: starting (input=%d chars, %d issues, "
-        "%d questions, %d chunks)",
+        "%d questions, %d chunks, model=%s, timeout=%.1fs)",
         len(normalized_text),
         len(issues),
         len(questions),
         len(chunks),
+        final_model,
+        final_timeout,
     )
     client = _get_client()
 
@@ -565,9 +576,6 @@ async def generate_grounded_answer(
         {"role": "system", "content": _GROUNDED_ANSWER_SYSTEM + _STRICT_SUFFIX},
         {"role": "user", "content": user_content},
     ]
-
-    final_model = s.FINAL_MODEL
-    final_timeout = s.FINAL_TIMEOUT_SEC
 
     raw = await client.chat_completion(
         messages,
@@ -649,7 +657,8 @@ async def generate_grounded_answer(
         sections[key] = str(raw_sections.get(key, "")).strip()
 
     logger.info(
-        "generate_grounded_answer: complete (%d claims, %d sections)",
+        "generate_grounded_answer: complete (model=%s, %d claims, %d sections)",
+        final_model,
         len(claims),
         len(sections),
     )
@@ -1075,7 +1084,8 @@ async def synthesize_and_correct_text(
         return ocr_version_a
 
     logger.info(
-        "OCR synthesis complete — %d chars (input was %d + %d chars)",
+        "OCR synthesis complete (model=%s) — %d chars (input was %d + %d chars)",
+        synthesis_model,
         len(corrected),
         len(a_text),
         len(b_text),
