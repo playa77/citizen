@@ -2,11 +2,12 @@
 and OCR result synthesis with spell/grammar correction.
 
 Implements stages 2-3 and 5-7 of the 7-stage pipeline:
-    2. Issue Classification          → classify_issues()
-    3. Question Decomposition         → decompose_questions()
-    5. Claim Construction             → construct_claims()
-    6. Verification Pass              → verify_claims()
-    7. Output Generation              → generate_output()
+    Combined Triage (WP-006)           → triage_document()
+    2. Issue Classification             → classify_issues()
+    3. Question Decomposition            → decompose_questions()
+    5. Claim Construction                → construct_claims()
+    6. Verification Pass                 → verify_claims()
+    7. Output Generation                 → generate_output()
 
 Plus an OCR post-processing stage that runs before the pipeline:
     OCR Synthesis & Correction        → synthesize_and_correct_text()
@@ -296,6 +297,109 @@ async def decompose_questions(normalized_text: str) -> list[str]:
         logger.warning("decompose_questions: unexpected 'questions' type: %s", type(questions))
         return []
     return [str(q).strip() for q in questions if str(q).strip()]
+
+
+# ---------------------------------------------------------------------------
+# Combined Stages 2+3 — Triage (WP-006)
+# ---------------------------------------------------------------------------
+
+_TRIAGE_SYSTEM = (
+    "Du bist ein Experte für deutsches Sozialrecht. Dir wird der Text eines "
+    "behördlichen Dokuments (z. B. Jobcenter-Bescheid) vorgelegt.\n\n"
+    "Erledige BEIDE der folgenden Aufgaben in einem einzigen Durchlauf:\n\n"
+    "1. **Themenidentifikation:** Identifiziere alle rechtlichen Themen / "
+    "Problemfelder, die in dem Dokument angesprochen werden. Verwende präzise "
+    "deutsche sozialrechtliche Fachbegriffe (z. B. \"Meldefristverletzung\", "
+    "\"Eingliederungsvereinbarung\", \"Bewilligungsbescheid\", "
+    "\"Kosten der Unterkunft\", \"Sanktion nach § 31 SGB II\"). Liefere 1–8 "
+    "Themen.\n\n"
+    "2. **Fragenableitung:** Leite daraus 3–5 konkrete, beantwortbare "
+    "Rechtsfragen ab. Jede Frage muss mit dem deutschen Sozialrecht "
+    "(insbesondere SGB II, SGB X, SGB XII) beantwortbar sein.\n\n"
+    "Gib NUR ein JSON-Objekt mit genau diesen zwei Schlüsseln zurück:\n"
+    '{ "issues": ["Thema A", "Thema B", ...], '
+    '"questions": ["Frage 1", "Frage 2", ...] }\n\n'
+    "Kein Prosatext. Keine Markdown-Formatierung. Keine Erklärungen."
+)
+
+
+async def triage_document(normalized_text: str) -> dict[str, list[str]]:
+    """Perform combined classification and decomposition in a single LLM call.
+
+    Instead of calling ``classify_issues()`` and ``decompose_questions()``
+    sequentially, this function asks one LLM call for both lists at once.
+
+    Parameters
+    ----------
+    normalized_text :
+        Cleaned text from the OCR / ingestion pipeline.
+
+    Returns
+    -------
+    dict[str, list[str]]
+        A dict with keys ``issues`` (list of legal issue labels) and
+        ``questions`` (list of explicit legal questions).
+    """
+    from app.core.config import settings as s
+
+    logger.info("triage_document: starting (input=%d chars)", len(normalized_text))
+    client = _get_client()
+
+    messages = [
+        {"role": "system", "content": _TRIAGE_SYSTEM + _STRICT_SUFFIX},
+        {
+            "role": "user",
+            "content": normalized_text[:8000],
+        },
+    ]
+
+    triage_model = s.TRIAGE_MODEL
+    triage_timeout = s.TRIAGE_TIMEOUT_SEC
+
+    raw = await client.chat_completion(
+        messages,
+        temperature=0.1,
+        model=triage_model,
+        timeout=triage_timeout,
+        max_retries=1,
+    )
+    try:
+        result = _parse_json_response(raw, context="triage (classification + decomposition)")
+    except JSONParseError:
+        logger.warning("JSON parse error in triage_document, retrying with stricter prompt")
+        messages_minimal = [
+            {"role": "system", "content": _TRIAGE_SYSTEM + _STRICT_SUFFIX},
+            {"role": "user", "content": normalized_text[:4000]},
+        ]
+        raw2 = await client.chat_completion(
+            messages_minimal,
+            temperature=0.0,
+            model=triage_model,
+            timeout=triage_timeout,
+            max_retries=1,
+        )
+        result = _parse_json_response(raw2, context="triage (retry)")
+
+    # Validate and extract issues.
+    issues = result.get("issues", [])
+    if not isinstance(issues, list):
+        logger.warning("triage_document: unexpected 'issues' type: %s", type(issues))
+        issues = []
+    clean_issues = [str(i).strip() for i in issues if str(i).strip()]
+
+    # Validate and extract questions.
+    questions = result.get("questions", [])
+    if not isinstance(questions, list):
+        logger.warning("triage_document: unexpected 'questions' type: %s", type(questions))
+        questions = []
+    clean_questions = [str(q).strip() for q in questions if str(q).strip()]
+
+    logger.info(
+        "triage_document: complete (%d issues, %d questions)",
+        len(clean_issues),
+        len(clean_questions),
+    )
+    return {"issues": clean_issues, "questions": clean_questions}
 
 
 # ---------------------------------------------------------------------------

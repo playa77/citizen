@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     EMBEDDING_TIMEOUT_SEC: float = 15.0
     TRIAGE_MODEL: str | None = None
     FINAL_MODEL: str | None = None
+    COMBINE_TRIAGE_STAGES: bool = True
+    COMBINE_FINAL_STAGES: bool = True
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v0.1.0"

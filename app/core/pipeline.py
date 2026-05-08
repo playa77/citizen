@@ -181,18 +181,64 @@ async def _stage_decomposition(state: PipelineState) -> None:
 async def _run_classification_and_decomposition_stages(
     state: PipelineState,
 ) -> AsyncGenerator[str, None]:
-    """Run classification and decomposition concurrently after normalization.
+    """Run classification and decomposition after normalization.
 
-    Both stages only depend on ``state.normalized_text`` and are independent of
-    each other. Executing them via ``asyncio.gather()`` cuts end-to-end latency
-    from ``max(cls, dec) + overhead`` to ``max(cls, dec)``.
+    When ``COMBINE_TRIAGE_STAGES`` is ``True`` (WP-006), both tasks are
+    resolved by a single ``triage_document()`` LLM call. Otherwise they
+    run concurrently via ``asyncio.gather()`` (WP-003).
 
     SSE events are emitted in the canonical order: classification first, then
     decomposition.
     """
-    from app.services.reasoning import classify_issues, decompose_questions
+    from app.services.reasoning import (
+        classify_issues,
+        decompose_questions,
+        triage_document,
+    )
 
     t0 = time.monotonic()
+
+    # ── WP-006: combined triage path ───────────────────────────────────
+    if cfg._get_settings().COMBINE_TRIAGE_STAGES:
+        logger.info("  → launching combined triage (classification + decomposition)")
+        try:
+            triage_result = await triage_document(state.normalized_text)
+        except Exception as exc:
+            logger.exception("Combined triage failed")
+            state.errors.append(f"triage (classification+decomposition): {exc}")
+            raise StageExecutionError(
+                f"Combined triage failed: {exc}"
+            ) from exc
+
+        state.issues = triage_result["issues"]
+        state.questions = triage_result["questions"]
+        dur = int((time.monotonic() - t0) * 1000)
+
+        logger.info(
+            "Triage complete (%d issues, %d questions, %dms)",
+            len(state.issues),
+            len(state.questions),
+            dur,
+        )
+
+        yield _sse_event(
+            stage="classification",
+            status="complete",
+            payload=_stage_payload(
+                state, stage_name="classification", duration_ms=dur,
+            ),
+        )
+
+        yield _sse_event(
+            stage="decomposition",
+            status="complete",
+            payload=_stage_payload(
+                state, stage_name="decomposition", duration_ms=dur,
+            ),
+        )
+        return
+
+    # ── WP-003: parallel path (legacy, COMBINE_TRIAGE_STAGES=False) ───
     logger.info("  → launching classification + decomposition in parallel")
 
     cls_task = asyncio.create_task(

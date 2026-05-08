@@ -33,6 +33,7 @@ from app.services.reasoning import (
     decompose_questions,
     generate_output,
     reset_client,
+    triage_document,
     verify_claims,
 )
 
@@ -223,6 +224,107 @@ class TestDecomposeQuestions:
         ).start()
         result = await decompose_questions(_SAMPLE_TEXT)
         assert result == []
+
+
+# ===========================================================================
+# 3b. triage_document (WP-006 — combined classification + decomposition)
+# ===========================================================================
+
+
+class TestTriageDocument:
+    TRIAGE_VALID = json.dumps(
+        {
+            "issues": ["SGB II § 31", "KdU", "Eingliederungsvereinbarung"],
+            "questions": [
+                "Ist die Sanktion nach § 31 SGB II rechtmäßig?",
+                "Sind die Kosten der Unterkunft angemessen?",
+                "Welche Mitwirkungspflichten bestehen?",
+                "Kann der Bescheid angefochten werden?",
+            ],
+        }
+    )
+
+    @pytest_asyncio.fixture(autouse=True)
+    async def _patch_client(self) -> None:
+        self._patcher = patch(
+            "app.services.reasoning._get_client",
+            return_value=_make_mock_response(self.TRIAGE_VALID),
+        )
+        self._patcher.start()
+        yield
+        self._patcher.stop()
+
+    async def test_returns_dict_with_issues_and_questions(self) -> None:
+        result = await triage_document(_SAMPLE_TEXT)
+        assert isinstance(result, dict)
+        assert "issues" in result
+        assert "questions" in result
+        assert isinstance(result["issues"], list)
+        assert isinstance(result["questions"], list)
+
+    async def test_issues_are_strings(self) -> None:
+        result = await triage_document(_SAMPLE_TEXT)
+        assert result["issues"] == ["SGB II § 31", "KdU", "Eingliederungsvereinbarung"]
+
+    async def test_questions_are_strings(self) -> None:
+        result = await triage_document(_SAMPLE_TEXT)
+        assert len(result["questions"]) == 4
+        assert "Ist die Sanktion nach § 31 SGB II rechtmäßig?" in result["questions"]
+
+    async def test_empty_lists_returned_when_fields_missing(self) -> None:
+        patch(
+            "app.services.reasoning._get_client",
+            return_value=_make_mock_response(json.dumps({})),
+        ).start()
+        result = await triage_document(_SAMPLE_TEXT)
+        assert result == {"issues": [], "questions": []}
+
+    async def test_non_list_issues_returns_empty(self) -> None:
+        patch(
+            "app.services.reasoning._get_client",
+            return_value=_make_mock_response(
+                json.dumps({"issues": "not a list", "questions": ["q"]})
+            ),
+        ).start()
+        result = await triage_document(_SAMPLE_TEXT)
+        assert result["issues"] == []
+        assert result["questions"] == ["q"]
+
+    async def test_non_list_questions_returns_empty(self) -> None:
+        patch(
+            "app.services.reasoning._get_client",
+            return_value=_make_mock_response(
+                json.dumps({"issues": ["i"], "questions": "not a list"})
+            ),
+        ).start()
+        result = await triage_document(_SAMPLE_TEXT)
+        assert result["issues"] == ["i"]
+        assert result["questions"] == []
+
+    async def test_strips_empty_entries(self) -> None:
+        patch(
+            "app.services.reasoning._get_client",
+            return_value=_make_mock_response(
+                json.dumps({"issues": ["  ", "KdU", ""], "questions": ["Q", "  "]})
+            ),
+        ).start()
+        result = await triage_document(_SAMPLE_TEXT)
+        assert result["issues"] == ["KdU"]
+        assert result["questions"] == ["Q"]
+
+    async def test_retry_on_malformed_json(self) -> None:
+        mock = AsyncMock()
+        mock.chat_completion = AsyncMock(
+            side_effect=[
+                "This is not JSON at all!",
+                self.TRIAGE_VALID,
+            ]
+        )
+        with patch("app.services.reasoning._get_client", return_value=mock):
+            result = await triage_document(_SAMPLE_TEXT)
+
+        assert mock.chat_completion.call_count == 2
+        assert result["issues"] == ["SGB II § 31", "KdU", "Eingliederungsvereinbarung"]
 
 
 # ===========================================================================

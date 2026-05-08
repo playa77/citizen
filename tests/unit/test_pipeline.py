@@ -59,6 +59,16 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
             "Kann die Kürzung angefochten werden?",
         ]
 
+    async def triage_document(normalized_text: str) -> dict[str, list[str]]:
+        return {
+            "issues": ["SGB II § 31 — Kürzung der Leistung"],
+            "questions": [
+                "War die Kürzung nach § 31 SGB II rechtmäßig?",
+                "Welche Mitwirkungspflichten wurden verletzt?",
+                "Kann die Kürzung angefochten werden?",
+            ],
+        }
+
     async def construct_claims(
         chunks: list[dict[str, Any]], questions: list[str]
     ) -> list[dict[str, Any]]:
@@ -98,6 +108,7 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
     mod = types.ModuleType("app.services.reasoning")
     mod.classify_issues = classify_issues  # type: ignore[attr-defined]
     mod.decompose_questions = decompose_questions  # type: ignore[attr-defined]
+    mod.triage_document = triage_document  # type: ignore[attr-defined]
     mod.construct_claims = construct_claims  # type: ignore[attr-defined]
     mod.verify_claims = verify_claims  # type: ignore[attr-defined]
     mod.generate_output = generate_output  # type: ignore[attr-defined]

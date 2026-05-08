@@ -134,6 +134,16 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
             "Kann die Kürzung angefochten werden?",
         ]
 
+    async def triage_document(normalized_text: str) -> dict[str, list[str]]:
+        return {
+            "issues": ["SGB II § 31 — Kürzung der Leistung"],
+            "questions": [
+                "War die Kürzung nach § 31 SGB II rechtmäßig?",
+                "Welche Meldepflichten wurden verletzt?",
+                "Kann die Kürzung angefochten werden?",
+            ],
+        }
+
     async def construct_claims(
         chunks: list[dict],
         questions: list[str],
@@ -182,6 +192,7 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
 
     reasoning_mod.classify_issues = classify_issues  # type: ignore[attr-defined]
     reasoning_mod.decompose_questions = decompose_questions  # type: ignore[attr-defined]
+    reasoning_mod.triage_document = triage_document  # type: ignore[attr-defined]
     reasoning_mod.construct_claims = construct_claims  # type: ignore[attr-defined]
     reasoning_mod.verify_claims = verify_claims  # type: ignore[attr-defined]
     reasoning_mod.generate_output = generate_output  # type: ignore[attr-defined]
