@@ -26,6 +26,7 @@ import logging
 from typing import Any
 
 from app.core.router import OpenRouterClient
+from app.utils.tokens import trim_text, estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -214,11 +215,13 @@ async def classify_issues(normalized_text: str) -> list[str]:
     """
     logger.info("classify_issues: starting (input=%d chars)", len(normalized_text))
     client = _get_client()
+    from app.core.config import settings as _s
+    triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
     messages = [
         {"role": "system", "content": _CLASSIFICATION_SYSTEM + _STRICT_SUFFIX},
         {
             "role": "user",
-            "content": normalized_text[:8000],  # truncate to stay within context limits
+            "content": trim_text(normalized_text, triage_budget),
         },
     ]
 
@@ -230,7 +233,7 @@ async def classify_issues(normalized_text: str) -> list[str]:
         logger.warning("JSON parse error in classify_issues, retrying with stricter prompt")
         messages_minimal = [
             {"role": "system", "content": _CLASSIFICATION_SYSTEM + _STRICT_SUFFIX},
-            {"role": "user", "content": normalized_text[:4000]},
+            {"role": "user", "content": trim_text(normalized_text, triage_budget // 2)},
         ]
         raw2 = await client.chat_completion(messages_minimal, temperature=0.0)
         result = _parse_json_response(raw2, context="issue classification (retry)")
@@ -272,11 +275,13 @@ async def decompose_questions(normalized_text: str) -> list[str]:
     """
     logger.info("decompose_questions: starting (input=%d chars)", len(normalized_text))
     client = _get_client()
+    from app.core.config import settings as _s
+    triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
     messages = [
         {"role": "system", "content": _DECOMPOSITION_SYSTEM + _STRICT_SUFFIX},
         {
             "role": "user",
-            "content": normalized_text[:8000],
+            "content": trim_text(normalized_text, triage_budget),
         },
     ]
 
@@ -287,7 +292,7 @@ async def decompose_questions(normalized_text: str) -> list[str]:
         logger.warning("JSON parse error in decompose_questions, retrying with stricter prompt")
         messages_minimal = [
             {"role": "system", "content": _DECOMPOSITION_SYSTEM + _STRICT_SUFFIX},
-            {"role": "user", "content": normalized_text[:4000]},
+            {"role": "user", "content": trim_text(normalized_text, triage_budget // 2)},
         ]
         raw2 = await client.chat_completion(messages_minimal, temperature=0.0)
         result = _parse_json_response(raw2, context="question decomposition (retry)")
@@ -344,22 +349,32 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
 
     triage_model = s.TRIAGE_MODEL or s.PRIMARY_MODEL
     triage_timeout = s.TRIAGE_TIMEOUT_SEC
+    triage_input_chars = s.MAX_TRIAGE_INPUT_CHARS
 
     logger.info(
-        "triage_document: starting (input=%d chars, model=%s, timeout=%.1fs)",
+        "triage_document: starting (input=%d chars, budget=%d chars, model=%s, timeout=%.1fs)",
         len(normalized_text),
+        triage_input_chars,
         triage_model,
         triage_timeout,
     )
     client = _get_client()
 
+    trimmed_input = trim_text(normalized_text, triage_input_chars)
+    input_tokens = estimate_tokens(trimmed_input + _TRIAGE_SYSTEM + _STRICT_SUFFIX)
+
     messages = [
         {"role": "system", "content": _TRIAGE_SYSTEM + _STRICT_SUFFIX},
-        {
-            "role": "user",
-            "content": normalized_text[:8000],
-        },
+        {"role": "user", "content": trimmed_input},
     ]
+
+    logger.info(
+        "triage_document: prompt ~%d chars (user=%d, system=%d), ~%d tokens",
+        len(trimmed_input) + len(_TRIAGE_SYSTEM) + len(_STRICT_SUFFIX),
+        len(trimmed_input),
+        len(_TRIAGE_SYSTEM) + len(_STRICT_SUFFIX),
+        input_tokens,
+    )
 
     raw = await client.chat_completion(
         messages,
@@ -374,7 +389,7 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
         logger.warning("JSON parse error in triage_document, retrying with stricter prompt")
         messages_minimal = [
             {"role": "system", "content": _TRIAGE_SYSTEM + _STRICT_SUFFIX},
-            {"role": "user", "content": normalized_text[:4000]},
+            {"role": "user", "content": trim_text(normalized_text, triage_input_chars // 2)},
         ]
         raw2 = await client.chat_completion(
             messages_minimal,
@@ -518,24 +533,29 @@ async def generate_grounded_answer(
 
     final_model = s.FINAL_MODEL or s.PRIMARY_MODEL
     final_timeout = s.FINAL_TIMEOUT_SEC
+    max_chunks_for_final = s.MAX_CHUNKS_FOR_FINAL
+    max_chunk_context_chars = s.MAX_CHUNK_CONTEXT_CHARS
+    max_final_input_chars = s.MAX_FINAL_INPUT_CHARS
 
     logger.info(
         "generate_grounded_answer: starting (input=%d chars, %d issues, "
-        "%d questions, %d chunks, model=%s, timeout=%.1fs)",
+        "%d questions, %d chunks, budget: max_input=%d max_chunks=%d max_chunk_chars=%d, model=%s, timeout=%.1fs)",
         len(normalized_text),
         len(issues),
         len(questions),
         len(chunks),
+        max_final_input_chars,
+        max_chunks_for_final,
+        max_chunk_context_chars,
         final_model,
         final_timeout,
     )
     client = _get_client()
 
-    # Build chunk context (cap to manageable size).
-    max_chunk_chars = 7000
+    # Build chunk context (cap to manageable size, using top N by retrieval score).
     chunk_lines: list[str] = []
     total_chunk_chars = 0
-    for c in chunks[:12]:
+    for c in chunks[:max_chunks_for_final]:
         chunk_id = c.get("chunk_id", "?")
         hierarchy = c.get("hierarchy_path", "?")
         text = c.get("text_content", "")
@@ -543,8 +563,8 @@ async def generate_grounded_answer(
             f"CHUNK [{chunk_id}] {hierarchy}:\n"
             f"{text}\n"
         )
-        if total_chunk_chars + len(line) > max_chunk_chars:
-            remaining = max_chunk_chars - total_chunk_chars
+        if total_chunk_chars + len(line) > max_chunk_context_chars:
+            remaining = max_chunk_context_chars - total_chunk_chars
             if remaining > 100:
                 line = line[:remaining] + "..."
             else:
@@ -557,7 +577,7 @@ async def generate_grounded_answer(
     user_parts: list[str] = []
 
     user_parts.append("## DOKUMENT\n")
-    user_parts.append(normalized_text[:4000])
+    user_parts.append(trim_text(normalized_text, max_final_input_chars))
 
     if issues:
         user_parts.append("\n\n## IDENTIFIZIERTE THEMEN\n")
@@ -577,6 +597,20 @@ async def generate_grounded_answer(
         {"role": "user", "content": user_content},
     ]
 
+    prompt_chars = len(_GROUNDED_ANSWER_SYSTEM) + len(_STRICT_SUFFIX) + len(user_content)
+    prompt_tokens = estimate_tokens(
+        _GROUNDED_ANSWER_SYSTEM + _STRICT_SUFFIX + user_content
+    )
+    logger.info(
+        "generate_grounded_answer: prompt ~%d chars (user=%d, system=%d), ~%d tokens, "
+        "%d chunks included",
+        prompt_chars,
+        len(user_content),
+        len(_GROUNDED_ANSWER_SYSTEM) + len(_STRICT_SUFFIX),
+        prompt_tokens,
+        len(chunk_lines),
+    )
+
     raw = await client.chat_completion(
         messages,
         temperature=0.1,
@@ -592,7 +626,7 @@ async def generate_grounded_answer(
         )
         messages_minimal = [
             {"role": "system", "content": _GROUNDED_ANSWER_SYSTEM + _STRICT_SUFFIX},
-            {"role": "user", "content": user_content[:4000]},
+            {"role": "user", "content": user_content[: max_final_input_chars // 2]},
         ]
         raw2 = await client.chat_completion(
             messages_minimal,
@@ -707,17 +741,18 @@ async def construct_claims(
     """
     logger.info("construct_claims: starting (%d chunks, %d questions)", len(chunks), len(questions))
     client = _get_client()
+    from app.core.config import settings as _s
 
     chunk_context = "\n\n---\n\n".join(
         f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}"
-        for c in chunks[:12]  # cap context to stay within limits
+        for c in chunks[:_s.MAX_CHUNKS_FOR_FINAL]
     )
 
     user_content = (
         "Questions:\n"
         + "\n".join(f"- {q}" for q in questions[:5])
         + "\n\nRelevant legal chunks:\n"
-        + chunk_context[:6000]
+        + chunk_context[:_s.MAX_CHUNK_CONTEXT_CHARS]
     )
 
     messages = [
@@ -733,7 +768,7 @@ async def construct_claims(
         raw2 = await client.chat_completion(
             [
                 {"role": "system", "content": _CLAIM_CONSTRUCTION_SYSTEM + _STRICT_SUFFIX},
-                {"role": "user", "content": user_content[:3000]},
+                {"role": "user", "content": user_content[:_s.MAX_CHUNK_CONTEXT_CHARS // 2]},
             ],
             temperature=0.0,
         )
@@ -817,9 +852,11 @@ async def verify_claims(
 
     logger.info("verify_claims: starting (%d claims, %d chunks)", len(claims), len(chunks))
     client = _get_client()
+    from app.core.config import settings as _s
 
     chunk_text = "\n\n---\n\n".join(
-        f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}" for c in chunks[:12]
+        f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}"
+        for c in chunks[:_s.MAX_CHUNKS_FOR_FINAL]
     )
 
     claims_text = "\n".join(
@@ -827,7 +864,7 @@ async def verify_claims(
         for i, c in enumerate(claims)
     )
 
-    user_content = f"Claims to verify:\n{claims_text}\n\nSource chunks:\n{chunk_text[:6000]}"
+    user_content = f"Claims to verify:\n{claims_text}\n\nSource chunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
 
     messages = [
         {"role": "system", "content": _VERIFICATION_SYSTEM + _STRICT_SUFFIX},
@@ -844,7 +881,7 @@ async def verify_claims(
                 {"role": "system", "content": _VERIFICATION_SYSTEM + _STRICT_SUFFIX},
                 {
                     "role": "user",
-                    "content": f"Claims:\n{claims_text[:2000]}\n\nChunks:\n{chunk_text[:2000]}",
+                    "content": f"Claims:\n{claims_text[:_s.MAX_CHUNK_CONTEXT_CHARS // 3]}\n\nChunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS // 3]}",
                 },
             ],
             temperature=0.0,
@@ -929,6 +966,7 @@ async def generate_output(
     """
     logger.info("generate_output: starting (%d verified claims)", len(verified_claims))
     client = _get_client()
+    from app.core.config import settings as _s
 
     claims_text = "\n".join(
         f"- [{c.get('claim_type', '?')}] (verified={c.get('verified', False)}, "
@@ -936,7 +974,7 @@ async def generate_output(
         for c in verified_claims
     )
 
-    user_content = f"Verified claims:\n{claims_text[:8000]}"
+    user_content = f"Verified claims:\n{claims_text[:_s.MAX_FINAL_INPUT_CHARS]}"
 
     messages = [
         {"role": "system", "content": _OUTPUT_SYSTEM + _STRICT_SUFFIX},
@@ -951,7 +989,7 @@ async def generate_output(
         raw2 = await client.chat_completion(
             [
                 {"role": "system", "content": _OUTPUT_SYSTEM + _STRICT_SUFFIX},
-                {"role": "user", "content": user_content[:4000]},
+                {"role": "user", "content": user_content[:_s.MAX_FINAL_INPUT_CHARS // 2]},
             ],
             temperature=0.0,
         )

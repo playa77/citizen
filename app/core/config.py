@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     FINAL_MODEL: str | None = None
     COMBINE_TRIAGE_STAGES: bool = True
     COMBINE_FINAL_STAGES: bool = True
+    # Prompt / token budgeting (WP-010)
+    MAX_TRIAGE_INPUT_CHARS: int = 8000
+    MAX_FINAL_INPUT_CHARS: int = 5000
+    MAX_CHUNK_CONTEXT_CHARS: int = 7000
+    MAX_CHUNKS_FOR_FINAL: int = 6
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v0.1.0"
