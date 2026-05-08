@@ -21,6 +21,7 @@ Each SSE event follows the format::
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -32,7 +33,7 @@ from fastapi import APIRouter, Body, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from app.core.pipeline import PipelineState, run_pipeline
-from app.db.session import get_async_session
+from app.db.session import async_session_factory
 from app.services.audit import AuditRecord, persist_audit_record
 from app.utils.text import normalize_text
 
@@ -49,6 +50,28 @@ router = APIRouter()
 def _sse_format(data: dict[str, Any]) -> str:
     """Serialize *data* as an SSE data line."""
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+# ---------------------------------------------------------------------------
+# Background audit persistence
+# ---------------------------------------------------------------------------
+
+
+async def _persist_audit_safely(audit_record: AuditRecord) -> None:
+    """Persist *audit_record* in a fresh DB session, swallowing all errors.
+
+    This helper is designed to be scheduled with ``asyncio.create_task()``
+    so that audit persistence never blocks the SSE response stream
+    (WP-005).
+    """
+    try:
+        async with async_session_factory() as db_session:
+            await persist_audit_record(db_session, audit_record)
+    except Exception:
+        logger.exception(
+            "Background audit persistence failed for session %s",
+            audit_record.session_id,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +197,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             }
             yield _sse_format(error_payload)
 
-            # Persist a failed audit record for observability.
+            # Schedule a failed-audit persistence in the background.
             latency_ms = int((time.monotonic() - start) * 1000)
             failed_audit = AuditRecord(
                 session_id=session_id,
@@ -190,26 +213,16 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                     "duration_ms": 0,
                 },
             )
-            try:
-                async for db_session in get_async_session():
-                    await persist_audit_record(db_session, failed_audit)
-                    await db_session.close()
-                    break
-            except Exception:
-                logger.exception(
-                    "Failed to persist failed audit trail for session %s", session_id
-                )
+            asyncio.create_task(_persist_audit_safely(failed_audit))
             return
 
-        # Persist the audit trail in the background after streaming completes.
+        # Schedule audit persistence in the background after streaming completes.
         latency_ms = int((time.monotonic() - start) * 1000)
-
         disclaimer_ack_entry = {
             "input_snapshot": {"session_id": session_id},
             "output_snapshot": {"acknowledged": True},
             "duration_ms": 0,
         }
-
         audit_record = AuditRecord(
             session_id=session_id,
             input_text=input_text,
@@ -220,15 +233,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             evidence_bindings=evidence_entries,
             disclaimer_ack=disclaimer_ack_entry,
         )
-
-        try:
-            # Use a fresh session for persistence.
-            async for db_session in get_async_session():
-                await persist_audit_record(db_session, audit_record)
-                await db_session.close()
-                break
-        except Exception:
-            logger.exception("Failed to persist audit trail for session %s", session_id)
+        asyncio.create_task(_persist_audit_safely(audit_record))
 
     return StreamingResponse(
         event_generator(),
