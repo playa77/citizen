@@ -316,6 +316,31 @@ class Claim(Base):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# 8. cache_entry
+# ---------------------------------------------------------------------------
+
+
+class CacheEntry(Base):
+    """Simple key-value cache for expensive operations (embeddings, triage results)."""
+
+    __tablename__ = "cache_entry"
+
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    value_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    __table_args__ = (
+        Index("idx_cache_expires", "expires_at"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 7. evidence_binding
+# ---------------------------------------------------------------------------
+
+
 class EvidenceBinding(Base):
     """Explicit link between a claim and a legal_chunk."""
 

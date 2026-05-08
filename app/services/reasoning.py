@@ -351,6 +351,32 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
     triage_timeout = s.TRIAGE_TIMEOUT_SEC
     triage_input_chars = s.MAX_TRIAGE_INPUT_CHARS
 
+    # ── WP-011: triage cache ────────────────────────────────────────────
+    if s.ENABLE_CACHE:
+        from app.db.session import get_async_session
+        from app.services.cache import get_json_cache, make_cache_key
+
+        cache_key = make_cache_key("triage", triage_model, normalized_text)
+        async for session in get_async_session():
+            try:
+                cached = await get_json_cache(session, cache_key)
+                if cached is not None and isinstance(cached, dict):
+                    issues = cached.get("issues", [])
+                    questions = cached.get("questions", [])
+                    if isinstance(issues, list) and isinstance(questions, list):
+                        logger.info(
+                            "triage_document: CACHE HIT (model=%s, %d issues, %d questions)",
+                            triage_model,
+                            len(issues),
+                            len(questions),
+                        )
+                        return {"issues": list(issues), "questions": list(questions)}
+            except Exception as exc:
+                logger.warning("triage_document: cache read failed: %s", exc)
+            finally:
+                await session.close()
+            break
+
     logger.info(
         "triage_document: starting (input=%d chars, budget=%d chars, model=%s, timeout=%.1fs)",
         len(normalized_text),
@@ -413,6 +439,24 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
         logger.warning("triage_document: unexpected 'questions' type: %s", type(questions))
         questions = []
     clean_questions = [str(q).strip() for q in questions if str(q).strip()]
+
+    # ── WP-011: store in triage cache ───────────────────────────────────
+    if s.ENABLE_CACHE:
+        from app.db.session import get_async_session
+        from app.services.cache import make_cache_key as _mk, set_json_cache as _set
+
+        async for session in get_async_session():
+            try:
+                await _set(
+                    session,
+                    _mk("triage", triage_model, normalized_text),
+                    {"issues": clean_issues, "questions": clean_questions},
+                )
+            except Exception as exc:
+                logger.warning("triage_document: cache write failed: %s", exc)
+            finally:
+                await session.close()
+            break
 
     logger.info(
         "triage_document: complete (model=%s, %d issues, %d questions)",

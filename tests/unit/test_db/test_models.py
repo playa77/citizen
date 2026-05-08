@@ -37,9 +37,9 @@ def _check_constraints(table: type[models.Base]) -> list[CheckConstraint]:
 # ---------------------------------------------------------------------------
 
 
-def test_exactly_seven_tables() -> None:
+def test_exactly_eight_tables() -> None:
     tables = models.Base.metadata.tables
-    assert len(tables) == 7, f"Expected 7 tables, got {len(tables)}: {list(tables)}"
+    assert len(tables) == 8, f"Expected 8 tables, got {len(tables)}: {list(tables)}"
 
 
 def test_expected_table_names() -> None:
@@ -51,6 +51,7 @@ def test_expected_table_names() -> None:
         "pipeline_stage_log",
         "claim",
         "evidence_binding",
+        "cache_entry",
     }
     actual = set(models.Base.metadata.tables.keys())
     assert actual == expected, f"Missing: {expected - actual}; Extra: {actual - expected}"

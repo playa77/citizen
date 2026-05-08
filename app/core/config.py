@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     MAX_FINAL_INPUT_CHARS: int = 5000
     MAX_CHUNK_CONTEXT_CHARS: int = 7000
     MAX_CHUNKS_FOR_FINAL: int = 6
+    # Caching (WP-011)
+    ENABLE_CACHE: bool = True
+    CACHE_TTL_SEC: int = 86400
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     DISCLAIMER_VERSION: str = "v0.1.0"

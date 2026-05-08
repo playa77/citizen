@@ -196,13 +196,48 @@ async def retrieve_chunks_combined(
         len(questions),
     )
 
-    # Step 1 — generate one embedding
-    async with client or OpenRouterClient() as router:
-        try:
-            embedding = await router.get_embedding(combined_query)
-        except EmbeddingError as exc:
-            logger.error("Combined embedding generation failed: %s", exc)
-            raise RetrievalError(f"Embedding API failure during combined retrieval: {exc}") from exc
+    # Step 1 — generate one embedding (with WP-011 cache)
+    embedding_model = settings.EMBEDDING_MODEL
+    embedding: list[float] | None = None
+
+    if settings.ENABLE_CACHE:
+        from app.services.cache import get_json_cache, make_cache_key, set_json_cache
+
+        cache_key = make_cache_key("embedding", embedding_model, combined_query)
+        async for session in get_async_session():
+            try:
+                cached = await get_json_cache(session, cache_key)
+                if cached is not None and isinstance(cached, list):
+                    embedding = [float(v) for v in cached]
+                    logger.info(
+                        "retrieve_chunks_combined: embedding CACHE HIT (model=%s, dim=%d)",
+                        embedding_model,
+                        len(embedding),
+                    )
+            except Exception as exc:
+                logger.warning("retrieve_chunks_combined: embedding cache read failed: %s", exc)
+            finally:
+                await session.close()
+            break
+
+    if embedding is None:
+        async with client or OpenRouterClient() as router:
+            try:
+                embedding = await router.get_embedding(combined_query)
+            except EmbeddingError as exc:
+                logger.error("Combined embedding generation failed: %s", exc)
+                raise RetrievalError(f"Embedding API failure during combined retrieval: {exc}") from exc
+
+        # ── WP-011: store embedding in cache ────────────────────────
+        if settings.ENABLE_CACHE:
+            async for session in get_async_session():
+                try:
+                    await set_json_cache(session, cache_key, embedding)
+                except Exception as exc:
+                    logger.warning("retrieve_chunks_combined: embedding cache write failed: %s", exc)
+                finally:
+                    await session.close()
+                break
 
     # Step 2 — query pgvector once
     all_chunks: list[dict[str, Any]] = []
