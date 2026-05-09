@@ -1,6 +1,7 @@
 # Rechtlicher Hinweis und Haftungsausschluss
 
-**Autor:** www.github.com/playa77  
+**Autor:** www.github.com/playa77
+
 **Repository:** https://github.com/playa77/citizen
 
 **Datum:** 2026-05-09
