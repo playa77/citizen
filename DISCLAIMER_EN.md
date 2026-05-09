@@ -1,3 +1,21 @@
+# Legal Notice and Disclaimer
+
+**Author:** github.com/playa77
+**Repository:** https://github.com/playa77/citizen
+**Date:** 2026-05-09
+
+This document contains legal notices and disclaimers. It does not replace or
+modify the applicable open-source license terms unless expressly stated.
+
+This software is licensed under the MIT License.
+
+See `LICENSE`
+
+To the extent this disclaimer contains contractual terms, they apply only to
+the maximum extent permitted by applicable mandatory law.
+
+---
+
 ## 1. Nature of the Software
 
 This repository contains personal, bespoke software developed primarily for the
