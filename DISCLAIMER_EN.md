@@ -1,7 +1,9 @@
 # Legal Notice and Disclaimer
 
 **Author:** github.com/playa77
+
 **Repository:** https://github.com/playa77/citizen
+
 **Date:** 2026-05-09
 
 This document contains legal notices and disclaimers. It does not replace or
