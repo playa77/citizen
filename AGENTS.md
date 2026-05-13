@@ -46,3 +46,22 @@ Before working on any task, check if `codemap.md` exists in the project root or 
 - OCR now supports TXT/HTML/EML in addition to PDF/JPG/PNG
 - Added `scripts/benchmark_analyze.py` for SSE pipeline latency measurement
 - LLM router is at `app/core/router.py` (not `app/services/openrouter_client.py` — fixed stale ref in AGENTS.md constraints)
+
+### 2026-05-13: Runtime corpus source selection and settings page added
+
+- New endpoints in `app/api/routes/corpus.py`: `GET /corpus/available-sources`, `GET /corpus/sources`, `PUT /corpus/sources`
+- Runtime source preferences persisted to `.corpus_sources.json` (in project root, analogous to `.secret_salt`)
+- `POST /corpus/update` now accepts optional `{"sources": [...]}` body for one-shot override
+- `_run_corpus_update` accepts `override_sources` parameter; falls back to `get_effective_corpus_sources()` which checks `.corpus_sources.json` then `settings.CORPUS_SOURCES`
+- `CORPUS_SOURCE_METADATA` dict in `app/services/corpus.py` defines all 11 source types with full_name, description, tooltip, has_scraper, checked_by_default, source URL origin
+- Weisung PDF scraper scaffold added to `app/services/corpus.py`: `scrape_weisungen()`, `_find_weisung_pdf_links()`, `_scrape_weisung_pdf()`, `_split_weisung_into_paragraphs()`. Uses pdfplumber (already a dependency). Index URL: `arbeitsagentur.de/ueber-uns/veroeffentlichungen/weisungen/weisungen-nach-rechtsnorm`
+- `scrape_and_chunk()` now dispatches by source_type: `"weisung"` → `scrape_weisungen()`; all others → gesetze-im-internet.de HTML parser
+- Frontend: new Settings mode as third mode alongside Analyze and Chat. Toggle button in header. Dedicated settings page with:
+  - Checkbox list of all 11 source types with full names, source origin badges, descriptions, and ? tooltips (title attribute)
+  - Select-all checkbox with indeterminate state
+  - "Auswahl speichern" (PUT) and "Corpus mit Auswahl neu laden" (POST with sources + progress polling) buttons
+  - Source count display, loading/error/success states
+- CSS: `.btn-secondary` style added, `.settings-*` class family for source list items, tooltips, status messages
+- Source type `"weisung"` now has metadata, display name, and scraper (previously only DB-level recognition with no scraper)
+- Source type `"bsg"` has metadata but `has_scraper: false` — shown as disabled in settings UI with "(noch nicht verfügbar)" badge
+- All 334 tests pass (324 unit + 10 integration). Old `_SOURCE_DISPLAY_NAMES` dict in routes removed in favor of `CORPUS_SOURCE_METADATA`

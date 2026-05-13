@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
 import re
-from datetime import date
+from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 from uuid import uuid4
@@ -49,6 +51,226 @@ _TRANSIENT_CODES = frozenset({429, 500, 502, 503, 504})
 
 # Prevent overlapping scrape operations (e.g. double-click of Corpus aktualisieren).
 _SCRAPE_SEMAPHORE = asyncio.Semaphore(1)
+
+# ---------------------------------------------------------------------------
+# Runtime corpus source selection (persisted to .corpus_sources.json)
+# ---------------------------------------------------------------------------
+_CORPUS_SOURCES_FILE = Path(".corpus_sources.json")
+
+CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
+    "sgb2": {
+        "key": "sgb2",
+        "name": "SGB II",
+        "full_name": "SGB II (Bürgergeld, Grundsicherung für Arbeitsuchende)",
+        "description": (
+            "Grundsicherung für Arbeitsuchende — das zentrale Gesetz für Bürgergeld, "
+            "Eingliederungsleistungen und Sanktionen."
+        ),
+        "tooltip": (
+            "Unverzichtbar. Regelt Bürgergeld, Leistungen zur Eingliederung, "
+            "Sanktionen, Einkommensanrechnung und Bedarfsermittlung."
+        ),
+        "has_scraper": True,
+        "checked_by_default": True,
+        "source": "gesetze-im-internet.de",
+    },
+    "sgbx": {
+        "key": "sgbx",
+        "name": "SGB X",
+        "full_name": "SGB X (Sozialverwaltungsverfahren und Sozialdatenschutz)",
+        "description": (
+            "Regelt Verwaltungsverfahren, Datenschutz und Zusammenarbeit "
+            "der Sozialleistungsträger."
+        ),
+        "tooltip": (
+            "Wichtig für Verfahrensfragen. Definiert Fristen, Akteneinsicht, "
+            "Anhörung, Datenschutz im Sozialrecht."
+        ),
+        "has_scraper": True,
+        "checked_by_default": True,
+        "source": "gesetze-im-internet.de",
+    },
+    "sgb1": {
+        "key": "sgb1",
+        "name": "SGB I",
+        "full_name": "SGB I (Allgemeiner Teil)",
+        "description": (
+            "Allgemeiner Teil des Sozialgesetzbuchs — Grundprinzipien, "
+            "soziale Rechte, Aufklärung, Beratung."
+        ),
+        "tooltip": (
+            "Empfohlen. Enthält übergreifende Prinzipien wie Aufklärungs- "
+            "und Beratungspflichten nach §§ 13–15 SGB I."
+        ),
+        "has_scraper": True,
+        "checked_by_default": True,
+        "source": "gesetze-im-internet.de",
+    },
+    "sgb12": {
+        "key": "sgb12",
+        "name": "SGB XII",
+        "full_name": "SGB XII (Sozialhilfe)",
+        "description": (
+            "Sozialhilfe — Hilfe zum Lebensunterhalt, Grundsicherung im Alter, "
+            "Eingliederungshilfe."
+        ),
+        "tooltip": (
+            "Relevant für Abgrenzung SGB II vs. SGB XII und bei "
+            "Erwerbsminderung (§ 41 SGB XII)."
+        ),
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "sgb3": {
+        "key": "sgb3",
+        "name": "SGB III",
+        "full_name": "SGB III (Arbeitsförderung)",
+        "description": (
+            "Arbeitsförderung — Arbeitslosengeld, Vermittlung, "
+            "Berufsberatung, Weiterbildung."
+        ),
+        "tooltip": (
+            "Nützlich für Eingliederungsleistungen nach § 16 SGB II "
+            "(Verweiskette ins SGB III)."
+        ),
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "sgb9": {
+        "key": "sgb9",
+        "name": "SGB IX",
+        "full_name": "SGB IX (Rehabilitation und Teilhabe)",
+        "description": "Rehabilitation und Teilhabe von Menschen mit Behinderungen.",
+        "tooltip": "Spezialfall. Relevant wenn Behinderung oder Reha im Spiel ist.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "bgb": {
+        "key": "bgb",
+        "name": "BGB",
+        "full_name": "BGB (Bürgerliches Gesetzbuch)",
+        "description": (
+            "Bürgerliches Gesetzbuch — allgemeines Zivilrecht, "
+            "Verträge, Schuldverhältnisse."
+        ),
+        "tooltip": "Geringe Relevanz. Nur in Ausnahmefällen (z.B. zivilrechtliche Vorfragen).",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "vwvfg": {
+        "key": "vwvfg",
+        "name": "VwVfG",
+        "full_name": "VwVfG (Verwaltungsverfahrensgesetz)",
+        "description": (
+            "Bundes-Verwaltungsverfahrensgesetz — allgemeines "
+            "Verwaltungsverfahrensrecht."
+        ),
+        "tooltip": (
+            "Ergänzend. Regeln für Verwaltungsakte, Widerspruchsverfahren "
+            "außerhalb SGB X."
+        ),
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "sgg": {
+        "key": "sgg",
+        "name": "SGG",
+        "full_name": "SGG (Sozialgerichtsgesetz)",
+        "description": "Sozialgerichtsgesetz — Verfahren vor den Sozialgerichten.",
+        "tooltip": (
+            "Nur für Verfahrensfragen relevant (Klagefristen, Rechtsmittel, "
+            "einstweiliger Rechtsschutz)."
+        ),
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "weisung": {
+        "key": "weisung",
+        "name": "Fachliche Weisungen",
+        "full_name": "Fachliche Weisungen der BA (SGB II)",
+        "description": (
+            "Verwaltungsinterne Weisungen der Bundesagentur für Arbeit "
+            "zur Anwendung des SGB II — PDFs von arbeitsagentur.de."
+        ),
+        "tooltip": (
+            "Sehr wertvoll für die Praxis. Enthält Auslegungshilfen, "
+            "Ermessensdirektiven, Berechnungsbeispiele und Verfahrens- "
+            "hinweise der BA. Kein Gesetz, aber bindend für die Jobcenter."
+        ),
+        "has_scraper": True,
+        "checked_by_default": True,
+        "source": "arbeitsagentur.de",
+    },
+    "bsg": {
+        "key": "bsg",
+        "name": "BSG-Rechtsprechung",
+        "full_name": "BSG-Rechtsprechung (Bundessozialgericht)",
+        "description": "Entscheidungen des Bundessozialgerichts zu SGB II/SGB XII.",
+        "tooltip": (
+            "Noch nicht verfügbar. BSG-Urteile sollen in einer späteren "
+            "Version integriert werden."
+        ),
+        "has_scraper": False,
+        "checked_by_default": False,
+        "source": "bsg.bund.de",
+    },
+}
+
+
+def _get_corpus_sources_path() -> Path:
+    """Return the path to the runtime corpus sources config file."""
+    return _CORPUS_SOURCES_FILE
+
+
+def load_runtime_sources() -> list[str] | None:
+    """Load runtime corpus source selection from JSON file.
+
+    Returns None if the file doesn't exist (meaning the env default
+    should be used instead).
+    """
+    path = _get_corpus_sources_path()
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        selected = data.get("selected_sources", [])
+        return selected if isinstance(selected, list) else None
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Failed to load %s: %s", path, exc)
+        return None
+
+
+def save_runtime_sources(sources: list[str]) -> None:
+    """Save runtime corpus source selection to JSON file."""
+    path = _get_corpus_sources_path()
+    data: dict[str, object] = {
+        "selected_sources": sources,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+async def get_effective_corpus_sources() -> list[str]:
+    """Get the effective list of corpus sources to ingest.
+
+    Prefers runtime configuration (from .corpus_sources.json) over env default.
+    Falls back to ``settings.CORPUS_SOURCES`` if no runtime config exists.
+    Validates that all requested sources are known.
+    """
+    runtime = load_runtime_sources()
+    if runtime is not None:
+        valid = [s for s in runtime if s in CORPUS_SOURCE_METADATA]
+        unknown = set(runtime) - set(CORPUS_SOURCE_METADATA)
+        if unknown:
+            logger.warning("Ignoring unknown corpus sources from runtime config: %s", unknown)
+        return valid if valid else list(settings.CORPUS_SOURCES)
+    return list(settings.CORPUS_SOURCES)
 
 # ---------------------------------------------------------------------------
 # Source URL prefixes (gesetze-im-internet.de official XML/HTML endpoints)
@@ -135,20 +357,34 @@ async def scrape_and_chunk(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> list[dict[str, Any]]:
-    """Scrape a legal corpus from gesetze-im-internet.de and return hierarchical chunks.
+    """Scrape a legal corpus and return hierarchical chunks.
+
+    Dispatches to the appropriate scraper based on *source_type*:
+    - Gesetze-im-Internet sources (sgb2, sgbx, …): HTML parsing
+    - weisung: PDF scraping from arbeitsagentur.de
 
     Args:
-        source_type: One of ``sgb2``, ``sgbx``, ``sgb1``, ``sgb3``, ``sgb9``,
-            ``sgb12``, ``bgb``, ``vwvfg``, ``sgg``.
+        source_type: One of the keys in :data:`CORPUS_SOURCE_METADATA`.
 
     Returns:
         List of dicts with keys: ``id``, ``source_type``, ``title``,
-        ``unit_type``, ``hierarchy_path``, ``text_content``, ``effective_date``,
-        ``source_url``, ``version_hash``, ``chunk_id``.
+        ``unit_type``, ``hierarchy_path``, ``text_content``,
+        ``effective_date``, ``source_url``, ``version_hash``, ``chunk_id``.
     """
+    if source_type not in CORPUS_SOURCE_METADATA:
+        raise ValueError(
+            f"Unknown source_type={source_type!r}. "
+            f"Allowed: {list(CORPUS_SOURCE_METADATA)}"
+        )
+
+    # Dispatch weisung to dedicated PDF scraper
+    if source_type == "weisung":
+        return await scrape_weisungen(client=client)
+
+    # All other known source types use gesetze-im-internet.de
     if source_type not in _SOURCE_TYPE_PREFIX:
         raise ValueError(
-            f"Unknown source_type={source_type!r}. " f"Allowed: {list(_SOURCE_TYPE_PREFIX)}"
+            f"No gesetze-im-internet.de mapping for source_type={source_type!r}."
         )
 
     prefix = _SOURCE_TYPE_PREFIX[source_type]
@@ -202,6 +438,179 @@ def _find_consolidated_href(soup: BeautifulSoup) -> str | None:
         if re.match(r"^BJNR\d+\.html$", href):
             return href
     return None
+
+
+# ---------------------------------------------------------------------------
+# Weisung PDF scraper (arbeitsagentur.de)
+# ---------------------------------------------------------------------------
+# Index page listing all Fachliche Weisungen organised by SGB paragraph.
+_WEISUNG_INDEX = (
+    "https://www.arbeitsagentur.de/ueber-uns/"
+    "veroeffentlichungen/weisungen/weisungen-nach-rechtsnorm"
+)
+_WEISUNG_PDF_RE = re.compile(r"fw-sgb-?ii.*\.pdf", re.IGNORECASE)
+
+
+async def scrape_weisungen(
+    *,
+    client: httpx.AsyncClient | None = None,
+) -> list[dict[str, Any]]:
+    """Scrape Fachliche Weisungen (SGB II) PDFs from arbeitsagentur.de.
+
+    Fetches the Weisungen-nach-Rechtsnorm index page, finds all
+    SGB II PDF links, downloads each PDF, extracts text via pdfplumber,
+    and returns hierarchical chunks suitable for embedding.
+    """
+    chunks: list[dict[str, Any]] = []
+
+    async with client or httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=30.0,
+        limits=_HTTP_LIMITS,
+    ) as c:
+        # ── Step 1: Fetch the Weisungen index page ───────────────────
+        resp = await _http_get_with_backoff(c, _WEISUNG_INDEX)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        # ── Step 2: Find all SGB II PDF links ────────────────────────
+        pdf_links = _find_weisung_pdf_links(soup)
+        if not pdf_links:
+            logger.warning("No SGB II Weisung PDF links found at %s", _WEISUNG_INDEX)
+            return []
+
+        logger.info("Found %d Weisung PDF links for SGB II", len(pdf_links))
+
+        # ── Step 3: Download and parse each PDF sequentially ─────────
+        for i, (pdf_url, pdf_title) in enumerate(pdf_links):
+            # Be a good netizen — delay between consecutive requests.
+            await asyncio.sleep(_POLITENESS_DELAY)
+
+            try:
+                pdf_chunks = await _scrape_weisung_pdf(
+                    c, pdf_url, pdf_title, i + 1, len(pdf_links),
+                )
+                chunks.extend(pdf_chunks)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to scrape Weisung %d/%d: %s — %s",
+                    i + 1,
+                    len(pdf_links),
+                    pdf_title or pdf_url,
+                    exc,
+                )
+
+    logger.info("Scraped %d chunks from %d Weisungen", len(chunks), len(pdf_links))
+    return chunks
+
+
+def _find_weisung_pdf_links(soup: BeautifulSoup) -> list[tuple[str, str]]:
+    """Find all SGB II Weisung PDF links on the index page.
+
+    Returns list of (url, title) tuples.
+    """
+    links: list[tuple[str, str]] = []
+    for a_tag in soup.find_all("a", href=True):
+        href = str(a_tag["href"])
+        if _WEISUNG_PDF_RE.search(href):
+            text = a_tag.get_text(strip=True) or href
+            # Resolve relative URLs
+            if href.startswith("/"):
+                href = urljoin("https://www.arbeitsagentur.de", href)
+            links.append((href, text))
+    return links
+
+
+async def _scrape_weisung_pdf(
+    client: httpx.AsyncClient,
+    pdf_url: str,
+    title: str,
+    index: int,
+    total: int,
+) -> list[dict[str, Any]]:
+    """Download a single Weisung PDF, extract text, and chunk it hierarchically.
+
+    Uses pdfplumber for text extraction and applies the same hierarchical
+    parsing logic as the gesetze-im-internet scraper (Absatz-level chunks).
+    """
+    import io
+
+    import pdfplumber
+
+    logger.info("Downloading Weisung %d/%d: %s", index, total, title or pdf_url)
+    resp = await _http_get_with_backoff(client, pdf_url)
+    resp.raise_for_status()
+
+    chunks: list[dict[str, Any]] = []
+
+    with pdfplumber.open(io.BytesIO(resp.content)) as pdf:
+        full_text_parts: list[str] = []
+        for page in pdf.pages:
+            text = page.extract_text()
+            if text:
+                full_text_parts.append(text)
+
+        if not full_text_parts:
+            logger.warning("No extractable text in Weisung PDF: %s", title or pdf_url)
+            return []
+
+        full_text = "\n\n".join(full_text_parts)
+        full_text = _clean_ocr_artefacts(full_text)
+
+        # Attempt to detect § references and split into paragraph-level chunks
+        para_chunks = _split_weisung_into_paragraphs(full_text, title, pdf_url)
+        chunks.extend(para_chunks)
+
+    return chunks
+
+
+def _split_weisung_into_paragraphs(
+    text: str,
+    title: str,
+    source_url: str,
+) -> list[dict[str, Any]]:
+    """Split Weisung text into paragraph-level chunks on § markers.
+
+    Weisung PDFs contain the full Gesetzestext followed by the BA commentary.
+    We split on ``§ NNN`` boundaries and treat each as a chunk.
+    """
+    chunks: list[dict[str, Any]] = []
+
+    # Split on "§ <number>" boundaries (German paragraph markers)
+    sections = re.split(r"\n(?=§\s+\d+)", text)
+
+    for section in sections:
+        norm_text = normalize_text(section)
+        if not norm_text:
+            continue
+
+        # Extract paragraph number
+        para_match = _PARA_TAG_RE.search(norm_text)
+        para_label = f"§ {para_match.group(1)}" if para_match else "Allgemein"
+
+        hierarchy = ["Fachliche Weisung", para_label]
+
+        chunks.append(
+            {
+                "id": str(uuid4()),
+                "source_type": "weisung",
+                "title": "Fachliche Weisung",
+                "unit_type": "absatz",
+                "hierarchy_path": " > ".join(hierarchy),
+                "text_content": norm_text,
+                "effective_date": date.today().isoformat(),
+                "source_url": source_url,
+                "version_hash": _compute_version_hash(norm_text),
+                "chunk_id": str(uuid4()),
+            }
+        )
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Consolidated HTML parser
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------

@@ -110,6 +110,21 @@
         chatSendBtn: document.getElementById('chat-send-btn'),
         chatAttachBtn: document.getElementById('chat-attach-btn'),
         chatFileInput: document.getElementById('chat-file-input'),
+        // Settings mode
+        settingsMode: document.getElementById('settings-mode'),
+        modeSettingsBtn: document.getElementById('mode-settings-btn'),
+        settingsSourceList: document.getElementById('settings-source-list'),
+        settingsSourceCount: document.getElementById('settings-source-count'),
+        settingsSelectAll: document.getElementById('settings-select-all'),
+        settingsLoading: document.getElementById('settings-loading'),
+        settingsError: document.getElementById('settings-error'),
+        settingsSaveBtn: document.getElementById('settings-save-btn'),
+        settingsReloadBtn: document.getElementById('settings-reload-btn'),
+        settingsStatus: document.getElementById('settings-status'),
+        settingsProgress: document.getElementById('settings-progress'),
+        settingsProgressFill: document.getElementById('settings-progress-fill'),
+        settingsSubstage: document.getElementById('settings-substage'),
+        settingsChunksCount: document.getElementById('settings-chunks-count'),
     };
 
     // =========================================================================
@@ -130,6 +145,12 @@
         conversations: [],
         activeConversationId: null,
         conversationDocuments: [],
+        // Settings mode state
+        availableSources: [],
+        selectedSources: [],
+        settingsDirty: false,
+        settingsJobId: null,
+        settingsPollingTimer: null,
         isStreaming: false,
         streamingAbortController: null,
     };
@@ -818,22 +839,344 @@
         if (mode === state.currentMode) return;
         state.currentMode = mode;
 
+        // Hide all modes first
+        elements.analyzeMode.classList.add('hidden');
+        elements.chatMode.classList.add('hidden');
+        elements.settingsMode.classList.add('hidden');
+
+        // Deactivate all mode buttons in all headers
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+
         if (mode === 'analyze') {
             elements.analyzeMode.classList.remove('hidden');
-            elements.chatMode.classList.add('hidden');
-            elements.modeAnalyzeBtn.classList.add('active');
-            elements.modeChatBtn.classList.remove('active');
-        } else {
-            elements.analyzeMode.classList.add('hidden');
+            document.querySelectorAll('.mode-btn[data-mode="analyze"]').forEach(btn => btn.classList.add('active'));
+        } else if (mode === 'chat') {
             elements.chatMode.classList.remove('hidden');
-            elements.modeAnalyzeBtn.classList.remove('active');
-            elements.modeChatBtn.classList.add('active');
-
-            // Load conversations when switching to chat mode
+            document.querySelectorAll('.mode-btn[data-mode="chat"]').forEach(btn => btn.classList.add('active'));
             if (state.conversations.length === 0) {
                 loadConversations();
             }
+        } else if (mode === 'settings') {
+            elements.settingsMode.classList.remove('hidden');
+            document.querySelectorAll('.mode-btn[data-mode="settings"]').forEach(btn => btn.classList.add('active'));
+            if (state.availableSources.length === 0) {
+                loadSettingsSources();
+            }
         }
+    }
+
+    // =========================================================================
+    // Settings
+    // =========================================================================
+
+    async function loadSettingsSources() {
+        elements.settingsLoading.classList.remove('hidden');
+        elements.settingsError.classList.add('hidden');
+        elements.settingsSourceList.classList.add('hidden');
+        elements.settingsSaveBtn.disabled = true;
+        elements.settingsReloadBtn.disabled = true;
+
+        try {
+            const response = await fetch(API_BASE + '/corpus/available-sources', {
+                method: 'GET',
+                headers: buildHeaders({ 'Accept': 'application/json' }),
+            });
+
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+
+            state.availableSources = await response.json();
+            state.selectedSources = state.availableSources
+                .filter(s => s.active)
+                .map(s => s.key);
+            state.settingsDirty = false;
+            renderSettingsSources();
+        } catch (err) {
+            elements.settingsError.textContent = 'Fehler beim Laden der Quellen: ' + err.message;
+            elements.settingsError.classList.remove('hidden');
+        } finally {
+            elements.settingsLoading.classList.add('hidden');
+        }
+    }
+
+    function renderSettingsSources() {
+        const sources = state.availableSources;
+        const selected = new Set(state.selectedSources);
+
+        elements.settingsSourceList.innerHTML = '';
+        elements.settingsSourceList.classList.remove('hidden');
+
+        let selectableCount = 0;
+
+        sources.forEach(source => {
+            if (source.has_scraper) selectableCount++;
+
+            const item = document.createElement('div');
+            item.className = 'settings-source-item' + (!source.has_scraper ? ' disabled' : '');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = 'source-' + source.key;
+            checkbox.value = source.key;
+            checkbox.checked = selected.has(source.key);
+            checkbox.disabled = !source.has_scraper;
+
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    state.selectedSources.push(source.key);
+                } else {
+                    state.selectedSources = state.selectedSources.filter(k => k !== source.key);
+                }
+                state.settingsDirty = true;
+                updateSettingsUI();
+            });
+
+            const label = document.createElement('label');
+            label.htmlFor = 'source-' + source.key;
+            label.className = 'settings-source-label';
+
+            label.innerHTML = `
+                <span class="settings-source-name">${escapeHtml(source.full_name)}</span>
+                <span class="settings-source-source">${escapeHtml(source.source)}</span>
+                ${!source.has_scraper
+                    ? '<span class="settings-source-unavailable">(noch nicht verfügbar)</span>'
+                    : ''}
+            `;
+
+            // Tooltip on the item
+            item.title = source.tooltip;
+
+            const desc = document.createElement('div');
+            desc.className = 'settings-source-desc';
+            desc.textContent = source.description;
+
+            const tooltip = document.createElement('span');
+            tooltip.className = 'settings-tooltip-icon';
+            tooltip.innerHTML = '?';
+            tooltip.title = source.tooltip;
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            item.appendChild(tooltip);
+            item.appendChild(desc);
+
+            elements.settingsSourceList.appendChild(item);
+        });
+
+        elements.settingsSelectAll.checked = selected.size === selectableCount && selectableCount > 0;
+        elements.settingsSelectAll.indeterminate = selected.size > 0 && selected.size < selectableCount;
+
+        updateSettingsUI();
+    }
+
+    function updateSettingsUI() {
+        const selected = state.selectedSources;
+        const total = state.availableSources.length;
+        const selectable = state.availableSources.filter(s => s.has_scraper).length;
+
+        elements.settingsSourceCount.textContent =
+            `${selected.length} von ${selectable} Quellen ausgewählt`;
+
+        elements.settingsSaveBtn.disabled = !state.settingsDirty || selected.length === 0;
+        elements.settingsReloadBtn.disabled = selected.length === 0;
+
+        // Update select-all checkbox
+        const allSelectable = state.availableSources.filter(s => s.has_scraper);
+        elements.settingsSelectAll.checked = allSelectable.every(s => selected.includes(s.key));
+        elements.settingsSelectAll.indeterminate =
+            allSelectable.some(s => selected.includes(s.key)) &&
+            !allSelectable.every(s => selected.includes(s.key));
+    }
+
+    async function handleSettingsSave() {
+        if (!state.settingsDirty || state.selectedSources.length === 0) return;
+
+        elements.settingsSaveBtn.disabled = true;
+        elements.settingsStatus.classList.add('hidden');
+
+        try {
+            const response = await fetch(API_BASE + '/corpus/sources', {
+                method: 'PUT',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ sources: state.selectedSources }),
+            });
+
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+
+            const data = await response.json();
+            state.settingsDirty = false;
+            elements.settingsSaveBtn.disabled = true;
+
+            elements.settingsStatus.className = 'settings-status success';
+            elements.settingsStatus.textContent = 'Auswahl gespeichert.';
+            elements.settingsStatus.classList.remove('hidden');
+
+            // Refresh active state
+            state.availableSources.forEach(s => {
+                s.active = state.selectedSources.includes(s.key);
+            });
+        } catch (err) {
+            elements.settingsStatus.className = 'settings-status error';
+            elements.settingsStatus.textContent = 'Fehler: ' + err.message;
+            elements.settingsStatus.classList.remove('hidden');
+            elements.settingsSaveBtn.disabled = false;
+        }
+    }
+
+    async function handleSettingsReload() {
+        if (state.settingsJobId) return;  // Already running
+
+        // Reset state
+        elements.settingsStatus.classList.add('hidden');
+        elements.settingsProgress.classList.remove('hidden');
+        elements.settingsSubstage.textContent = 'Auftrag wird eingereiht …';
+        elements.settingsChunksCount.textContent = '';
+        elements.settingsProgressFill.classList.remove('indeterminate');
+        elements.settingsProgressFill.style.width = '0%';
+
+        elements.settingsSaveBtn.disabled = true;
+        elements.settingsReloadBtn.disabled = true;
+
+        try {
+            const response = await fetch(API_BASE + '/corpus/update', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ sources: state.selectedSources }),
+            });
+
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+
+            const data = await response.json();
+            state.settingsJobId = data.job_id;
+            elements.settingsSubstage.textContent = 'Auftrag gestartet …';
+            pollSettingsStatus(data.job_id);
+        } catch (err) {
+            settingsLoadError(err.message);
+        }
+    }
+
+    function pollSettingsStatus(jobId) {
+        if (state.settingsPollingTimer) {
+            clearTimeout(state.settingsPollingTimer);
+        }
+
+        state.settingsPollingTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(API_BASE + '/corpus/status/' + jobId, {
+                    method: 'GET',
+                    headers: buildHeaders(),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        settingsLoadError('Auftrag nicht mehr im Speicher.');
+                        return;
+                    }
+                    await handleApiError(response);
+                    return;
+                }
+
+                const job = await response.json();
+                updateSettingsProgress(job);
+
+                if (job.status === 'completed' || job.status === 'failed') {
+                    finishSettingsReload(job);
+                } else {
+                    pollSettingsStatus(jobId);
+                }
+            } catch (err) {
+                settingsLoadError(err.message);
+            }
+        }, 2000);
+    }
+
+    function updateSettingsProgress(job) {
+        if (job.substage) {
+            const labels = {
+                scraping: 'Rechtsquellen werden abgerufen und aufbereitet …',
+                embedding: 'Vektordarstellungen (Embeddings) werden generiert …',
+                upserting: 'Einträge werden in der Datenbank gespeichert …',
+            };
+            let label = labels[job.substage] || job.substage;
+
+            if (job.substage === 'scraping' && job.current_source_display) {
+                const sourceInfo = job.source_total
+                    ? ` (Quelle ${job.source_index}/${job.source_total})`
+                    : '';
+                label = `${job.current_source_display} wird abgerufen …${sourceInfo}`;
+            }
+            elements.settingsSubstage.textContent = label;
+        }
+
+        if (job.substage === 'scraping' && job.chunks_scraped > 0) {
+            elements.settingsChunksCount.textContent =
+                `${job.chunks_scraped} Textblöcke bisher abgerufen`;
+        } else if (job.substage === 'embedding' && job.chunks_scraped > 0) {
+            elements.settingsChunksCount.textContent =
+                `${job.chunks_scraped} Textblöcke werden verarbeitet`;
+        } else if (job.substage === 'upserting' && job.chunks_scraped > 0) {
+            elements.settingsChunksCount.textContent =
+                `${job.chunks_scraped} Textblöcke in DB`;
+        }
+
+        if (job.status === 'running') {
+            elements.settingsProgressFill.classList.add('indeterminate');
+        }
+    }
+
+    function finishSettingsReload(job) {
+        if (state.settingsPollingTimer) {
+            clearTimeout(state.settingsPollingTimer);
+            state.settingsPollingTimer = null;
+        }
+        state.settingsJobId = null;
+
+        elements.settingsProgress.classList.add('hidden');
+        elements.settingsReloadBtn.disabled = false;
+        elements.settingsSaveBtn.disabled = !state.settingsDirty;
+
+        elements.settingsStatus.classList.remove('hidden');
+
+        if (job.status === 'completed') {
+            const count = job.chunks_processed || 0;
+            if (count > 0) {
+                elements.settingsStatus.className = 'settings-status success';
+                elements.settingsStatus.textContent =
+                    `Corpus-Aktualisierung abgeschlossen: ${count} Texteinträge verarbeitet.`;
+            } else {
+                elements.settingsStatus.className = 'settings-status warning';
+                elements.settingsStatus.textContent =
+                    'Corpus-Aktualisierung abgeschlossen, aber keine Einträge gefunden.';
+            }
+        } else if (job.status === 'failed') {
+            elements.settingsStatus.className = 'settings-status error';
+            elements.settingsStatus.textContent =
+                `Fehler: ${job.error || 'Corpus-Aktualisierung fehlgeschlagen.'}`;
+        }
+    }
+
+    function settingsLoadError(message) {
+        if (state.settingsPollingTimer) {
+            clearTimeout(state.settingsPollingTimer);
+            state.settingsPollingTimer = null;
+        }
+        state.settingsJobId = null;
+
+        elements.settingsProgress.classList.add('hidden');
+        elements.settingsReloadBtn.disabled = false;
+        elements.settingsSaveBtn.disabled = !state.settingsDirty;
+
+        elements.settingsStatus.className = 'settings-status error';
+        elements.settingsStatus.textContent = `Fehler: ${message}`;
+        elements.settingsStatus.classList.remove('hidden');
     }
 
     // =========================================================================
@@ -1822,6 +2165,36 @@
 
         elements.modeAnalyzeBtn.addEventListener('click', () => switchMode('analyze'));
         elements.modeChatBtn.addEventListener('click', () => switchMode('chat'));
+        elements.modeSettingsBtn.addEventListener('click', () => switchMode('settings'));
+
+        // Also wire up mode buttons within settings-mode header (different DOM nodes)
+        document.querySelectorAll('#settings-mode .mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+        });
+
+        // =========================================================================
+        // Settings Mode Event Listeners
+        // =========================================================================
+
+        elements.settingsSelectAll.addEventListener('change', () => {
+            const checked = elements.settingsSelectAll.checked;
+            state.availableSources.forEach(s => {
+                if (s.has_scraper) {
+                    if (checked) {
+                        if (!state.selectedSources.includes(s.key)) {
+                            state.selectedSources.push(s.key);
+                        }
+                    } else {
+                        state.selectedSources = state.selectedSources.filter(k => k !== s.key);
+                    }
+                }
+            });
+            state.settingsDirty = true;
+            renderSettingsSources();
+        });
+
+        elements.settingsSaveBtn.addEventListener('click', handleSettingsSave);
+        elements.settingsReloadBtn.addEventListener('click', handleSettingsReload);
 
         // =========================================================================
         // Chat Mode Event Listeners

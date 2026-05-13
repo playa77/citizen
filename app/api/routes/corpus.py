@@ -1,18 +1,15 @@
-"""Corpus management endpoints — manual trigger and status for scraper/chunker.
+"""Corpus management endpoints — manual trigger, status, source configuration.
 
-Provides three endpoints:
-    POST /api/v1/corpus/update       — Trigger a full scrape of gesetze-im-internet.de,
-                                      parse the hierarchy, split into chunks, generate
-                                      embeddings, and upsert to the database.
-
-    GET  /api/v1/corpus/status/{job_id} — Query the status of a corpus update job,
-                                          including substage tracking for progress UI.
-
-    GET  /api/v1/corpus/health       — Corpus health check: chunk counts, source info,
-                                      warnings.
+Provides endpoints for:
+    POST   /api/v1/corpus/update           — Trigger corpus scrape+embed+upsert
+    GET    /api/v1/corpus/status/{job_id}  — Query job progress
+    GET    /api/v1/corpus/health           — Corpus health check
+    GET    /api/v1/corpus/available-sources — List all known source types with metadata
+    GET    /api/v1/corpus/sources          — Get current source selection
+    PUT    /api/v1/corpus/sources          — Save source selection (persisted to disk)
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 
@@ -21,14 +18,22 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, status
 from sqlalchemy import func, select
 
 from app.core import config as cfg
 from app.core.config import settings
 from app.db.models import LegalChunk, LegalSource
 from app.db.session import get_session_factory
-from app.services.corpus import generate_embeddings, scrape_and_chunk, upsert_chunks
+from app.services.corpus import (
+    CORPUS_SOURCE_METADATA,
+    generate_embeddings,
+    get_effective_corpus_sources,
+    load_runtime_sources,
+    save_runtime_sources,
+    scrape_and_chunk,
+    upsert_chunks,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,33 +45,18 @@ router = APIRouter()
 _job_store: dict[str, dict[str, Any]] = {}
 
 
-# Map source_type abbreviations to human-readable names for the progress UI.
-_SOURCE_DISPLAY_NAMES: dict[str, str] = {
-    "sgb2": "SGB II (Bürgergeld)",
-    "sgbx": "SGB X (Verwaltungsverfahren)",
-    "sgb12": "SGB XII (Sozialhilfe)",
-    "sgb1": "SGB I (Allgemeiner Teil)",
-    "sgb3": "SGB III (Arbeitsförderung)",
-    "sgb9": "SGB IX (Rehabilitation und Teilhabe)",
-    "bgb": "BGB (Bürgerliches Gesetzbuch)",
-    "vwvfg": "VwVfG (Verwaltungsverfahrensgesetz)",
-    "sgg": "SGG (Sozialgerichtsgesetz)",
-}
-
-
 # ---------------------------------------------------------------------------
 # Helper — background job
 # ---------------------------------------------------------------------------
 
 
-async def _run_corpus_update(job_id: str) -> None:
+async def _run_corpus_update(
+    job_id: str, override_sources: list[str] | None = None
+) -> None:
     """Background task that executes the full corpus update pipeline.
 
-    Catches all exceptions and records detailed status in ``_job_store``,
-    including substage transitions and the currently processed source type
-    so the frontend can render granular progress.
-
-    Enforces ``CORPUS_INGESTION_TIMEOUT_SEC`` via ``asyncio.wait_for``.
+    *override_sources*, when provided, takes precedence over both runtime
+    and env-default source lists for this single job execution.
     """
     timeout = cfg._get_settings().CORPUS_INGESTION_TIMEOUT_SEC
 
@@ -76,13 +66,18 @@ async def _run_corpus_update(job_id: str) -> None:
             status="running", substage="scraping", current_source=None
         )
 
-        source_types = settings.CORPUS_SOURCES
+        source_types = (
+            override_sources
+            if override_sources is not None
+            else await get_effective_corpus_sources()
+        )
         per_source: dict[str, int] = {}
 
         # Stage 1 — scrape & chunk for each configured source type
         chunks: list[dict[str, Any]] = []
         for idx, source_type in enumerate(source_types):
-            display_name = _SOURCE_DISPLAY_NAMES.get(source_type, source_type.upper())
+            meta = CORPUS_SOURCE_METADATA.get(source_type, {})
+            display_name = str(meta.get("full_name") or meta.get("name", source_type.upper()))
             _job_store[job_id].update(
                 current_source=source_type,
                 current_source_display=display_name,
@@ -183,14 +178,19 @@ async def _run_corpus_update(job_id: str) -> None:
 
 
 @router.post("/corpus/update", status_code=status.HTTP_202_ACCEPTED)
-async def corpus_update(background_tasks: BackgroundTasks) -> dict[str, str | int]:
+async def corpus_update(
+    background_tasks: BackgroundTasks,
+    payload: dict[str, Any] | None = Body(None),
+) -> dict[str, str | int]:
     """Trigger a manual corpus refresh in the background.
 
-    Returns immediately with a ``job_id`` that can be used to query
-    status via ``GET /api/v1/corpus/status/{job_id}``.
+    Optionally accepts a JSON body with ``sources`` (list of source type keys)
+    to override the active source selection for this job.  The override is
+    **not** persisted — use ``PUT /api/v1/corpus/sources`` for persistent
+    changes.
 
     The background job will:
-      1. Scrape legal sources (gesetze-im-internet.de)
+      1. Scrape legal sources (gesetze-im-internet.de / arbeitsagentur.de)
       2. Chunk hierarchically by §/Abs/Satz
       3. Generate embeddings via OpenRouter
       4. Upsert all records to the database
@@ -199,17 +199,17 @@ async def corpus_update(background_tasks: BackgroundTasks) -> dict[str, str | in
     -------
     dict[str, str | int]
         ``{"job_id": "<uuid>", "status": "queued"}``
-
-    Raises
-    ------
-    HTTPException(500)
-        If the background task could not be scheduled (extremely rare).
     """
     job_id = str(uuid.uuid4())
     _job_store[job_id] = {"status": "queued", "substage": None, "chunks_scraped": 0}
 
+    # Capture optional one-shot source override
+    override_sources: list[str] | None = None
+    if payload and isinstance(payload.get("sources"), list):
+        override_sources = [str(s) for s in payload["sources"] if s in CORPUS_SOURCE_METADATA]
+
     try:
-        background_tasks.add_task(_run_corpus_update, job_id)
+        background_tasks.add_task(_run_corpus_update, job_id, override_sources)
     except Exception as exc:
         logger.exception("Failed to schedule corpus update job")
         raise HTTPException(
@@ -299,7 +299,7 @@ async def corpus_health() -> dict[str, Any]:
         )
 
     # Check configured sources vs actual sources
-    configured = set(settings.CORPUS_SOURCES)
+    configured = set(await get_effective_corpus_sources())
     available = {s["type"] for s in sources}
     missing = configured - available
     if missing:
@@ -314,4 +314,87 @@ async def corpus_health() -> dict[str, Any]:
         "sources": sources,
         "is_healthy": is_healthy,
         "warnings": warnings,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Runtime source configuration endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/corpus/available-sources")
+async def available_sources() -> list[dict[str, object]]:
+    """Return all known corpus source types with their metadata.
+
+    Includes display names, descriptions, tooltips, scraper availability,
+    and smart defaults so the frontend can render a configuration dialogue.
+    """
+    currently_active = await get_effective_corpus_sources()
+    active_set = set(currently_active)
+
+    result: list[dict[str, object]] = []
+    for key, meta in CORPUS_SOURCE_METADATA.items():
+        result.append(
+            {
+                **meta,
+                "active": key in active_set,
+            }
+        )
+    return result
+
+
+@router.get("/corpus/sources")
+async def get_sources() -> dict[str, object]:
+    """Return the currently active corpus source selection."""
+    sources = await get_effective_corpus_sources()
+    is_runtime = load_runtime_sources() is not None
+    return {
+        "sources": sources,
+        "source": "runtime" if is_runtime else "env_default",
+    }
+
+
+@router.put("/corpus/sources")
+async def set_sources(
+    payload: dict[str, Any] = Body(...),
+) -> dict[str, object]:
+    """Persist a new corpus source selection to disk.
+
+    Expects ``{"sources": ["sgb2", "sgbx", ...]}`` in the request body.
+    The selection takes effect on the next corpus update (scrape+embed+upsert)
+    and survives server restarts.
+
+    Raises 422 if the payload is malformed or contains unknown source types.
+    """
+    raw = payload.get("sources")
+    if not isinstance(raw, list) or not all(isinstance(s, str) for s in raw):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="'sources' must be a list of source type strings.",
+        )
+
+    selected = [str(s) for s in raw]
+
+    unknown = set(selected) - set(CORPUS_SOURCE_METADATA)
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown source type(s): {', '.join(sorted(unknown))}",
+        )
+
+    if not selected:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one source must be selected.",
+        )
+
+    save_runtime_sources(selected)
+    logger.info(
+        "Runtime corpus sources updated: %s → %s",
+        settings.CORPUS_SOURCES,
+        selected,
+    )
+    return {
+        "sources": selected,
+        "status": "saved",
     }

@@ -85,11 +85,10 @@ async def test_run_corpus_update_success(monkeypatch, caplog):
         patch("app.api.routes.corpus.get_session_factory", return_value=lambda: mock_cm),
         patch("app.api.routes.corpus.upsert_chunks", new_callable=AsyncMock) as mock_upsert,
         patch("app.api.routes.corpus.generate_embeddings", new_callable=AsyncMock) as mock_embed,
-        patch("app.api.routes.corpus.settings.CORPUS_SOURCES", ["sgb2", "sgbx", "weisung", "bsg"]),
     ):
         mock_scrape.side_effect = _capture_and_return
         mock_embed.side_effect = lambda chunks: chunks  # passthrough — embeddings already present
-        await _run_corpus_update(job_id)
+        await _run_corpus_update(job_id, override_sources=["sgb2", "sgbx", "weisung", "bsg"])
 
     # ── Verify scraper called for each source type in order ──────────
     assert mock_scrape.await_count == 4
@@ -99,27 +98,27 @@ async def test_run_corpus_update_success(monkeypatch, caplog):
     # ── Verify current_source tracking at each scrape call ───────────
     assert len(captured_states) == 4
 
-    # First source: sgb2 (has a display name in _SOURCE_DISPLAY_NAMES)
+    # First source: sgb2
     assert captured_states[0]["current_source"] == "sgb2"
-    assert captured_states[0]["current_source_display"] == "SGB II (Bürgergeld)"
+    assert captured_states[0]["current_source_display"] == "SGB II (Bürgergeld, Grundsicherung für Arbeitsuchende)"
     assert captured_states[0]["source_index"] == 1
     assert captured_states[0]["source_total"] == 4
 
-    # Second source: sgbx (has a display name)
+    # Second source: sgbx
     assert captured_states[1]["current_source"] == "sgbx"
-    assert captured_states[1]["current_source_display"] == "SGB X (Verwaltungsverfahren)"
+    assert captured_states[1]["current_source_display"] == "SGB X (Sozialverwaltungsverfahren und Sozialdatenschutz)"
     assert captured_states[1]["source_index"] == 2
     assert captured_states[1]["source_total"] == 4
 
-    # Third source: weisung (no display name → falls back to source_type.upper())
+    # Third source: weisung (now has metadata — fallback display name no longer needed)
     assert captured_states[2]["current_source"] == "weisung"
-    assert captured_states[2]["current_source_display"] == "WEISUNG"
+    assert captured_states[2]["current_source_display"] == "Fachliche Weisungen der BA (SGB II)"
     assert captured_states[2]["source_index"] == 3
     assert captured_states[2]["source_total"] == 4
 
-    # Fourth source: bsg (no display name → falls back to source_type.upper())
+    # Fourth source: bsg (now has metadata)
     assert captured_states[3]["current_source"] == "bsg"
-    assert captured_states[3]["current_source_display"] == "BSG"
+    assert captured_states[3]["current_source_display"] == "BSG-Rechtsprechung (Bundessozialgericht)"
     assert captured_states[3]["source_index"] == 4
     assert captured_states[3]["source_total"] == 4
 

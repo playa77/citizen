@@ -41,6 +41,10 @@
                             <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                             Chat
                         </button>
+                        <button class="mode-btn" data-mode="settings" id="mode-settings-btn">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            Einstellungen
+                        </button>
                     </div>
                 </div>
             </header>
@@ -254,6 +258,89 @@
                     <p class="chat-disclaimer">Citizen kann Fehler machen. Rechtliche Auskünfte ohne Gewähr.</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Settings Mode -->
+        <div id="settings-mode" class="hidden">
+            <header>
+                <div class="header-top">
+                    <div class="header-brand">
+                        <h1>Citizen</h1>
+                        <p class="subtitle">Einstellungen</p>
+                    </div>
+                    <div class="mode-toggle">
+                        <button class="mode-btn" data-mode="analyze" id="settings-mode-analyze-btn">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Analysieren
+                        </button>
+                        <button class="mode-btn" data-mode="chat">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            Chat
+                        </button>
+                        <button class="mode-btn active" data-mode="settings">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            Einstellungen
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <section class="section">
+                    <h2>Corpus-Quellen verwalten</h2>
+                    <p class="settings-description">
+                        Wählen Sie aus, welche Rechtsquellen und Weisungen bei der
+                        Corpus-Aktualisierung geladen werden sollen. Die Auswahl wird
+                        gespeichert und bei der nächsten Aktualisierung verwendet.
+                    </p>
+
+                    <!-- Global source count and select all -->
+                    <div class="settings-source-header">
+                        <label class="settings-checkbox settings-select-all">
+                            <input type="checkbox" id="settings-select-all">
+                            <span class="settings-checkbox-label">Alle auswählen / abwählen</span>
+                        </label>
+                        <span class="settings-source-count" id="settings-source-count"></span>
+                    </div>
+
+                    <!-- Source list -->
+                    <div class="settings-source-list" id="settings-source-list">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="settings-loading" id="settings-loading">
+                        Quellen werden geladen …
+                    </div>
+
+                    <div class="settings-error hidden" id="settings-error"></div>
+
+                    <!-- Actions -->
+                    <div class="settings-actions">
+                        <button id="settings-save-btn" class="btn btn-primary" disabled>
+                            Auswahl speichern
+                        </button>
+                        <button id="settings-reload-btn" class="btn btn-secondary" disabled>
+                            Corpus mit Auswahl neu laden
+                        </button>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="settings-status hidden" id="settings-status"></div>
+
+                    <!-- Progress (reused from corpus section) -->
+                    <div class="corpus-progress hidden" id="settings-progress">
+                        <div class="corpus-progress-bar">
+                            <div class="corpus-progress-fill" id="settings-progress-fill"></div>
+                        </div>
+                        <div class="corpus-substage" id="settings-substage"></div>
+                        <div class="corpus-chunks-count" id="settings-chunks-count"></div>
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                <p>Citizen v0.2.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+            </footer>
         </div>
 
     </div>
