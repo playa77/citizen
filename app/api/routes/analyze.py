@@ -1,17 +1,17 @@
-"""Analysis endpoint — full 7-stage pipeline with SSE streaming.
+"""Analysis endpoint — full 8-stage pipeline with SSE streaming.
 
 Provides a single endpoint:
     POST /api/v1/analyze — Execute the complete reasoning pipeline on
     provided legal text. Streams SSE events representing stage progress
-    and finally yields the 6-part structured output.
+    and finally yields the 7-part structured output.
 
 Request body accepts either raw text or a reference to a previously
 ingested document. For WP-013, the payload is a simple JSON object:
     { "text": "<normalized or raw text>" }
 
 The endpoint normalizes the input (Stage 1) and then streams one SSE
-event per completed stage. After Stage 7 (generation), the stream ends
-with a final event containing the 6-part JSON output.
+event per completed stage. After Stage 8 (generation), the stream ends
+with a final event containing the 7-part JSON output.
 
 Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
@@ -149,7 +149,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                                 }
                             )
                             # Collect claims and evidence from
-                            # construction/verification.
+                            # construction/verification/adversarial_review.
                             if parsed["stage"] == "construction":
                                 claims_payload = parsed.get("payload", {}).get("claims", [])
                                 for idx, c in enumerate(claims_payload):
@@ -176,6 +176,23 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                                             "chunk_id": str(ref_chunk_id) if ref_chunk_id else "",
                                         }
                                     )
+                            if parsed["stage"] == "adversarial_review":
+                                review_payload = parsed.get("payload", {})
+                                evidence_entries.append(
+                                    {
+                                        "claim_index": -1,
+                                        "binding_strength": review_payload.get(
+                                            "overall_assessment", {}
+                                        ).get("confidence_in_defense", 0.5),
+                                        "quote_excerpt": str(
+                                            review_payload.get("overall_assessment", {}).get(
+                                                "summary", ""
+                                            )[:500]
+                                        ),
+                                        "chunk_hierarchy": "adversarial_review",
+                                        "chunk_id": "adversarial_review",
+                                    }
+                                )
                     except (json.JSONDecodeError, IndexError, KeyError):
                         pass
 

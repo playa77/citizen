@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -130,6 +130,31 @@ async def retrieve_chunks(
 
     # Step 3 — sort by aggregate relevance (distance ascending)
     all_chunks.sort(key=lambda c: c["distance"])
+
+    # Step 4 — keyword fallback if too few results
+    if (
+        len(all_chunks) < _MIN_CHUNKS_FOR_FALLBACK
+        and settings.RETRIEVAL_KEYWORD_FALLBACK
+    ):
+        logger.warning(
+            "retrieve_chunks: nur %d Vektor-Ergebnisse (min=%d) – "
+            "Stichwort-Fallback wird aktiviert",
+            len(all_chunks),
+            _MIN_CHUNKS_FOR_FALLBACK,
+        )
+        combined_query = "\n".join(questions)
+        keyword_chunks = await retrieve_chunks_keyword(
+            combined_query,
+            top_k=settings.TOP_K_KEYWORD,
+            question_index=0,
+        )
+        all_chunks = _merge_vector_and_keyword_results(all_chunks, keyword_chunks)
+        logger.info(
+            "retrieve_chunks: Stichwort-Fallback hat %d weitere Chunks hinzugefügt "
+            "(insgesamt %d)",
+            len(keyword_chunks),
+            len(all_chunks),
+        )
 
     logger.info(
         "Retrieval complete: %d unique chunks for %d questions " "(threshold=%.2f, top_k=%d)",
@@ -291,6 +316,30 @@ async def retrieve_chunks_combined(
     # Step 3 — sort by distance ascending
     all_chunks.sort(key=lambda c: c["distance"])
 
+    # Step 4 — keyword fallback if too few results
+    if (
+        len(all_chunks) < _MIN_CHUNKS_FOR_FALLBACK
+        and settings.RETRIEVAL_KEYWORD_FALLBACK
+    ):
+        logger.warning(
+            "retrieve_chunks_combined: nur %d Vektor-Ergebnisse (min=%d) – "
+            "Stichwort-Fallback wird aktiviert",
+            len(all_chunks),
+            _MIN_CHUNKS_FOR_FALLBACK,
+        )
+        keyword_chunks = await retrieve_chunks_keyword(
+            combined_query,
+            top_k=settings.TOP_K_KEYWORD,
+            question_index=0,
+        )
+        all_chunks = _merge_vector_and_keyword_results(all_chunks, keyword_chunks)
+        logger.info(
+            "retrieve_chunks_combined: Stichwort-Fallback hat %d weitere Chunks "
+            "hinzugefügt (insgesamt %d)",
+            len(keyword_chunks),
+            len(all_chunks),
+        )
+
     logger.info(
         "Combined retrieval complete: %d unique chunks (threshold=%.2f, top_k=%d)",
         len(all_chunks),
@@ -425,3 +474,197 @@ async def _execute_query(
         }
         for row in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Keyword fallback search (used when vector search returns too few results)
+# ---------------------------------------------------------------------------
+
+
+# German legal terms and common stop words
+_LEGAL_STOP_WORDS = frozenset({
+    "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "eines",
+    "einen", "einem", "und", "oder", "aber", "sondern", "doch", "nicht",
+    "auch", "als", "wie", "bei", "mit", "nach", "von", "aus", "zu", "zur",
+    "zum", "auf", "in", "im", "an", "am", "ist", "wird", "werden", "wurde",
+    "würde", "kann", "können", "soll", "sollen", "muss", "müssen", "hat",
+    "haben", "hätte", "hätten", "sein", "sind", "war", "waren", "wäre",
+    "dass", "durch", "für", "gegen", "ohne", "um", "über", "unter", "vor",
+    "zwischen", "bis", "ab", "seit", "außer", "innerhalb", "außerhalb",
+    "§", "abs", "satz", "nr", "bzw", "ggf", "z.b", "vgl",
+})
+
+
+def _extract_keywords(text: str, *, max_keywords: int = 8) -> list[str]:
+    """Extract meaningful German keywords from a query text.
+
+    Strategy:
+    1. Split into words, lowercased
+    2. Remove stop words and short words (< 4 chars unless uppercase/capitalized)
+    3. Keep capitalized words (German nouns) with higher priority
+    4. Take the longest words first (they tend to be most specific)
+    """
+    import re as _re
+
+    # Tokenize on whitespace and punctuation
+    words = _re.findall(r"[A-Za-zÖÜÄöüäß]+", text)
+
+    # Categorize
+    capitalized = []
+    lower = []
+    for w in words:
+        if len(w) <= 2:
+            continue
+        wl = w.lower()
+        if wl in _LEGAL_STOP_WORDS:
+            continue
+        if w[0].isupper():
+            capitalized.append(w)
+        else:
+            lower.append(w)
+
+    # Sort: longest first (more specific), deduplicate preserving case
+    seen: set[str] = set()
+    result: list[str] = []
+
+    def add_unique(word: str) -> None:
+        wl = word.lower()
+        if wl not in seen:
+            seen.add(wl)
+            result.append(word)
+
+    # Priority: 1) longest capitalized, 2) longest lowercased
+    for word in sorted(capitalized, key=len, reverse=True):
+        if len(result) >= max_keywords:
+            break
+        add_unique(word)
+
+    for word in sorted(lower, key=len, reverse=True):
+        if len(result) >= max_keywords:
+            break
+        add_unique(word)
+
+    return result
+
+
+async def retrieve_chunks_keyword(
+    query_text: str,
+    *,
+    top_k: int = 5,
+    question_index: int = 0,
+) -> list[dict[str, Any]]:
+    """Retrieve legal chunks using keyword-based ``ilike`` search.
+
+    Falls back to this when vector similarity returns too few results.
+    Extracts meaningful German keywords from *query_text* and searches
+    ``legal_chunk.text_content`` for matches using PostgreSQL ``ilike``.
+
+    Parameters
+    ----------
+    query_text :
+        The search query (typically a legal question or combined query).
+    top_k :
+        Maximum number of keyword results to return.
+    question_index :
+        Index to assign to each result's ``question_index`` key.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Chunks with the same structure as :func:`retrieve_chunks` but with
+        ``distance`` set to ``0.5`` and ``method`` set to ``"keyword"``.
+    """
+    keywords = _extract_keywords(query_text)
+    if not keywords:
+        logger.info("retrieve_chunks_keyword: no keywords extracted from query, skipping")
+        return []
+
+    logger.info(
+        "retrieve_chunks_keyword: extracted %d keywords: %s",
+        len(keywords),
+        keywords,
+    )
+
+    # Build ilike filters for each keyword
+    filters = [LegalChunk.text_content.ilike(f"%{kw}%") for kw in keywords]
+    combined_filter = or_(*filters)
+
+    results: list[dict[str, Any]] = []
+
+    async for session in get_async_session():
+        stmt = (
+            select(
+                LegalChunk.id.label("chunk_id"),
+                LegalChunk.text_content,
+                LegalChunk.hierarchy_path,
+                LegalChunk.unit_type,
+                LegalChunk.effective_date,
+                LegalSource.source_type,
+                LegalSource.title,
+            )
+            .join(LegalSource, LegalSource.id == LegalChunk.source_id)
+            .where(combined_filter, LegalSource.is_active.is_(True))
+            .limit(top_k)
+        )
+
+        result = await session.execute(stmt)
+        rows = result.mappings().all()
+
+        seen_cids: set[str] = set()
+        for row in rows:
+            cid = str(row["chunk_id"])
+            if cid in seen_cids:
+                continue
+            seen_cids.add(cid)
+
+            results.append(
+                {
+                    "chunk_id": cid,
+                    "text_content": row["text_content"],
+                    "hierarchy_path": row["hierarchy_path"],
+                    "unit_type": row["unit_type"],
+                    "effective_date": str(row["effective_date"])
+                    if row["effective_date"]
+                    else "",
+                    "source_type": row["source_type"],
+                    "title": row["title"],
+                    "distance": 0.5,  # keyword results appear after vector results
+                    "method": "keyword",
+                    "question_index": question_index,
+                }
+            )
+
+        await session.close()
+        break
+
+    logger.info(
+        "retrieve_chunks_keyword: found %d chunks for %d keywords",
+        len(results),
+        len(keywords),
+    )
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Fallback helper: merge vector and keyword results with deduplication
+# ---------------------------------------------------------------------------
+
+_MIN_CHUNKS_FOR_FALLBACK = 3
+
+
+def _merge_vector_and_keyword_results(
+    vector_chunks: list[dict[str, Any]],
+    keyword_chunks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge vector and keyword results, deduplicating by ``chunk_id``.
+
+    Keyword results get ``distance=0.5`` so they sort after vector results.
+    """
+    seen: set[str] = {c["chunk_id"] for c in vector_chunks}
+    merged = list(vector_chunks)
+    for kc in keyword_chunks:
+        if kc["chunk_id"] not in seen:
+            seen.add(kc["chunk_id"])
+            merged.append(kc)
+    merged.sort(key=lambda c: c["distance"])
+    return merged

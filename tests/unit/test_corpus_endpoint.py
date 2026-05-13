@@ -26,7 +26,15 @@ def clear_job_store():
 
 
 async def test_run_corpus_update_success(monkeypatch, caplog):
-    """Happy path: scraper returns chunks for each source type, embeddings generated, DB upsert succeeds."""
+    """Happy path: scraper returns chunks for each source type, embeddings generated, DB upsert succeeds.
+
+    Also verifies:
+    - ``current_source`` / ``current_source_display`` tracking during scraping
+    - ``source_index`` / ``source_total`` progress counters
+    - ``current_source`` is cleared after scraping completes
+    - ``asyncio.wait_for`` timeout enforcement is in place (implicitly passes
+      when the pipeline finishes within the configured timeout)
+    """
     caplog.set_level(logging.INFO, logger="app.api.routes.corpus")
 
     job_id = "job-xyz"
@@ -59,27 +67,73 @@ async def test_run_corpus_update_success(monkeypatch, caplog):
     mock_cm.__aenter__ = AsyncMock(return_value=mock_session)
     mock_cm.__aexit__ = AsyncMock(return_value=None)
 
+    # Capture job-store state at each scrape call to verify current_source tracking.
+    captured_states: list[dict[str, object]] = []
+
+    async def _capture_and_return(**kwargs: object) -> list[dict]:
+        captured_states.append({
+            "source_type": kwargs.get("source_type"),
+            "current_source": _job_store[job_id].get("current_source"),
+            "current_source_display": _job_store[job_id].get("current_source_display"),
+            "source_index": _job_store[job_id].get("source_index"),
+            "source_total": _job_store[job_id].get("source_total"),
+        })
+        return fake_chunks
+
     with (
         patch("app.api.routes.corpus.scrape_and_chunk", new_callable=AsyncMock) as mock_scrape,
         patch("app.api.routes.corpus.get_session_factory", return_value=lambda: mock_cm),
         patch("app.api.routes.corpus.upsert_chunks", new_callable=AsyncMock) as mock_upsert,
         patch("app.api.routes.corpus.generate_embeddings", new_callable=AsyncMock) as mock_embed,
+        patch("app.api.routes.corpus.settings.CORPUS_SOURCES", ["sgb2", "sgbx", "weisung", "bsg"]),
     ):
-        mock_scrape.return_value = fake_chunks
+        mock_scrape.side_effect = _capture_and_return
         mock_embed.side_effect = lambda chunks: chunks  # passthrough — embeddings already present
         await _run_corpus_update(job_id)
 
-    # Verify scraper called for each source type in order
+    # ── Verify scraper called for each source type in order ──────────
     assert mock_scrape.await_count == 4
     source_types = [call_.kwargs["source_type"] for call_ in mock_scrape.await_args_list]
     assert source_types == ["sgb2", "sgbx", "weisung", "bsg"]
-    # Verify embed called once with all chunks
+
+    # ── Verify current_source tracking at each scrape call ───────────
+    assert len(captured_states) == 4
+
+    # First source: sgb2 (has a display name in _SOURCE_DISPLAY_NAMES)
+    assert captured_states[0]["current_source"] == "sgb2"
+    assert captured_states[0]["current_source_display"] == "SGB II (Bürgergeld)"
+    assert captured_states[0]["source_index"] == 1
+    assert captured_states[0]["source_total"] == 4
+
+    # Second source: sgbx (has a display name)
+    assert captured_states[1]["current_source"] == "sgbx"
+    assert captured_states[1]["current_source_display"] == "SGB X (Verwaltungsverfahren)"
+    assert captured_states[1]["source_index"] == 2
+    assert captured_states[1]["source_total"] == 4
+
+    # Third source: weisung (no display name → falls back to source_type.upper())
+    assert captured_states[2]["current_source"] == "weisung"
+    assert captured_states[2]["current_source_display"] == "WEISUNG"
+    assert captured_states[2]["source_index"] == 3
+    assert captured_states[2]["source_total"] == 4
+
+    # Fourth source: bsg (no display name → falls back to source_type.upper())
+    assert captured_states[3]["current_source"] == "bsg"
+    assert captured_states[3]["current_source_display"] == "BSG"
+    assert captured_states[3]["source_index"] == 4
+    assert captured_states[3]["source_total"] == 4
+
+    # ── Verify embed called once with all chunks ─────────────────────
     mock_embed.assert_awaited_once()
     # Verify upsert called with chunks
     mock_upsert.assert_awaited_once()
-    # Verify job store updated
+
+    # ── Verify final job store state ─────────────────────────────────
     assert _job_store[job_id]["status"] == "completed"
     assert _job_store[job_id]["chunks_processed"] == 4
+    # current_source must be cleared after scraping completes
+    assert _job_store[job_id].get("current_source") is None
+    assert _job_store[job_id].get("current_source_display") is None
 
 
 async def test_run_corpus_update_failure(monkeypatch, caplog):

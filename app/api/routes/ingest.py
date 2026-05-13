@@ -1,7 +1,7 @@
 """Ingestion endpoint — OCR and text normalization.
 
 Provides a single endpoint:
-    POST /api/v1/ingest — Upload a document (PDF/JPG/PNG) and receive
+    POST /api/v1/ingest — Upload a document (PDF/JPG/PNG/TXT/HTML/EML) and receive
     normalized UTF-8 text as JSON.
 
 The endpoint enforces the ``MAX_FILE_SIZE_MB`` limit and validates MIME type.
@@ -29,7 +29,7 @@ async def ingest(file: UploadFile = File(...)) -> dict[str, str]:  # noqa: B008
     Parameters
     ----------
     file : UploadFile
-        The uploaded file (PDF, JPG, PNG). Must obey the configured
+        The uploaded file (PDF, JPG, PNG, TXT, HTML, EML). Must obey the configured
         ``MAX_FILE_SIZE_MB`` limit and have a recognized MIME type.
 
     Returns
@@ -54,11 +54,14 @@ async def ingest(file: UploadFile = File(...)) -> dict[str, str]:  # noqa: B008
         "image/jpeg",
         "image/jpg",
         "image/png",
+        "text/plain",
+        "text/html",
+        "message/rfc822",
     }
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported media type: {file.content_type}. Allowed: PDF, JPG, PNG",
+            detail=f"Unsupported media type: {file.content_type}. Allowed: PDF, JPG, PNG, TXT, HTML, EML",
         )
 
     try:

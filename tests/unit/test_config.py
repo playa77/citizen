@@ -136,8 +136,8 @@ class TestSettingsValidation:
         assert s.REQUEST_TIMEOUT == 25.0
         assert s.OCR_DPI == 300
         assert s.OCR_JPG_QUALITY == 84
-        assert s.TOP_K_RETRIEVAL == 6
-        assert s.MAX_COSINE_DISTANCE == 0.85
+        assert s.TOP_K_RETRIEVAL == 10
+        assert s.MAX_COSINE_DISTANCE == 0.95
         assert s.LOG_LEVEL == "INFO"
         assert s.DISCLAIMER_VERSION == "v0.1.0"
 

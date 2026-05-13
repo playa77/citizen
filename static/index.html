@@ -50,14 +50,14 @@
                 <section id="upload-section" class="section">
                     <h2>Dokument hochladen</h2>
                     <div class="upload-area" id="upload-area">
-                        <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                        <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.txt,.html,.htm,.eml" hidden>
                         <div class="upload-prompt">
                             <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            <p>PDF, JPG oder PNG hier ablegen oder klicken</p>
+                            <p>PDF, JPG, PNG, TXT, HTML oder EML hier ablegen oder klicken</p>
                             <small>Max. 25 MB</small>
                         </div>
                     </div>
@@ -66,6 +66,18 @@
                         <button id="remove-file" class="btn btn-small">Entfernen</button>
                     </div>
                     <button id="upload-btn" class="btn btn-primary" disabled>Text extrahieren</button>
+
+                    <div class="text-editor-separator"><span>— oder —</span></div>
+
+                    <div class="text-editor-container">
+                        <textarea
+                            id="text-editor"
+                            class="text-editor"
+                            placeholder="Text direkt eingeben oder einfügen..."
+                            rows="8"
+                        ></textarea>
+                        <button id="use-text-btn" class="btn btn-primary" disabled>Text verwenden</button>
+                    </div>
                 </section>
 
                 <!-- Corpus Management Section -->
@@ -125,7 +137,7 @@
                             <span class="stage-icon">○</span>
                             <span class="stage-name">Retrieval</span>
                         </div>
-                        <div class="stage" data-stage="claims">
+                        <div class="stage" data-stage="construction">
                             <span class="stage-icon">○</span>
                             <span class="stage-name">Anspruchsaufbau</span>
                         </div>
@@ -133,10 +145,18 @@
                             <span class="stage-icon">○</span>
                             <span class="stage-name">Verifikation</span>
                         </div>
+                        <div class="stage" data-stage="adversarial_review">
+                            <span class="stage-icon">○</span>
+                            <span class="stage-name">Rechtsprüfung</span>
+                        </div>
                         <div class="stage" data-stage="generation">
                             <span class="stage-icon">○</span>
                             <span class="stage-name">Ausgabe</span>
                         </div>
+                    </div>
+                    <div id="stream-output" class="stream-output hidden">
+                        <div class="stream-output-header">Modell-Ausgabe (letzte Zeilen)</div>
+                        <pre id="stream-output-content" class="stream-output-content"></pre>
                     </div>
                 </section>
 
@@ -219,7 +239,7 @@
                         <button id="chat-attach-btn" class="btn-icon-only chat-attach-btn" title="Dokument anhängen">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
-                        <input type="file" id="chat-file-input" accept=".pdf,.jpg,.jpeg,.png" hidden multiple>
+                        <input type="file" id="chat-file-input" accept=".pdf,.jpg,.jpeg,.png,.txt,.html,.htm,.eml" hidden multiple>
                         <textarea
                             id="chat-input"
                             class="chat-input"

@@ -1,4 +1,4 @@
-"""7-Stage reasoning pipeline orchestrator with SSE streaming and timeout enforcement.
+"""8-Stage reasoning pipeline orchestrator with SSE streaming and timeout enforcement.
 
 Pipeline stages:
     1. Input Normalization
@@ -7,7 +7,8 @@ Pipeline stages:
     4. Evidence Retrieval
     5. Claim Construction
     6. Verification Pass
-    7. Output Generation
+    7. Adversarial Legal Review
+    8. Output Generation
 
 Each stage yields an SSE-formatted event:
     ``data: {"stage": "...", "status": "complete", "payload": {...}}\\n\\n``
@@ -26,7 +27,11 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from sqlalchemy import func, select
+
 from app.core import config as cfg
+from app.db.models import LegalChunk
+from app.db.session import get_async_session, get_session_factory
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -51,7 +56,7 @@ class StageExecutionError(Exception):
 
 @dataclass
 class PipelineState:
-    """Mutable state carried through all 7 pipeline stages.
+    """Mutable state carried through all 8 pipeline stages.
 
     Attributes
     ----------
@@ -69,8 +74,10 @@ class PipelineState:
         Claims with confidence scores and types (stage 5).
     verified_claims :
         Claims cross-referenced against source text (stage 6).
+    adversarial_review :
+        Adversarial legal review results (stage 7).
     final_output :
-        6-part formatted result dictionary (stage 7).
+        7-part formatted result dictionary (stage 8).
     errors :
         Collected stage errors, if any.
     """
@@ -82,8 +89,11 @@ class PipelineState:
     retrieved_chunks: list[dict[str, Any]] = field(default_factory=list)
     claims: list[dict[str, Any]] = field(default_factory=list)
     verified_claims: list[dict[str, Any]] = field(default_factory=list)
+    adversarial_review: dict[str, Any] = field(default_factory=dict)
+    calculation_result: dict[str, Any] = field(default_factory=dict)
     final_output: dict[str, str] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
+    stream_output_lines: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +108,8 @@ _STAGES: list[str] = [
     "construction",
     "verification",
     "generation",
+    "adversarial_review",
+    "calculation_check",
 ]
 
 # ---------------------------------------------------------------------------
@@ -116,6 +128,16 @@ def _sse_event(stage: str, status: str, payload: dict[str, Any]) -> str:
         "stage": stage,
         "status": status,
         "payload": payload,
+    }
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _sse_stream_event(lines: list[str]) -> str:
+    """Format a stream output progress event as an SSE data line."""
+    data = {
+        "stage": "stream_output",
+        "status": "streaming",
+        "payload": {"lines": lines},
     }
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -145,6 +167,13 @@ def _stage_payload(
     elif stage_name == "verification":
         payload["verified_claim_count"] = len(state.verified_claims)
         payload["verified_claims"] = state.verified_claims
+    elif stage_name == "adversarial_review":
+        payload["review_count"] = len(state.adversarial_review.get("reviews", []))
+        payload["key_risks"] = state.adversarial_review.get("overall_assessment", {}).get("key_risks", [])
+    elif stage_name == "calculation_check":
+        payload["calculations_found"] = len(state.calculation_result.get("calculations_found", []))
+        payload["discrepancies"] = state.calculation_result.get("overall_assessment", {}).get("total_discrepancies", 0)
+        payload["total_amount_eur"] = state.calculation_result.get("overall_assessment", {}).get("total_amount_eur", 0.0)
     elif stage_name == "generation":
         payload["sections"] = list(state.final_output.keys())
 
@@ -299,18 +328,20 @@ async def _run_classification_and_decomposition_stages(
 
 async def _run_final_stages(
     state: PipelineState,
+    stream_progress: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Run construction, verification, and generation in a single LLM call.
 
     When ``COMBINE_FINAL_STAGES`` is ``True`` (WP-007), all three tasks are
     resolved by a single ``generate_grounded_answer()`` call followed by
-    deterministic local verification. Otherwise each stage runs as a
-    separate LLM call (legacy path).
+    deterministic local verification. The adversarial review stage is NOT
+    included here — it runs as a separate pipeline stage afterwards.
+
+    Otherwise each stage runs as a separate LLM call (legacy path).
 
     SSE events are emitted in the canonical order: construction first, then
     verification, then generation.
     """
-    from app.services.reasoning import generate_grounded_answer
     from app.services.verification import verify_claims_against_chunks
 
     t0 = time.monotonic()
@@ -321,24 +352,71 @@ async def _run_final_stages(
             "  → launching combined grounded answer "
             "(construction + verification + generation)"
         )
-        try:
-            grounded = await generate_grounded_answer(
-                state.normalized_text,
-                state.issues,
-                state.questions,
-                state.retrieved_chunks,
-            )
-        except Exception as exc:
-            logger.exception("Combined grounded answer failed")
-            state.errors.append(
-                f"grounded answer (construction+verification+generation): {exc}"
-            )
-            raise StageExecutionError(
-                f"Combined grounded answer failed: {exc}"
-            ) from exc
 
-        llm_claims = grounded["claims"]
-        sections = grounded["sections"]
+        if stream_progress and cfg._get_settings().ENABLE_PROGRESS_STREAM:
+            from app.services.reasoning import generate_grounded_answer_stream
+
+            accumulated_text: list[str] = []
+            last_emit_time = time.monotonic()
+            llm_claims: list[dict[str, Any]] | None = None
+            sections: dict[str, str] | None = None
+
+            try:
+                async for item in generate_grounded_answer_stream(
+                    state.normalized_text,
+                    state.issues,
+                    state.questions,
+                    state.retrieved_chunks,
+                ):
+                    if item["type"] == "token":
+                        accumulated_text.append(item["content"])
+                        # Emit SSE progress every ~200ms or on line breaks
+                        now = time.monotonic()
+                        full_text = "".join(accumulated_text)
+                        if (now - last_emit_time) >= 0.2 or "\n" in item["content"]:
+                            lines = full_text.split("\n")
+                            last_4 = lines[-4:]
+                            state.stream_output_lines = last_4
+                            yield _sse_stream_event(last_4)
+                            last_emit_time = now
+                    elif item["type"] == "done":
+                        result = item["result"]
+                        llm_claims = result["claims"]
+                        sections = result["sections"]
+            except Exception as exc:
+                logger.exception("Combined grounded answer stream failed")
+                state.errors.append(
+                    f"grounded answer (construction+verification+generation): {exc}"
+                )
+                raise StageExecutionError(
+                    f"Combined grounded answer failed: {exc}"
+                ) from exc
+
+            if llm_claims is None or sections is None:
+                raise StageExecutionError(
+                    "Combined grounded answer stream completed without a result"
+                )
+        else:
+            from app.services.reasoning import generate_grounded_answer
+
+            try:
+                grounded = await generate_grounded_answer(
+                    state.normalized_text,
+                    state.issues,
+                    state.questions,
+                    state.retrieved_chunks,
+                )
+            except Exception as exc:
+                logger.exception("Combined grounded answer failed")
+                state.errors.append(
+                    f"grounded answer (construction+verification+generation): {exc}"
+                )
+                raise StageExecutionError(
+                    f"Combined grounded answer failed: {exc}"
+                ) from exc
+
+            llm_claims = grounded["claims"]
+            sections = grounded["sections"]
 
         # -- Stage 5: Construction (populated from LLM claims) ---------------
         state.claims = llm_claims
@@ -484,12 +562,134 @@ async def _stage_verification(state: PipelineState) -> None:
     logger.info("Verification complete (%d verified claims)", len(state.verified_claims))
 
 
+async def _stage_adversarial_review(state: PipelineState) -> None:
+    """Stage 7 — adversarial legal review from multiple perspectives.
+
+    Runs the "Rechtsprüfungsrat" (legal review council) that evaluates
+    every claim from defense, authority, and judicial perspectives.
+    Also performs procedural review and risk assessment.
+
+    Gracefully skips if the LLM call fails so the pipeline can continue.
+    """
+    from app.services.reasoning import adversarial_review
+
+    # Use verified claims if available, otherwise raw claims.
+    claims_to_review = state.verified_claims if state.verified_claims else state.claims
+    if not claims_to_review:
+        logger.warning("adversarial_review: no claims to review, skipping")
+        state.adversarial_review = {
+            "reviews": [],
+            "overall_assessment": {
+                "summary": "Keine Claims zur Prüfung vorhanden.",
+                "key_risks": [],
+                "recommended_next_steps": [],
+                "confidence_in_defense": 0.0,
+                "procedural_errors_found": [],
+            },
+        }
+        return
+
+    try:
+        result = await adversarial_review(
+            normalized_text=state.normalized_text,
+            issues=state.issues,
+            questions=state.questions,
+            claims=claims_to_review,
+            chunks=state.retrieved_chunks,
+        )
+        state.adversarial_review = result
+
+        # Inject adversarial findings into final_output for the UI.
+        state.final_output["adversarial_pruefung"] = json.dumps(
+            result, ensure_ascii=False, indent=2
+        )
+
+        logger.info(
+            "Adversarial review complete (%d reviews)",
+            len(result.get("reviews", [])),
+        )
+    except Exception as exc:
+        logger.exception("Adversarial review failed — skipping gracefully: %s", exc)
+        state.errors.append(f"adversarial_review: {exc}")
+        state.adversarial_review = {
+            "reviews": [],
+            "overall_assessment": {
+                "summary": "Adversariale Prüfung fehlgeschlagen.",
+                "key_risks": [],
+                "recommended_next_steps": [
+                    "Bitte besprechen Sie die rechtlichen Risiken direkt mit Ihrem Anwalt."
+                ],
+                "confidence_in_defense": 0.5,
+                "procedural_errors_found": [],
+            },
+        }
+        state.final_output["adversarial_pruefung"] = (
+            "Adversariale Prüfung nicht verfügbar (LLM-Fehler). "
+            "Bitte konsultieren Sie einen Rechtsanwalt."
+        )
+
+
 async def _stage_generation(state: PipelineState) -> None:
-    """Stage 7 — format into mandatory 6-part structure."""
+    """Stage 8 — format into mandatory 7-part structure."""
     from app.services.reasoning import generate_output
 
     state.final_output = await generate_output(state.verified_claims)
     logger.info("Generation complete (sections: %s)", list(state.final_output.keys()))
+
+
+async def _stage_calculation_check(state: PipelineState) -> None:
+    """Stage 9 — verify all monetary calculations in the document against SGB II rules.
+
+    Uses a specialised calculation-checking model to extract and verify every
+    monetary computation (freibeträge, aufrechnungen, etc.) in the document.
+    The result is injected into ``state.final_output`` under the
+    ``berechnungspruefung`` key so the frontend can display it alongside the
+    other output sections.
+
+    Gracefully skips if the LLM call fails so the pipeline can continue.
+    """
+    from app.services.calculation import check_calculations
+
+    # Build claims and sections for context.
+    claims_for_check = state.verified_claims or state.claims or None
+    sections_for_check = state.final_output if state.final_output else None
+
+    try:
+        result = await check_calculations(
+            state.normalized_text,
+            claims=claims_for_check,
+            sections=sections_for_check,
+        )
+        state.calculation_result = result
+
+        # Inject calculation findings into final_output for the UI.
+        state.final_output["berechnungspruefung"] = json.dumps(
+            result, ensure_ascii=False, indent=2
+        )
+
+        discrepancies = result.get("overall_assessment", {}).get("total_discrepancies", 0)
+        logger.info(
+            "Calculation check complete (%d calculations, %d discrepancies)",
+            len(result.get("calculations_found", [])),
+            discrepancies,
+        )
+    except Exception as exc:
+        logger.warning("Calculation check failed — skipping gracefully: %s", exc)
+        state.errors.append(f"calculation_check: {exc}")
+        state.calculation_result = {
+            "calculations_found": [],
+            "overall_assessment": {
+                "total_discrepancies": 0,
+                "total_amount_eur": 0.0,
+                "direction": "keine",
+                "summary": "Berechnungsprüfung nicht verfügbar (LLM-Fehler).",
+                "recommended_action": "",
+            },
+        }
+        state.final_output["berechnungspruefung"] = (
+            "Berechnungsprüfung nicht verfügbar (LLM-Fehler). "
+            "Bitte überprüfen Sie die Berechnungen eigenständig."
+        )
 
 
 # Map stage name → stage async function.
@@ -500,6 +700,8 @@ _STAGE_MAP: dict[str, Callable[[PipelineState], Awaitable[None]]] = {
     "retrieval": _stage_retrieval,
     "construction": _stage_construction,
     "verification": _stage_verification,
+    "adversarial_review": _stage_adversarial_review,
+    "calculation_check": _stage_calculation_check,
     "generation": _stage_generation,
 }
 
@@ -580,7 +782,7 @@ async def _collect_async_gen(
 
 
 async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
-    """Execute the full 7-stage reasoning pipeline with timeout enforcement.
+    """Execute the full 8-stage reasoning pipeline with timeout enforcement.
 
     Yields SSE-formatted progress events after each stage.
     If the retrieval stage returns no chunks, the pipeline stops early
@@ -607,6 +809,62 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     """
     timeout_sec = cfg._get_settings().PIPELINE_TIMEOUT_SEC
     logger.info("Starting pipeline (timeout=%ds)", timeout_sec)
+
+    # -----------------------------------------------------------------------
+    # Corpus health check (before pipeline begins)
+    # -----------------------------------------------------------------------
+    total_chunks = 0
+    try:
+        async for session in get_async_session():
+            total_chunks = await session.scalar(
+                select(func.count(LegalChunk.id))
+            ) or 0
+            await session.close()
+            break
+    except Exception as exc:
+        logger.warning("Corpus health check fehlgeschlagen: %s", exc)
+
+    if total_chunks == 0:
+        warn_msg = (
+            "Der Corpus enthält keine Rechtsquellen. "
+            "Bitte führen Sie eine Corpus-Aktualisierung durch: POST /api/v1/corpus/update"
+        )
+        logger.warning(warn_msg)
+        yield _sse_event(
+            stage="corpus_health",
+            status="warning",
+            payload={
+                "total_chunks": 0,
+                "total_sources": 0,
+                "message": warn_msg,
+                "warnings": [warn_msg],
+            },
+        )
+    elif total_chunks < 100:
+        warn_msg = (
+            f"Der Corpus enthält nur {total_chunks} Textblöcke – "
+            "für eine zuverlässige Analyse werden mehr Rechtsquellen empfohlen."
+        )
+        logger.warning(warn_msg)
+        yield _sse_event(
+            stage="corpus_health",
+            status="warning",
+            payload={
+                "total_chunks": total_chunks,
+                "message": warn_msg,
+                "warnings": [warn_msg],
+            },
+        )
+    else:
+        yield _sse_event(
+            stage="corpus_health",
+            status="ok",
+            payload={
+                "total_chunks": total_chunks,
+                "message": f"Corpus enthält {total_chunks} Textblöcke.",
+                "warnings": [],
+            },
+        )
 
     started = time.monotonic()
     stage_timings: dict[str, float] = {}  # collect per-stage elapsed seconds for summary
@@ -735,6 +993,15 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
 
         # No-evidence guard: if retrieval returned nothing, stop safely
         if stage_name == "retrieval" and not state.retrieved_chunks:
+            settings = cfg._get_settings()
+            threshold = settings.MAX_COSINE_DISTANCE
+            keyword_fallback = settings.RETRIEVAL_KEYWORD_FALLBACK
+            fallback_note = (
+                "Stichwort-Fallback wurde versucht, aber es wurden keine "
+                "relevanten Ergebnisse gefunden."
+                if keyword_fallback
+                else "Stichwort-Fallback war deaktiviert."
+            )
             logger.warning(
                 "No legal chunks retrieved — stopping pipeline with safe output"
             )
@@ -751,8 +1018,12 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
                 ),
                 "entwurf": "",
                 "unsicherheiten": (
-                    "Keine passenden Rechtsquellen im lokalen Corpus gefunden. "
-                    "Eine Corpus-Aktualisierung über /api/v1/corpus/update wird empfohlen."
+                    f"Keine passenden Rechtsquellen im lokalen Corpus gefunden.\n"
+                    f"  • Corpus-Umfang: {total_chunks} Textblöcke\n"
+                    f"  • Schwellenwert (Cosine Distance): {threshold:.2f}\n"
+                    f"  • {fallback_note}\n"
+                    f"  • Eine Corpus-Aktualisierung über /api/v1/corpus/update wird empfohlen.\n"
+                    f"  • Konfigurierte Quellen: {settings.CORPUS_SOURCES}"
                 ),
             }
             break

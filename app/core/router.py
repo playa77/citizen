@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
 from typing import Any
 
 import httpx
@@ -190,6 +190,122 @@ class OpenRouterClient:
 
         raise RouterExhaustedError(f"All models exhausted: {effective_models}")
 
+    async def chat_completion_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float = 0.1,
+        model: str | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        models: list[str] | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """Stream tokens from a chat completion via SSE.
+
+        Accepts the same parameters as :meth:`chat_completion` but adds
+        ``"stream": true`` to the request payload and yields each content
+        token string as it arrives from the SSE stream.
+
+        Args:
+            Same as :meth:`chat_completion`.
+
+        Yields:
+            Content token strings from ``choices[0].delta.content``.
+
+        Raises:
+            RouterExhaustedError: If every model / retry attempt fails.
+        """
+        effective_max_retries = max_retries if max_retries is not None else settings.MAX_RETRIES
+        timeout_config = httpx.Timeout(timeout) if timeout is not None else None
+
+        if models is not None:
+            effective_models = _deduplicate_preserve_order(models)
+        elif model is not None:
+            effective_models = [model]
+        else:
+            effective_models = self.models
+
+        for current_model in effective_models:
+            for attempt in range(1, effective_max_retries + 1):
+                try:
+                    payload: dict[str, Any] = {
+                        "model": current_model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "stream": True,
+                    }
+                    logger.info(
+                        "chat_completion_stream → streaming (model=%s, attempt=%d/%d, msg_chars=%d)",
+                        current_model,
+                        attempt,
+                        effective_max_retries,
+                        sum(len(m.get("content", "")) for m in messages),
+                    )
+                    req_start = time.monotonic()
+                    async with self._client.stream(
+                        "POST",
+                        _API_URL,
+                        json=payload,
+                        headers=_headers(),
+                        timeout=timeout_config,
+                    ) as resp:
+                        resp.raise_for_status()
+                        token_count = 0
+                        async for line in resp.aiter_lines():
+                            line = line.strip()
+                            if not line:
+                                continue
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str == "[DONE]":
+                                    break
+                                try:
+                                    chunk = json.loads(data_str)
+                                    delta = chunk["choices"][0]["delta"]
+                                    content = delta.get("content", "")
+                                    if content:
+                                        token_count += 1
+                                        yield content
+                                except (KeyError, IndexError, json.JSONDecodeError):
+                                    continue
+
+                    req_elapsed = time.monotonic() - req_start
+                    logger.info(
+                        "chat_completion_stream OK (model=%s, attempt=%d/%d, elapsed=%.2fs, tokens=%d)",
+                        current_model,
+                        attempt,
+                        effective_max_retries,
+                        req_elapsed,
+                        token_count,
+                    )
+                    return
+
+                except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
+                    fail_elapsed = time.monotonic() - req_start
+                    fail_reason = type(exc).__name__
+                    if isinstance(exc, httpx.HTTPStatusError):
+                        fail_reason = f"HTTP {exc.response.status_code}"
+                    logger.warning(
+                        "chat_completion_stream FAILED (model=%s, attempt=%d/%d, elapsed=%.2fs, reason=%s): %s",
+                        current_model,
+                        attempt,
+                        effective_max_retries,
+                        fail_elapsed,
+                        fail_reason,
+                        exc,
+                    )
+                    if attempt < effective_max_retries:
+                        await asyncio.sleep(2 ** (attempt - 1))
+                    continue
+
+            logger.info(
+                "Model %s exhausted after %d retries, trying next fallback.",
+                current_model,
+                effective_max_retries,
+            )
+
+        raise RouterExhaustedError(f"All models exhausted: {effective_models}")
+
     async def get_embedding(self, text: str, *, model: str | None = None) -> list[float]:
         """Generate an embedding vector for *text* via the OpenRouter embeddings endpoint.
 
@@ -225,6 +341,19 @@ class OpenRouterClient:
             req_elapsed = time.monotonic() - req_start
             resp.raise_for_status()
             body = resp.json()
+            # ── Detect OpenRouter-level error responses ─────────────────
+            if "error" in body and "data" not in body:
+                err_detail = body["error"]
+                err_msg = err_detail.get("message", str(err_detail)) if isinstance(err_detail, dict) else str(err_detail)
+                fail_elapsed = time.monotonic() - req_start
+                logger.error(
+                    "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=api_error): %s | body=%s",
+                    model_name,
+                    fail_elapsed,
+                    err_msg,
+                    str(body)[:500],
+                )
+                raise EmbeddingError(f"Embedding API returned error: {err_msg}") from None
             embedding: list[float] = body["data"][0]["embedding"]
             if len(embedding) != settings.VECTOR_DIM:
                 raise EmbeddingError(
@@ -254,11 +383,17 @@ class OpenRouterClient:
             raise EmbeddingError(f"Embedding API error: {exc}") from exc
         except (KeyError, IndexError) as exc:
             fail_elapsed = time.monotonic() - req_start
+            # Capture response body for diagnostics when structure is unexpected
+            try:
+                response_preview = str(body)[:500]
+            except Exception:
+                response_preview = "<unavailable>"
             logger.error(
-                "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=malformed_response): %s",
+                "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=malformed_response): %s | body=%s",
                 model_name,
                 fail_elapsed,
                 exc,
+                response_preview,
             )
             raise EmbeddingError(f"Malformed embedding response: {exc}") from exc
 

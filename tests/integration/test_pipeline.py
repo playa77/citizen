@@ -234,6 +234,56 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     reasoning_mod.verify_claims = verify_claims  # type: ignore[attr-defined]
     reasoning_mod.generate_output = generate_output  # type: ignore[attr-defined]
     reasoning_mod.generate_grounded_answer = generate_grounded_answer  # type: ignore[attr-defined]
+
+    # New: adversarial review stub (Stage 7)
+    async def adversarial_review(
+        normalized_text: str,
+        issues: list[str],
+        questions: list[str],
+        claims: list[dict],
+        chunks: list[dict],
+    ) -> dict:
+        return {
+            "reviews": [
+                {
+                    "claim_index": 0,
+                    "defense_argument": "Die Kürzung war möglicherweise unverhältnismäßig.",
+                    "authority_argument": "Die Behörde beruft sich auf § 31 SGB II.",
+                    "judicial_assessment": "Einzelfallabwägung erforderlich — Gericht könnte zugunsten des Bürgers entscheiden.",
+                    "procedural_issues": "Keine formellen Fehler erkennbar.",
+                    "risk_level": "mittel",
+                    "recommended_strategy": "Widerspruch mit Hinweis auf Unverhältnismäßigkeit.",
+                },
+            ],
+            "overall_assessment": {
+                "summary": "Insgesamt bestehen gute Chancen, die Kürzung anzufechten.",
+                "key_risks": [
+                    "Die Meldepflichtverletzung ist gut dokumentiert.",
+                    "Ermessensspielraum der Behörde könnte ausreichen.",
+                ],
+                "recommended_next_steps": [
+                    "Widerspruch fristgemäß einlegen.",
+                    "Rechtsanwalt für Sozialrecht konsultieren.",
+                ],
+                "confidence_in_defense": 0.65,
+                "procedural_errors_found": [],
+            },
+        }
+
+    # New: streaming grounded answer stub (for ENABLE_PROGRESS_STREAM)
+    async def generate_grounded_answer_stream(
+        normalized_text: str,
+        issues: list[str],
+        questions: list[str],
+        chunks: list[dict],
+    ):
+        result = await generate_grounded_answer(
+            normalized_text, issues, questions, chunks
+        )
+        yield {"type": "done", "result": result}
+
+    reasoning_mod.adversarial_review = adversarial_review  # type: ignore[attr-defined]
+    reasoning_mod.generate_grounded_answer_stream = generate_grounded_answer_stream  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.reasoning", reasoning_mod)
 
     # --- retrieval stub --------------------------------------------------
@@ -394,9 +444,10 @@ class TestFullPipelineExecution:
         # Acceptance: total latency < 300 s
         assert elapsed < 300.0, f"Pipeline took {elapsed:.1f}s, exceeding 300s limit"
 
-        # Verify SSE events contain the 7 expected stages in order
+        # Verify SSE events contain the expected stages in order
         stage_events = [e for e in events if e.get("stage") and "final_output" not in e]
-        stage_names = [e["stage"] for e in stage_events]
+        # Filter corpus_health (pre-pipeline health check) from stage names
+        stage_names = [e["stage"] for e in stage_events if e["stage"] != "corpus_health"]
         expected_stages = [
             "normalization",
             "classification",
@@ -405,6 +456,7 @@ class TestFullPipelineExecution:
             "construction",
             "verification",
             "generation",
+            "adversarial_review",
         ]
         assert stage_names == expected_stages, f"Stage order mismatch: {stage_names}"
 
@@ -475,6 +527,6 @@ class TestDisclaimerEnforcement:
             assert response.status_code == 200
             events = _consume_sse(response)
 
-        # Should have at least 7 stage events
-        stage_events = [e for e in events if e.get("stage") and "final_output" not in e]
-        assert len(stage_events) == 7
+        # Should have at least 8 stage events (excluding pre-pipeline corpus_health)
+        stage_events = [e for e in events if e.get("stage") and "final_output" not in e and e["stage"] != "corpus_health"]
+        assert len(stage_events) == 8

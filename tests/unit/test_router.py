@@ -405,6 +405,21 @@ class TestGetEmbedding:
         with pytest.raises(EmbeddingError, match="Malformed embedding"):
             await client.get_embedding("text")
 
+    async def test_api_error_response_raises_embedding_error(
+        self, client: OpenRouterClient, mock_httpx_client: AsyncMock
+    ) -> None:
+        """OpenRouter error responses (HTTP 200 with `error` key, no `data`) are detected."""
+        mock_httpx_client.post.return_value = httpx.Response(
+            status_code=200,
+            request=httpx.Request("POST", "https://example.com"),
+            content=json.dumps({
+                "error": {"message": "Insufficient credits", "code": 402}
+            }).encode(),
+        )
+
+        with pytest.raises(EmbeddingError, match="Embedding API returned error: Insufficient credits"):
+            await client.get_embedding("text")
+
 
 # ===========================================================================
 # 8. Batch embedding generation

@@ -58,6 +58,13 @@ _BASE = "https://www.gesetze-im-internet.de"
 _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb2": "/sgb_2/",
     "sgbx": "/sgb_10/",  # SGB X = Zehntes Buch → sgb_10
+    "sgb12": "/sgb_12/",  # SGB XII - Sozialhilfe
+    "sgb1": "/sgb_1/",    # SGB I - Allgemeiner Teil
+    "sgb3": "/sgb_3/",    # SGB III - Arbeitsförderung
+    "sgb9": "/sgb_9/",    # SGB IX - Rehabilitation und Teilhabe
+    "bgb": "/bgb/",       # BGB - Bürgerliches Gesetzbuch
+    "vwvfg": "/vwvfg/",   # VwVfG - Verwaltungsverfahrensgesetz
+    "sgg": "/sgg/",       # SGG - Sozialgerichtsgesetz
 }
 
 # Regex for paragraph references, e.g. "§ 31"
@@ -131,7 +138,8 @@ async def scrape_and_chunk(
     """Scrape a legal corpus from gesetze-im-internet.de and return hierarchical chunks.
 
     Args:
-        source_type: One of ``sgb2``, ``sgbx``.
+        source_type: One of ``sgb2``, ``sgbx``, ``sgb1``, ``sgb3``, ``sgb9``,
+            ``sgb12``, ``bgb``, ``vwvfg``, ``sgg``.
 
     Returns:
         List of dicts with keys: ``id``, ``source_type``, ``title``,
@@ -363,6 +371,13 @@ def _infer_law_name(element: Tag, source_type: str) -> str:
     _LAW_NAME_DEFAULT: dict[str, str] = {
         "sgb2": "SGB II",
         "sgbx": "SGB X",
+        "sgb12": "SGB XII",
+        "sgb1": "SGB I",
+        "sgb3": "SGB III",
+        "sgb9": "SGB IX",
+        "bgb": "BGB",
+        "vwvfg": "VwVfG",
+        "sgg": "SGG",
         "weisung": "Fachliche Weisung",
         "bsg": "BSG Urteil",
     }

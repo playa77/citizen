@@ -1,13 +1,14 @@
-"""Reasoning engine: LLM-driven claim construction, verification, output formatting,
-and OCR result synthesis with spell/grammar correction.
+"""Reasoning engine: LLM-driven claim construction, verification, adversarial review,
+output formatting, and OCR result synthesis with spell/grammar correction.
 
-Implements stages 2-3 and 5-7 of the 7-stage pipeline:
+Implements stages 2-3 and 5-8 of the 8-stage pipeline:
     Combined Triage (WP-006)           → triage_document()
     2. Issue Classification             → classify_issues()
     3. Question Decomposition            → decompose_questions()
     5. Claim Construction                → construct_claims()
     6. Verification Pass                 → verify_claims()
-    7. Output Generation                 → generate_output()
+    7. Adversarial Review                → adversarial_review()
+    8. Output Generation                 → generate_output()
 
 Plus an OCR post-processing stage that runs before the pipeline:
     OCR Synthesis & Correction        → synthesize_and_correct_text()
@@ -23,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from app.core.router import OpenRouterClient
@@ -513,7 +515,316 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# Combined Stages 5+6+7 — Grounded Answer Generation (WP-007)
+# Stage 7 — Adversarial Legal Review (Rechtsprüfungsrat)
+# ---------------------------------------------------------------------------
+
+_ADVERSARIAL_REVIEW_SYSTEM = (
+    "Du bist der **Rechtsprüfungsrat** — ein Gremium aus mehreren "
+    "Rechtsexpertinnen und -experten, die eine umfassende adversariale "
+    "Prüfung des Falles aus allen Perspektiven durchführen.\n\n"
+    "Dir werden vorgelegt:\n"
+    "1. Der normalisierte Text eines behördlichen Dokuments.\n"
+    "2. Eine Liste identifizierter rechtlicher Themen.\n"
+    "3. Eine Liste konkreter Rechtsfragen.\n"
+    "4. Eine Liste rechtlicher Claims (Aussagen) mit Konfidenzwerten.\n"
+    "5. Rechtsquellen-Chunks aus dem Corpus.\n\n"
+    "Du prüfst JEDEN Claim aus allen Perspektiven:\n\n"
+    "**1. Verteidigerperspektive (Bürgeranwalt):**\n"
+    "- Welche Gegenargumente sprechen gegen die Position der Behörde?\n"
+    "- Welche Rechtsfehler hat die Behörde möglicherweise begangen?\n"
+    "- Welche Schutzvorschriften kommen dem Bürger zugute?\n\n"
+    "**2. Behördengerspektive (gegnerische Partei):**\n"
+    "- Was würde die Behörde / das Jobcenter / Sozialamt zur "
+    "Verteidigung ihrer Position vorbringen?\n"
+    "- Auf welche Rechtsgrundlagen würde sie sich stützen?\n"
+    "- Welche Ermessensspielräume hätte sie?\n\n"
+    "**3. Richterliche Perspektive (neutrale Instanz):**\n"
+    "- Wie würde ein neutrales Gericht diesen Fall wahrscheinlich "
+    "beurteilen?\n"
+    "- Ist die Rechtslage eindeutig oder bestehen "
+    "Auslegungsspielräume?\n"
+    "- Wie hoch ist die Erfolgswahrscheinlichkeit vor Gericht?\n\n"
+    "**4. Verfahrensprüfung:**\n"
+    "- Wurden formelle Verfahrensvorschriften eingehalten?\n"
+    "- Liegen formelle Fehler vor (fehlende Anhörung, unzureichende "
+    "Begründung, Fristversäumnis, falsche Zuständigkeit)?\n"
+    "- Ist der Bescheid formell anfechtbar?\n\n"
+    "**5. Risikobewertung:**\n"
+    "- Welche rechtlichen Risiken bestehen für den Bürger?\n"
+    "- Wie hoch ist das Risiko einer negativen Entscheidung?\n"
+    "- Wie stark ist die Verteidigungsposition insgesamt?\n\n"
+    "Erstelle für JEDEN Claim eine Bewertung als JSON-Objekt:\n"
+    '{\n'
+    '  "reviews": [\n'
+    '    {\n'
+    '      "claim_index": 0,\n'
+    '      "defense_argument": "Argument aus Verteidigersicht",\n'
+    '      "authority_argument": "Argument der Behörde",\n'
+    '      "judicial_assessment": "Einschätzung des Gerichts",\n'
+    '      "procedural_issues": "Verfahrensfehler oder -bedenken",\n'
+    '      "risk_level": "niedrig" | "mittel" | "hoch",\n'
+    '      "recommended_strategy": "Empfohlene Strategie"\n'
+    '    }\n'
+    '  ],\n'
+    '  "overall_assessment": {\n'
+    '    "summary": "Gesamtbewertung aller Claims aus adversarialer Sicht",\n'
+    '    "key_risks": [\n'
+    '      "Risiko 1 – Beschreibung",\n'
+    '      "Risiko 2 – Beschreibung",\n'
+    '      "Risiko 3 – Beschreibung"\n'
+    '    ],\n'
+    '    "recommended_next_steps": [\n'
+    '      "Schritt 1 – Beschreibung",\n'
+    '      "Schritt 2 – Beschreibung",\n'
+    '      "Schritt 3 – Beschreibung"\n'
+    '    ],\n'
+    '    "confidence_in_defense": 0.65,\n'
+    '    "procedural_errors_found": [\n'
+    '      "Formeller Fehler 1",\n'
+    '      "Formeller Fehler 2"\n'
+    '    ]\n'
+    '  }\n'
+    '}\n\n'
+    "Wichtige Regeln:\n"
+    "- Alle Texte auf Deutsch verfassen.\n"
+    "- Keine Tatsachen, Paragraphen oder Aktenzeichen erfinden.\n"
+    "- Nur auf Grundlage der bereitgestellten Dokumente und Chunks "
+    "argumentieren.\n"
+    "- Die Risikobewertung soll ehrlich sein – eine schwache "
+    "Verteidigungsposition eingestehen, wenn die Fakten dagegen "
+    "sprechen.\n"
+    "- Gib 3-5 key_risks und 3-5 recommended_next_steps an.\n"
+    "- confidence_in_defense: 0.0 (sehr schwach) bis 1.0 (sehr stark).\n"
+    "- procedural_errors_found kann auch leer sein, wenn keine "
+    "Verfahrensfehler erkennbar sind.\n"
+    "- Jeder review-Eintrag MUSS einen claim_index haben, der auf den "
+    "ursprünglichen Claim verweist.\n\n"
+    "Gib ausschließlich gültiges JSON zurück. Kein Prosatext. Keine "
+    "Markdown-Formatierung."
+)
+
+
+async def adversarial_review(
+    normalized_text: str,
+    issues: list[str],
+    questions: list[str],
+    claims: list[dict[str, Any]],
+    chunks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Perform an adversarial legal review of the claims from multiple
+    perspectives (defense, authority, judicial, procedural).
+
+    This implements Stage 7 of the pipeline — the "Rechtsprüfungsrat"
+    (legal review council) that evaluates every claim from opposing
+    legal perspectives.
+
+    Parameters
+    ----------
+    normalized_text :
+        Cleaned text from the OCR / ingestion pipeline.
+    issues :
+        Legal topics identified during triage.
+    questions :
+        Explicit legal questions from triage.
+    claims :
+        Claims (verified or raw) to be adversarially reviewed.
+    chunks :
+        Evidence chunks retrieved from pgvector.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dict with keys:
+        - ``reviews``: list of per-claim adversarial reviews
+        - ``overall_assessment``: dict with summary, key_risks,
+          recommended_next_steps, confidence_in_defense,
+          procedural_errors_found
+    """
+    from app.core.config import settings as s
+
+    final_model = s.FINAL_MODEL or s.PRIMARY_MODEL
+    final_timeout = s.FINAL_TIMEOUT_SEC
+    max_chunks_for_final = s.MAX_CHUNKS_FOR_FINAL
+    max_chunk_context_chars = s.MAX_CHUNK_CONTEXT_CHARS
+
+    logger.info(
+        "adversarial_review: starting (input=%d chars, %d issues, "
+        "%d questions, %d claims, %d chunks, model=%s, timeout=%.1fs)",
+        len(normalized_text),
+        len(issues),
+        len(questions),
+        len(claims),
+        len(chunks),
+        final_model,
+        final_timeout,
+    )
+    client = _get_client()
+
+    # Build chunk context (same pattern as generate_grounded_answer).
+    chunk_lines: list[str] = []
+    total_chunk_chars = 0
+    for c in chunks[:max_chunks_for_final]:
+        chunk_id = c.get("chunk_id", "?")
+        hierarchy = c.get("hierarchy_path", "?")
+        text = c.get("text_content", c.get("text", ""))
+        line = (
+            f"CHUNK [{chunk_id}] {hierarchy}:\n"
+            f"{text}\n"
+        )
+        if total_chunk_chars + len(line) > max_chunk_context_chars:
+            remaining = max_chunk_context_chars - total_chunk_chars
+            if remaining > 100:
+                line = line[:remaining] + "..."
+            else:
+                break
+        chunk_lines.append(line)
+        total_chunk_chars += len(line)
+    chunk_context = "\n---\n".join(chunk_lines)
+
+    # Build claim text.
+    claims_text = "\n".join(
+        f"{i}. [{c.get('claim_type', '?')}] (confidence={c.get('confidence_score', 0.0):.2f}) "
+        f"{c.get('claim_text', '')}"
+        for i, c in enumerate(claims)
+    )
+
+    # Build user prompt.
+    user_parts: list[str] = []
+
+    user_parts.append("## DOKUMENT\n")
+    user_parts.append(trim_text(normalized_text, 5000))
+
+    if issues:
+        user_parts.append("\n\n## IDENTIFIZIERTE THEMEN\n")
+        user_parts.append("\n".join(f"- {i}" for i in issues))
+
+    if questions:
+        user_parts.append("\n\n## RECHTSFRAGEN\n")
+        user_parts.append("\n".join(f"- {q}" for q in questions))
+
+    user_parts.append("\n\n## ZU PRÜFENDE CLAIMS\n")
+    user_parts.append(claims_text)
+
+    user_parts.append("\n\n## RECHTSQUELLEN (CHUNKS)\n")
+    user_parts.append(chunk_context)
+
+    user_content = "\n".join(user_parts)
+
+    messages = [
+        {"role": "system", "content": _ADVERSARIAL_REVIEW_SYSTEM + _STRICT_SUFFIX},
+        {"role": "user", "content": user_content},
+    ]
+
+    logger.info(
+        "adversarial_review: prompt ~%d chars (user=%d, system=%d), %d chunks",
+        len(user_content) + len(_ADVERSARIAL_REVIEW_SYSTEM) + len(_STRICT_SUFFIX),
+        len(user_content),
+        len(_ADVERSARIAL_REVIEW_SYSTEM) + len(_STRICT_SUFFIX),
+        len(chunk_lines),
+    )
+
+    raw = await client.chat_completion(
+        messages,
+        temperature=0.1,
+        model=final_model,
+        timeout=final_timeout,
+        max_retries=1,
+    )
+    try:
+        result = _parse_json_response(raw, context="adversarial review")
+    except JSONParseError:
+        logger.warning(
+            "JSON parse error in adversarial_review, retrying with stricter prompt"
+        )
+        messages_minimal = [
+            {"role": "system", "content": _ADVERSARIAL_REVIEW_SYSTEM + _STRICT_SUFFIX},
+            {"role": "user", "content": user_content[:4000]},
+        ]
+        raw2 = await client.chat_completion(
+            messages_minimal,
+            temperature=0.0,
+            model=final_model,
+            timeout=final_timeout,
+            max_retries=1,
+        )
+        result = _parse_json_response(raw2, context="adversarial review (retry)")
+
+    # --- Validate reviews ---
+    reviews = result.get("reviews", [])
+    if not isinstance(reviews, list):
+        logger.warning(
+            "adversarial_review: unexpected 'reviews' type: %s", type(reviews)
+        )
+        reviews = []
+
+    validated_reviews: list[dict[str, Any]] = []
+    valid_risk_levels = {"niedrig", "mittel", "hoch"}
+    for item in reviews:
+        if not isinstance(item, dict):
+            continue
+        rl = item.get("risk_level", "mittel")
+        if rl not in valid_risk_levels:
+            rl = "mittel"
+        validated_reviews.append({
+            "claim_index": int(item.get("claim_index", -1)),
+            "defense_argument": str(item.get("defense_argument", "")).strip(),
+            "authority_argument": str(item.get("authority_argument", "")).strip(),
+            "judicial_assessment": str(item.get("judicial_assessment", "")).strip(),
+            "procedural_issues": str(item.get("procedural_issues", "")).strip(),
+            "risk_level": rl,
+            "recommended_strategy": str(item.get("recommended_strategy", "")).strip(),
+        })
+
+    # --- Validate overall assessment ---
+    raw_overall = result.get("overall_assessment", {})
+    if not isinstance(raw_overall, dict):
+        logger.warning(
+            "adversarial_review: unexpected 'overall_assessment' type: %s",
+            type(raw_overall),
+        )
+        raw_overall = {}
+
+    key_risks = raw_overall.get("key_risks", [])
+    if not isinstance(key_risks, list):
+        key_risks = []
+
+    recommended_next_steps = raw_overall.get("recommended_next_steps", [])
+    if not isinstance(recommended_next_steps, list):
+        recommended_next_steps = []
+
+    procedural_errors_found = raw_overall.get("procedural_errors_found", [])
+    if not isinstance(procedural_errors_found, list):
+        procedural_errors_found = []
+
+    confidence_in_defense = raw_overall.get("confidence_in_defense", 0.5)
+    try:
+        confidence_in_defense = float(confidence_in_defense)
+    except (TypeError, ValueError):
+        confidence_in_defense = 0.5
+    confidence_in_defense = max(0.0, min(1.0, confidence_in_defense))
+
+    overall_assessment = {
+        "summary": str(raw_overall.get("summary", "")).strip(),
+        "key_risks": [str(r).strip() for r in key_risks if str(r).strip()],
+        "recommended_next_steps": [
+            str(s).strip() for s in recommended_next_steps if str(s).strip()
+        ],
+        "confidence_in_defense": confidence_in_defense,
+        "procedural_errors_found": [
+            str(e).strip() for e in procedural_errors_found if str(e).strip()
+        ],
+    }
+
+    logger.info(
+        "adversarial_review: complete (model=%s, %d reviews)",
+        final_model,
+        len(validated_reviews),
+    )
+    return {"reviews": validated_reviews, "overall_assessment": overall_assessment}
+
+
+# ---------------------------------------------------------------------------
+# Combined Stages 5+6+7+8 — Grounded Answer Generation (WP-007)
 # ---------------------------------------------------------------------------
 
 _GROUNDED_ANSWER_SYSTEM = (
@@ -558,7 +869,7 @@ _GROUNDED_ANSWER_SYSTEM = (
     "Auslegung und Handlungsempfehlung.\n"
     "- Empfehlungen dürfen nur aus zuvor belegten rechtlichen Bewertungen "
     "folgen.\n\n"
-    "B) **Abschnitte generieren:** Erstelle die folgenden 6 Abschnitte "
+    "B) **Abschnitte generieren:** Erstelle die folgenden 7 Abschnitte "
     "auf Deutsch:\n"
     '  - "sachverhalt": Zusammenfassung des Sachverhalts\n'
     '  - "rechtliche_wuerdigung": Rechtliche Würdigung mit Zitaten der '
@@ -567,7 +878,9 @@ _GROUNDED_ANSWER_SYSTEM = (
     '  - "handlungsempfehlung": Konkrete Handlungsempfehlungen\n'
     '  - "entwurf": Entwurf eines Antwortschreibens\n'
     '  - "unsicherheiten": Verbleibende Unsicherheiten oder fehlende '
-    "Informationen\n\n"
+    "Informationen\n"
+    '  - "adversarial_pruefung": Vorläufige adversariale Einschätzung '
+    "(wird später durch die detaillierte Rechtsprüfung ersetzt)\n\n"
     "WICHTIGE REGELN FÜR DIE ABSCHNITTE:\n"
     "- Schreibe verständlich für eine betroffene Person, aber rechtlich "
     "präzise.\n"
@@ -599,7 +912,8 @@ _GROUNDED_ANSWER_SYSTEM = (
     '    "ergebnis": "...",\n'
     '    "handlungsempfehlung": "...",\n'
     '    "entwurf": "...",\n'
-    '    "unsicherheiten": "..."\n'
+    '    "unsicherheiten": "...",\n'
+    '    "adversarial_pruefung": "..."\n'
     '  }\n'
     '}\n\n'
     "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
@@ -801,6 +1115,7 @@ async def generate_grounded_answer(
         "handlungsempfehlung",
         "entwurf",
         "unsicherheiten",
+        "adversarial_pruefung",
     ]
     sections: dict[str, str] = {}
     for key in required_keys:
@@ -813,6 +1128,195 @@ async def generate_grounded_answer(
         len(sections),
     )
     return {"claims": claims, "sections": sections}
+
+
+async def generate_grounded_answer_stream(
+    normalized_text: str,
+    issues: list[str],
+    questions: list[str],
+    chunks: list[dict[str, Any]],
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Stream tokens from a grounded answer generation, yielding progress.
+
+    Accepts the same parameters as :meth:`generate_grounded_answer` but uses
+    ``chat_completion_stream`` instead of ``chat_completion`` so tokens are
+    yielded incrementally.
+
+    Yields:
+        ``{"type": "token", "content": "..."}`` for each content token, and
+        finally ``{"type": "done", "result": <parsed JSON dict>}`` when the
+        stream is complete.
+
+    On JSON parse failure, falls back to ``generate_grounded_answer`` once.
+    """
+    from app.core.config import settings as s
+
+    final_model = s.FINAL_MODEL or s.PRIMARY_MODEL
+    final_timeout = s.FINAL_TIMEOUT_SEC
+    max_chunks_for_final = s.MAX_CHUNKS_FOR_FINAL
+    max_chunk_context_chars = s.MAX_CHUNK_CONTEXT_CHARS
+    max_final_input_chars = s.MAX_FINAL_INPUT_CHARS
+
+    logger.info(
+        "generate_grounded_answer_stream: starting (input=%d chars, %d issues, "
+        "%d questions, %d chunks, model=%s, timeout=%.1fs)",
+        len(normalized_text),
+        len(issues),
+        len(questions),
+        len(chunks),
+        final_model,
+        final_timeout,
+    )
+    client = _get_client()
+
+    # Build chunk context (same logic as generate_grounded_answer).
+    chunk_lines: list[str] = []
+    total_chunk_chars = 0
+    for c in chunks[:max_chunks_for_final]:
+        chunk_id = c.get("chunk_id", "?")
+        hierarchy = c.get("hierarchy_path", "?")
+        text = c.get("text_content", "")
+        line = (
+            f"CHUNK [{chunk_id}] {hierarchy}:\n"
+            f"{text}\n"
+        )
+        if total_chunk_chars + len(line) > max_chunk_context_chars:
+            remaining = max_chunk_context_chars - total_chunk_chars
+            if remaining > 100:
+                line = line[:remaining] + "..."
+            else:
+                break
+        chunk_lines.append(line)
+        total_chunk_chars += len(line)
+    chunk_context = "\n---\n".join(chunk_lines)
+
+    # Build the user prompt (German).
+    user_parts: list[str] = []
+    user_parts.append("## DOKUMENT\n")
+    user_parts.append(trim_text(normalized_text, max_final_input_chars))
+    if issues:
+        user_parts.append("\n\n## IDENTIFIZIERTE THEMEN\n")
+        user_parts.append("\n".join(f"- {i}" for i in issues))
+    if questions:
+        user_parts.append("\n\n## RECHTSFRAGEN\n")
+        user_parts.append("\n".join(f"- {q}" for q in questions))
+    user_parts.append("\n\n## RECHTSQUELLEN (CHUNKS)\n")
+    user_parts.append(chunk_context)
+    user_content = "\n".join(user_parts)
+
+    messages = [
+        {"role": "system", "content": _GROUNDED_ANSWER_SYSTEM + _STRICT_SUFFIX},
+        {"role": "user", "content": user_content},
+    ]
+
+    # Accumulate the raw response.
+    raw_parts: list[str] = []
+
+    try:
+        async for token in client.chat_completion_stream(
+            messages,
+            temperature=0.1,
+            model=final_model,
+            timeout=final_timeout,
+            max_retries=1,
+        ):
+            raw_parts.append(token)
+            yield {"type": "token", "content": token}
+    except Exception as exc:
+        logger.warning(
+            "chat_completion_stream failed, falling back to non-streaming: %s",
+            exc,
+        )
+        raw = await client.chat_completion(
+            messages,
+            temperature=0.1,
+            model=final_model,
+            timeout=final_timeout,
+            max_retries=1,
+        )
+        raw_parts = [raw]
+        # Yield the full response as a single token so the caller sees output.
+        yield {"type": "token", "content": raw}
+
+    raw_response = "".join(raw_parts)
+
+    # Parse the accumulated response.
+    try:
+        result = _parse_json_response(raw_response, context="grounded answer stream")
+    except JSONParseError:
+        logger.warning(
+            "JSON parse error in generate_grounded_answer_stream, "
+            "falling back to non-streaming generate_grounded_answer"
+        )
+        # Fallback: call the non-streaming version directly.
+        result = await generate_grounded_answer(
+            normalized_text, issues, questions, chunks,
+        )
+        yield {"type": "done", "result": result}
+        return
+
+    # --- Extract and validate claims (same logic as generate_grounded_answer) ---
+    raw_claims = result.get("claims", [])
+    if not isinstance(raw_claims, list):
+        logger.warning(
+            "generate_grounded_answer_stream: unexpected 'claims' type: %s",
+            type(raw_claims),
+        )
+        raw_claims = []
+
+    valid_claim_types = {"fact", "interpretation", "recommendation"}
+    claims: list[dict[str, Any]] = []
+    for item in raw_claims:
+        if not isinstance(item, dict):
+            continue
+        ct = item.get("claim_type", "fact")
+        if ct not in valid_claim_types:
+            ct = "fact"
+        cs = item.get("confidence_score", 0.5)
+        try:
+            cs = float(cs)
+        except (TypeError, ValueError):
+            cs = 0.5
+        cs = max(0.0, min(1.0, cs))
+        claims.append({
+            "claim_text": str(item.get("claim_text", "")).strip(),
+            "confidence_score": cs,
+            "claim_type": ct,
+            "question": str(item.get("question", "")).strip(),
+            "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
+            "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
+            "evidence_quote": str(item.get("evidence_quote", "")).strip(),
+        })
+
+    # --- Extract and validate sections ---
+    raw_sections = result.get("sections", {})
+    if not isinstance(raw_sections, dict):
+        logger.warning(
+            "generate_grounded_answer_stream: unexpected 'sections' type: %s",
+            type(raw_sections),
+        )
+        raw_sections = {}
+
+    required_keys = [
+        "sachverhalt",
+        "rechtliche_wuerdigung",
+        "ergebnis",
+        "handlungsempfehlung",
+        "entwurf",
+        "unsicherheiten",
+        "adversarial_pruefung",
+    ]
+    sections: dict[str, str] = {}
+    for key in required_keys:
+        sections[key] = str(raw_sections.get(key, "")).strip()
+
+    logger.info(
+        "generate_grounded_answer_stream: complete (model=%s, %d claims, %d sections)",
+        final_model,
+        len(claims),
+        len(sections),
+    )
+    yield {"type": "done", "result": {"claims": claims, "sections": sections}}
 
 
 # ---------------------------------------------------------------------------

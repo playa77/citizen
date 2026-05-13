@@ -31,8 +31,10 @@
         classification: 'Klassifikation',
         decomposition: 'Fragezerlegung',
         retrieval: 'Retrieval',
-        claims: 'Anspruchsaufbau',
+        construction: 'Anspruchsaufbau',
         verification: 'Verifikation',
+        adversarial_review: 'Rechtsprüfung (Adversarial)',
+        calculation_check: 'Berechnungsprüfung',
         generation: 'Ausgabe',
     };
 
@@ -45,6 +47,8 @@
         handlungsempfehlung: 'Handlungsempfehlung',
         entwurf: 'Entwurf',
         unsicherheiten: 'Unsicherheiten',
+        adversarial_pruefung: 'Adversariale Rechtsprüfung',
+        berechnungspruefung: 'Berechnungsprüfung',
     };
 
     // =========================================================================
@@ -65,12 +69,16 @@
         filename: document.getElementById('filename'),
         removeFile: document.getElementById('remove-file'),
         uploadBtn: document.getElementById('upload-btn'),
+        textEditor: document.getElementById('text-editor'),
+        useTextBtn: document.getElementById('use-text-btn'),
         analysisSection: document.getElementById('analysis-section'),
         textPreview: document.getElementById('text-preview'),
         analyzeBtn: document.getElementById('analyze-btn'),
         progressSection: document.getElementById('progress-section'),
         progressBar: document.getElementById('progress-bar'),
         stageList: document.getElementById('stage-list'),
+        streamOutput: document.getElementById('stream-output'),
+        streamOutputContent: document.getElementById('stream-output-content'),
         resultsSection: document.getElementById('results-section'),
         resultsContainer: document.getElementById('results-container'),
         errorDisplay: document.getElementById('error-display'),
@@ -261,9 +269,9 @@
             return;
         }
 
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'text/plain', 'text/html', 'message/rfc822'];
         if (!allowedTypes.includes(file.type)) {
-            showError('Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG.');
+            showError('Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG, TXT, HTML, EML.');
             return;
         }
 
@@ -271,6 +279,9 @@
         elements.filename.textContent = file.name;
         elements.fileInfo.classList.remove('hidden');
         elements.uploadBtn.disabled = false;
+        // Clear text editor (inputs are mutually exclusive)
+        elements.textEditor.value = '';
+        elements.useTextBtn.disabled = true;
     }
 
     function handleFileDrop(event) {
@@ -297,6 +308,42 @@
         elements.uploadBtn.disabled = true;
         elements.uploadBtn.textContent = 'Text extrahieren';
         elements.analysisSection.classList.add('hidden');
+        elements.resultsSection.classList.add('hidden');
+        // Clear text editor too (inputs are mutually exclusive)
+        elements.textEditor.value = '';
+        elements.useTextBtn.disabled = true;
+    }
+
+    // =========================================================================
+    // Text Editor (Analyze Mode — alternative to file upload)
+    // =========================================================================
+
+    function handleTextEditorInput() {
+        const hasContent = elements.textEditor.value.trim().length > 0;
+        elements.useTextBtn.disabled = !hasContent;
+    }
+
+    function handleUseText() {
+        const text = elements.textEditor.value.trim();
+        if (!text) return;
+
+        showError(null);
+        // Clear any selected file (mutual exclusivity)
+        state.file = null;
+        state.hasExtracted = false;
+        elements.fileInput.value = '';
+        elements.fileInfo.classList.add('hidden');
+        elements.uploadBtn.disabled = true;
+        elements.uploadBtn.textContent = 'Text extrahieren';
+
+        state.extractedText = text;
+        state.hasExtracted = true;
+
+        const fullLength = state.extractedText.length;
+        elements.textPreview.innerHTML =
+            truncateText(state.extractedText, 500)
+            + `\n\n<span class="char-count">(${fullLength} Zeichen erfasst — Vorschau zeigt erste 500)</span>`;
+        elements.analysisSection.classList.remove('hidden');
         elements.resultsSection.classList.add('hidden');
     }
 
@@ -361,6 +408,14 @@
         elements.progressBar.style.width = '0%';
         elements.progressSection.classList.remove('hidden');
 
+        // Hide and clear stream output
+        elements.streamOutput.classList.add('hidden');
+        elements.streamOutputContent.textContent = '';
+
+        // Remove any existing corpus health warning
+        const existingWarning = elements.progressSection.querySelector('.corpus-health-warning');
+        if (existingWarning) existingWarning.remove();
+
         try {
             const response = await fetch(API_BASE + '/analyze', {
                 method: 'POST',
@@ -417,12 +472,57 @@
             return;
         }
 
+        // Corpus health warning event
+        if (event.stage === 'corpus_health') {
+            handleCorpusHealthEvent(event);
+            return;
+        }
+
+        // Stream output events — show live model output
+        if (event.stage === 'stream_output') {
+            handleStreamOutputEvent(event);
+            return;
+        }
+
         if (event.stage) {
             updateStage(event.stage, event.status, event.payload);
         }
 
         if (event.final_output) {
             renderResults(event.final_output);
+        }
+    }
+
+    function handleStreamOutputEvent(event) {
+        const lines = (event.payload && event.payload.lines) || [];
+        if (lines.length > 0) {
+            elements.streamOutput.classList.remove('hidden');
+            elements.streamOutputContent.textContent = lines.join('\n');
+            // Auto-scroll to bottom of stream output
+            elements.streamOutputContent.scrollTop = elements.streamOutputContent.scrollHeight;
+        }
+    }
+
+    function handleCorpusHealthEvent(event) {
+        const payload = event.payload || {};
+        const warnings = payload.warnings || [];
+        const message = payload.message || '';
+
+        if (event.status === 'warning') {
+            // Show warning message in the progress area
+            const warningEl = document.createElement('div');
+            warningEl.className = 'corpus-health-warning';
+            warningEl.innerHTML = `
+                <span class="corpus-health-icon">⚠️</span>
+                <span class="corpus-health-text">${escapeHtml(message)}</span>
+            `;
+            // Insert after progress bar
+            const progressSection = elements.progressSection;
+            const existing = progressSection.querySelector('.corpus-health-warning');
+            if (existing) {
+                existing.remove();
+            }
+            progressSection.insertBefore(warningEl, elements.stageList);
         }
     }
 
@@ -462,6 +562,7 @@
         });
 
         elements.progressSection.classList.add('hidden');
+        elements.streamOutput.classList.add('hidden');
         elements.resultsSection.classList.remove('hidden');
     }
 
@@ -537,12 +638,12 @@
      */
     function validateChatFile(file) {
         const maxSize = 25 * 1024 * 1024;
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'text/plain', 'text/html', 'message/rfc822'];
         if (file.size > maxSize) {
             return `Datei "${file.name}" zu groß (max. 25 MB).`;
         }
         if (!allowedTypes.includes(file.type)) {
-            return `Datei "${file.name}" hat ungültigen Typ. Erlaubt: PDF, JPG, PNG.`;
+            return `Datei "${file.name}" hat ungültigen Typ. Erlaubt: PDF, JPG, PNG, TXT, HTML, EML.`;
         }
         return null;
     }
@@ -631,7 +732,15 @@
 
     function updateCorpusProgress(job) {
         if (job.substage && substageLabels[job.substage]) {
-            elements.corpusSubstage.textContent = substageLabels[job.substage];
+            let label = substageLabels[job.substage];
+            // Show which source is currently being ingested (WP-014)
+            if (job.substage === 'scraping' && job.current_source_display) {
+                const sourceInfo = job.source_total
+                    ? ` (Quelle ${job.source_index}/${job.source_total})`
+                    : '';
+                label = `${job.current_source_display} wird abgerufen …${sourceInfo}`;
+            }
+            elements.corpusSubstage.textContent = label;
         }
 
         if (job.substage === 'scraping' && job.chunks_scraped > 0) {
@@ -1704,6 +1813,8 @@
         elements.uploadBtn.addEventListener('click', handleUpload);
         elements.analyzeBtn.addEventListener('click', handleAnalyze);
         elements.corpusUpdateBtn.addEventListener('click', handleCorpusUpdate);
+        elements.textEditor.addEventListener('input', handleTextEditorInput);
+        elements.useTextBtn.addEventListener('click', handleUseText);
 
         // =========================================================================
         // Mode Toggle

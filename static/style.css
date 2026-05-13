@@ -433,6 +433,71 @@ body {
 }
 
 /* ==========================================================================
+   Text Editor (Analyze Mode — alternative to file upload)
+   ========================================================================== */
+
+.text-editor-separator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin: var(--spacing-lg) 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+}
+
+.text-editor-separator::before,
+.text-editor-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.text-editor-separator span {
+    white-space: nowrap;
+    font-weight: 500;
+    padding: 0 var(--spacing-xs);
+}
+
+.text-editor-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.text-editor {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    font-family: var(--font-family);
+    font-size: var(--font-size-small);
+    line-height: 1.7;
+    color: var(--color-text);
+    background: var(--color-background);
+    resize: vertical;
+    min-height: 120px;
+    max-height: 400px;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    outline: none;
+}
+
+.text-editor::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.7;
+}
+
+.text-editor:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(26, 95, 122, 0.1);
+    background: var(--color-surface);
+}
+
+.text-editor-container .btn {
+    align-self: flex-start;
+}
+
+/* ==========================================================================
    Text Preview
    ========================================================================== */
 

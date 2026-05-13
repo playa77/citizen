@@ -1,4 +1,4 @@
-"""Unit tests for the 7-stage pipeline orchestrator (WP-010).
+"""Unit tests for the 8-stage pipeline orchestrator (WP-010).
 
 All stages beyond normalization depend on ``app.services.reasoning`` and
 ``app.services.retrieval`` which are implemented in WP-011 / WP-012.  Tests
@@ -140,6 +140,49 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
             },
         }
 
+    async def generate_grounded_answer_stream(
+        normalized_text: str,
+        issues: list[str],
+        questions: list[str],
+        chunks: list[dict[str, Any]],
+    ) -> AsyncGenerator[dict[str, Any], None]:
+        """Stub streaming version of grounded answer."""
+        result = await generate_grounded_answer(
+            normalized_text, issues, questions, chunks,
+        )
+        yield {"type": "token", "content": '{"claims":'}
+        yield {"type": "token", "content": " [...]"}
+        yield {"type": "done", "result": result}
+
+    async def adversarial_review(
+        normalized_text: str,
+        issues: list[str],
+        questions: list[str],
+        claims: list[dict[str, Any]],
+        chunks: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Stub for adversarial legal review."""
+        return {
+            "reviews": [
+                {
+                    "claim_index": 0,
+                    "defense_argument": "Die Kürzung war unverhältnismäßig.",
+                    "authority_argument": "Die Kürzung war rechtmäßig.",
+                    "judicial_assessment": "Das Gericht würde prüfen.",
+                    "procedural_issues": "Keine formellen Fehler.",
+                    "risk_level": "mittel",
+                    "recommended_strategy": "Widerspruch einlegen.",
+                }
+            ],
+            "overall_assessment": {
+                "summary": "Adversariale Prüfung abgeschlossen.",
+                "key_risks": ["Risiko der Kostenpflicht"],
+                "recommended_next_steps": ["Anwalt konsultieren"],
+                "confidence_in_defense": 0.65,
+                "procedural_errors_found": [],
+            },
+        }
+
     import sys
     import types
 
@@ -151,6 +194,8 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
     mod.verify_claims = verify_claims  # type: ignore[attr-defined]
     mod.generate_output = generate_output  # type: ignore[attr-defined]
     mod.generate_grounded_answer = generate_grounded_answer  # type: ignore[attr-defined]
+    mod.generate_grounded_answer_stream = generate_grounded_answer_stream  # type: ignore[attr-defined]
+    mod.adversarial_review = adversarial_review  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.reasoning", mod)
 
 
@@ -233,6 +278,7 @@ class TestPipelineState:
         assert state.retrieved_chunks == []
         assert state.claims == []
         assert state.verified_claims == []
+        assert state.adversarial_review == {}
         assert state.final_output == {}
         assert state.errors == []
         assert state.input_text == SAMPLE_INPUT
@@ -309,6 +355,24 @@ class TestStagePayloads:
         payload = _stage_payload(state, stage_name="verification", duration_ms=30)
         assert payload["verified_claim_count"] == 1
 
+    def test_adversarial_review_payload(self) -> None:
+        state = PipelineState(
+            input_text="",
+            adversarial_review={
+                "reviews": [{"claim_index": 0}],
+                "overall_assessment": {
+                    "key_risks": ["Risk 1"],
+                    "summary": "test",
+                    "recommended_next_steps": [],
+                    "confidence_in_defense": 0.5,
+                    "procedural_errors_found": [],
+                },
+            },
+        )
+        payload = _stage_payload(state, stage_name="adversarial_review", duration_ms=40)
+        assert payload["review_count"] == 1
+        assert payload["key_risks"] == ["Risk 1"]
+
     def test_generation_payload(self) -> None:
         state = PipelineState(
             input_text="",
@@ -358,6 +422,11 @@ class TestPipelineSequence:
             events.append(event)
 
         stage_names = [json.loads(e[len("data: ") :].strip())["stage"] for e in events]
+        # Filter out non-pipeline events (e.g. corpus_health).
+        stage_names = [s for s in stage_names if s in (
+            "normalization", "classification", "decomposition", "retrieval",
+            "construction", "verification", "adversarial_review", "generation",
+        )]
         expected = [
             "normalization",
             "classification",
@@ -366,11 +435,13 @@ class TestPipelineSequence:
             "construction",
             "verification",
             "generation",
+            "adversarial_review",
         ]
         assert stage_names == expected
 
-        # All stages report "complete".
-        statuses = [json.loads(e[len("data: ") :].strip())["status"] for e in events]
+        # All stages report "complete" (filter out non-stage events like corpus_health).
+        statuses = [json.loads(e[len("data: ") :].strip())["status"] for e in events
+                    if json.loads(e[len("data: ") :].strip()).get("stage") != "corpus_health"]
         assert all(s == "complete" for s in statuses)
 
     @pytest.mark.asyncio
@@ -393,6 +464,12 @@ class TestPipelineSequence:
         assert state.final_output.get("handlungsempfehlung") is not None
         assert state.final_output.get("entwurf") is not None
         assert state.final_output.get("unsicherheiten") is not None
+        assert state.final_output.get("adversarial_pruefung") is not None
+
+        # Adversarial review state should also be populated
+        assert state.adversarial_review is not None
+        assert "reviews" in state.adversarial_review
+        assert "overall_assessment" in state.adversarial_review
 
 
 # ---------------------------------------------------------------------------

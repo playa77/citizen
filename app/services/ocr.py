@@ -4,6 +4,7 @@ Pipeline
 --------
 1. Validate file size against ``settings.MAX_FILE_SIZE_MB``.
 2. Route by MIME type:
+   - ``text/*`` or ``message/rfc822`` → direct text decoding (UTF-8 with latin-1 fallback).
    - ``application/pdf`` → text extraction (``pdfplumber`` → ``PyMuPDF``),
      then image-based dual-OCR if text extraction yields nothing.
    - ``image/*`` → standardize → dual-preprocess → Tesseract ×2 → LLM synthesis.
@@ -64,18 +65,20 @@ _MAX_IMAGE_DIMENSION = 5000
 
 
 async def process_document(file: UploadFile, *, synthesize: bool | None = None) -> str:
-    """Extract and normalize text from a scanned document or image.
+    """Extract and normalize text from a scanned document, image, or plain-text file.
 
     Uses dual preprocessing (greyscale+contrast AND black/white thresholded)
     for every image-based OCR pass. When ``ENABLE_OCR_LLM_SYNTHESIS`` is
     true (or *synthesize* is explicitly passed), feeds both Tesseract results
     to the configured ``OCR_SYNTHESIS_MODEL`` LLM for comparison,
     reconciliation, and spell/grammar correction.
+    For ``text/*`` and ``message/rfc822`` content types, the text is decoded
+    directly (UTF-8 with latin-1 fallback) without OCR.
 
     Parameters
     ----------
     file : UploadFile
-        Uploaded file (PDF, JPG, PNG, etc.). Must be smaller than
+        Uploaded file (PDF, JPG, PNG, TXT, HTML, EML, etc.). Must be smaller than
         ``settings.MAX_FILE_SIZE_MB``.
     synthesize : bool | None
         If True, run LLM synthesis on dual-OCR results.
@@ -122,6 +125,8 @@ async def process_document(file: UploadFile, *, synthesize: bool | None = None) 
     # Route by MIME type.
     if content_type == "application/pdf":
         raw_text = await _process_pdf(raw_bytes, cfg, synthesize=synthesize)
+    elif content_type.startswith("text/") or content_type == "message/rfc822":
+        raw_text = _process_text(raw_bytes, content_type)
     elif content_type.startswith("image/"):
         raw_text = await _process_image(raw_bytes, cfg, synthesize=synthesize)
     else:
@@ -300,6 +305,38 @@ async def _process_image(raw_bytes: bytes, cfg: config.Settings, *, synthesize: 
         return await _synthesize_ocr_text(result.greyscale_contrast, result.black_white)
     else:
         return f"{result.greyscale_contrast}\n{result.black_white}"
+
+
+# ---------------------------------------------------------------------------
+# Text processing — direct decoding for plain-text documents
+# ---------------------------------------------------------------------------
+
+
+def _process_text(raw_bytes: bytes, content_type: str) -> str:  # pragma: no cover
+    """Decode a plain-text document from raw bytes.
+
+    Tries UTF-8 first (strict), then falls back to latin-1 (ISO-8859-1)
+    which covers all German characters.
+
+    Parameters
+    ----------
+    raw_bytes : bytes
+        Raw file content.
+    content_type : str
+        MIME type of the document (e.g. ``text/plain``, ``text/html``,
+        ``message/rfc822``).
+
+    Returns
+    -------
+    str
+        Decoded text.
+    """
+    try:
+        text = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        text = raw_bytes.decode("latin-1")
+    logger.info("Text document processed: content_type=%s chars=%d", content_type, len(text))
+    return text
 
 
 # ---------------------------------------------------------------------------

@@ -49,9 +49,14 @@ class Settings(BaseSettings):
     OCR_MAX_PAGES: int = 10                  # Max PDF pages processed by image-based OCR; 0 = unlimited
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
-    TOP_K_RETRIEVAL: int = 6
-    MAX_COSINE_DISTANCE: float = 0.85
+    TOP_K_RETRIEVAL: int = 10
+    MAX_COSINE_DISTANCE: float = 0.95
+    MAX_COSINE_DISTANCE_STRICT: float = 0.85
     RETRIEVAL_MODE: str = "combined"  # "combined" or "per_question"
+    RETRIEVAL_KEYWORD_FALLBACK: bool = True
+    TOP_K_KEYWORD: int = 5
+    CORPUS_SOURCES: list[str] = ["sgb2", "sgbx"]
+    CORPUS_INGESTION_TIMEOUT_SEC: int = 900  # 15 min timeout for full corpus scrape+embed+upsert (WP-014)
     PIPELINE_TIMEOUT_SEC: int = 120
     TRIAGE_TIMEOUT_SEC: float = 20.0
     FINAL_TIMEOUT_SEC: float = 75.0
@@ -65,11 +70,16 @@ class Settings(BaseSettings):
     MAX_FINAL_INPUT_CHARS: int = 5000
     MAX_CHUNK_CONTEXT_CHARS: int = 7000
     MAX_CHUNKS_FOR_FINAL: int = 6
+    # Calculation check (WP-014) — specialised model for numeric verification
+    ENABLE_CALCULATION_CHECK: bool = True
+    CALCULATION_MODEL: str | None = None  # None = use PRIMARY_MODEL
+    CALCULATION_TIMEOUT_SEC: float = 45.0
     # Caching (WP-011)
     ENABLE_CACHE: bool = True
     CACHE_TTL_SEC: int = 86400
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:8000"]
+    ENABLE_PROGRESS_STREAM: bool = True  # Whether to stream model output during analysis progress
     DISCLAIMER_VERSION: str = "v0.1.0"
     RATE_LIMIT_REQUESTS: int = 60
     RATE_LIMIT_WINDOW: int = 60

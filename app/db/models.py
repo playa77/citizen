@@ -50,7 +50,11 @@ class Base(DeclarativeBase):
 # 1. legal_source
 # ---------------------------------------------------------------------------
 
-SOURCE_TYPE_ALLOWED = ("sgb2", "sgbx", "weisung", "bsg")
+SOURCE_TYPE_ALLOWED = (
+    "sgb1", "sgb2", "sgb3", "sgb9", "sgb12", "sgbx",
+    "bgb", "vwvfg", "sgg",
+    "weisung", "bsg",
+)
 
 
 class LegalSource(Base):

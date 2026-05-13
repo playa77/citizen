@@ -69,11 +69,25 @@ class TestIngestEndpoint:
         assert data["text"] == "Normalized text from mocked PDF."
 
     def test_ingest_rejects_unsupported_mime(self, client: TestClient) -> None:
-        """Upload with an unsupported MIME type returns 415."""
-        fake_txt = b"Plain text content."
+        """text/plain returns 200; truly unsupported MIME types return 415."""
+        # text/plain is accepted
+        with patch("app.api.routes.ingest.process_document", new_callable=AsyncMock) as mock_proc:
+            mock_proc.return_value = "Normalized text from mocked TXT."
+            response = client.post(
+                "/api/v1/ingest",
+                files={"file": ("test.txt", b"plain text", "text/plain")},
+                headers=DISCLAIMER_HEADERS,
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "text" in data
+        assert data["text"] == "Normalized text from mocked TXT."
+
+        # application/octet-stream is rejected
         response = client.post(
             "/api/v1/ingest",
-            files={"file": ("test.txt", fake_txt, "text/plain")},
+            files={"file": ("test.bin", b"binary data", "application/octet-stream")},
             headers=DISCLAIMER_HEADERS,
         )
         assert response.status_code == 415

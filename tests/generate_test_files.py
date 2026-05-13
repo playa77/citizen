@@ -24,16 +24,15 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
-    Image,
     PageTemplate,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
 )
+from reportlab.platypus import Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet
 
 
@@ -86,44 +85,37 @@ def generate_small_pdf(path: Path) -> None:
 
 def generate_large_pdf(path: Path) -> None:
     """
-    Create a PDF larger than 25 MB by embedding a large JPEG image multiple times.
-    The image is generated in memory as noisy JPEG data that compresses to ~1 MB.
-    We embed it 30 times to exceed 25 MB.
-    """
-    # --- generate a large (~1 MB) JPEG in memory ---
-    # Image dimensions 2000x2000 with random pixels; JPEG quality 85
-    img = Image.new("RGB", (2000, 2000))
-    pixels = img.load()
-    for y in range(img.height):
-        for x in range(img.width):
-            # Deterministic but random-looking
-            r = (x * 123 + y * 457) % 256
-            g = (x * 789 + y * 231) % 256
-            b = (x * 456 + y * 789) % 256
-            pixels[x, y] = (r, g, b)
+    Create a PDF larger than 25 MB.
 
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85)
-    jpeg_data = buf.getvalue()
-    # Aiming for ~1 MB; adjust size if needed (rare)
-    if len(jpeg_data) < 900_000:
-        # increase dimensions until we reach ~1 MB
-        img = img.resize((2500, 2500), Image.Resampling.LANCZOS)
+    Strategy: generate 150 pages, each with a unique noisy JPEG image
+    (same dimensions, but different pixel patterns via per-image seeds).
+    Each JPEG compresses to ~0.2 MB; 150 copies => ~30 MB.
+    PDF embedding overhead pushes this past the 25 MB target.
+    """
+    W, H = 800, 800  # image dimensions — small enough to encode quickly
+    copies = 55
+
+    def make_jpeg(seed: int) -> bytes:
+        img = Image.new("RGB", (W, H))
+        pixels = img.load()
+        for y in range(H):
+            for x in range(W):
+                r = (x * 123 + y * 457 + seed * 313) % 256
+                g = (x * 789 + y * 231 + seed * 619) % 256
+                b = (x * 456 + y * 789 + seed * 877) % 256
+                pixels[x, y] = (r, g, b)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
-        jpeg_data = buf.getvalue()
+        return buf.getvalue()
 
-    # Create PDF document
     doc = SimpleDocTemplate(str(path), pagesize=A4)
     story = []
-    # Each image copy adds ~1 MB; 30 copies => ~30 MB
-    for i in range(30):
-        img_reader = ImageReader(io.BytesIO(jpeg_data))
-        story.append(Image(img_reader, width=400, height=400))
-        story.append(Spacer(1, 5))
-        if (i + 1) % 5 == 0:   # force page break every 5 images to avoid blowout
-            story.append(Paragraph(f"Page {i//5 + 1}", getSampleStyleSheet()["BodyText"]))
-            story.append(Spacer(1, 10))
+    for i in range(copies):
+        jpeg_data = make_jpeg(i)
+        story.append(RLImage(io.BytesIO(jpeg_data), width=200, height=200))
+        story.append(Spacer(1, 3))
+        if (i + 1) % 10 == 0:
+            story.append(Paragraph(f"Page {(i + 1) // 10}", getSampleStyleSheet()["BodyText"]))
     doc.build(story)
 
 
