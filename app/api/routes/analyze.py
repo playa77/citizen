@@ -196,6 +196,9 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                     except (json.JSONDecodeError, IndexError, KeyError):
                         pass
 
+            # Capture legal_snapshot from calculation result for audit persistence.
+            legal_snapshot = state.calculation_result.get("legal_snapshot") if state.calculation_result else None
+
             # After pipeline completes, yield a final compact summary event.
             final_payload = {
                 "session_id": session_id,
@@ -229,6 +232,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                     "output_snapshot": {"acknowledged": False},
                     "duration_ms": 0,
                 },
+                legal_snapshot=None,
             )
             asyncio.create_task(_persist_audit_safely(failed_audit))
             return
@@ -249,6 +253,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             claims=claim_entries,
             evidence_bindings=evidence_entries,
             disclaimer_ack=disclaimer_ack_entry,
+            legal_snapshot=legal_snapshot,
         )
         asyncio.create_task(_persist_audit_safely(audit_record))
 

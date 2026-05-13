@@ -39,7 +39,7 @@ def _check_constraints(table: type[models.Base]) -> list[CheckConstraint]:
 
 def test_exactly_eight_tables() -> None:
     tables = models.Base.metadata.tables
-    assert len(tables) == 8, f"Expected 8 tables, got {len(tables)}: {list(tables)}"
+    assert len(tables) == 12, f"Expected 12 tables, got {len(tables)}: {list(tables)}"
 
 
 def test_expected_table_names() -> None:
@@ -52,6 +52,10 @@ def test_expected_table_names() -> None:
         "claim",
         "evidence_binding",
         "cache_entry",
+        "legal_parameter",
+        "conversation",
+        "conversation_message",
+        "conversation_document",
     }
     actual = set(models.Base.metadata.tables.keys())
     assert actual == expected, f"Missing: {expected - actual}; Extra: {actual - expected}"
@@ -186,6 +190,7 @@ class TestCaseRun:
             "status",
             "latency_ms",
             "llm_fallback_chain",
+            "legal_snapshot",
             "created_at",
         }
         assert _column_names(self.TABLE) == expected

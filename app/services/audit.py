@@ -50,6 +50,7 @@ class AuditRecord:
     claims: list[dict[str, Any]] = field(default_factory=list)
     evidence_bindings: list[dict[str, Any]] = field(default_factory=list)
     disclaimer_ack: dict[str, Any] = field(default_factory=dict)
+    legal_snapshot: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +83,8 @@ async def persist_audit_record(
         status=record.status,
         latency_ms=record.latency_ms,
     )
+    if record.legal_snapshot:
+        case_run.legal_snapshot = record.legal_snapshot
     session.add(case_run)
     await session.flush()  # ensures case_run.id is available
 

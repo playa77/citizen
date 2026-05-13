@@ -201,6 +201,7 @@ class CaseRun(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     llm_fallback_chain: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+    legal_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     # Relationships
@@ -384,6 +385,58 @@ class EvidenceBinding(Base):
             "chunk_id",
             unique=True,
         ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 8b. legal_parameter
+# ---------------------------------------------------------------------------
+
+
+class LegalParameter(Base):
+    """Versioned legal parameter sourced from the legal corpus.
+
+    Each row represents one scalar or structured value (e.g., Regelbedarf
+    amount, Freibetrag band, Aufrechnung percentage) with a validity window
+    and an evidence backlink to the source legal_chunk.
+    """
+
+    __tablename__ = "legal_parameter"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
+    parameter_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    value_numeric: Mapped[float | None] = mapped_column(Float, nullable=True)
+    value_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    domain: Mapped[str] = mapped_column(String(50), nullable=False, server_default="sgb2")
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_chunk_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("legal_chunk.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_quote: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="proposed"
+    )
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+
+    # Relationships
+    source_chunk: Mapped["LegalChunk | None"] = relationship("LegalChunk")
+
+    __table_args__ = (
+        CheckConstraint(
+            "review_status IN ('proposed', 'validated', 'verified', 'deprecated')",
+            name="ck_legal_parameter_review_status",
+        ),
+        Index("idx_param_key_valid", "parameter_key", "valid_from", "valid_to"),
+        Index("idx_param_domain", "domain"),
     )
 
 

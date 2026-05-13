@@ -18,6 +18,8 @@ import json
 import logging
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from app.services.reasoning import (
     JSONParseError,
     _STRICT_SUFFIX,
@@ -28,6 +30,124 @@ from app.services.rules_engine import process_extraction
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Pydantic extraction schema (single source of truth)
+# ---------------------------------------------------------------------------
+
+
+class ExtractionValues(BaseModel):
+    """LLM-extracted monetary values from an SGB II document."""
+
+    regelbedarf_authority: float | None = Field(
+        None, description="Vom Jobcenter angesetzter Regelbedarf in EUR"
+    )
+    regelbedarf_stufe: int | None = Field(
+        None, description="Angewendete Regelbedarfsstufe (1 oder 2)"
+    )
+    brutto_einkommen: float | None = Field(
+        None, description="Monatliches Bruttoeinkommen in EUR"
+    )
+    netto_einkommen: float | None = Field(
+        None, description="Monatliches Nettoeinkommen in EUR"
+    )
+    freibetrag_authority: float | None = Field(
+        None, description="Vom Jobcenter angesetzter Freibetrag in EUR"
+    )
+    aufrechnung_authority: float | None = Field(
+        None, description="Vom Jobcenter angesetzte monatliche Aufrechnung in EUR"
+    )
+    aufrechnung_regelbedarf_used: float | None = Field(
+        None,
+        description="Der für die Aufrechnung zugrunde gelegte Regelbedarf in EUR",
+    )
+    kdu_unterkunft: float | None = Field(
+        None, description="Kaltmiete in EUR"
+    )
+    kdu_heizung: float | None = Field(
+        None, description="Heizkosten in EUR"
+    )
+    kdu_nebenkosten: float | None = Field(
+        None, description="Nebenkosten in EUR"
+    )
+    kdu_gesamt_authority: float | None = Field(
+        None, description="Von der Behörde angegebener KdU-Gesamtbetrag in EUR"
+    )
+    anrechenbares_einkommen_authority: float | None = Field(
+        None,
+        description="Von der Behörde als anrechenbar angesetztes Einkommen in EUR",
+    )
+    auszahlungsbetrag_authority: float | None = Field(
+        None,
+        description="Von der Behörde festgesetzter Auszahlungsbetrag in EUR",
+    )
+    sanktion_authority: float | None = Field(
+        None, description="Sanktionsbetrag in EUR"
+    )
+    mehrbedarf_authority: float | None = Field(
+        None, description="Mehrbedarf in EUR"
+    )
+    unterhaltszahlung: float | None = Field(
+        None, description="Unterhaltszahlung in EUR"
+    )
+    kindergeld: float | None = Field(
+        None, description="Kindergeld in EUR"
+    )
+
+
+class ExtractionResult(BaseModel):
+    """Full structured extraction from an SGB II document."""
+
+    person_type: str | None = Field(
+        None, description="alleinstehend | partner | alleinerziehend"
+    )
+    has_minor_child: bool | None = Field(
+        None, description="Minderjähriges Kind in der Bedarfsgemeinschaft"
+    )
+    period_year: int | None = Field(
+        None, description="Jahr des Leistungszeitraums"
+    )
+    extracted_values: ExtractionValues = Field(default_factory=ExtractionValues)
+    authority_calculation_text: str = Field(
+        "", description="Wie das Jobcenter die Berechnung beschreibt"
+    )
+    extraction_notes: str = Field(
+        "", description="Unsicherheiten oder fehlende Angaben"
+    )
+
+
+def cross_check_extraction(
+    extraction: dict[str, Any], document_text: str
+) -> list[str]:
+    """Verify that extracted numbers appear in the document text.
+
+    Returns a list of warnings for values not found in the document.
+    """
+    warnings: list[str] = []
+    values = extraction.get("extracted_values") or {}
+
+    for field_name, value in values.items():
+        if value is None or not isinstance(value, (int, float)):
+            continue
+        # Check if the numeric value appears in the document text
+        # Try common formats: "563.00", "563,00", "563", "563.0"
+        candidates = [
+            f"{value:.2f}",
+            f"{value:.2f}".replace(".", ","),
+            str(int(value)) if value == int(value) else None,
+            f"{value:.1f}".replace(".", ","),
+        ]
+        found = any(
+            c and c in document_text for c in candidates if c is not None
+        )
+        if not found:
+            warnings.append(
+                f"Extrahierter Wert '{field_name}' = {value} konnte nicht "
+                f"im Dokumenttext gefunden werden. Wert könnte falsch extrahiert sein."
+            )
+
+    return warnings
+
 
 # ---------------------------------------------------------------------------
 # Reset / close helpers (re-exported for test convenience)
@@ -50,13 +170,20 @@ _EXTRACTION_SYSTEM = (
     "ausschließlich die im Dokument genannten Werte. **Berechne nichts.** "
     "Führe keine Additionen, Multiplikationen oder Prozentrechnungen durch.\n\n"
     "Regeln:\n"
+    "- **Extrahiere ausschließlich Werte, die explizit im Dokument genannt "
+    "werden.**\n"
     "- Setze jeden numerischen Wert, der nicht explizit im Dokument genannt "
     "wird, auf ``null``.\n"
+    "- Setze jeden Wert, der nicht explizit mit einer Zahl genannt wird, auf "
+    "null. Auch wenn du ihn erschließen oder ableiten könntest.\n"
     "- Wenn ein Wert unsicher ist oder interpretiert werden muss, setze ihn "
     "auf ``null`` und vermerke die Unsicherheit in ``extraction_notes``.\n"
+    "- Wenn du unsicher bist, ob ein Wert korrekt ist, setze ihn auf null.\n"
     "- Erfinde keine Zahlen, Personentypen, Zeiträume oder Haushaltsdaten.\n"
     "- Verwende Punkt als Dezimaltrenner in JSON-Zahlenwerten.\n"
     "- Alle Textfelder auf Deutsch.\n\n"
+    "Das JSON-Schema unten entspricht dem Pydantic-Modell. "
+    "Halte dich exakt an diese Struktur.\n"
     "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
     "{\n"
     '  "person_type": "alleinstehend" | "partner" | "alleinerziehend" | null,\n'
@@ -245,7 +372,59 @@ async def check_calculations(
 
     logger.info("check_calculations: phase 2 — running deterministic rules engine")
 
-    calculations = process_extraction(extraction)
+    # ── Fetch legal parameters from the DB ───────────────────────────
+    from datetime import date as dt_date
+    from app.services.parameter_store import (
+        build_legal_snapshot,
+        get_parameter_numeric,
+        get_parameter_json,
+    )
+
+    period_year_val = extraction.get("period_year")
+    try:
+        period_year_int = int(period_year_val) if period_year_val else 2025
+    except (TypeError, ValueError):
+        period_year_int = 2025
+
+    param_overrides: dict[str, Any] = {}
+    legal_snapshot: dict[str, Any] | None = None
+    from app.db.session import get_session_factory
+
+    session_factory = get_session_factory()
+    try:
+        async with session_factory() as db_session:
+            as_of = dt_date(period_year_int, 7, 1)  # mid-year
+
+            # Fetch Regelbedarf parameters
+            rbs1 = await get_parameter_numeric(db_session, "sgb2.regelbedarf.rbs1", as_of)
+            rbs2 = await get_parameter_numeric(db_session, "sgb2.regelbedarf.rbs2", as_of)
+            param_overrides["rbs1"] = rbs1
+            param_overrides["rbs2"] = rbs2
+
+            # Fetch Freibetrag brackets from the DB (if available)
+            brackets = await get_parameter_json(
+                db_session, "sgb2.einkommen.erwerbstaetigenfreibetrag.band", as_of
+            )
+            if brackets["value"] is not None:
+                param_overrides["freibetrag_brackets"] = brackets["value"].get("bands", [])
+                param_overrides["freibetrag_base_allowance"] = float(
+                    brackets["value"].get("base_allowance", 100.0)
+                )
+                param_overrides["freibetrag_child_upper_limit"] = float(
+                    brackets["value"].get("minor_child_upper", 1500.0)
+                )
+
+            # Build the legal snapshot for audit trail
+            legal_snapshot = await build_legal_snapshot(db_session, year=period_year_int)
+    except Exception as exc:
+        logger.warning(
+            "Failed to fetch legal parameters from DB: %s. Using hardcoded fallbacks.",
+            exc,
+        )
+        param_overrides = {}
+        legal_snapshot = None
+
+    calculations = process_extraction(extraction, param_overrides=param_overrides)
 
     logger.info(
         "check_calculations: engine produced %d calculation entries",
@@ -287,6 +466,7 @@ async def check_calculations(
     return {
         "calculations_found": validated_calculations,
         "overall_assessment": overall_assessment,
+        "legal_snapshot": legal_snapshot if legal_snapshot else None,
     }
 
 
@@ -351,6 +531,14 @@ async def _llm_extract(
             type(result).__name__,
         )
         return None
+
+    # Cross-check: verify extracted numbers appear in the document text.
+    document_text = user_content
+    if document_text.startswith("## DOKUMENT\n"):
+        document_text = document_text[len("## DOKUMENT\n") :]
+    cross_check_warnings = cross_check_extraction(result, document_text)
+    for warning in cross_check_warnings:
+        logger.warning("cross_check: %s", warning)
 
     return result
 

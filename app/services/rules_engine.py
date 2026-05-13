@@ -83,6 +83,7 @@ _FREIBETRAG_UPPER_LIMIT_WITH_CHILD: float = 1500.00
 def compute_regelbedarf(
     year: int | None,
     person_type: str | None,
+    param_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Look up the correct Regelbedarf for a given year and person type.
 
@@ -92,6 +93,10 @@ def compute_regelbedarf(
         Calendar year of the Leistungszeitraum, e.g. 2025.
     person_type :
         One of ``"alleinstehend"``, ``"alleinerziehend"``, ``"partner"``.
+    param_overrides :
+        Optional dict with pre-fetched DB parameters keyed by
+        ``"rbs1"`` / ``"rbs2"``.  When provided the hardcoded lookup
+        table is bypassed entirely.
 
     Returns
     -------
@@ -101,6 +106,33 @@ def compute_regelbedarf(
         - ``stufe`` (``int | None``): Regelbedarfsstufe (1 or 2).
         - ``error`` (``str | None``): description if lookup failed.
     """
+    # ── DB-provided override path ───────────────────────────────────
+    if param_overrides:
+        pt_lower_ov = person_type.strip().lower() if person_type else ""
+        stufe_ov = _PERSON_TYPE_TO_STUFE.get(pt_lower_ov)
+        if stufe_ov is None:
+            return {
+                "value": None,
+                "stufe": None,
+                "error": f"Unbekannter Personentyp: {person_type!r}",
+            }
+        rbs_key = f"rbs{stufe_ov}"
+        param = param_overrides.get(rbs_key, {})
+        value = param.get("value")
+        error = param.get("error")
+        if value is None:
+            return {
+                "value": None,
+                "stufe": stufe_ov,
+                "error": error or f"Keine Parameter für Regelbedarfsstufe {stufe_ov} in den übergebenen Daten.",
+            }
+        return {
+            "value": float(value),
+            "stufe": stufe_ov,
+            "error": None,
+        }
+
+    # ── Hardcoded fallback path ─────────────────────────────────────
     if year is None:
         return {
             "value": None,
@@ -152,6 +184,7 @@ def compute_regelbedarf(
 def compute_freibetrag(
     brutto_einkommen: float | None,
     has_minor_child: bool | None = None,
+    param_overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compute the correct Erwerbstätigenfreibetrag (§ 11b SGB II).
 
@@ -162,6 +195,9 @@ def compute_freibetrag(
     has_minor_child :
         Whether at least one minor child lives in the Bedarfsgemeinschaft.
         ``None`` means "unknown" — the standard 1,200 EUR cap is used.
+    param_overrides :
+        Optional dict with pre-fetched DB parameters.  When it contains
+        ``"freibetrag_brackets"`` the hardcoded bracket table is replaced.
 
     Returns
     -------
@@ -186,6 +222,42 @@ def compute_freibetrag(
             "value": 0.0,
             "brackets_applied": [],
             "upper_limit": 1200.00,
+            "error": None,
+        }
+
+    # ── DB-provided override path ───────────────────────────────────
+    if param_overrides and "freibetrag_brackets" in param_overrides:
+        brackets_data = param_overrides["freibetrag_brackets"]
+        base_allowance = param_overrides.get("freibetrag_base_allowance", 100.0)
+        child_upper = param_overrides.get("freibetrag_child_upper_limit", 1500.0)
+
+        if has_minor_child:
+            upper_limit = child_upper
+        else:
+            upper_limit = 1200.0
+
+        total = base_allowance
+        applied: list[dict[str, Any]] = []
+        applied.append({"from_": 0.0, "to": base_allowance, "rate": 1.0, "amount": base_allowance})
+
+        remaining = brutto_einkommen - base_allowance
+        for band in brackets_data:
+            lower = float(band["from_"])
+            upper = min(float(band["to"]), upper_limit)
+            rate = float(band["rate"])
+            if remaining <= 0:
+                break
+            in_band = min(remaining, upper - lower)
+            amount = round(in_band * rate, 2)
+            total += amount
+            applied.append({"from_": lower, "to": upper, "rate": rate, "amount": amount})
+            remaining -= in_band
+
+        total = round(total, 2)
+        return {
+            "value": total,
+            "brackets_applied": applied,
+            "upper_limit": upper_limit,
             "error": None,
         }
 
@@ -236,7 +308,7 @@ def compute_freibetrag(
     }
 
 
-def compute_aufrechnung(regelbedarf: float | None) -> dict[str, Any]:
+def compute_aufrechnung(regelbedarf: float | None, aufrechnung_rate: float = 0.05) -> dict[str, Any]:
     """Compute the monthly Aufrechnung for a Darlehen (§ 42a SGB II).
 
     The legal rate is 5 % of the relevant monthly Regelbedarf.
@@ -245,32 +317,35 @@ def compute_aufrechnung(regelbedarf: float | None) -> dict[str, Any]:
     ----------
     regelbedarf :
         Monthly Regelbedarf in EUR (e.g. 563.00).
+    aufrechnung_rate :
+        Decimal rate to apply (default 0.05 = 5 %).  Can be overridden with a
+        DB-provided value.
 
     Returns
     -------
     dict
         Keys:
         - ``value`` (``float | None``): monthly Aufrechnung in EUR.
-        - ``rate`` (``float``): the applied percentage (always 0.05).
+        - ``rate`` (``float``): the applied percentage.
         - ``error`` (``str | None``): description if computation failed.
     """
     if regelbedarf is None:
         return {
             "value": None,
-            "rate": 0.05,
+            "rate": aufrechnung_rate,
             "error": "Kein Regelbedarf angegeben — Aufrechnung kann nicht berechnet werden.",
         }
 
     if regelbedarf <= 0:
         return {
             "value": 0.0,
-            "rate": 0.05,
+            "rate": aufrechnung_rate,
             "error": None,
         }
 
     return {
-        "value": round(regelbedarf * 0.05, 2),
-        "rate": 0.05,
+        "value": round(regelbedarf * aufrechnung_rate, 2),
+        "rate": aufrechnung_rate,
         "error": None,
     }
 
@@ -406,7 +481,7 @@ def _discrepancy_result(
     }
 
 
-def process_extraction(extraction: dict[str, Any]) -> list[dict[str, Any]]:
+def process_extraction(extraction: dict[str, Any], param_overrides: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Take an LLM-extracted structured document and run all deterministic checks.
 
     Parameters
@@ -415,6 +490,11 @@ def process_extraction(extraction: dict[str, Any]) -> list[dict[str, Any]]:
         Parsed JSON from the extraction LLM call.  Expected keys are
         defined by the extraction prompt.  All numeric fields are optional;
         the engine skips any check for which required data is missing.
+    param_overrides :
+        Optional dict with pre-fetched DB parameters.  Passed through to
+        ``compute_regelbedarf``, ``compute_freibetrag``, and
+        ``compute_aufrechnung`` to allow DB-backed overrides of hardcoded
+        constants.
 
     Returns
     -------
@@ -472,7 +552,7 @@ def process_extraction(extraction: dict[str, Any]) -> list[dict[str, Any]]:
         except (TypeError, ValueError):
             pass
 
-    rb_result = compute_regelbedarf(period_year, person_type)
+    rb_result = compute_regelbedarf(period_year, person_type, param_overrides=param_overrides)
     rb_authority = _num("extracted_values.regelbedarf_authority")
 
     if rb_result["error"] is None and rb_authority is not None:
@@ -514,7 +594,7 @@ def process_extraction(extraction: dict[str, Any]) -> list[dict[str, Any]]:
     # -- 2. Erwerbstätigenfreibetrag check ------------------------------------
     brutto = _num("extracted_values.brutto_einkommen")
     has_child = _bool_or_none("has_minor_child")
-    fb_result = compute_freibetrag(brutto, has_child)
+    fb_result = compute_freibetrag(brutto, has_child, param_overrides=param_overrides)
     fb_authority = _num("extracted_values.freibetrag_authority")
 
     if fb_result["error"] is None and fb_authority is not None:
@@ -565,7 +645,8 @@ def process_extraction(extraction: dict[str, Any]) -> list[dict[str, Any]]:
     aufr_rb = _num("extracted_values.aufrechnung_regelbedarf_used")
     # Prefer our computed RB, fall back to the authority's stated RB.
     effective_rb = rb_result.get("value") if rb_result["error"] is None else aufr_rb
-    aufr_result = compute_aufrechnung(effective_rb)
+    aufr_rate = param_overrides.get("aufrechnung_rate", 0.05) if param_overrides else 0.05
+    aufr_result = compute_aufrechnung(effective_rb, aufrechnung_rate=aufr_rate)
     aufr_authority = _num("extracted_values.aufrechnung_authority")
 
     if aufr_result["error"] is None and aufr_authority is not None:
