@@ -1,18 +1,20 @@
-"""Calculation verification service: LLM-driven numerical audit of SGB II documents.
+"""Calculation verification service: three-phase numerical audit of SGB II documents.
 
-Checks all monetary calculations in Jobcenter / SGB II documents for correctness
-against current German social law calculation rules. Extracts monetary figures,
-applies SGB II rules (Bürgergeld / Sozialhilfe), compares with Jobcenter
-calculations, and flags discrepancies.
+Architecture (trustworthiness split):
+    1. LLM **extracts** structured monetary data from the document text.
+    2. **Deterministic rules engine** (:mod:`app.services.rules_engine`) computes
+       correct values and flags discrepancies.
+    3. LLM **explains** the findings in natural language and suggests actions.
 
-Uses the same shared OpenRouterClient singleton and JSON parsing helpers as the
-reasoning engine in :mod:`app.services.reasoning`.
+This replaces the earlier approach where a single LLM call performed extraction,
+calculation, AND explanation inside a single ``_CALCULATION_SYSTEM`` prompt.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -22,6 +24,7 @@ from app.services.reasoning import (
     _get_client,
     _parse_json_response,
 )
+from app.services.rules_engine import process_extraction
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -30,135 +33,114 @@ logger = logging.getLogger(__name__)
 # Reset / close helpers (re-exported for test convenience)
 # ---------------------------------------------------------------------------
 
-# The shared _client singleton lives in reasoning.py; these aliases exist so
-# that callers can reset or close the client without importing reasoning.py.
-
 reset_client = __import__("app.services.reasoning", fromlist=["reset_client"]).reset_client
 close_client = __import__("app.services.reasoning", fromlist=["close_client"]).close_client
 
 
 # ---------------------------------------------------------------------------
-# System prompt — calculation verification for SGB II documents
+# Phase 1: Extraction system prompt
 # ---------------------------------------------------------------------------
 
-_CALCULATION_SYSTEM = (
-    "Du bist ein präziser, mathematisch exakter Rechnungsprüfer für "
-    "deutsches Sozialrecht (SGB II / SGB XII).\n\n"
+_EXTRACTION_SYSTEM = (
+    "Du bist ein präziser Datenextraktor für deutsche Sozialrechtsdokumente "
+    "(SGB II / Bürgergeld).\n\n"
     "Dir wird der Text eines behördlichen Dokuments vorgelegt (z. B. "
-    "Jobcenter-Bescheid über Leistungen nach dem SGB II / Bürgergeld).\n\n"
-    "Deine Aufgabe:\n"
-    "1. Finde ALLE monetären Berechnungen im Dokument, insbesondere Bedarf, "
-    "Regelbedarf, Mehrbedarf, Unterkunft und Heizung, Einkommen, "
-    "Freibeträge, Abzüge, Minderungen, Sanktionen, Aufrechnungen, "
-    "Darlehen, Erstattungen, Nachzahlungen und Auszahlungsbeträge.\n"
-    "2. Extrahiere ausschließlich die im Dokument genannten Zahlenwerte. "
-    "Erfinde keine fehlenden Beträge, Zeiträume, Haushaltsmitglieder oder "
-    "Einkommensarten.\n"
-    "3. Prüfe zunächst die reine Arithmetik der Behördenberechnung "
-    "(Addition, Subtraktion, Prozentrechnung, Monatsbeträge, Rundungen).\n"
-    "4. Berechne selbst, was nach den sicher anwendbaren SGB-II-Regeln "
-    "korrekt wäre, soweit die dafür erforderlichen Angaben im Dokument "
-    "vorhanden sind.\n"
-    "5. Vergleiche deine Berechnung mit der Behördenberechnung.\n"
-    "6. Gib für jede gefundene Berechnung an, ob und in welcher Höhe eine "
-    "Abweichung vorliegt.\n\n"
-    "Wichtige methodische Leitlinie:\n"
-    "- Unterscheide streng zwischen einem sicher feststellbaren Rechenfehler "
-    "und einer rechtlich oder tatsächlich nicht abschließend prüfbaren "
-    "Berechnung.\n"
-    "- Wenn erforderliche Angaben fehlen, darfst du keine vollständige "
-    "Neuberechnung vortäuschen. Benenne die Unsicherheit im commentary-Feld "
-    "und setze discrepancy_found nur dann auf true, wenn die Abweichung "
-    "trotz fehlender Angaben sicher feststeht.\n"
-    "- Die folgenden Regeln sind wichtige Prüfanker für typische Fehler, "
-    "aber kein abschließender Katalog aller sozialrechtlichen Berechnungen.\n\n"
-    "Aktuelle SGB-II-Berechnungsregeln für Leistungszeiträume 2024/2025 "
-    "(Bürgergeld-Reform), soweit anhand des Dokuments sicher anwendbar:\n\n"
-    "**Freibetrag bei Erwerbstätigkeit (§ 11b SGB II):**\n"
-    "- Grundfreibetrag: 100,00 EUR\n"
-    "- 20 % für den Bruttoeinkommensteil von 100,01 EUR bis 520,00 EUR\n"
-    "- 30 % für den Bruttoeinkommensteil von 520,01 EUR bis 1.000,00 EUR\n"
-    "- 10 % für den Bruttoeinkommensteil von 1.000,01 EUR bis 1.200,00 EUR\n"
-    "- Die obere Grenze erhöht sich auf 1.500,00 EUR, wenn mindestens ein "
-    "minderjähriges Kind in der Bedarfsgemeinschaft lebt.\n"
-    "- Prüfe diese Freibeträge nur, wenn das Dokument ausreichende Angaben "
-    "zum Bruttoeinkommen und zum relevanten Haushalt enthält.\n\n"
-    "**Aufrechnung bei Darlehen (§ 42a SGB II):**\n"
-    "- Die laufende monatliche Aufrechnung beträgt 5 % des maßgebenden "
-    "monatlichen Regelbedarfs.\n"
-    "- Prüfe, ob die Behörde den richtigen Regelbedarf als Bezugsgröße "
-    "verwendet hat.\n\n"
-    "**Regelbedarf 2025:**\n"
-    "- Regelbedarfsstufe 1 (Alleinstehende / Alleinerziehende): 563,00 EUR\n"
-    "- Regelbedarfsstufe 2 (Partner in Bedarfsgemeinschaft): 506,00 EUR\n"
-    "- Prüfe den Regelbedarf nur, wenn aus dem Dokument die Personengruppe "
-    "und der Leistungszeitraum erkennbar sind.\n\n"
-    "Weitere typische Prüfpunkte:\n"
-    "- Stimmen Zwischensummen und Endsumme überein?\n"
-    "- Wurden Monatsbeträge und Zeitanteile korrekt auf Teilmonate "
-    "umgerechnet?\n"
-    "- Wurden Einkommen, Kindergeld, Unterhalt oder sonstige Einnahmen "
-    "erkennbar doppelt oder falsch abgezogen?\n"
-    "- Wurde ein Abzug, eine Minderung oder eine Aufrechnung prozentual "
-    "korrekt berechnet?\n"
-    "- Stimmen Auszahlungsbetrag, bewilligter Betrag und einbehaltene "
-    "Beträge rechnerisch zusammen?\n\n"
+    "Jobcenter-Bescheid).\n\n"
+    "Deine Aufgabe: Extrahiere strukturierte Daten aus dem Dokument — "
+    "ausschließlich die im Dokument genannten Werte. **Berechne nichts.** "
+    "Führe keine Additionen, Multiplikationen oder Prozentrechnungen durch.\n\n"
+    "Regeln:\n"
+    "- Setze jeden numerischen Wert, der nicht explizit im Dokument genannt "
+    "wird, auf ``null``.\n"
+    "- Wenn ein Wert unsicher ist oder interpretiert werden muss, setze ihn "
+    "auf ``null`` und vermerke die Unsicherheit in ``extraction_notes``.\n"
+    "- Erfinde keine Zahlen, Personentypen, Zeiträume oder Haushaltsdaten.\n"
+    "- Verwende Punkt als Dezimaltrenner in JSON-Zahlenwerten.\n"
+    "- Alle Textfelder auf Deutsch.\n\n"
     "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
     "{\n"
-    '  "calculations_found": [\n'
+    '  "person_type": "alleinstehend" | "partner" | "alleinerziehend" | null,\n'
+    '  "has_minor_child": true | false | null,\n'
+    '  "period_year": 2025 | null,\n'
+    '  "extracted_values": {\n'
+    '    "regelbedarf_authority": 563.00 | null,\n'
+    '    "regelbedarf_stufe": 1 | 2 | null,\n'
+    '    "brutto_einkommen": 1200.00 | null,\n'
+    '    "netto_einkommen": 950.00 | null,\n'
+    '    "freibetrag_authority": 184.00 | null,\n'
+    '    "aufrechnung_authority": 28.15 | null,\n'
+    '    "aufrechnung_regelbedarf_used": 563.00 | null,\n'
+    '    "kdu_unterkunft": 540.00 | null,\n'
+    '    "kdu_heizung": 80.00 | null,\n'
+    '    "kdu_nebenkosten": null,\n'
+    '    "kdu_gesamt_authority": 620.00 | null,\n'
+    '    "anrechenbares_einkommen_authority": 900.00 | null,\n'
+    '    "auszahlungsbetrag_authority": 500.00 | null,\n'
+    '    "sanktion_authority": null,\n'
+    '    "mehrbedarf_authority": null,\n'
+    '    "unterhaltszahlung": null,\n'
+    '    "kindergeld": null\n'
+    "  },\n"
+    '  "authority_calculation_text": "Freitext: Wie das Jobcenter die '
+    'Berechnung beschreibt (im Dokument genannter Text)",\n'
+    '  "extraction_notes": "Freitext: Unsicherheiten oder fehlende Angaben"\n'
+    "}\n\n"
+    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
+    "zusätzlichen Schlüssel."
+)
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Explanation system prompt
+# ---------------------------------------------------------------------------
+
+_EXPLANATION_SYSTEM = (
+    "Du bist ein sorgfältiger Erklärer für sozialrechtliche Berechnungen "
+    "(SGB II / Bürgergeld).\n\n"
+    "Dir werden vorgelegt:\n"
+    "1. Der Text des Originaldokuments (Jobcenter-Bescheid o. Ä.).\n"
+    "2. Extrahierte Werte aus dem Dokument (von einem Extraktor ermittelt).\n"
+    "3. Berechnungsergebnisse einer deterministischen Prüf-Engine, "
+    "die bereits erkannt hat, bei welchen Posten eine Abweichung "
+    "zwischen Behördenangabe und gesetzlichem Sollwert vorliegt.\n\n"
+    "Deine Aufgabe:\n"
+    "- Erkläre in verständlichem Deutsch, was die Prüf-Engine gefunden hat.\n"
+    "- Wenn Abweichungen vorliegen: Erkläre, warum die Behördenberechnung "
+    "möglicherweise falsch ist und woran der Fehler liegen könnte.\n"
+    "- Nenne, was die betroffene Person bei der Behörde erfragen oder "
+    "beanstanden kann.\n"
+    "- Formuliere eine Gesamtbewertung (summary) und eine konkrete "
+    "Handlungsempfehlung (recommended_action).\n\n"
+    "Wichtige Regeln:\n"
+    "- **Die von der Prüf-Engine berechneten Werte sind die autoritativen "
+    "Zahlen.** Du darfst sie nicht in Frage stellen oder neu berechnen.\n"
+    "- Verwende die von der Engine vorgegebene discrepancy_direction und "
+    "den discrepancy_amount_eur unverändert.\n"
+    "- Wenn die Engine keine Abweichung festgestellt hat, bestätige das, "
+    "weise aber darauf hin, dass nur die prüfbaren Posten kontrolliert "
+    "wurden.\n"
+    "- Wenn Daten fehlen und die Engine deshalb nichts prüfen konnte, "
+    "erkläre, welche Angaben für eine vollständige Prüfung fehlen.\n"
+    "- Erfinde keine Paragraphen, Rechtsprechung oder Tatsachen.\n"
+    "- Alle Texte auf Deutsch.\n\n"
+    "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
+    "{\n"
+    '  "enriched_calculations": [\n'
     "    {\n"
-    '      "label": "Beschreibung der Berechnung (z. B. '
-    '\\"Erwerbstätigenfreibetrag\\")",\n'
-    '      "document_values": {\n'
-    '        "extracted_numbers": {\n'
-    '          "brutto": 780.00,\n'
-    '          "netto": 710.10,\n'
-    '          "regelbedarf": 563.00,\n'
-    '          "unterkunft": 540.00\n'
-    "        },\n"
-    '        "authority_calculation": "Wie das Jobcenter gerechnet hat '
-    '(als Text)"\n'
-    "      },\n"
-    '      "correct_calculation": "Die korrekte Berechnung Schritt für '
-    'Schritt (als Text)",\n'
-    '      "discrepancy_found": true,\n'
-    '      "discrepancy_amount_eur": 26.00,\n'
-    '      "discrepancy_direction": "zulasten",\n'
-    '      "relevant_rule": "z. B. § 11b SGB II – Freibetrag: 20 % für '
-    '100,01–520 EUR, 30 % für 520,01–1.000 EUR",\n'
-    '      "commentary": "Erläuterung des Fehlers auf Deutsch"\n'
+    '      "index": 0,\n'
+    '      "commentary": "Erläuterung auf Deutsch"\n'
     "    }\n"
     "  ],\n"
     '  "overall_assessment": {\n'
-    '    "total_discrepancies": 1,\n'
-    '    "total_amount_eur": 26.00,\n'
-    '    "direction": "zulasten",\n'
-    '    "summary": "Gesamteindruck zu den Berechnungsfehlern",\n'
+    '    "summary": "Gesamteindruck zu den Berechnungen",\n'
     '    "recommended_action": "Was der Nutzer tun sollte '
-    '(z. B. Widerspruch einlegen)"\n'
+    '(z. B. Widerspruch einlegen, Behörde um Aufschlüsselung bitten)"\n'
     "  }\n"
     "}\n\n"
-    "Wichtige Regeln:\n"
-    "- Verwende deutsche Zahlenformate im Text, aber numerische Werte im JSON "
-    "(Punkt als Dezimaltrenner).\n"
-    "- Wenn keine Berechnungen im Dokument gefunden werden, gib ein leeres "
-    'calculations_found-Array und eine entsprechende Bewertung zurück.\n'
-    "- Wenn die Behördenberechnung korrekt ist, setze discrepancy_found auf "
-    'false und discrepancy_direction auf "keine".\n'
-    "- Wenn eine Berechnung wegen fehlender Angaben nicht sicher prüfbar ist, "
-    'setze discrepancy_found nur bei sicherem Fehler auf true; andernfalls '
-    'false, discrepancy_direction auf "keine", discrepancy_amount_eur auf '
-    "0.00 und erläutere die Unsicherheit im commentary-Feld.\n"
-    "- discrepancy_direction: \"zulasten\" = Behörde hat zu wenig berechnet "
-    "oder zu viel abgezogen; \"zugunsten\" = Behörde hat zu viel bewilligt "
-    'oder zu wenig abgezogen; "keine" = kein sicher feststellbarer Fehler.\n'
-    "- Alle Texte und Erläuterungen auf Deutsch verfassen.\n"
-    "- Erfinde keine Zahlen, die nicht im Dokument genannt werden.\n"
-    "- Erfinde keine Haushaltsdaten, Einkommensarten, Zeiträume oder "
-    "Rechtsfolgen.\n"
-    "- Gib ausschließlich gültiges JSON zurück. Kein Prosatext. Keine "
-    "Markdown-Formatierung."
+    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
+    "zusätzlichen Schlüssel."
 )
+
 
 # ---------------------------------------------------------------------------
 # Calculation check entry point
@@ -171,55 +153,28 @@ async def check_calculations(
     claims: list[dict[str, Any]] | None = None,
     sections: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Verify all monetary calculations in *normalized_text* against current
-    SGB II calculation rules using a specialised LLM call.
+    """Verify all monetary calculations in *normalized_text* against SGB II rules.
 
-    Extracts monetary figures from the document, applies the current
-    Bürgergeld / SGB II rules (freibeträge, aufrechnung, regelbedarf),
-    compares with the authority's calculation, and flags any discrepancies.
+    Three-phase architecture:
+        1. LLM extracts structured monetary data from the document.
+        2. Deterministic rules engine computes correct values and flags
+           discrepancies.
+        3. LLM explains the findings in natural language.
 
     Parameters
     ----------
     normalized_text :
         The cleaned document text (e.g. from OCR / synthesis pipeline).
     claims :
-        Optional list of claims from the reasoning pipeline.  Used as
-        additional context for the calculation check.  When ``None`` the
-        function still extracts numbers from just the document text.
+        Optional list of claims from the reasoning pipeline.
     sections :
-        Optional output sections from the reasoning pipeline.  Used as
-        additional context for the calculation check.
+        Optional output sections from the reasoning pipeline.
 
     Returns
     -------
     dict[str, Any]
-        A dict with keys:
-
-        - ``calculations_found``: ``list[dict]`` — one entry per identified
-          calculation, each containing the document values, the correct
-          calculation, discrepancy info, and the relevant rule.
-        - ``overall_assessment``: ``dict`` — summary of all discrepancies
-          with total amount, direction, and recommended action.
-
-        When the feature is disabled (``ENABLE_CALCULATION_CHECK = False``),
-        returns an early "skipped" result::
-
-            {
-                "calculations_found": [],
-                "overall_assessment": {
-                    "total_discrepancies": 0,
-                    "total_amount_eur": 0.0,
-                    "direction": "keine",
-                    "summary": (
-                        "Berechnungsprüfung ist deaktiviert. "
-                        "Zum Aktivieren ENABLE_CALCULATION_CHECK=True setzen."
-                    ),
-                    "recommended_action": "",
-                },
-            }
-
-        When no monetary calculations are found in the text or the LLM call
-        fails, returns an empty result with the same structure.
+        A dict with keys ``calculations_found`` and ``overall_assessment``,
+        matching the format expected by the pipeline and frontend.
     """
     from app.core.config import settings as s
 
@@ -241,11 +196,11 @@ async def check_calculations(
         calculation_timeout,
     )
 
-    # ── Build the user prompt ────────────────────────────────────────
-    user_parts: list[str] = []
+    client = _get_client()
 
+    # ── Build the user prompt (shared between extraction and explanation) ──
+    user_parts: list[str] = []
     user_parts.append("## DOKUMENT\n")
-    # Trim the document to a reasonable budget to avoid token overflow.
     user_parts.append(trim_text(normalized_text, s.MAX_FINAL_INPUT_CHARS * 2))
 
     if claims:
@@ -260,158 +215,65 @@ async def check_calculations(
         user_parts.append("\n\n## KONTEXT: ABSCHNITTE (aus der rechtlichen Analyse)\n")
         for key, val in sections.items():
             if val and val.strip():
-                # Only include non-empty sections, trimmed to a reasonable length.
                 user_parts.append(f"**{key}:** {trim_text(val, 1500)}")
 
     user_content = "\n".join(user_parts)
 
-    # ── Call the LLM ─────────────────────────────────────────────────
-    client = _get_client()
+    # ==================================================================
+    # Phase 1: Extraction
+    # ==================================================================
 
-    messages = [
-        {"role": "system", "content": _CALCULATION_SYSTEM + _STRICT_SUFFIX},
-        {"role": "user", "content": user_content},
-    ]
+    logger.info("check_calculations: phase 1 — extracting structured data from document")
 
-    logger.info(
-        "check_calculations: prompt ~%d chars (user=%d, system=%d)",
-        len(user_content) + len(_CALCULATION_SYSTEM) + len(_STRICT_SUFFIX),
-        len(user_content),
-        len(_CALCULATION_SYSTEM) + len(_STRICT_SUFFIX),
-    )
-
-    raw = await client.chat_completion(
-        messages,
-        temperature=0.1,
+    extraction = await _llm_extract(
+        client,
+        user_content,
         model=calculation_model,
         timeout=calculation_timeout,
-        max_retries=1,
     )
 
-    # ── Parse JSON with retry ────────────────────────────────────────
-    try:
-        result = _parse_json_response(raw, context="calculation check")
-    except JSONParseError:
-        logger.warning(
-            "JSON parse error in check_calculations, retrying with stricter prompt"
-        )
-        messages_minimal = [
-            {"role": "system", "content": _CALCULATION_SYSTEM + _STRICT_SUFFIX},
-            {
-                "role": "user",
-                "content": user_content[: s.MAX_FINAL_INPUT_CHARS],
-            },
-        ]
-        raw2 = await client.chat_completion(
-            messages_minimal,
-            temperature=0.0,
-            model=calculation_model,
-            timeout=calculation_timeout,
-            max_retries=1,
-        )
-        result = _parse_json_response(raw2, context="calculation check (retry)")
-
-    # ── Validate the result structure ────────────────────────────────
-    if not isinstance(result, dict):
-        logger.warning(
-            "check_calculations: LLM returned non-dict result (%s); "
-            "returning empty result",
-            type(result).__name__,
-        )
+    if extraction is None:
+        # Extraction completely failed — return empty result.
         return _empty_result(
-            "Die Berechnungsprüfung konnte kein gültiges Ergebnis liefern."
+            "Die Extraktion strukturierter Daten aus dem Dokument ist "
+            "fehlgeschlagen. Eine Berechnungsprüfung war nicht möglich."
         )
 
-    calculations = result.get("calculations_found", [])
-    if not isinstance(calculations, list):
-        logger.warning(
-            "check_calculations: 'calculations_found' is not a list (%s); "
-            "returning empty result",
-            type(calculations).__name__,
-        )
-        return _empty_result(
-            "Die Berechnungsprüfung konnte keine Berechnungen identifizieren."
-        )
+    # ==================================================================
+    # Phase 2: Deterministic rules engine
+    # ==================================================================
 
-    # Validate each calculation entry.
-    validated_calculations: list[dict[str, Any]] = []
-    for calc in calculations:
-        if not isinstance(calc, dict):
-            continue
+    logger.info("check_calculations: phase 2 — running deterministic rules engine")
 
-        # Normalize discrepancy_direction.
-        dd = calc.get("discrepancy_direction", "keine")
-        if dd not in ("zulasten", "zugunsten", "keine"):
-            dd = "keine"
+    calculations = process_extraction(extraction)
 
-        # Normalize discrepancy_amount_eur to float.
-        da = calc.get("discrepancy_amount_eur", 0.0)
-        try:
-            da = float(da)
-        except (TypeError, ValueError):
-            da = 0.0
+    logger.info(
+        "check_calculations: engine produced %d calculation entries",
+        len(calculations),
+    )
 
-        # Normalize discrepancy_found to bool.
-        df = bool(calc.get("discrepancy_found", False))
+    # ==================================================================
+    # Phase 3: Explanation
+    # ==================================================================
 
-        validated_calculations.append({
-            "label": str(calc.get("label", "")).strip(),
-            "document_values": {
-                "extracted_numbers": dict(
-                    calc.get("document_values", {}).get("extracted_numbers", {})
-                ),
-                "authority_calculation": str(
-                    calc.get("document_values", {}).get("authority_calculation", "")
-                ).strip(),
-            },
-            "correct_calculation": str(calc.get("correct_calculation", "")).strip(),
-            "discrepancy_found": df,
-            "discrepancy_amount_eur": da,
-            "discrepancy_direction": dd,
-            "relevant_rule": str(calc.get("relevant_rule", "")).strip(),
-            "commentary": str(calc.get("commentary", "")).strip(),
-        })
+    logger.info("check_calculations: phase 3 — explaining findings")
 
-    # Validate overall assessment.
-    raw_overall = result.get("overall_assessment", {})
-    if not isinstance(raw_overall, dict):
-        logger.warning(
-            "check_calculations: 'overall_assessment' is not a dict (%s); "
-            "using defaults",
-            type(raw_overall).__name__,
-        )
-        raw_overall = {}
+    explanation = await _llm_explain(
+        client,
+        user_content,
+        calculations,
+        extraction,
+        model=calculation_model,
+        timeout=calculation_timeout,
+    )
 
-    total_discrepancies = raw_overall.get("total_discrepancies", 0)
-    try:
-        total_discrepancies = int(total_discrepancies)
-    except (TypeError, ValueError):
-        total_discrepancies = 0
+    # ── Merge explanation into calculations ──────────────────────────
+    validated_calculations = _merge_explanations(calculations, explanation)
 
-    total_amount_eur = raw_overall.get("total_amount_eur", 0.0)
-    try:
-        total_amount_eur = float(total_amount_eur)
-    except (TypeError, ValueError):
-        total_amount_eur = 0.0
-
-    overall_direction = raw_overall.get("direction", "keine")
-    if overall_direction not in ("zulasten", "zugunsten", "keine"):
-        overall_direction = "keine"
-
-    overall_assessment = {
-        "total_discrepancies": total_discrepancies,
-        "total_amount_eur": total_amount_eur,
-        "direction": overall_direction,
-        "summary": str(raw_overall.get("summary", "")).strip(),
-        "recommended_action": str(raw_overall.get("recommended_action", "")).strip(),
-    }
-
-    # If the LLM returned no calculations at all, use a neutral assessment.
-    if not validated_calculations and not raw_overall.get("summary"):
-        overall_assessment["summary"] = (
-            "Es wurden keine Berechnungen im Dokument gefunden oder "
-            "die Berechnungsprüfung konnte keine eindeutigen Ergebnisse liefern."
-        )
+    # ── Build overall assessment ─────────────────────────────────────
+    overall_assessment = _build_overall_assessment(
+        validated_calculations, explanation
+    )
 
     logger.info(
         "check_calculations: complete (model=%s, %d calculations found, "
@@ -425,6 +287,325 @@ async def check_calculations(
     return {
         "calculations_found": validated_calculations,
         "overall_assessment": overall_assessment,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Phase 1: LLM extraction call
+# ---------------------------------------------------------------------------
+
+
+async def _llm_extract(
+    client: Any,
+    user_content: str,
+    *,
+    model: str,
+    timeout: float,
+) -> dict[str, Any] | None:
+    """Call the extraction LLM and return parsed JSON, or ``None`` on failure."""
+    from app.core.config import settings as s
+
+    messages = [
+        {"role": "system", "content": _EXTRACTION_SYSTEM + _STRICT_SUFFIX},
+        {"role": "user", "content": user_content},
+    ]
+
+    logger.info(
+        "_llm_extract: prompt ~%d chars (user=%d, system=%d)",
+        len(user_content) + len(_EXTRACTION_SYSTEM) + len(_STRICT_SUFFIX),
+        len(user_content),
+        len(_EXTRACTION_SYSTEM) + len(_STRICT_SUFFIX),
+    )
+
+    try:
+        raw = await client.chat_completion(
+            messages,
+            temperature=0.1,
+            model=model,
+            timeout=timeout,
+            max_retries=1,
+        )
+        result = _parse_json_response(raw, context="calculation extraction")
+    except JSONParseError:
+        logger.warning("JSON parse error in extraction, retrying with stricter prompt")
+        messages_minimal = [
+            {"role": "system", "content": _EXTRACTION_SYSTEM + _STRICT_SUFFIX},
+            {"role": "user", "content": user_content[: s.MAX_FINAL_INPUT_CHARS]},
+        ]
+        try:
+            raw2 = await client.chat_completion(
+                messages_minimal,
+                temperature=0.0,
+                model=model,
+                timeout=timeout,
+                max_retries=1,
+            )
+            result = _parse_json_response(raw2, context="calculation extraction (retry)")
+        except JSONParseError:
+            logger.warning("Extraction JSON parse failed even after retry")
+            return None
+
+    if not isinstance(result, dict):
+        logger.warning(
+            "_llm_extract: LLM returned non-dict result (%s)",
+            type(result).__name__,
+        )
+        return None
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: LLM explanation call
+# ---------------------------------------------------------------------------
+
+
+async def _llm_explain(
+    client: Any,
+    document_content: str,
+    engine_calculations: list[dict[str, Any]],
+    extraction: dict[str, Any],
+    *,
+    model: str,
+    timeout: float,
+) -> dict[str, Any] | None:
+    """Call the explanation LLM to enrich engine output with natural language.
+
+    Returns the parsed JSON, or ``None`` if the call fails (caller falls back
+    to the engine's templated commentary).
+    """
+    from app.core.config import settings as s
+
+    # Build an explanation prompt that includes the engine output so the
+    # LLM can produce detailed commentary.
+    engine_summary = json.dumps(
+        _summarise_engine_output(engine_calculations),
+        ensure_ascii=False,
+        indent=2,
+    )
+
+    extraction_summary = json.dumps(
+        {
+            "person_type": extraction.get("person_type"),
+            "period_year": extraction.get("period_year"),
+            "has_minor_child": extraction.get("has_minor_child"),
+            "authority_calculation_text": extraction.get(
+                "authority_calculation_text", ""
+            ),
+            "extraction_notes": extraction.get("extraction_notes", ""),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+    explanation_user = (
+        f"{document_content}\n\n"
+        f"## EXTRAHIERTE DATEN\n{extraction_summary}\n\n"
+        f"## ERGEBNISSE DER PRÜF-ENGINE\n{engine_summary}\n"
+    )
+
+    messages = [
+        {"role": "system", "content": _EXPLANATION_SYSTEM + _STRICT_SUFFIX},
+        {"role": "user", "content": explanation_user},
+    ]
+
+    logger.info(
+        "_llm_explain: prompt ~%d chars (user=%d, system=%d)",
+        len(explanation_user) + len(_EXPLANATION_SYSTEM) + len(_STRICT_SUFFIX),
+        len(explanation_user),
+        len(_EXPLANATION_SYSTEM) + len(_STRICT_SUFFIX),
+    )
+
+    try:
+        raw = await client.chat_completion(
+            messages,
+            temperature=0.1,
+            model=model,
+            timeout=timeout,
+            max_retries=1,
+        )
+        result = _parse_json_response(raw, context="calculation explanation")
+    except JSONParseError:
+        logger.warning(
+            "JSON parse error in explanation LLM — using engine commentary as fallback"
+        )
+        return None
+
+    if not isinstance(result, dict):
+        logger.warning(
+            "_llm_explain: LLM returned non-dict result (%s)",
+            type(result).__name__,
+        )
+        return None
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Result assembly helpers
+# ---------------------------------------------------------------------------
+
+
+def _summarise_engine_output(
+    calculations: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build a compact summary of the engine output for the explanation LLM.
+
+    Includes only the fields the LLM needs to write good commentary.
+    """
+    summary: list[dict[str, Any]] = []
+    for i, calc in enumerate(calculations):
+        summary.append({
+            "index": i,
+            "label": calc.get("label"),
+            "computation_detail": calc.get("computed_values", {}).get(
+                "computation_detail", ""
+            ),
+            "deterministic_result": calc.get("computed_values", {}).get(
+                "deterministic_result"
+            ),
+            "discrepancy_found": calc.get("discrepancy_found"),
+            "discrepancy_amount_eur": calc.get("discrepancy_amount_eur"),
+            "discrepancy_direction": calc.get("discrepancy_direction"),
+            "relevant_rule": calc.get("relevant_rule"),
+        })
+    return summary
+
+
+def _merge_explanations(
+    engine_calculations: list[dict[str, Any]],
+    explanation: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Merge LLM-produced commentary into the engine's calculation entries.
+
+    If *explanation* is ``None`` or parsing fails, the engine's templated
+    commentary is kept as-is.
+    """
+    enriched: list[dict[str, Any]] = []
+
+    # Build a lookup: index → commentary text.
+    commentary_by_index: dict[int, str] = {}
+    if explanation is not None:
+        enriched_list = explanation.get("enriched_calculations", [])
+        if isinstance(enriched_list, list):
+            for item in enriched_list:
+                if isinstance(item, dict):
+                    idx = item.get("index", -1)
+                    try:
+                        idx = int(idx)
+                    except (TypeError, ValueError):
+                        continue
+                    commentary_by_index[idx] = str(
+                        item.get("commentary", "")
+
+                    ).strip()
+
+    for i, calc in enumerate(engine_calculations):
+        entry = dict(calc)  # shallow copy
+
+        # Override commentary with LLM explanation if available.
+        if i in commentary_by_index and commentary_by_index[i]:
+            entry["commentary"] = commentary_by_index[i]
+
+        # Add extracted_numbers from the document_values for backward compat.
+        if "document_values" not in entry:
+            entry["document_values"] = {
+                "extracted_numbers": {},
+                "authority_calculation": "",
+            }
+
+        # Ensure all required fields are valid.
+        dd = entry.get("discrepancy_direction", "keine")
+        if dd not in ("zulasten", "zugunsten", "keine"):
+            dd = "keine"
+        entry["discrepancy_direction"] = dd
+
+        try:
+            entry["discrepancy_amount_eur"] = float(
+                entry.get("discrepancy_amount_eur", 0.0)
+            )
+        except (TypeError, ValueError):
+            entry["discrepancy_amount_eur"] = 0.0
+
+        entry["discrepancy_found"] = bool(entry.get("discrepancy_found", False))
+
+        enriched.append(entry)
+
+    return enriched
+
+
+def _build_overall_assessment(
+    calculations: list[dict[str, Any]],
+    explanation: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build the ``overall_assessment`` dict from the engine + LLM results."""
+    # Compute totals from the engine output (deterministic, not LLM-derived).
+    total_discrepancies = 0
+    total_amount_eur = 0.0
+    directions: list[str] = []
+
+    for calc in calculations:
+        if calc.get("discrepancy_found"):
+            total_discrepancies += 1
+            total_amount_eur += calc.get("discrepancy_amount_eur", 0.0)
+            directions.append(calc.get("discrepancy_direction", "keine"))
+
+    # Determine overall direction.
+    if not directions:
+        overall_direction = "keine"
+    elif all(d == "zulasten" for d in directions):
+        overall_direction = "zulasten"
+    elif all(d == "zugunsten" for d in directions):
+        overall_direction = "zugunsten"
+    else:
+        overall_direction = "gemischt"
+        # Normalize to one of the three allowed values.
+        overall_direction = "zulasten"  # default when mixed
+
+    # Round total.
+    total_amount_eur = round(total_amount_eur, 2)
+
+    # Use LLM summary and recommendation if available.
+    summary = ""
+    recommended_action = ""
+    if explanation is not None:
+        oa = explanation.get("overall_assessment", {})
+        if isinstance(oa, dict):
+            summary = str(oa.get("summary", "")).strip()
+            recommended_action = str(oa.get("recommended_action", "")).strip()
+
+    if not summary:
+        if not calculations:
+            summary = (
+                "Es wurden keine Berechnungen im Dokument gefunden oder "
+                "die Berechnungsprüfung konnte keine eindeutigen Ergebnisse "
+                "liefern."
+            )
+        elif total_discrepancies == 0:
+            summary = (
+                "Die Prüf-Engine hat bei den prüfbaren Posten keine "
+                "Abweichungen festgestellt. Nicht alle Berechnungen "
+                "konnten geprüft werden."
+            )
+        else:
+            summary = (
+                f"Es wurden {total_discrepancies} Abweichung(en) mit "
+                f"einem Gesamtbetrag von {total_amount_eur:.2f} EUR "
+                f"festgestellt."
+            )
+
+    if not recommended_action and total_discrepancies > 0:
+        recommended_action = (
+            "Bitte lassen Sie die Berechnung von einer Fachstelle "
+            "oder einem Rechtsanwalt für Sozialrecht überprüfen."
+        )
+
+    return {
+        "total_discrepancies": total_discrepancies,
+        "total_amount_eur": total_amount_eur,
+        "direction": overall_direction,
+        "summary": summary,
+        "recommended_action": recommended_action,
     }
 
 

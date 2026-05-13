@@ -1,15 +1,10 @@
 """Unit tests for the calculation verification service (WP-014).
 
-Covers the ``check_calculations`` function in ``app.services.calculation``,
-including the disabled-early-return, the normal LLM-driven path, empty results,
-and edge cases around optional ``claims`` / ``sections`` parameters.
+Covers the ``check_calculations`` function in ``app.services.calculation``
+with the new three-phase architecture (extraction → rules engine → explanation).
 """
 
-# Semantic Version: 0.1.0
-
-from __future__ import annotations
-
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -33,21 +28,35 @@ _SAMPLE_TEXT = (
 )
 
 
-@pytest.fixture
-def mock_parse_json() -> MagicMock:
-    """Patch ``_parse_json_response`` so no real LLM call is made."""
-    with patch("app.services.calculation._parse_json_response") as mock:
-        yield mock
-
-
-@pytest.fixture
-def mock_client() -> MagicMock:
-    """Patch ``_get_client`` to return a fake async client."""
-    with patch("app.services.calculation._get_client") as mock:
-        fake_client = AsyncMock()
-        fake_client.chat_completion = AsyncMock(return_value="{}")
-        mock.return_value = fake_client
-        yield mock
+def _make_extraction(**overrides):
+    """Return a default extraction dict, optionally overriding fields."""
+    base = {
+        "person_type": "alleinstehend",
+        "has_minor_child": False,
+        "period_year": 2025,
+        "extracted_values": {
+            "regelbedarf_authority": 563.00,
+            "regelbedarf_stufe": 1,
+            "brutto_einkommen": 1200.00,
+            "netto_einkommen": 950.00,
+            "freibetrag_authority": 184.00,
+            "aufrechnung_authority": 28.15,
+            "aufrechnung_regelbedarf_used": 563.00,
+            "kdu_unterkunft": 540.00,
+            "kdu_heizung": 80.00,
+            "kdu_gesamt_authority": 620.00,
+            "anrechenbares_einkommen_authority": 1050.00,
+            "auszahlungsbetrag_authority": 133.00,
+        },
+        "authority_calculation_text": (
+            "Regelbedarf 563,00 EUR, Freibetrag 184,00 EUR "
+            "(100 EUR Grundfreibetrag + 20 % von 420 EUR), "
+            "Aufrechnung 28,15 EUR, Auszahlung 133,00 EUR"
+        ),
+        "extraction_notes": "",
+    }
+    base.update(overrides)
+    return base
 
 
 # ---------------------------------------------------------------------------
@@ -56,15 +65,14 @@ def mock_client() -> MagicMock:
 
 
 async def test_check_calculations_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When ``ENABLE_CALCULATION_CHECK=False``, return an early skipped result
-    without calling the LLM."""
+    """When ``ENABLE_CALCULATION_CHECK=False``, return an early empty result
+    without calling any LLM."""
     monkeypatch.setattr(
         "app.core.config.settings.ENABLE_CALCULATION_CHECK", False
     )
 
     result = await check_calculations(_SAMPLE_TEXT)
 
-    # Should return the "skipped" empty result immediately.
     assert result["calculations_found"] == []
     assert result["overall_assessment"]["total_discrepancies"] == 0
     assert result["overall_assessment"]["total_amount_eur"] == 0.0
@@ -73,165 +81,171 @@ async def test_check_calculations_disabled(monkeypatch: pytest.MonkeyPatch) -> N
     assert result["overall_assessment"]["recommended_action"] == ""
 
 
-async def test_check_calculations_success(
-    mock_parse_json: MagicMock, mock_client: MagicMock
-) -> None:
-    """Happy path: LLM returns valid JSON with calculations found.
+async def test_check_calculations_extraction_failure() -> None:
+    """When ``_llm_extract`` returns ``None``, return an empty result with
+    an error message."""
+    mock_extract = AsyncMock(return_value=None)
 
-    Verifies:
-    - ``calculations_found`` is returned correctly with all fields
-    - ``overall_assessment`` has the right structure
-    - Discrepancy values are properly validated (direction, amount)
-    """
-    mock_parse_json.return_value = {
-        "calculations_found": [
-            {
-                "label": "Erwerbstätigenfreibetrag",
-                "document_values": {
-                    "extracted_numbers": {
-                        "brutto": 1200.0,
-                        "netto": 950.0,
-                        "regelbedarf": 563.0,
-                        "unterkunft": 540.0,
-                    },
-                    "authority_calculation": (
-                        "Jobcenter: 100 EUR Grundfreibetrag + "
-                        "20 % von 420 EUR = 184 EUR Freibetrag"
-                    ),
-                },
-                "correct_calculation": (
-                    "Korrekt: 100 EUR Grundfreibetrag + "
-                    "20 % von 420 EUR (100-520) = 84 EUR + "
-                    "30 % von 480 EUR (520-1000) = 144 EUR, "
-                    "gesamt = 328 EUR Freibetrag"
-                ),
-                "discrepancy_found": True,
-                "discrepancy_amount_eur": 144.0,
-                "discrepancy_direction": "zulasten",
-                "relevant_rule": "§ 11b SGB II – Freibetrag bei Erwerbstätigkeit",
-                "commentary": (
-                    "Das Jobcenter hat nur 184 EUR statt korrekt "
-                    "328 EUR Freibetrag berücksichtigt."
-                ),
-            }
-        ],
-        "overall_assessment": {
-            "total_discrepancies": 1,
-            "total_amount_eur": 144.0,
-            "direction": "zulasten",
-            "summary": (
-                "Es wurde ein Berechnungsfehler beim "
-                "Erwerbstätigenfreibetrag festgestellt."
-            ),
-            "recommended_action": (
-                "Widerspruch einlegen und Neuberechnung "
-                "des Freibetrags fordern."
-            ),
-        },
-    }
-
-    result = await check_calculations(_SAMPLE_TEXT)
-
-    # ── calculations_found ───────────────────────────────────────────
-    assert len(result["calculations_found"]) == 1
-    calc = result["calculations_found"][0]
-
-    assert calc["label"] == "Erwerbstätigenfreibetrag"
-    assert calc["document_values"]["extracted_numbers"]["brutto"] == 1200.0
-    assert calc["document_values"]["extracted_numbers"]["netto"] == 950.0
-    assert calc["document_values"]["extracted_numbers"]["regelbedarf"] == 563.0
-    assert calc["document_values"]["extracted_numbers"]["unterkunft"] == 540.0
-    assert "Grundfreibetrag" in calc["document_values"]["authority_calculation"]
-    assert "Grundfreibetrag" in calc["correct_calculation"]
-    assert calc["discrepancy_found"] is True
-    assert calc["discrepancy_amount_eur"] == 144.0
-    assert calc["discrepancy_direction"] == "zulasten"
-    assert "§ 11b SGB II" in calc["relevant_rule"]
-    assert isinstance(calc["commentary"], str)
-
-    # ── overall_assessment ───────────────────────────────────────────
-    assessment = result["overall_assessment"]
-    assert assessment["total_discrepancies"] == 1
-    assert assessment["total_amount_eur"] == 144.0
-    assert assessment["direction"] == "zulasten"
-    assert "Berechnungsfehler" in assessment["summary"]
-    assert "Widerspruch" in assessment["recommended_action"]
-
-    # Verify the LLM was actually called via the client (not early-returned).
-    mock_client.return_value.chat_completion.assert_awaited_once()
-
-
-async def test_check_calculations_empty_result(
-    mock_parse_json: MagicMock, mock_client: MagicMock
-) -> None:
-    """When the LLM returns an empty ``calculations_found`` array, the
-    function handles it gracefully and returns a neutral assessment."""
-    mock_parse_json.return_value = {
-        "calculations_found": [],
-        "overall_assessment": {
-            "total_discrepancies": 0,
-            "total_amount_eur": 0.0,
-            "direction": "keine",
-            "summary": (
-                "Es wurden keine Berechnungen im Dokument gefunden, "
-                "die einer Überprüfung bedürfen."
-            ),
-            "recommended_action": "",
-        },
-    }
-
-    result = await check_calculations(_SAMPLE_TEXT)
+    with patch("app.services.calculation._llm_extract", mock_extract):
+        result = await check_calculations(_SAMPLE_TEXT)
 
     assert result["calculations_found"] == []
     assert result["overall_assessment"]["total_discrepancies"] == 0
     assert result["overall_assessment"]["total_amount_eur"] == 0.0
     assert result["overall_assessment"]["direction"] == "keine"
-    assert "keine Berechnungen" in result["overall_assessment"]["summary"]
+    assert "fehlgeschlagen" in result["overall_assessment"]["summary"]
     assert result["overall_assessment"]["recommended_action"] == ""
 
 
-async def test_check_calculations_no_claims_or_sections(
-    mock_parse_json: MagicMock, mock_client: MagicMock
-) -> None:
-    """When ``claims=None`` and ``sections=None``, the function works with
-    just the ``normalized_text`` and produces a valid result."""
-    mock_parse_json.return_value = {
-        "calculations_found": [
-            {
-                "label": "Regelbedarf",
-                "document_values": {
-                    "extracted_numbers": {"regelbedarf": 563.0},
-                    "authority_calculation": "563,00 EUR",
-                },
-                "correct_calculation": "563,00 EUR (korrekt)",
-                "discrepancy_found": False,
-                "discrepancy_amount_eur": 0.0,
-                "discrepancy_direction": "keine",
-                "relevant_rule": "§ 20 SGB II",
-                "commentary": "Regelbedarf korrekt angesetzt.",
-            }
-        ],
-        "overall_assessment": {
-            "total_discrepancies": 0,
-            "total_amount_eur": 0.0,
-            "direction": "keine",
-            "summary": "Alle Berechnungen sind korrekt.",
-            "recommended_action": "",
-        },
-    }
+async def test_check_calculations_successful_pipeline() -> None:
+    """Happy path through all three phases.
 
-    # Call with only normalized_text; claims and sections are None by default.
-    result = await check_calculations(_SAMPLE_TEXT, claims=None, sections=None)
+    Verifies:
+    - ``calculations_found`` entries have all required fields
+    - ``overall_assessment`` reflects the LLM explanation
+    - Discrepancy flags from the deterministic rules engine are propagated
+    """
+    extraction = _make_extraction()
 
-    assert len(result["calculations_found"]) == 1
-    assert result["calculations_found"][0]["label"] == "Regelbedarf"
-    assert result["calculations_found"][0]["discrepancy_found"] is False
-    assert result["calculations_found"][0]["discrepancy_amount_eur"] == 0.0
-    assert result["calculations_found"][0]["discrepancy_direction"] == "keine"
+    mock_extract = AsyncMock(return_value=extraction)
 
-    assert result["overall_assessment"]["total_discrepancies"] == 0
-    assert result["overall_assessment"]["direction"] == "keine"
-    assert result["overall_assessment"]["summary"] == "Alle Berechnungen sind korrekt."
+    mock_explain = AsyncMock(
+        return_value={
+            "enriched_calculations": [
+                {"index": 1, "commentary": "Der Freibetrag wurde zu niedrig angesetzt."},
+                {"index": 4, "commentary": "Das anrechenbare Einkommen weicht ab."},
+            ],
+            "overall_assessment": {
+                "summary": "Test summary from explanation LLM",
+                "recommended_action": "Widerspruch",
+            },
+        }
+    )
 
-    # The client should still have been called (feature was enabled).
-    mock_client.return_value.chat_completion.assert_awaited_once()
+    patches = [
+        patch("app.services.calculation._llm_extract", mock_extract),
+        patch("app.services.calculation._llm_explain", mock_explain),
+    ]
+
+    with patches[0], patches[1]:
+        result = await check_calculations(_SAMPLE_TEXT)
+
+    # ── calculations_found ──────────────────────────────────────────────
+    calcs = result["calculations_found"]
+    assert len(calcs) > 0, "Expected at least one calculation entry"
+
+    # Verify each entry has all required fields.
+    for entry in calcs:
+        assert "label" in entry
+        assert "document_values" in entry
+        assert "extracted_numbers" in entry["document_values"]
+        assert "authority_calculation" in entry["document_values"]
+        assert "computed_values" in entry
+        assert "deterministic_result" in entry["computed_values"]
+        assert "computation_detail" in entry["computed_values"]
+        assert "correct_calculation" in entry
+        assert "discrepancy_found" in entry
+        assert "discrepancy_amount_eur" in entry
+        assert "discrepancy_direction" in entry
+        assert "relevant_rule" in entry
+        assert "commentary" in entry
+
+    # Check specific expected entries (by label).
+    labels = [c["label"] for c in calcs]
+
+    # ── Regelbedarf (no discrepancy: 563 vs 563) ────────────────────────
+    assert "Regelbedarf" in labels
+    rb = next(c for c in calcs if c["label"] == "Regelbedarf")
+    assert rb["discrepancy_found"] is False
+    assert rb["discrepancy_amount_eur"] == 0.0
+    assert rb["discrepancy_direction"] == "keine"
+
+    # ── Erwerbstätigenfreibetrag (discrepancy: 184 vs 348 ─ zulasten) ────
+    assert "Erwerbstätigenfreibetrag" in labels
+    fb = next(c for c in calcs if c["label"] == "Erwerbstätigenfreibetrag")
+    assert fb["discrepancy_found"] is True
+    assert fb["discrepancy_direction"] == "zulasten"
+    # computed=348, authority=184, diff=164
+    assert fb["discrepancy_amount_eur"] == 164.0
+    assert "§ 11b SGB II" in fb["relevant_rule"]
+    # LLM commentary should override engine commentary for index 1.
+    assert fb["commentary"] == "Der Freibetrag wurde zu niedrig angesetzt."
+
+    # ── Aufrechnung (no discrepancy: 28.15 vs 28.15) ────────────────────
+    assert "Aufrechnung (Darlehen)" in labels
+    auf = next(c for c in calcs if c["label"] == "Aufrechnung (Darlehen)")
+    assert auf["discrepancy_found"] is False
+
+    # ── KdU (no discrepancy: 540+80 = 620) ──────────────────────────────
+    assert "Kosten der Unterkunft (KdU)" in labels
+    kdu = next(c for c in calcs if c["label"] == "Kosten der Unterkunft (KdU)")
+    assert kdu["discrepancy_found"] is False
+
+    # ── Einkommensanrechnung (discrepancy: 852 vs 1050 ─ zugunsten) ─────
+    assert "Einkommensanrechnung (Brutto - Freibetrag)" in labels
+    ec = next(c for c in calcs if c["label"] == "Einkommensanrechnung (Brutto - Freibetrag)")
+    assert ec["discrepancy_found"] is True
+    assert ec["discrepancy_direction"] == "zugunsten"
+    assert ec["discrepancy_amount_eur"] == 198.0
+    # LLM commentary should override engine commentary for index 4.
+    assert ec["commentary"] == "Das anrechenbare Einkommen weicht ab."
+
+    # ── Auszahlungsbetrag (discrepancy: 331 vs 133 ─ zulasten) ──────────
+    assert "Auszahlungsbetrag (Gesamt)" in labels
+    az = next(c for c in calcs if c["label"] == "Auszahlungsbetrag (Gesamt)")
+    assert az["discrepancy_found"] is True
+    assert az["discrepancy_direction"] == "zulasten"
+    assert az["discrepancy_amount_eur"] == 198.0
+
+    # ── overall_assessment ──────────────────────────────────────────────
+    assessment = result["overall_assessment"]
+    assert assessment["summary"] == "Test summary from explanation LLM"
+    assert assessment["recommended_action"] == "Widerspruch"
+
+    # Total discrepancies from the engine (3 of 6 entries have discrepancies).
+    assert assessment["total_discrepancies"] == 3
+    assert assessment["total_amount_eur"] == 560.0  # 164 + 198 + 198
+    # Mixed directions default to "zulasten" in _build_overall_assessment.
+    assert assessment["direction"] == "zulasten"
+
+
+async def test_check_calculations_explanation_fallback() -> None:
+    """When ``_llm_explain`` returns ``None``, the engine's templated
+    commentary is used as a fallback. The result is still valid."""
+    extraction = _make_extraction()
+
+    mock_extract = AsyncMock(return_value=extraction)
+    mock_explain = AsyncMock(return_value=None)
+
+    patches = [
+        patch("app.services.calculation._llm_extract", mock_extract),
+        patch("app.services.calculation._llm_explain", mock_explain),
+    ]
+
+    with patches[0], patches[1]:
+        result = await check_calculations(_SAMPLE_TEXT)
+
+    # ── calculations_found ──────────────────────────────────────────────
+    calcs = result["calculations_found"]
+    assert len(calcs) > 0
+
+    # Every entry must have a non-empty commentary (engine fallback).
+    for entry in calcs:
+        assert isinstance(entry["commentary"], str)
+        assert len(entry["commentary"]) > 0
+
+    # The engine's discrepancy data should still be intact.
+    disc_entries = [c for c in calcs if c["discrepancy_found"]]
+    assert len(disc_entries) == 3
+
+    # ── overall_assessment (fallback — no LLM summary) ──────────────────
+    assessment = result["overall_assessment"]
+    # Since _llm_explain returned None, the engine's templated summary
+    # should be used instead.
+    assert len(assessment["summary"]) > 0
+    assert "3" in assessment["summary"] or "drei" in assessment["summary"].lower() or "560" in assessment["summary"]
+    assert "560" in assessment["summary"], (
+        "Expected the fallback summary to mention the total amount (560.00 EUR)"
+    )
+    assert assessment["total_discrepancies"] == 3
+    assert assessment["total_amount_eur"] == 560.0
