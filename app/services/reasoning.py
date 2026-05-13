@@ -513,7 +513,6 @@ async def triage_document(normalized_text: str) -> dict[str, list[str]]:
     )
     return {"issues": clean_issues, "questions": clean_questions}
 
-
 # ---------------------------------------------------------------------------
 # Stage 7 — Adversarial Legal Review (Rechtsprüfungsrat)
 # ---------------------------------------------------------------------------
@@ -528,35 +527,47 @@ _ADVERSARIAL_REVIEW_SYSTEM = (
     "3. Eine Liste konkreter Rechtsfragen.\n"
     "4. Eine Liste rechtlicher Claims (Aussagen) mit Konfidenzwerten.\n"
     "5. Rechtsquellen-Chunks aus dem Corpus.\n\n"
+    "Deine Aufgabe ist nicht, die Claims automatisch zu verteidigen. Du "
+    "prüfst jeden Claim kritisch, gegnerisch und neutral. Ein Claim kann "
+    "stark, teilweise tragfähig, unsicher oder unbegründet sein.\n\n"
     "Du prüfst JEDEN Claim aus allen Perspektiven:\n\n"
     "**1. Verteidigerperspektive (Bürgeranwalt):**\n"
     "- Welche Gegenargumente sprechen gegen die Position der Behörde?\n"
     "- Welche Rechtsfehler hat die Behörde möglicherweise begangen?\n"
-    "- Welche Schutzvorschriften kommen dem Bürger zugute?\n\n"
-    "**2. Behördengerspektive (gegnerische Partei):**\n"
+    "- Welche Schutzvorschriften kommen dem Bürger zugute?\n"
+    "- Welche Tatsachen aus dem Dokument stützen die Position des Bürgers?\n\n"
+    "**2. Behördenperspektive (gegnerische Partei):**\n"
     "- Was würde die Behörde / das Jobcenter / Sozialamt zur "
     "Verteidigung ihrer Position vorbringen?\n"
-    "- Auf welche Rechtsgrundlagen würde sie sich stützen?\n"
-    "- Welche Ermessensspielräume hätte sie?\n\n"
+    "- Auf welche bereitgestellten Rechtsgrundlagen würde sie sich stützen?\n"
+    "- Welche Ermessens-, Beurteilungs- oder Nachweisspielräume hätte sie?\n"
+    "- Welche Schwächen oder Lücken in der Position des Bürgers würde sie "
+    "angreifen?\n\n"
     "**3. Richterliche Perspektive (neutrale Instanz):**\n"
     "- Wie würde ein neutrales Gericht diesen Fall wahrscheinlich "
     "beurteilen?\n"
     "- Ist die Rechtslage eindeutig oder bestehen "
     "Auslegungsspielräume?\n"
-    "- Wie hoch ist die Erfolgswahrscheinlichkeit vor Gericht?\n\n"
+    "- Ist der Claim anhand der bereitgestellten Chunks ausreichend belegt?\n"
+    "- Wie hoch ist die Erfolgsaussicht qualitativ einzuschätzen "
+    "(keine Garantie, keine verbindliche Rechtsberatung)?\n\n"
     "**4. Verfahrensprüfung:**\n"
     "- Wurden formelle Verfahrensvorschriften eingehalten?\n"
     "- Liegen formelle Fehler vor (fehlende Anhörung, unzureichende "
-    "Begründung, Fristversäumnis, falsche Zuständigkeit)?\n"
-    "- Ist der Bescheid formell anfechtbar?\n\n"
+    "Begründung, Fristversäumnis, falsche Zuständigkeit, fehlende "
+    "Bestimmtheit, unklare Rechtsbehelfsbelehrung)?\n"
+    "- Ist der Bescheid formell angreifbar?\n"
+    "- Welche Verfahrensfehler sind nur möglich, aber nicht sicher "
+    "feststellbar?\n\n"
     "**5. Risikobewertung:**\n"
     "- Welche rechtlichen Risiken bestehen für den Bürger?\n"
     "- Wie hoch ist das Risiko einer negativen Entscheidung?\n"
-    "- Wie stark ist die Verteidigungsposition insgesamt?\n\n"
+    "- Wie stark ist die Verteidigungsposition insgesamt?\n"
+    "- Welche fehlenden Tatsachen oder Unterlagen könnten entscheidend sein?\n\n"
     "Erstelle für JEDEN Claim eine Bewertung als JSON-Objekt:\n"
-    '{\n'
+    "{\n"
     '  "reviews": [\n'
-    '    {\n'
+    "    {\n"
     '      "claim_index": 0,\n'
     '      "defense_argument": "Argument aus Verteidigersicht",\n'
     '      "authority_argument": "Argument der Behörde",\n'
@@ -564,32 +575,39 @@ _ADVERSARIAL_REVIEW_SYSTEM = (
     '      "procedural_issues": "Verfahrensfehler oder -bedenken",\n'
     '      "risk_level": "niedrig" | "mittel" | "hoch",\n'
     '      "recommended_strategy": "Empfohlene Strategie"\n'
-    '    }\n'
-    '  ],\n'
+    "    }\n"
+    "  ],\n"
     '  "overall_assessment": {\n'
     '    "summary": "Gesamtbewertung aller Claims aus adversarialer Sicht",\n'
     '    "key_risks": [\n'
     '      "Risiko 1 – Beschreibung",\n'
     '      "Risiko 2 – Beschreibung",\n'
     '      "Risiko 3 – Beschreibung"\n'
-    '    ],\n'
+    "    ],\n"
     '    "recommended_next_steps": [\n'
     '      "Schritt 1 – Beschreibung",\n'
     '      "Schritt 2 – Beschreibung",\n'
     '      "Schritt 3 – Beschreibung"\n'
-    '    ],\n'
+    "    ],\n"
     '    "confidence_in_defense": 0.65,\n'
     '    "procedural_errors_found": [\n'
     '      "Formeller Fehler 1",\n'
     '      "Formeller Fehler 2"\n'
-    '    ]\n'
-    '  }\n'
-    '}\n\n'
+    "    ]\n"
+    "  }\n"
+    "}\n\n"
     "Wichtige Regeln:\n"
     "- Alle Texte auf Deutsch verfassen.\n"
     "- Keine Tatsachen, Paragraphen oder Aktenzeichen erfinden.\n"
     "- Nur auf Grundlage der bereitgestellten Dokumente und Chunks "
     "argumentieren.\n"
+    "- Wenn ein Claim durch die bereitgestellten Chunks nicht ausreichend "
+    "gestützt wird, sage das ausdrücklich und bewerte das Risiko entsprechend "
+    "höher.\n"
+    "- Die Behördenperspektive muss ernsthaft und stark formuliert werden, "
+    "auch wenn dies der Nutzerposition schadet.\n"
+    "- Die richterliche Perspektive muss neutral sein und darf keine "
+    "Erfolgsaussicht übertreiben.\n"
     "- Die Risikobewertung soll ehrlich sein – eine schwache "
     "Verteidigungsposition eingestehen, wenn die Fakten dagegen "
     "sprechen.\n"
@@ -597,12 +615,16 @@ _ADVERSARIAL_REVIEW_SYSTEM = (
     "- confidence_in_defense: 0.0 (sehr schwach) bis 1.0 (sehr stark).\n"
     "- procedural_errors_found kann auch leer sein, wenn keine "
     "Verfahrensfehler erkennbar sind.\n"
+    "- Mögliche, aber nicht sicher feststellbare Verfahrensfehler gehören in "
+    "procedural_issues oder key_risks, nicht zwingend in "
+    "procedural_errors_found.\n"
     "- Jeder review-Eintrag MUSS einen claim_index haben, der auf den "
-    "ursprünglichen Claim verweist.\n\n"
+    "ursprünglichen Claim verweist.\n"
+    "- Verwende für risk_level ausschließlich einen der Werte: "
+    '"niedrig", "mittel" oder "hoch".\n\n'
     "Gib ausschließlich gültiges JSON zurück. Kein Prosatext. Keine "
     "Markdown-Formatierung."
 )
-
 
 async def adversarial_review(
     normalized_text: str,
@@ -822,7 +844,6 @@ async def adversarial_review(
     )
     return {"reviews": validated_reviews, "overall_assessment": overall_assessment}
 
-
 # ---------------------------------------------------------------------------
 # Combined Stages 5+6+7+8 — Grounded Answer Generation (WP-007)
 # ---------------------------------------------------------------------------
@@ -838,6 +859,15 @@ _GROUNDED_ANSWER_SYSTEM = (
     "3. Eine Liste konkreter Rechtsfragen.\n"
     "4. Eine Sammlung von Rechtsprechungs- und Gesetzes-Chunks aus einer "
     "Vektordatenbank.\n\n"
+    "Arbeitsprinzip:\n"
+    "- Tatsachen dürfen nur aus dem Dokument übernommen werden.\n"
+    "- Rechtliche Aussagen dürfen nur auf den bereitgestellten Chunks "
+    "beruhen.\n"
+    "- Empfehlungen dürfen nur aus belegten Tatsachen und belegten "
+    "rechtlichen Bewertungen folgen.\n"
+    "- Wenn eine Frage mit den bereitgestellten Quellen nicht sicher "
+    "beantwortet werden kann, musst du diese Unsicherheit ausdrücklich "
+    "benennen.\n\n"
     "Deine Aufgabe:\n\n"
     "A) **Claims erstellen:** Für jede Rechtsfrage 1–3 rechtliche Aussagen "
     "(Claims) formulieren. Jeder Claim MUSS:\n"
@@ -863,12 +893,22 @@ _GROUNDED_ANSWER_SYSTEM = (
     "- Wenn die Evidenz nicht ausreicht, setze confidence_score niedrig "
     "(≤ 0.4) und sage im claim_text ausdrücklich, dass die Frage mit den "
     "bereitgestellten Quellen nicht sicher beantwortet werden kann.\n"
+    "- Wenn gar kein geeigneter Chunk vorhanden ist, erstelle keinen "
+    "substantiven rechtlichen Claim. Formuliere stattdessen nur eine "
+    "vorsichtige Aussage zur fehlenden Belegbarkeit mit niedrigem "
+    "confidence_score und verwende leere Strings für evidence_chunk_id, "
+    "evidence_hierarchy und evidence_quote.\n"
     "- Erfinde KEINE Paragraphen, Gerichtsentscheidungen, Aktenzeichen, "
     "Fristen oder Rechtsfolgen.\n"
+    "- Übernimm keine Tatsache aus dem Dokument als sicher, wenn sie im "
+    "Dokument nur behauptet, unklar oder streitig erscheint; kennzeichne sie "
+    "dann vorsichtig.\n"
     "- Unterscheide sauber zwischen Tatsachen aus dem Dokument, rechtlicher "
     "Auslegung und Handlungsempfehlung.\n"
     "- Empfehlungen dürfen nur aus zuvor belegten rechtlichen Bewertungen "
-    "folgen.\n\n"
+    "folgen.\n"
+    "- Eine hohe confidence_score ist nur zulässig, wenn Dokumenttatsachen "
+    "und Rechtsquelle klar zusammenpassen.\n\n"
     "B) **Abschnitte generieren:** Erstelle die folgenden 7 Abschnitte "
     "auf Deutsch:\n"
     '  - "sachverhalt": Zusammenfassung des Sachverhalts\n'
@@ -884,19 +924,28 @@ _GROUNDED_ANSWER_SYSTEM = (
     "WICHTIGE REGELN FÜR DIE ABSCHNITTE:\n"
     "- Schreibe verständlich für eine betroffene Person, aber rechtlich "
     "präzise.\n"
+    "- Die rechtliche_wuerdigung muss auf den Claims und deren "
+    "evidence_quote beruhen. Keine zusätzlichen Rechtsquellen einführen.\n"
     "- Mache deutlich, wenn eine Einschätzung unsicher ist oder weitere "
     "Informationen fehlen.\n"
     "- Nenne keine konkreten Fristen, wenn sie nicht aus dem Dokument oder "
     "den bereitgestellten Quellen hervorgehen.\n"
+    "- Wenn eine Frist im Dokument genannt ist, darfst du sie wiedergeben, "
+    "musst aber kenntlich machen, dass sie aus dem Dokument stammt.\n"
     "- Der Entwurf soll höflich, sachlich und behördentauglich sein.\n"
     "- Der Entwurf darf keine falschen Tatsachen behaupten; bei fehlenden "
     "Informationen nutze Platzhalter wie [Datum], [Aktenzeichen] oder "
     "[konkrete Begründung ergänzen].\n"
+    "- Der Entwurf darf keine rechtlichen Behauptungen enthalten, die nicht "
+    "durch die Claims gestützt sind.\n"
+    "- Wenn die Rechtslage unsicher ist, formuliere den Entwurf vorsichtig "
+    "als Prüfungs- oder Begründungsverlangen statt als sichere "
+    "Rechtsbehauptung.\n"
     "- Stelle nicht dar, dass dies verbindliche anwaltliche Beratung sei.\n\n"
     "Gib NUR ein JSON-Objekt zurück:\n"
-    '{\n'
+    "{\n"
     '  "claims": [\n'
-    '    {\n'
+    "    {\n"
     '      "claim_text": "...",\n'
     '      "confidence_score": 0.82,\n'
     '      "claim_type": "interpretation",\n'
@@ -904,8 +953,8 @@ _GROUNDED_ANSWER_SYSTEM = (
     '      "evidence_chunk_id": "...",\n'
     '      "evidence_hierarchy": "SGB II > § 31 > Abs. 1",\n'
     '      "evidence_quote": "..."\n'
-    '    }\n'
-    '  ],\n'
+    "    }\n"
+    "  ],\n"
     '  "sections": {\n'
     '    "sachverhalt": "...",\n'
     '    "rechtliche_wuerdigung": "...",\n'
@@ -914,12 +963,11 @@ _GROUNDED_ANSWER_SYSTEM = (
     '    "entwurf": "...",\n'
     '    "unsicherheiten": "...",\n'
     '    "adversarial_pruefung": "..."\n'
-    '  }\n'
-    '}\n\n'
+    "  }\n"
+    "}\n\n"
     "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
     "zusätzlichen Schlüssel."
 )
-
 
 async def generate_grounded_answer(
     normalized_text: str,
