@@ -1,5 +1,3 @@
-# generate_test_files.py
-
 #!/usr/bin/env python3
 """
 Generate valid test files for UI testing as specified in ui_testing_guide.md.
