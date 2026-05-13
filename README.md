@@ -11,7 +11,7 @@ Citizen is a local-first, evidence-constrained legal reasoning engine designed t
 ## Core Features
 
 * **Local-First OCR Pipeline:** Fully local document ingestion (PDF/JPG/PNG/TXT/HTML/EML) up to 25 MB. Uses a deterministic fallback chain (`pdfplumber` → `PyMuPDF` → `Tesseract`) with dual-pass image preprocessing (conversion to 300 dpi JPG, contrast enhancement, optional binarization). Optional LLM synthesis for reconciling dual-OCR results.
-* **Hierarchical Legal Corpus:** Automated scraping of German legal texts from gesetze-im-internet.de, chunked at four granularity levels (Statute → § → Absatz → Satz) to preserve exact legal boundaries for precise citation. Includes statutes (SGB II, SGB X), administrative directives (Weisungen), and case law (BSG decisions).
+* **Hierarchical Legal Corpus:** Automated scraping of German legal texts from gesetze-im-internet.de and Fachliche Weisungen PDFs from arbeitsagentur.de, chunked at four granularity levels (Statute → § → Absatz → Satz) to preserve exact legal boundaries for precise citation. Includes 11 source types (SGB I/II/III/IX/X/XII, BGB, VwVfG, SGG, Fachliche Weisungen, BSG-Rechtsprechung) with runtime-selectable sources via the settings page. Sensible defaults: SGB II, SGB X, SGB I, Weisungen checked by default.
 * **9-Stage Reasoning Pipeline:** A deterministic orchestrator enforcing a strict, sequential analysis flow with optimizations: Normalization → Classification+Decomposition (combined) → Retrieval (pgvector + keyword fallback) → Construction+Verification+Generation (combined) → Adversarial Review → Calculation Check. Each stage is streamed in real time via Server-Sent Events (SSE), with optional token-by-token output streaming.
 * **Adversarial Legal Review:** Multi-perspective review by a "Rechtsprüfungsrat" — evaluates claims from defense, authority, and judicial perspectives to surface hidden weaknesses or counterarguments.
 * **Deterministic SGB II Calculation Engine:** Three-phase numerical verification for benefits calculations (Regelbedarf, income offsets, Freibeträge, KdU arithmetic). LLM extracts structured monetary values → deterministic rules engine applies § 11b SGB II tiers and lookup tables → LLM explains findings. Catches arithmetic errors in official Bescheide.
@@ -22,7 +22,7 @@ Citizen is a local-first, evidence-constrained legal reasoning engine designed t
 * **Multi-Turn Conversational Reasoning:** Iterative chat interface for discussing uploaded documents across multiple turns. First message triggers the full pipeline; subsequent messages use focused RAG + conversation history for grounded responses. Conversations and documents persist across sessions.
 * **Embedding Cache:** SHA-256 keyed cache for LLM embeddings and triage results with configurable TTL, reducing redundant API calls.
 * **Token Budgeting:** Configurable character limits for LLM prompts (`MAX_TRIAGE_INPUT_CHARS`, `MAX_FINAL_INPUT_CHARS`, `MAX_CHUNK_CONTEXT_CHARS`, `MAX_CHUNKS_FOR_FINAL`) prevent accidental giant prompts.
-* **Browser-Based UI:** Vanilla HTML/CSS/JS frontend with disclaimer acceptance, drag-and-drop document upload, corpus management controls, real-time pipeline progress visualization, structured result display, and a dedicated chat mode with conversation sidebar.
+* **Browser-Based UI:** Vanilla HTML/CSS/JS frontend with disclaimer acceptance, drag-and-drop document upload, dedicated settings page for corpus source selection (11 source types with tooltips and sensible defaults), real-time pipeline progress visualization, structured result display, and a dedicated chat mode with conversation sidebar.
 
 ## Architecture
 
@@ -269,9 +269,12 @@ python scripts/benchmark_analyze.py
 | **conversations** | `POST` | `/api/v1/conversations/{id}/documents` | Attach a document to a conversation |
 | **conversations** | `GET` | `/api/v1/conversations/{id}/documents` | List documents attached to a conversation |
 | **conversations** | `DELETE` | `/api/v1/conversations/{id}/documents/{doc_id}` | Remove a document from a conversation |
-| **corpus** | `POST` | `/api/v1/corpus/update` | Trigger legal corpus scrape & embedding (background) |
+| **corpus** | `POST` | `/api/v1/corpus/update` | Trigger legal corpus scrape & embedding (background: accepts optional `{"sources": [...]}` body) |
 | **corpus** | `GET` | `/api/v1/corpus/status/{job_id}` | Check corpus update progress with substage tracking |
 | **corpus** | `GET` | `/api/v1/corpus/health` | Corpus health check (chunk/source counts, warnings) |
+| **corpus** | `GET` | `/api/v1/corpus/available-sources` | List all 11 source types with names, descriptions, tooltips, scraper status |
+| **corpus** | `GET` | `/api/v1/corpus/sources` | Get current runtime source selection |
+| **corpus** | `PUT` | `/api/v1/corpus/sources` | Persist source selection to disk (survives restarts) |
 | **meta** | `GET` | `/api/v1/meta/disclaimer/version` | Current disclaimer version |
 | **meta** | `GET` | `/api/v1/meta/disclaimer/text` | Full disclaimer text (German, HTML) |
 | **meta** | `GET` | `/api/v1/meta/version` | API and disclaimer version info |
@@ -296,7 +299,7 @@ citizen/
 │   │   └── routes/
 │   │       ├── analyze.py            # POST /analyze (SSE pipeline streaming)
 │   │       ├── conversations.py      # Conversation CRUD, chat messages (SSE), documents
-│   │       ├── corpus.py             # POST /corpus/update, GET /corpus/status, /health
+│   │       ├── corpus.py             # POST /corpus/update, GET /corpus/status, /corpus/health, /corpus/available-sources, /corpus/sources
 │   │       ├── ingest.py             # POST /ingest (document upload & OCR)
 │   │       └── meta.py               # GET /meta/* (disclaimer, version)
 │   ├── core/
@@ -315,7 +318,7 @@ citizen/
 │   │   ├── calculation.py            # 3-phase SGB II calculation verification (extract→compute→explain)
 │   │   ├── chat_reasoning.py         # Conversational reasoning (pipeline + RAG chat)
 │   │   ├── conversation.py           # Conversation CRUD service
-│   │   ├── corpus.py                 # Legal corpus scraper, hierarchical chunker & embedder
+│   │   ├── corpus.py                 # Legal corpus scraper (11 source types: gesetze-im-internet.de HTML + BA Weisung PDFs), hierarchical chunker, embedder, runtime source config
 │   │   ├── ocr.py                    # 3-tier OCR fallback pipeline with dual-pass preprocessing
 │   │   ├── parameter_store.py        # Versioned legal parameter lookup (Regelbedarf, etc.)
 │   │   ├── reasoning.py              # LLM-based reasoning service (triage, combined stages, adversarial)
@@ -336,9 +339,9 @@ citizen/
 ├── scripts/                          # Utility scripts
 │   └── benchmark_analyze.py          # SSE pipeline latency benchmark
 ├── static/                           # Frontend assets (vanilla HTML/JS/CSS)
-│   ├── index.html                    # Main page (Analyze mode + Chat mode with sidebar)
-│   ├── app.js                        # SSE streaming, corpus UI, pipeline UI, chat UI
-│   └── style.css                     # Responsive styles (light + chat dark theme)
+│   ├── index.html                    # Main page (Analyze + Chat + Settings modes)
+│   ├── app.js                        # SSE streaming, corpus UI, pipeline UI, chat UI, settings UI
+│   └── style.css                     # Responsive styles (light + chat dark theme + settings)
 ├── tests/
 │   ├── unit/                         # Unit tests (15 files, no DB needed)
 │   ├── integration/                  # Integration tests (4 files, DB required)
@@ -380,6 +383,7 @@ All settings are managed via environment variables or `.env` file (see `app/core
 | | `MAX_CHUNKS_FOR_FINAL` | `6` | Max chunks in final generation context |
 | **Cache** | `ENABLE_CACHE` | `True` | Enable embedding/triage result cache |
 | | `CACHE_TTL_SEC` | `86400` | Cache TTL (24 hours) |
+| **Corpus** | `CORPUS_SOURCES` | `["sgb2", "sgbx"]` | Default source types (env fallback); overridable at runtime via Settings page (persisted to `.corpus_sources.json`) |
 
 See `.env.example` for the complete list of configurable settings.
 
