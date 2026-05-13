@@ -191,7 +191,11 @@ class TestCaseRun:
             "latency_ms",
             "llm_fallback_chain",
             "legal_snapshot",
+            "title",
             "created_at",
+            "updated_at",
+            "chat_history",
+            "user_edits",
         }
         assert _column_names(self.TABLE) == expected
 
@@ -266,6 +270,7 @@ class TestClaim:
             "claim_text",
             "confidence_score",
             "claim_type",
+            "user_adjudication",
             "created_at",
         }
         assert _column_names(self.TABLE) == expected

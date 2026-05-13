@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import analyze, conversations, corpus, ingest, meta
+from app.api.routes import analyze, cases, conversations, corpus, ingest, meta
 from app.core.config import get_app_version, get_app_version_tag, settings
 from app.middleware.disclaimer import DisclaimerMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -69,6 +69,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(ingest.router, prefix="/api/v1", tags=["ingest"])
 app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["conversations"])
+app.include_router(cases.router, prefix="/api/v1", tags=["cases"])
 app.include_router(corpus.router, prefix="/api/v1", tags=["corpus"])
 app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
 

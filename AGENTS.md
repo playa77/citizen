@@ -65,3 +65,14 @@ Before working on any task, check if `codemap.md` exists in the project root or 
 - Source type `"weisung"` now has metadata, display name, and scraper (previously only DB-level recognition with no scraper)
 - Source type `"bsg"` has metadata but `has_scraper: false` — shown as disabled in settings UI with "(noch nicht verfügbar)" badge
 - All 334 tests pass (324 unit + 10 integration). Old `_SOURCE_DISPLAY_NAMES` dict in routes removed in favor of `CORPUS_SOURCE_METADATA`
+
+### 2026-05-13: Case Chat feature implemented (replaces static results view)
+
+- New "Case Chat" interface replaces the static `#results-section` in Analyze mode with an interactive, persistent case session
+- `POST /analyze` now persists `CaseRun` + `PipelineStageLog` + `Claim` + `EvidenceBinding` on completion, includes `case_run_id` in final SSE event for auto-navigation
+- 9 new API endpoints at `/api/v1/cases`: CRUD, chat (SSE), targeted re-evaluation (SSE), claim editing, adjudication, export (JSON/Markdown)
+- DB: `CaseRun` gains `title`, `updated_at`, `chat_history` (JSONB), `user_edits` (JSONB). `Claim` gains `user_adjudication` (JSONB). Migration `005_add_case_chat_fields.py`
+- New service: `app/services/case_chat.py` — chat grounded in pipeline output, targeted re-evaluation with downstream dependency map
+- Frontend: sidebar case session list, section toolbar actions (re-run, edit, flag, confirm, copy, export), dark-theme chat, comparison overlay with diff highlighting
+- Entry points: auto-navigate after fresh analysis, or select from case session list
+- Version bumped: 0.2.0 → 0.3.0 in index.html, style.css, app.js

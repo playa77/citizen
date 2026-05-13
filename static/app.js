@@ -1,6 +1,6 @@
 /**
  * Citizen — Legal Reasoning Engine Frontend
- * @version 0.2.0
+     * @version 0.3.0
  *
  * Handles:
  * - Disclaimer acceptance modal with localStorage persistence
@@ -125,6 +125,28 @@
         settingsProgressFill: document.getElementById('settings-progress-fill'),
         settingsSubstage: document.getElementById('settings-substage'),
         settingsChunksCount: document.getElementById('settings-chunks-count'),
+        // Case Chat elements
+        caseChatSection: document.getElementById('case-chat-section'),
+        caseSidebar: document.getElementById('case-sidebar'),
+        caseSessionList: document.getElementById('case-session-list'),
+        caseSessionEmpty: document.getElementById('case-session-empty'),
+        caseTitle: document.getElementById('case-title'),
+        caseHeader: document.getElementById('case-header'),
+        caseExportBtn: document.getElementById('case-export-btn'),
+        caseCompareBtn: document.getElementById('case-compare-btn'),
+        caseDeleteBtn: document.getElementById('case-delete-btn'),
+        caseSections: document.getElementById('case-sections'),
+        caseChatMessages: document.getElementById('case-chat-messages'),
+        caseChatEmpty: document.getElementById('case-chat-empty'),
+        caseChatInput: document.getElementById('case-chat-input'),
+        caseChatSendBtn: document.getElementById('case-chat-send-btn'),
+        caseCompareOverlay: document.getElementById('case-compare-overlay'),
+        caseCompareSelect: document.getElementById('case-compare-select'),
+        caseCompareLoad: document.getElementById('case-compare-load'),
+        caseCompareClose: document.getElementById('case-compare-close'),
+        caseComparePanels: document.getElementById('case-compare-panels'),
+        caseCompareLeft: document.getElementById('case-compare-left'),
+        caseCompareRight: document.getElementById('case-compare-right'),
     };
 
     // =========================================================================
@@ -153,6 +175,13 @@
         settingsPollingTimer: null,
         isStreaming: false,
         streamingAbortController: null,
+        // Case Chat state
+        activeCaseId: null,
+        activeCaseData: null,
+        caseSessions: [],
+        caseChatAbortController: null,
+        caseIsStreaming: false,
+        compareCaseData: null,
     };
 
     // =========================================================================
@@ -512,6 +541,17 @@
         if (event.final_output) {
             renderResults(event.final_output);
         }
+        if (event.case_run_id) {
+            // Persist and auto-navigate to case chat
+            state.activeCaseId = event.case_run_id;
+            if (state._pendingCaseOutput) {
+                loadCaseSession(event.case_run_id, state._pendingCaseOutput);
+                state._pendingCaseOutput = null;
+            } else {
+                loadCaseSession(event.case_run_id);
+            }
+            loadCaseSessions();
+        }
     }
 
     function handleStreamOutputEvent(event) {
@@ -569,22 +609,11 @@
     }
 
     function renderResults(output) {
-        elements.resultsContainer.innerHTML = '';
-
-        Object.entries(pipelineSectionLabels).forEach(([key, label]) => {
-            const content = output[key] || '—';
-            const sectionEl = document.createElement('div');
-            sectionEl.className = 'result-section';
-            sectionEl.innerHTML = `
-                <h3>${escapeHtml(label)}</h3>
-                <div class="result-content">${formatContent(content)}</div>
-            `;
-            elements.resultsContainer.appendChild(sectionEl);
-        });
-
+        // Save the output for when case_run_id arrives
+        state._pendingCaseOutput = output;
+        // Hide progress but keep results section hidden until case is persisted
         elements.progressSection.classList.add('hidden');
         elements.streamOutput.classList.add('hidden');
-        elements.resultsSection.classList.remove('hidden');
     }
 
     // =========================================================================
@@ -1177,6 +1206,451 @@
         elements.settingsStatus.className = 'settings-status error';
         elements.settingsStatus.textContent = `Fehler: ${message}`;
         elements.settingsStatus.classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // Case Chat — Interactive Pipeline Results
+    // =========================================================================
+
+    async function loadCaseSessions() {
+        try {
+            const response = await fetch(API_BASE + '/cases', { headers: buildHeaders() });
+            if (!response.ok) { await handleApiError(response); return; }
+            state.caseSessions = await response.json();
+            renderCaseSessionList();
+        } catch (err) {
+            console.error('Failed to load case sessions:', err);
+        }
+    }
+
+    function renderCaseSessionList() {
+        elements.caseSessionList.innerHTML = '';
+        if (state.caseSessions.length === 0) {
+            elements.caseSessionEmpty.style.display = 'block';
+            return;
+        }
+        elements.caseSessionEmpty.style.display = 'none';
+        state.caseSessions.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        state.caseSessions.forEach(cs => {
+            const item = document.createElement('div');
+            item.className = 'case-session-item';
+            if (cs.id === state.activeCaseId) item.classList.add('active');
+            item.innerHTML = `
+                <div class="case-session-title">${escapeHtml(cs.title || 'Unbenannter Fall')}</div>
+                <div class="case-session-meta">${relativeTime(cs.updated_at || cs.created_at)}</div>
+                <div class="case-session-preview">${escapeHtml((cs.input_text || '').substring(0, 80))}</div>
+            `;
+            item.addEventListener('click', () => loadCaseSession(cs.id));
+            elements.caseSessionList.appendChild(item);
+        });
+    }
+
+    async function loadCaseSession(caseId, preloadedOutput) {
+        state.activeCaseId = caseId;
+        elements.caseChatSection.classList.remove('hidden');
+        elements.resultsSection.classList.add('hidden');
+        elements.caseChatInput.disabled = false;
+        elements.caseChatSendBtn.disabled = false;
+        elements.caseChatMessages.innerHTML = '';
+        renderCaseSessionList();
+
+        if (preloadedOutput) {
+            state.activeCaseData = { id: caseId, final_output: preloadedOutput };
+            renderCaseSections(preloadedOutput);
+            return;
+        }
+
+        try {
+            const response = await fetch(API_BASE + '/cases/' + caseId, { headers: buildHeaders() });
+            if (!response.ok) { await handleApiError(response); return; }
+            const data = await response.json();
+            state.activeCaseData = data;
+            elements.caseTitle.textContent = data.title || 'Ergebnis';
+            renderCaseSections(data.final_output);
+            if (data.chat_history && data.chat_history.messages) {
+                data.chat_history.messages.forEach(m => renderCaseChatMessage(m.role, m.content, m.created_at));
+            }
+        } catch (err) {
+            showError('Fehler beim Laden des Falls: ' + err.message);
+        }
+    }
+
+    function renderCaseSections(output) {
+        if (!output) return;
+        elements.caseSections.innerHTML = '';
+        Object.entries(pipelineSectionLabels).forEach(([key, label]) => {
+            const content = output[key] || '—';
+            const sectionEl = document.createElement('div');
+            sectionEl.className = 'case-section';
+            sectionEl.id = 'case-section-' + key;
+            sectionEl.innerHTML = `
+                <div class="case-section-header" data-section="${key}">
+                    <h3>${escapeHtml(label)}</h3>
+                    <div class="case-section-toolbar">
+                        <button class="btn-icon-only section-btn-rerun" data-section="${key}" title="Neu analysieren">🔄</button>
+                        <button class="btn-icon-only section-btn-edit" data-section="${key}" title="Bearbeiten">✏️</button>
+                        <button class="btn-icon-only section-btn-flag" data-section="${key}" title="Beanstanden">⚑</button>
+                        <button class="btn-icon-only section-btn-confirm" data-section="${key}" title="Bestätigen">✓</button>
+                        <button class="btn-icon-only section-btn-copy" data-section="${key}" title="Kopieren">📋</button>
+                        <button class="btn-icon-only section-btn-export" data-section="${key}" title="Exportieren">📥</button>
+                    </div>
+                </div>
+                <div class="case-section-body">
+                    <div class="case-section-content">${formatCaseContent(content)}</div>
+                </div>
+            `;
+            // Toggle collapse on header click
+            sectionEl.querySelector('.case-section-header').addEventListener('click', function(e) {
+                if (e.target.closest('.case-section-toolbar')) return;
+                sectionEl.classList.toggle('collapsed');
+            });
+            // Wire toolbar buttons
+            sectionEl.querySelector('.section-btn-copy').addEventListener('click', () => {
+                navigator.clipboard.writeText(content).then(() => { /* brief flash */ });
+            });
+            sectionEl.querySelector('.section-btn-export').addEventListener('click', () => {
+                downloadText(label + '.txt', content);
+            });
+            sectionEl.querySelector('.section-btn-rerun').addEventListener('click', () => {
+                const stage = sectionToStage(key);
+                if (stage) startTargetedReevaluate(stage, key);
+            });
+            sectionEl.querySelector('.section-btn-edit').addEventListener('click', () => {
+                toggleSectionEdit(key, content);
+            });
+            sectionEl.querySelector('.section-btn-flag').addEventListener('click', () => {
+                adjudicateSection(key, 'disputed');
+            });
+            sectionEl.querySelector('.section-btn-confirm').addEventListener('click', () => {
+                adjudicateSection(key, 'agreed');
+            });
+            elements.caseSections.appendChild(sectionEl);
+        });
+    }
+
+    function sectionToStage(sectionKey) {
+        const map = {
+            sachverhalt: 'normalization',
+            rechtliche_wuerdigung: 'construction',
+            ergebnis: 'generation',
+            handlungsempfehlung: 'generation',
+            entwurf: 'generation',
+            unsicherheiten: 'verification',
+            adversarial_pruefung: 'adversarial_review',
+            berechnungspruefung: 'calculation_check',
+        };
+        return map[sectionKey] || null;
+    }
+
+    function formatCaseContent(content) {
+        if (!content) return '<em>—</em>';
+        return escapeHtml(content).replace(/\n/g, '<br>');
+    }
+
+    async function handleCaseChatSend() {
+        const input = elements.caseChatInput.value.trim();
+        if (!input || !state.activeCaseId || state.caseIsStreaming) return;
+        elements.caseChatInput.value = '';
+        elements.caseChatInput.dispatchEvent(new Event('input'));
+        elements.caseChatSendBtn.disabled = true;
+        state.caseIsStreaming = true;
+        state.caseChatAbortController = new AbortController();
+        // Render user message
+        renderCaseChatMessage('user', input);
+        // Show typing indicator
+        const typingEl = addCaseTypingIndicator();
+        try {
+            const response = await fetch(API_BASE + '/cases/' + state.activeCaseId + '/chat', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json', 'Accept': 'text/event-stream' }),
+                body: JSON.stringify({ content: input }),
+                signal: state.caseChatAbortController.signal,
+            });
+            if (!response.ok) { await handleApiError(response); return; }
+            // Remove typing indicator, process SSE
+            if (typingEl) typingEl.remove();
+            await processCaseChatSSE(response);
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            if (typingEl) typingEl.remove();
+            renderCaseChatMessage('system', 'Fehler: ' + err.message);
+        } finally {
+            state.caseIsStreaming = false;
+            elements.caseChatSendBtn.disabled = !elements.caseChatInput.value.trim();
+        }
+    }
+
+    function renderCaseChatMessage(role, content, timestamp) {
+        if (!content) return;
+        elements.caseChatEmpty.style.display = 'none';
+        const msgEl = document.createElement('div');
+        msgEl.className = 'case-chat-message ' + role;
+        const time = timestamp ? new Date(timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+        msgEl.innerHTML = `
+            <div class="case-chat-bubble">${formatCaseContent(content)}</div>
+            ${time ? '<div class="case-chat-time">' + time + '</div>' : ''}
+        `;
+        elements.caseChatMessages.appendChild(msgEl);
+        elements.caseChatMessages.scrollTop = elements.caseChatMessages.scrollHeight;
+    }
+
+    function addCaseTypingIndicator() {
+        const el = document.createElement('div');
+        el.className = 'case-chat-message assistant typing';
+        el.innerHTML = '<div class="case-chat-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        elements.caseChatMessages.appendChild(el);
+        elements.caseChatMessages.scrollTop = elements.caseChatMessages.scrollHeight;
+        return el;
+    }
+
+    async function processCaseChatSSE(response) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let currentBubble = null;
+        let accumulatedText = '';
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const event = JSON.parse(line.slice(6));
+                        if (event.type === 'case_token') {
+                            if (!currentBubble) {
+                                currentBubble = document.createElement('div');
+                                currentBubble.className = 'case-chat-message assistant';
+                                currentBubble.innerHTML = '<div class="case-chat-bubble"></div>';
+                                elements.caseChatMessages.appendChild(currentBubble);
+                            }
+                            accumulatedText += event.content;
+                            currentBubble.querySelector('.case-chat-bubble').innerHTML = formatCaseContent(accumulatedText);
+                            elements.caseChatMessages.scrollTop = elements.caseChatMessages.scrollHeight;
+                        } else if (event.type === 'case_done') {
+                            if (event.updated_sections) {
+                                event.updated_sections.forEach(key => updateSectionContent(key, event.section_contents));
+                            }
+                        } else if (event.type === 'stage_reevaluate') {
+                            const stageName = stageNames[event.stage] || event.stage;
+                            renderCaseChatMessage('system', 'Neu-Analyse: ' + stageName + ' — ' + (event.status === 'complete' ? '✓ abgeschlossen' : 'läuft...'));
+                        } else if (event.type === 'section_updated') {
+                            updateSectionContent(event.section, { [event.section]: event.content });
+                        } else if (event.error) {
+                            renderCaseChatMessage('system', 'Fehler: ' + (event.detail || event.error));
+                        }
+                    } catch (e) { /* skip malformed */ }
+                }
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') throw err;
+        }
+    }
+
+    function updateSectionContent(sectionKey, contents) {
+        if (!contents || !contents[sectionKey]) return;
+        const sectionEl = document.getElementById('case-section-' + sectionKey);
+        if (!sectionEl) return;
+        const contentEl = sectionEl.querySelector('.case-section-content');
+        if (contentEl) {
+            contentEl.innerHTML = formatCaseContent(contents[sectionKey]);
+        }
+    }
+
+    function toggleSectionEdit(sectionKey, currentContent) {
+        const sectionEl = document.getElementById('case-section-' + sectionKey);
+        if (!sectionEl) return;
+        const bodyEl = sectionEl.querySelector('.case-section-body');
+        const contentEl = sectionEl.querySelector('.case-section-content');
+        const existingEditor = bodyEl.querySelector('.case-section-editor');
+        if (existingEditor) {
+            // Save
+            const newContent = existingEditor.value;
+            existingEditor.remove();
+            contentEl.style.display = '';
+            contentEl.innerHTML = formatCaseContent(newContent);
+            saveSectionEdit(sectionKey, newContent);
+        } else {
+            // Edit mode
+            contentEl.style.display = 'none';
+            const textarea = document.createElement('textarea');
+            textarea.className = 'case-section-editor';
+            textarea.value = currentContent;
+            textarea.rows = 10;
+            bodyEl.insertBefore(textarea, contentEl);
+            textarea.focus();
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'btn btn-small';
+            saveBtn.textContent = 'Speichern';
+            saveBtn.style.marginTop = '8px';
+            saveBtn.addEventListener('click', () => {
+                const newContent = textarea.value;
+                textarea.remove();
+                saveBtn.remove();
+                contentEl.style.display = '';
+                contentEl.innerHTML = formatCaseContent(newContent);
+                saveSectionEdit(sectionKey, newContent);
+            });
+            bodyEl.appendChild(saveBtn);
+        }
+    }
+
+    async function saveSectionEdit(sectionKey, newContent) {
+        if (!state.activeCaseId) return;
+        try {
+            await fetch(API_BASE + '/cases/' + state.activeCaseId + '/adjudicate', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ target_type: 'section', target_id: sectionKey, status: 'edited', note: newContent }),
+            });
+        } catch (err) {
+            console.error('Failed to save section edit:', err);
+        }
+    }
+
+    async function adjudicateSection(sectionKey, status) {
+        if (!state.activeCaseId) return;
+        const note = status === 'disputed' ? prompt('Grund für Beanstandung (optional):') : '';
+        try {
+            await fetch(API_BASE + '/cases/' + state.activeCaseId + '/adjudicate', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ target_type: 'section', target_id: sectionKey, status, note: note || '' }),
+            });
+            // Update UI indicator
+            const sectionEl = document.getElementById('case-section-' + sectionKey);
+            if (sectionEl) {
+                const existingBadge = sectionEl.querySelector('.adjudication-badge');
+                if (existingBadge) existingBadge.remove();
+                const badge = document.createElement('span');
+                badge.className = 'adjudication-badge ' + status;
+                badge.textContent = status === 'agreed' ? '✓ Bestätigt' : '⚑ Beanstandet';
+                sectionEl.querySelector('.case-section-header h3').appendChild(badge);
+            }
+        } catch (err) {
+            console.error('Failed to adjudicate section:', err);
+        }
+    }
+
+    async function startTargetedReevaluate(stage, sectionKey) {
+        if (!state.activeCaseId || state.caseIsStreaming) return;
+        const context = prompt('Kontext für Neu-Analyse (optional):', '');
+        if (context === null) return; // cancelled
+        state.caseIsStreaming = true;
+        state.caseChatAbortController = new AbortController();
+        renderCaseChatMessage('system', 'Starte gezielte Neu-Analyse von "' + (stageNames[stage] || stage) + '"...');
+        try {
+            const response = await fetch(API_BASE + '/cases/' + state.activeCaseId + '/reevaluate', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json', 'Accept': 'text/event-stream' }),
+                body: JSON.stringify({ stage, context: context || '' }),
+                signal: state.caseChatAbortController.signal,
+            });
+            if (!response.ok) { await handleApiError(response); return; }
+            await processCaseChatSSE(response);
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            renderCaseChatMessage('system', 'Fehler bei Neu-Analyse: ' + err.message);
+        } finally {
+            state.caseIsStreaming = false;
+        }
+    }
+
+    async function handleCaseDelete() {
+        if (!state.activeCaseId) return;
+        if (!confirm('Diesen Fall wirklich löschen?')) return;
+        try {
+            const response = await fetch(API_BASE + '/cases/' + state.activeCaseId, {
+                method: 'DELETE',
+                headers: buildHeaders(),
+            });
+            if (!response.ok) { await handleApiError(response); return; }
+            state.activeCaseId = null;
+            state.activeCaseData = null;
+            elements.caseChatSection.classList.add('hidden');
+            elements.resultsSection.classList.remove('hidden');
+            loadCaseSessions();
+        } catch (err) {
+            showError('Fehler beim Löschen: ' + err.message);
+        }
+    }
+
+    async function handleCaseExport() {
+        if (!state.activeCaseId) return;
+        try {
+            const response = await fetch(API_BASE + '/cases/' + state.activeCaseId + '/export?format=markdown', {
+                headers: buildHeaders(),
+            });
+            if (!response.ok) { await handleApiError(response); return; }
+            const data = await response.json();
+            downloadText('citizen-analyse-' + state.activeCaseId.substring(0, 8) + '.md', data.content || JSON.stringify(data, null, 2));
+        } catch (err) {
+            showError('Fehler beim Export: ' + err.message);
+        }
+    }
+
+    async function handleCaseCompare() {
+        await loadCaseSessions();
+        const otherCases = state.caseSessions.filter(cs => cs.id !== state.activeCaseId);
+        elements.caseCompareSelect.innerHTML = '<option value="">— Fall auswählen —</option>' +
+            otherCases.map(cs => `<option value="${cs.id}">${escapeHtml(cs.title || cs.id.substring(0, 8))} (${relativeTime(cs.created_at)})</option>`).join('');
+        elements.caseCompareOverlay.classList.remove('hidden');
+    }
+
+    async function handleCaseCompareLoad() {
+        const compareId = elements.caseCompareSelect.value;
+        if (!compareId) return;
+        try {
+            const response = await fetch(API_BASE + '/cases/' + compareId, { headers: buildHeaders() });
+            if (!response.ok) { await handleApiError(response); return; }
+            state.compareCaseData = await response.json();
+            renderComparePanels();
+        } catch (err) {
+            alert('Fehler beim Laden des Vergleichsfalls: ' + err.message);
+        }
+    }
+
+    function renderComparePanels() {
+        if (!state.activeCaseData || !state.compareCaseData) return;
+        const left = state.activeCaseData.final_output;
+        const right = state.compareCaseData.final_output;
+        elements.caseCompareLeft.innerHTML = '';
+        elements.caseCompareRight.innerHTML = '';
+        Object.entries(pipelineSectionLabels).forEach(([key, label]) => {
+            const leftContent = left[key] || '—';
+            const rightContent = right[key] || '—';
+            const isDiff = leftContent !== rightContent;
+            elements.caseCompareLeft.innerHTML += `
+                <div class="compare-section${isDiff ? ' compare-diff' : ''}">
+                    <h4>${escapeHtml(label)}</h4>
+                    <div>${formatCaseContent(leftContent)}</div>
+                </div>
+            `;
+            elements.caseCompareRight.innerHTML += `
+                <div class="compare-section${isDiff ? ' compare-diff' : ''}">
+                    <h4>${escapeHtml(label)}</h4>
+                    <div>${formatCaseContent(rightContent)}</div>
+                </div>
+            `;
+        });
+    }
+
+    function handleCaseCompareClose() {
+        elements.caseCompareOverlay.classList.add('hidden');
+        state.compareCaseData = null;
+    }
+
+    function downloadText(filename, text) {
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // =========================================================================
@@ -2195,6 +2669,26 @@
 
         elements.settingsSaveBtn.addEventListener('click', handleSettingsSave);
         elements.settingsReloadBtn.addEventListener('click', handleSettingsReload);
+
+        // =========================================================================
+        // Case Chat Event Listeners
+        // =========================================================================
+
+        elements.caseChatSendBtn.addEventListener('click', handleCaseChatSend);
+        elements.caseChatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleCaseChatSend();
+            }
+        });
+        elements.caseChatInput.addEventListener('input', function() {
+            elements.caseChatSendBtn.disabled = !this.value.trim() || state.caseIsStreaming;
+        });
+        elements.caseDeleteBtn.addEventListener('click', handleCaseDelete);
+        elements.caseExportBtn.addEventListener('click', handleCaseExport);
+        elements.caseCompareBtn.addEventListener('click', handleCaseCompare);
+        elements.caseCompareLoad.addEventListener('click', handleCaseCompareLoad);
+        elements.caseCompareClose.addEventListener('click', handleCaseCompareClose);
 
         // =========================================================================
         // Chat Mode Event Listeners

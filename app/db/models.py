@@ -203,6 +203,12 @@ class CaseRun(Base):
     llm_fallback_chain: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     legal_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+    title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+    chat_history: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    user_edits: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     stage_logs: Mapped[list["PipelineStageLog"]] = relationship(
@@ -297,6 +303,7 @@ class Claim(Base):
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
     claim_type: Mapped[str] = mapped_column(String(30), nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+    user_adjudication: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     case_run: Mapped["CaseRun"] = relationship("CaseRun", back_populates="claims")

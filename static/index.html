@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen — Legal Reasoning Engine</title>
-    <!-- Semantic Version: 0.2.0 -->
+    <!-- Semantic Version: 0.3.0 -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -164,20 +164,88 @@
                     </div>
                 </section>
 
-                <!-- Results Section -->
-                <section id="results-section" class="section hidden">
-                    <h2>Ergebnis</h2>
-                    <div class="results-container" id="results-container">
-                        <!-- 6 sections will be rendered here -->
+                <!-- Case Chat (replaces static results view) -->
+                <section id="case-chat-section" class="section hidden">
+                    <div class="case-chat-layout">
+                        <!-- Case Session Sidebar -->
+                        <aside id="case-sidebar" class="case-sidebar">
+                            <div class="case-sidebar-header">
+                                <h3>Fall-Sitzungen</h3>
+                            </div>
+                            <div class="case-session-list" id="case-session-list">
+                                <!-- Populated by JS -->
+                            </div>
+                            <div id="case-session-empty" class="case-session-empty">
+                                <p>Keine analysierten Fälle</p>
+                            </div>
+                        </aside>
+
+                        <!-- Case Chat Main -->
+                        <div class="case-main">
+                            <!-- Case Header -->
+                            <div class="case-header" id="case-header">
+                                <h2 id="case-title" class="case-title">Ergebnis</h2>
+                                <div class="case-header-actions">
+                                    <button id="case-export-btn" class="btn btn-small" title="Fall exportieren">Export</button>
+                                    <button id="case-compare-btn" class="btn btn-small" title="Mit anderem Fall vergleichen">Vergleichen</button>
+                                    <button id="case-delete-btn" class="btn btn-small btn-danger" title="Fall löschen">Löschen</button>
+                                </div>
+                            </div>
+
+                            <!-- Pipeline Sections -->
+                            <div class="case-sections" id="case-sections">
+                                <!-- Sections rendered by JS -->
+                            </div>
+
+                            <!-- Case Chat Messages -->
+                            <div class="case-chat-messages" id="case-chat-messages">
+                                <div id="case-chat-empty" class="case-chat-empty">
+                                    <p>Stellen Sie Fragen zur Analyse oder fordern Sie eine gezielte Neubewertung an.</p>
+                                </div>
+                            </div>
+
+                            <!-- Case Chat Input -->
+                            <div class="case-chat-input-area">
+                                <div class="case-chat-input-container">
+                                    <textarea id="case-chat-input" class="case-chat-input"
+                                        placeholder="Frage zur Analyse stellen..."
+                                        rows="1" disabled></textarea>
+                                    <button id="case-chat-send-btn" class="btn-icon-only" disabled title="Senden">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                    </button>
+                                </div>
+                                <p class="case-chat-disclaimer">Citizen kann Fehler machen. Rechtliche Auskünfte ohne Gewähr.</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
+
+                <!-- Compare Mode Overlay -->
+                <div id="case-compare-overlay" class="case-compare-overlay hidden">
+                    <div class="case-compare-container">
+                        <div class="case-compare-header">
+                            <h3>Fall-Vergleich</h3>
+                            <button id="case-compare-close" class="btn-icon-only" title="Schließen">&times;</button>
+                        </div>
+                        <div class="case-compare-selector">
+                            <label>Vergleichen mit:</label>
+                            <select id="case-compare-select"></select>
+                            <button id="case-compare-load" class="btn btn-small">Laden</button>
+                        </div>
+                        <div class="case-compare-panels" id="case-compare-panels">
+                            <div class="case-compare-panel" id="case-compare-left"></div>
+                            <div class="case-compare-divider"></div>
+                            <div class="case-compare-panel" id="case-compare-right"></div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Error Display -->
                 <div id="error-display" class="error-display hidden"></div>
             </main>
 
             <footer>
-                <p>Citizen v0.2.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p>Citizen v0.3.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
             </footer>
         </div>
 
@@ -339,7 +407,7 @@
             </main>
 
             <footer>
-                <p>Citizen v0.2.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p>Citizen v0.3.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
             </footer>
         </div>
 

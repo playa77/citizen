@@ -33,6 +33,7 @@ from fastapi import APIRouter, Body, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from app.core.pipeline import PipelineState, run_pipeline
+from app.db.models import CaseRun, Claim, EvidenceBinding, PipelineStageLog
 from app.db.session import async_session_factory
 from app.services.audit import AuditRecord, persist_audit_record
 from app.utils.text import normalize_text
@@ -197,7 +198,79 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                         pass
 
             # Capture legal_snapshot from calculation result for audit persistence.
-            legal_snapshot = state.calculation_result.get("legal_snapshot") if state.calculation_result else None
+            calc_result = state.calculation_result
+            legal_snapshot = calc_result.get("legal_snapshot") if calc_result else None
+
+            # Compute latency and persist CaseRun with pipeline results.
+            latency_ms = int((time.monotonic() - start) * 1000)
+            case_run_id: str | None = None
+            try:
+                async with async_session_factory() as db:
+                    title = (input_text[:77] + "...") if len(input_text) > 80 else input_text[:80]
+                    case_run = CaseRun(
+                        session_id=session_id,
+                        input_text=input_text,
+                        status="completed",
+                        latency_ms=latency_ms,
+                        title=title,
+                        legal_snapshot=legal_snapshot,
+                        chat_history={},
+                        user_edits={},
+                    )
+                    db.add(case_run)
+                    await db.flush()
+
+                    # Persist PipelineStageLog records.
+                    for entry in stage_log_entries:
+                        stage_log = PipelineStageLog(
+                            case_run_id=case_run.id,
+                            stage_name=entry["stage_name"],
+                            input_snapshot=entry.get("input_snapshot"),
+                            output_snapshot=entry.get("output_snapshot"),
+                            duration_ms=entry.get("duration_ms", 0),
+                            error_trace=entry.get("error_trace"),
+                        )
+                        db.add(stage_log)
+
+                    # Persist Claim records and build index → id map.
+                    claim_id_map: dict[int, Any] = {}
+                    for entry in claim_entries:
+                        claim = Claim(
+                            case_run_id=case_run.id,
+                            claim_text=entry.get("claim_text", ""),
+                            confidence_score=entry.get("confidence_score", 0.0),
+                            claim_type=entry.get("claim_type", "interpretation"),
+                        )
+                        db.add(claim)
+                        await db.flush()
+                        claim_id_map[entry["_index"]] = claim.id
+
+                    # Persist EvidenceBinding records (skip entries with invalid chunk_id).
+                    for entry in evidence_entries:
+                        claim_index: int = entry.get("claim_index", -1)
+                        claim_id = claim_id_map.get(claim_index)
+                        if claim_id is None:
+                            continue
+                        chunk_id_str = entry.get("chunk_id", "")
+                        try:
+                            chunk_uuid = uuid.UUID(chunk_id_str) if chunk_id_str else None
+                        except (ValueError, AttributeError):
+                            chunk_uuid = None
+                        if chunk_uuid is None:
+                            continue
+                        evidence_binding = EvidenceBinding(
+                            claim_id=claim_id,
+                            chunk_id=chunk_uuid,
+                            binding_strength=entry.get("binding_strength", 0.5),
+                            quote_excerpt=entry.get("quote_excerpt", ""),
+                        )
+                        db.add(evidence_binding)
+
+                    await db.commit()
+                    await db.refresh(case_run)
+                    case_run_id = str(case_run.id)
+            except Exception:
+                logger.exception("Failed to persist CaseRun for session %s", session_id)
 
             # After pipeline completes, yield a final compact summary event.
             final_payload = {
@@ -205,6 +278,8 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                 "sections": list(state.final_output.keys()),
                 "final_output": state.final_output,
             }
+            if case_run_id:
+                final_payload["case_run_id"] = case_run_id
             yield _sse_format(final_payload)
 
         except Exception as exc:
@@ -219,6 +294,26 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
 
             # Schedule a failed-audit persistence in the background.
             latency_ms = int((time.monotonic() - start) * 1000)
+
+            # Also persist a failed CaseRun so the session is recorded.
+            try:
+                async with async_session_factory() as db:
+                    title = (input_text[:77] + "...") if len(input_text) > 80 else input_text[:80]
+                    failed_case_run = CaseRun(
+                        session_id=session_id,
+                        input_text=input_text,
+                        status="failed",
+                        latency_ms=latency_ms,
+                        title=title,
+                        legal_snapshot=None,
+                        chat_history={},
+                        user_edits={},
+                    )
+                    db.add(failed_case_run)
+                    await db.commit()
+            except Exception:
+                logger.exception("Failed to persist failed CaseRun for session %s", session_id)
+
             failed_audit = AuditRecord(
                 session_id=session_id,
                 input_text=input_text,
@@ -238,7 +333,6 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             return
 
         # Schedule audit persistence in the background after streaming completes.
-        latency_ms = int((time.monotonic() - start) * 1000)
         disclaimer_ack_entry = {
             "input_snapshot": {"session_id": session_id},
             "output_snapshot": {"acknowledged": True},
