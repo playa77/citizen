@@ -74,6 +74,27 @@
         analysisSection: document.getElementById('analysis-section'),
         textPreview: document.getElementById('text-preview'),
         analyzeBtn: document.getElementById('analyze-btn'),
+        // New: 3-step flow
+        stepIndicator: document.getElementById('step-indicator'),
+        intakeSection: document.getElementById('intake-section'),
+        intakeMessages: document.getElementById('intake-messages'),
+        intakeInput: document.getElementById('intake-input'),
+        intakeSendBtn: document.getElementById('intake-send-btn'),
+        intakeConfirmBtn: document.getElementById('intake-confirm-btn'),
+        intakeBackBtn: document.getElementById('intake-back-btn'),
+        intakeTurnCounter: document.getElementById('intake-turn-counter'),
+        confirmationSection: document.getElementById('confirmation-section'),
+        confirmationBackBtn: document.getElementById('confirmation-back-btn'),
+        presetCardBody: document.getElementById('preset-card-body'),
+        presetCardSummary: document.getElementById('preset-card-summary'),
+        presetCardMissing: document.getElementById('preset-card-missing'),
+        presetCardMissingText: document.getElementById('preset-card-missing-text'),
+        presetLoadMissingBtn: document.getElementById('preset-load-missing-btn'),
+        missingSourcesModal: document.getElementById('missing-sources-modal'),
+        missingSourcesList: document.getElementById('missing-sources-list'),
+        missingSourcesMessage: document.getElementById('missing-sources-message'),
+        missingSourcesCancelBtn: document.getElementById('missing-sources-cancel-btn'),
+        missingSourcesLoadBtn: document.getElementById('missing-sources-load-btn'),
         progressSection: document.getElementById('progress-section'),
         progressBar: document.getElementById('progress-bar'),
         stageList: document.getElementById('stage-list'),
@@ -162,6 +183,12 @@
         hasExtracted: false,
         corpusJobId: null,
         corpusPollingTimer: null,
+        // 3-step intake flow
+        currentStep: 1,
+        intakeSession: null,         // {id, status, turn_count, max_turns, primary_area, secondary_areas, intake_result}
+        intakeSelectedAreas: [],     // user-edited list of legal_areas (starts from LLM suggestion)
+        intakeAvailableSources: [],  // from /api/v1/corpus/available-sources
+        intakeMissingSources: [],    // per-area readiness check
         // Chat mode state
         currentMode: 'analyze',
         conversations: [],
@@ -473,8 +500,20 @@
                     'Content-Type': 'application/json',
                     'Accept': 'text/event-stream',
                 }),
-                body: JSON.stringify({ text: state.extractedText }),
+                body: JSON.stringify({
+                    text: state.extractedText,
+                    legal_areas: state.intakeSelectedAreas || [],
+                    intake_session_id: state.intakeSession ? state.intakeSession.id : null,
+                }),
             });
+
+            if (response.status === 409) {
+                // Pre-flight: missing corpus sources — show actionable modal
+                const data = await response.json();
+                showMissingSourcesModal(data.detail || data);
+                elements.progressSection.classList.add('hidden');
+                return;
+            }
 
             if (!response.ok) {
                 await handleApiError(response);
@@ -2618,9 +2657,346 @@
             showDisclaimerModal();
         }
 
-        // =========================================================================
-        // Analyze Mode Event Listeners
-        // =========================================================================
+    // =========================================================================
+    // 3-step intake flow (Step 1 → 2 → 3 → Pipeline)
+    // =========================================================================
+
+    const LEGAL_AREA_LABELS = {
+        sozialrecht: 'Sozialrecht',
+        erbrecht: 'Erbrecht',
+        schenkungsrecht: 'Schenkungsrecht',
+        familienrecht: 'Familienrecht',
+        mietrecht: 'Mietrecht',
+        arbeitsrecht: 'Arbeitsrecht',
+        vertragsrecht: 'Vertragsrecht',
+        verwaltungsrecht: 'Verwaltungsrecht',
+        strafrecht: 'Strafrecht',
+        andere: 'Andere',
+    };
+
+    function gotoStep(step) {
+        state.currentStep = step;
+        elements.uploadSection.classList.toggle('hidden', step !== 1);
+        elements.intakeSection.classList.toggle('hidden', step !== 2);
+        elements.confirmationSection.classList.toggle('hidden', step !== 3);
+        elements.progressSection.classList.add('hidden');
+        // Update step indicator
+        document.querySelectorAll('.step-indicator .step').forEach((el) => {
+            const elStep = parseInt(el.dataset.step, 10);
+            el.classList.toggle('active', elStep === step);
+            el.classList.toggle('completed', elStep < step);
+        });
+        // Scroll to top
+        elements.analyzeMode.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function startIntakeFlow() {
+        if (!state.extractedText || !state.extractedText.trim()) {
+            showError('Bitte zuerst einen Fall schildern.');
+            return;
+        }
+        elements.useTextBtn.disabled = true;
+        elements.useTextBtn.textContent = 'Interview wird gestartet …';
+
+        try {
+            const resp = await fetch(API_BASE + '/intake/start', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({
+                    session_id: state.sessionId,
+                    initial_text: state.extractedText,
+                    max_turns: 8,
+                }),
+            });
+            if (!resp.ok) {
+                await handleApiError(resp);
+                elements.useTextBtn.disabled = false;
+                elements.useTextBtn.textContent = 'Fall aufnehmen →';
+                return;
+            }
+            const data = await resp.json();
+            state.intakeSession = data;
+            renderIntake(data);
+            await loadAvailableSources();
+            await runReadinessCheck();
+            gotoStep(2);
+        } catch (err) {
+            showError('Intake konnte nicht gestartet werden: ' + err.message);
+            elements.useTextBtn.disabled = false;
+            elements.useTextBtn.textContent = 'Fall aufnehmen →';
+        }
+    }
+
+    function renderIntake(data) {
+        const messages = data.messages || [];
+        const html = messages.map((m) => {
+            const cls = m.role === 'user' ? 'intake-msg-user' : 'intake-msg-assistant';
+            return `<div class="intake-msg ${cls}"><div class="intake-msg-bubble">${escapeHtml(m.content)}</div></div>`;
+        }).join('');
+        elements.intakeMessages.innerHTML = html;
+        elements.intakeMessages.scrollTop = elements.intakeMessages.scrollHeight;
+
+        const turn = data.turn_count || 0;
+        const max = data.max_turns || 8;
+        elements.intakeTurnCounter.textContent = `Frage ${turn} von max. ${max}`;
+        elements.intakeInput.disabled = data.status !== 'active';
+        elements.intakeSendBtn.disabled = data.status !== 'active';
+
+        if (data.status === 'completed') {
+            finalizeIntakeIntoConfirmation(data);
+        }
+    }
+
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+    }
+
+    async function sendIntakeMessage() {
+        const text = elements.intakeInput.value.trim();
+        if (!text || !state.intakeSession) return;
+        elements.intakeSendBtn.disabled = true;
+        try {
+            const resp = await fetch(API_BASE + `/intake/${state.intakeSession.id}/message`, {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ message: text }),
+            });
+            if (resp.status === 409) {
+                // turn cap reached
+                await confirmIntake();
+                return;
+            }
+            if (!resp.ok) {
+                await handleApiError(resp);
+                elements.intakeSendBtn.disabled = false;
+                return;
+            }
+            const data = await resp.json();
+            state.intakeSession = data;
+            elements.intakeInput.value = '';
+            renderIntake(data);
+        } catch (err) {
+            showError('Senden fehlgeschlagen: ' + err.message);
+            elements.intakeSendBtn.disabled = false;
+        }
+    }
+
+    async function confirmIntake() {
+        if (!state.intakeSession) return;
+        try {
+            const resp = await fetch(API_BASE + `/intake/${state.intakeSession.id}/confirm`, {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({}),
+            });
+            if (!resp.ok) {
+                await handleApiError(resp);
+                return;
+            }
+            const data = await resp.json();
+            state.intakeSession = data;
+            finalizeIntakeIntoConfirmation(data);
+        } catch (err) {
+            showError('Bestätigen fehlgeschlagen: ' + err.message);
+        }
+    }
+
+    function finalizeIntakeIntoConfirmation(data) {
+        const result = data.intake_result || {};
+        const primary = data.primary_area || result.primary_area || 'andere';
+        const secondary = data.secondary_areas || result.secondary_areas || [];
+        state.intakeSelectedAreas = [primary, ...secondary.filter((a) => a !== primary)];
+
+        // Render the preset card
+        renderPresetCard();
+        gotoStep(3);
+    }
+
+    function renderPresetCard() {
+        const body = elements.presetCardBody;
+        const areas = state.intakeSelectedAreas.length
+            ? state.intakeSelectedAreas
+            : ['sozialrecht'];
+
+        body.innerHTML = areas.map((area, i) => {
+            const label = LEGAL_AREA_LABELS[area] || area;
+            const isPrimary = i === 0;
+            return `
+                <label class="preset-area-item">
+                    <input type="checkbox" data-area="${escapeHtml(area)}" ${i < areas.length ? 'checked' : ''}>
+                    <span class="preset-area-label">${escapeHtml(label)}</span>
+                    ${isPrimary ? '<span class="preset-primary-badge">Hauptgebiet</span>' : ''}
+                </label>
+            `;
+        }).join('');
+
+        // Allow adding 'andere' if nothing selected
+        body.innerHTML += `
+            <label class="preset-area-item preset-area-add">
+                <select id="preset-area-add-select">
+                    <option value="">+ Weiteres Rechtsgebiet hinzufügen</option>
+                    ${Object.keys(LEGAL_AREA_LABELS).filter((a) => !areas.includes(a)).map((a) =>
+                        `<option value="${a}">${escapeHtml(LEGAL_AREA_LABELS[a])}</option>`).join('')}
+                </select>
+            </label>
+        `;
+
+        // Wire change handlers
+        body.querySelectorAll('input[type="checkbox"][data-area]').forEach((cb) => {
+            cb.addEventListener('change', () => {
+                const area = cb.dataset.area;
+                if (cb.checked) {
+                    if (!state.intakeSelectedAreas.includes(area)) {
+                        state.intakeSelectedAreas.push(area);
+                    }
+                } else {
+                    state.intakeSelectedAreas = state.intakeSelectedAreas.filter((a) => a !== area);
+                }
+                runReadinessCheck();
+            });
+        });
+        const addSelect = body.querySelector('#preset-area-add-select');
+        if (addSelect) {
+            addSelect.addEventListener('change', () => {
+                const a = addSelect.value;
+                if (a && !state.intakeSelectedAreas.includes(a)) {
+                    state.intakeSelectedAreas.push(a);
+                    renderPresetCard();
+                    runReadinessCheck();
+                }
+            });
+        }
+
+        // Summary
+        const summary = (state.intakeSession && state.intakeSession.intake_result && state.intakeSession.intake_result.summary)
+            || state.intakeSession && state.intakeSession.intake_result && state.intakeSession.intake_result.summary;
+        const s = (state.intakeSession && state.intakeSession.intake_result && state.intakeSession.intake_result.summary) || '';
+        elements.presetCardSummary.textContent = s
+            ? `Zusammenfassung: ${s}`
+            : '';
+
+        runReadinessCheck();
+    }
+
+    async function loadAvailableSources() {
+        try {
+            const resp = await fetch(API_BASE + '/corpus/available-sources', {
+                headers: buildHeaders({}),
+            });
+            if (resp.ok) {
+                state.intakeAvailableSources = await resp.json();
+            }
+        } catch (err) {
+            console.warn('available-sources load failed', err);
+        }
+    }
+
+    async function runReadinessCheck() {
+        if (!state.intakeSelectedAreas.length) {
+            elements.presetCardMissing.classList.add('hidden');
+            return;
+        }
+        // Client-side heuristic: an area is "ready" if at least one of its
+        // mapped sources has a scraper (has_scraper). The full per-area
+        // status is determined server-side at pipeline run time.
+        const areaToSources = {
+            sozialrecht: ['sgb2', 'sgbx', 'sgb1', 'weisung'],
+            erbrecht: ['bgb', 'erbstg', 'hoefev'],
+            schenkungsrecht: ['bgb', 'erbstg'],
+            familienrecht: ['bgb'],
+            mietrecht: ['bgb'],
+            arbeitsrecht: ['bgb'],
+            vertragsrecht: ['bgb'],
+            verwaltungsrecht: ['vwvfg'],
+            strafrecht: [],
+            andere: [],
+        };
+        const available = new Set(
+            (state.intakeAvailableSources || [])
+                .filter((s) => s.has_scraper)
+                .map((s) => s.key)
+        );
+        const missing = [];
+        for (const area of state.intakeSelectedAreas) {
+            const sources = areaToSources[area] || [];
+            const has = sources.some((s) => available.has(s));
+            if (!has && sources.length > 0) {
+                missing.push(`${LEGAL_AREA_LABELS[area] || area} (${sources.filter((s) => !available.has(s)).join(', ')})`);
+            }
+        }
+        state.intakeMissingSources = missing;
+        if (missing.length) {
+            elements.presetCardMissing.classList.remove('hidden');
+            elements.presetCardMissingText.textContent =
+                `Citizen kann die Analyse erst starten, wenn diese Quellen geladen sind: ${missing.join('; ')}.`;
+        } else {
+            elements.presetCardMissing.classList.add('hidden');
+        }
+    }
+
+    async function loadMissingSources() {
+        const sources = ['sgb2', 'sgbx', 'sgb1', 'weisung', 'bgb', 'erbstg', 'hoefev'];
+        elements.presetLoadMissingBtn.disabled = true;
+        elements.presetLoadMissingBtn.textContent = 'Quellen werden geladen …';
+        try {
+            const resp = await fetch(API_BASE + '/corpus/update', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ sources }),
+            });
+            if (!resp.ok) {
+                await handleApiError(resp);
+                return;
+            }
+            const data = await resp.json();
+            state.corpusJobId = data.job_id;
+            // Show the corpus section progress UI (reuse existing handler)
+            if (typeof pollCorpusStatus === 'function') {
+                pollCorpusStatus();
+            }
+            await runReadinessCheck();
+            await loadAvailableSources();
+            await runReadinessCheck();
+        } catch (err) {
+            showError('Quellen-Update fehlgeschlagen: ' + err.message);
+        } finally {
+            elements.presetLoadMissingBtn.disabled = false;
+            elements.presetLoadMissingBtn.textContent = 'Fehlende Quellen jetzt laden';
+        }
+    }
+
+    function showMissingSourcesModal(detail) {
+        elements.missingSourcesMessage.textContent = detail.message || 'Quellen fehlen.';
+        const list = elements.missingSourcesList;
+        list.innerHTML = '';
+        const areas = detail.areas || {};
+        Object.keys(areas).forEach((area) => {
+            const info = areas[area];
+            const li = document.createElement('li');
+            const missing = (info.missing_source_types || []).join(', ') || '(keine)';
+            li.innerHTML = `<strong>${escapeHtml(LEGAL_AREA_LABELS[area] || area)}:</strong> fehlen ${escapeHtml(missing)}`;
+            list.appendChild(li);
+        });
+        if (!list.innerHTML) {
+            (detail.missing_source_types || []).forEach((s) => {
+                const li = document.createElement('li');
+                li.textContent = s;
+                list.appendChild(li);
+            });
+        }
+        elements.missingSourcesModal.classList.remove('hidden');
+    }
+
+    function hideMissingSourcesModal() {
+        elements.missingSourcesModal.classList.add('hidden');
+    }
+
+    // =========================================================================
+    // Original analyze handler — now uses intake state
+    // =========================================================================
+
 
         elements.fileInput.addEventListener('change', handleFileSelect);
         elements.uploadArea.addEventListener('click', () => elements.fileInput.click());
@@ -2631,7 +3007,41 @@
         elements.analyzeBtn.addEventListener('click', handleAnalyze);
         elements.corpusUpdateBtn.addEventListener('click', handleCorpusUpdate);
         elements.textEditor.addEventListener('input', handleTextEditorInput);
-        elements.useTextBtn.addEventListener('click', handleUseText);
+        elements.useTextBtn.addEventListener('click', startIntakeFlow);
+
+        // 3-step intake wiring
+        if (elements.intakeSendBtn) {
+            elements.intakeSendBtn.addEventListener('click', sendIntakeMessage);
+        }
+        if (elements.intakeInput) {
+            elements.intakeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendIntakeMessage();
+                }
+            });
+        }
+        if (elements.intakeConfirmBtn) {
+            elements.intakeConfirmBtn.addEventListener('click', confirmIntake);
+        }
+        if (elements.intakeBackBtn) {
+            elements.intakeBackBtn.addEventListener('click', () => gotoStep(1));
+        }
+        if (elements.confirmationBackBtn) {
+            elements.confirmationBackBtn.addEventListener('click', () => gotoStep(2));
+        }
+        if (elements.presetLoadMissingBtn) {
+            elements.presetLoadMissingBtn.addEventListener('click', loadMissingSources);
+        }
+        if (elements.missingSourcesCancelBtn) {
+            elements.missingSourcesCancelBtn.addEventListener('click', hideMissingSourcesModal);
+        }
+        if (elements.missingSourcesLoadBtn) {
+            elements.missingSourcesLoadBtn.addEventListener('click', () => {
+                hideMissingSourcesModal();
+                loadMissingSources();
+            });
+        }
 
         // =========================================================================
         // Mode Toggle

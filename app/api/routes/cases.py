@@ -26,7 +26,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.db.models import CaseRun, Claim
+from app.db.models import CaseRun, CaseRunArea, Claim
 from app.db.session import async_session_factory
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,22 @@ async def list_cases_endpoint() -> list[dict[str, Any]]:
         result = await db.execute(stmt)
         cases = list(result.scalars().all())
 
+        # Fetch the per-case areas in a single round trip.
+        case_ids = [c.id for c in cases]
+        areas_by_case: dict[Any, list[dict[str, Any]]] = {}
+        if case_ids:
+            areas_stmt = select(CaseRunArea).where(
+                CaseRunArea.case_run_id.in_(case_ids)
+            )
+            areas_res = await db.execute(areas_stmt)
+            for row in areas_res.scalars().all():
+                areas_by_case.setdefault(str(row.case_run_id), []).append(
+                    {
+                        "legal_area": row.legal_area,
+                        "is_primary": row.is_primary,
+                    }
+                )
+
     return [
         {
             "id": str(c.id),
@@ -74,6 +90,7 @@ async def list_cases_endpoint() -> list[dict[str, Any]]:
                 if c.input_text and len(c.input_text) > 100
                 else c.input_text
             ),
+            "legal_areas": areas_by_case.get(str(c.id), []),
         }
         for c in cases
     ]
@@ -130,6 +147,14 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
         for sl in (case.stage_logs or [])
     ]
 
+    # Fetch legal_areas for this case.
+    areas_stmt = select(CaseRunArea).where(CaseRunArea.case_run_id == case.id)
+    areas_res = await db.execute(areas_stmt)
+    legal_areas = [
+        {"legal_area": a.legal_area, "is_primary": a.is_primary}
+        for a in areas_res.scalars().all()
+    ]
+
     # Serialize claims with evidence bindings.
     claims = []
     for cl in case.claims or []:
@@ -169,6 +194,7 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
         "final_output": final_output,
         "stages": stages,
         "claims": claims,
+        "legal_areas": legal_areas,
     }
 
 

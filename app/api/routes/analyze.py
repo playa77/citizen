@@ -6,18 +6,32 @@ Provides a single endpoint:
     and finally yields the 7-part structured output.
 
 Request body accepts either raw text or a reference to a previously
-ingested document. For WP-013, the payload is a simple JSON object:
-    { "text": "<normalized or raw text>" }
+ingested document. The payload is a simple JSON object:
+    {
+        "text": "<normalized or raw text>",
+        "legal_areas": ["sozialrecht"]  // optional, defaults to []
+    }
+
+When ``legal_areas`` is non-empty, the pipeline runs per-area
+retrieval and uses area-specific prompts. The endpoint also accepts an
+optional ``intake_session_id`` to link the resulting CaseRun back to
+the IntakeSession that produced the legal_areas.
+
+A pre-flight check verifies that all selected legal_areas have a
+populated corpus; if any are missing, the endpoint returns HTTP 409
+with the list of missing source_types so the UI can show a targeted
+"Quellen jetzt laden" modal.
 
 The endpoint normalizes the input (Stage 1) and then streams one SSE
 event per completed stage. After Stage 8 (generation), the stream ends
-with a final event containing the 7-part JSON output.
+with a final event containing the 7-part JSON output and the
+``case_run_id``.
 
 Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 
@@ -31,11 +45,14 @@ from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.pipeline import PipelineState, run_pipeline
-from app.db.models import CaseRun, Claim, EvidenceBinding, PipelineStageLog
+from app.db.models import CaseRun, CaseRunArea, Claim, EvidenceBinding, IntakeSession, PipelineStageLog
 from app.db.session import async_session_factory
 from app.services.audit import AuditRecord, persist_audit_record
+from app.services.corpus_readiness import check_preflight
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -87,24 +104,40 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
     Parameters
     ----------
     payload : dict[str, str]
-        JSON body: ``{ "text": "<document text>" }``
+        JSON body::
+
+            {
+                "text": "<document text>",
+                "legal_areas": ["sozialrecht", "erbrecht"],
+                "intake_session_id": "<uuid>",
+            }
+
+        ``legal_areas`` is optional (defaults to ``[]``) and triggers
+        per-area retrieval and area-specific prompts.
 
     Returns
     -------
     StreamingResponse
         An SSE stream yielding one event per pipeline stage. Each event
         is a ``data: {...}\n\n`` line. The final event's ``payload``
-        contains the key ``sections`` pointing to the 6-part output keys
-        and a separate ``final_output`` field with the full result.
+        contains the key ``sections`` pointing to the 7-part output
+        keys, a separate ``final_output`` field with the full result,
+        and ``case_run_id`` for re-entry into Case Chat.
 
     Raises
     ------
     HTTPException(400)
         If the request body is missing the ``text`` field or it is empty.
+    HTTPException(404)
+        If the ``intake_session_id`` doesn't exist.
+    HTTPException(409)
+        Pre-flight check failed: one or more selected ``legal_areas``
+        have no corpus chunks. The response body lists per-area missing
+        sources so the UI can show a targeted "Quellen jetzt laden"
+        modal.
     HTTPException(500)
         If the pipeline fails with an unrecoverable error.
     """
-    # Validate payload
     raw_text = payload.get("text")
     if not raw_text or not isinstance(raw_text, str) or not raw_text.strip():
         raise HTTPException(
@@ -116,8 +149,66 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
     input_text = normalize_text(raw_text)
     session_id = str(uuid.uuid4())
 
+    # Optional: legal_areas list + intake_session_id.
+    legal_areas_raw = payload.get("legal_areas") or []
+    if isinstance(legal_areas_raw, str):
+        legal_areas = [a.strip() for a in legal_areas_raw.split(",") if a.strip()]
+    elif isinstance(legal_areas_raw, list):
+        legal_areas = [str(a).strip() for a in legal_areas_raw if str(a).strip()]
+    else:
+        legal_areas = []
+    intake_session_id_str = payload.get("intake_session_id")
+    intake_session_uuid: uuid.UUID | None = None
+    if intake_session_id_str:
+        try:
+            intake_session_uuid = uuid.UUID(str(intake_session_id_str))
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="'intake_session_id' must be a valid UUID.",
+            ) from None
+
+    # Pre-flight corpus check.
+    if legal_areas:
+        async with async_session_factory() as pre_db:
+            try:
+                preflight = await check_preflight(pre_db, legal_areas)
+            except SQLAlchemyError as exc:
+                logger.warning("pre-flight DB error: %s", exc)
+                preflight = {"is_ready": True, "areas": {}, "missing_source_types": [], "ready_source_types": []}
+        if not preflight["is_ready"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "error": "corpus_not_ready",
+                    "message": (
+                        "Mindestens ein ausgewähltes Rechtsgebiet hat keine "
+                        "Rechtsquellen im Corpus. Bitte die fehlenden Quellen laden."
+                    ),
+                    "legal_areas": legal_areas,
+                    "areas": preflight["areas"],
+                    "missing_source_types": preflight["missing_source_types"],
+                    "action": "POST /api/v1/corpus/update with the missing source_types",
+                },
+            )
+
+    # Verify intake_session_id if provided.
+    if intake_session_uuid is not None:
+        async with async_session_factory() as db:
+            stmt = select(IntakeSession).where(IntakeSession.id == intake_session_uuid)
+            res = await db.execute(stmt)
+            if res.scalar_one_or_none() is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"IntakeSession {intake_session_uuid} not found.",
+                )
+
     # Initialize pipeline state.
-    state = PipelineState(input_text=input_text)
+    state = PipelineState(
+        input_text=input_text,
+        legal_areas=legal_areas,
+        intake_session_id=str(intake_session_uuid) if intake_session_uuid else None,
+    )
 
     # Record start time for latency calculation.
     start = time.monotonic()
@@ -219,6 +310,25 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                     )
                     db.add(case_run)
                     await db.flush()
+
+                    # Persist case_run_area rows for every selected legal area.
+                    if state.legal_areas:
+                        primary = (
+                            state.legal_areas[0] if state.legal_areas else None
+                        )
+                        for area in state.legal_areas:
+                            db.add(
+                                CaseRunArea(
+                                    case_run_id=case_run.id,
+                                    legal_area=area,
+                                    is_primary=(area == primary),
+                                    intake_session_id=(
+                                        uuid.UUID(state.intake_session_id)
+                                        if state.intake_session_id
+                                        else None
+                                    ),
+                                )
+                            )
 
                     # Persist PipelineStageLog records.
                     for entry in stage_log_entries:

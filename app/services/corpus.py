@@ -220,6 +220,88 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "checked_by_default": False,
         "source": "bsg.bund.de",
     },
+    "erbstg": {
+        "key": "erbstg",
+        "name": "ErbStG",
+        "full_name": "ErbStG (Erbschaftsteuer- und Schenkungsteuergesetz)",
+        "description": (
+            "Erbschaft- und Schenkungsteuer: Freibeträge, Steuerklassen, "
+            "Bewertung von Grundvermögen, land- und forstwirtschaftlichem "
+            "Vermögen, Betriebsvermögen und sonstigem Vermögen."
+        ),
+        "tooltip": (
+            "Neu. Erforderlich für jede erbrechtliche oder schenkungs-"
+            "rechtliche Analyse, die steuerliche Auswirkungen hat."
+        ),
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "hoefev": {
+        "key": "hoefev",
+        "name": "HöfeO",
+        "full_name": "Höfeordnung (HöfeO)",
+        "description": (
+            "Höfeordnung — Sondererbrecht für landwirtschaftliche "
+            "Höfe in einigen Bundesländern: Hofesübergabe, "
+            "Abfindung weichender Erben, Ertragswertverfahren."
+        ),
+        "tooltip": (
+            "Neu. Regional begrenzt. Relevant für Hofübergaben in "
+            "Bundesländern mit Höfeordnung (z. B. NW, NDS, SH, HE, RP, BY)."
+        ),
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "kschg": {
+        "key": "kschg",
+        "name": "KSchG",
+        "full_name": "KSchG (Kündigungsschutzgesetz)",
+        "description": (
+            "Kündigungsschutzgesetz — allgemeiner und besonderer "
+            "Kündigungsschutz im Arbeitsverhältnis."
+        ),
+        "tooltip": (
+            "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
+            "wird die Quelle im Auswahlmenü als deaktiviert angezeigt."
+        ),
+        "has_scraper": False,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "burlg": {
+        "key": "burlg",
+        "name": "BUrlG",
+        "full_name": "BUrlG (Bundesurlaubsgesetz)",
+        "description": (
+            "Bundesurlaubsgesetz — Mindesturlaub, Urlaubsanspruch, "
+            "Übertragung, Verfall."
+        ),
+        "tooltip": (
+            "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
+            "wird die Quelle im Auswahlmenü als deaktiviert angezeigt."
+        ),
+        "has_scraper": False,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "tvg": {
+        "key": "tvg",
+        "name": "TVG",
+        "full_name": "TVG (Tarifvertragsgesetz)",
+        "description": (
+            "Tarifvertragsgesetz — Abschluss, Wirkung und Beendigung "
+            "von Tarifverträgen."
+        ),
+        "tooltip": (
+            "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
+            "wird die Quelle im Auswahlmenü als deaktiviert angezeigt."
+        ),
+        "has_scraper": False,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
 }
 
 
@@ -287,7 +369,56 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "bgb": "/bgb/",       # BGB - Bürgerliches Gesetzbuch
     "vwvfg": "/vwvfg/",   # VwVfG - Verwaltungsverfahrensgesetz
     "sgg": "/sgg/",       # SGG - Sozialgerichtsgesetz
+    "erbstg": "/erbstg/", # ErbStG - Erbschaft- und Schenkungsteuergesetz
+    "hoefev": "/hoefeordn_/",  # Höfeordnung (slug varies by BL; fallback)
 }
+
+
+# ---------------------------------------------------------------------------
+# BGB paragraph → legal_area tagger
+# ---------------------------------------------------------------------------
+# Maps BGB paragraph ranges to legal_area values used by
+# legal_chunk.legal_area. Single paragraphs win over ranges; ranges are
+# inclusive on both ends. Tagging is purely additive: when a BGB chunk is
+# produced the parser tries to detect its paragraph number and stamps
+# the matching legal_area on the chunk. Chunks that fall outside any
+# defined range (e.g. "Allgemein" headers) get legal_area=None.
+_BGB_PARA_TO_LEGAL_AREA: list[tuple[tuple[int, int], str]] = [
+    ((1922, 2385), "erbrecht"),         # §§ 1922–2385 BGB = Erbrecht
+    ((516, 534), "schenkungsrecht"),   # §§ 516–534 BGB = Schenkungsrecht
+    ((1297, 1921), "familienrecht"),   # §§ 1297–1921 BGB = Familienrecht
+]
+
+
+def _infer_legal_area_for_bgb(hierarchy_path: str) -> str | None:
+    """Return the legal_area for a BGB chunk based on its §-reference.
+
+    Parameters
+    ----------
+    hierarchy_path :
+        The chunk's hierarchy path (e.g. ``"BGB > § 1933"``). Only the
+        §-number is inspected; other parts of the path are ignored.
+
+    Returns
+    -------
+    str | None
+        The matched ``legal_area`` (e.g. ``"erbrecht"``) or ``None`` if
+        the paragraph falls outside any known range.
+    """
+    if not hierarchy_path:
+        return None
+    match = _PARA_TAG_RE.search(hierarchy_path)
+    if not match:
+        return None
+    try:
+        para = int(match.group(1))
+    except (TypeError, ValueError):
+        return None
+    for (lo, hi), area in _BGB_PARA_TO_LEGAL_AREA:
+        if lo <= para <= hi:
+            return area
+    return None
+
 
 # Regex for paragraph references, e.g. "§ 31"
 _PARA_TAG_RE = re.compile(r"§\s*(\d+)")
@@ -602,6 +733,7 @@ def _split_weisung_into_paragraphs(
                 "source_url": source_url,
                 "version_hash": _compute_version_hash(norm_text),
                 "chunk_id": str(uuid4()),
+                "legal_area": None,
             }
         )
 
@@ -678,18 +810,29 @@ def _parse_law_sections(
             if absatz_label:
                 hierarchy.append(absatz_label)
 
+            hierarchy_path = " > ".join(hierarchy)
+
+            # Tag BGB chunks with their legal_area (erbrecht /
+            # schenkungsrecht / familienrecht / None). Other sources
+            # leave legal_area=None — they are either single-domain
+            # (sgb*, weisung) or otherwise un-tagged.
+            legal_area: str | None = None
+            if source_type == "bgb":
+                legal_area = _infer_legal_area_for_bgb(hierarchy_path)
+
             chunks.append(
                 {
                     "id": str(uuid4()),
                     "source_type": source_type,
                     "title": law_name,
                     "unit_type": "satz",
-                    "hierarchy_path": " > ".join(hierarchy),
+                    "hierarchy_path": hierarchy_path,
                     "text_content": norm_text,
                     "effective_date": effective_date.isoformat(),
                     "source_url": source_url,
                     "version_hash": _compute_version_hash(norm_text),
                     "chunk_id": str(uuid4()),
+                    "legal_area": legal_area,
                 }
             )
 
@@ -954,6 +1097,7 @@ def _make_chunk(
         "source_url": source_url,
         "version_hash": _compute_version_hash(text),
         "chunk_id": str(uuid4()),
+        "legal_area": None,
     }
 
 
@@ -1085,8 +1229,14 @@ async def _get_or_create_legal_chunk(
             hierarchy_path=hierarchy_path,
             text_content=text_content,
             effective_date=date.fromisoformat(chunk["effective_date"]),
+            legal_area=chunk.get("legal_area"),
         )
         session.add(lc)
+        await session.flush()
+    elif chunk.get("legal_area") and lc.legal_area != chunk["legal_area"]:
+        # Back-fill legal_area for chunks that pre-date the column.
+        # Idempotent: subsequent re-corpus runs are no-ops.
+        lc.legal_area = chunk["legal_area"]
         await session.flush()
 
     return lc

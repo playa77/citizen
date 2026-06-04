@@ -33,6 +33,245 @@ class RetrievalError(Exception):
     """Raised when the retrieval engine fails irrecoverably."""
 
 
+async def retrieve_chunks_for_areas(
+    legal_areas: list[str],
+    issues: list[str],
+    questions: list[str],
+    normalized_text: str,
+    *,
+    client: OpenRouterClient | None = None,
+) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    """Per-area retrieval: run retrieval once per area, merge results.
+
+    Parameters
+    ----------
+    legal_areas :
+        One or more legal_area keys (e.g. ``["erbrecht",
+        "familienrecht"]``). Areas with no mapped source_types (e.g.
+        ``"andere"``) are still represented in the result dict with an
+        empty list.
+    issues, questions, normalized_text :
+        The standard pipeline inputs used to build the combined query.
+    client :
+        Optional OpenRouter client.
+
+    Returns
+    -------
+    (per_area, merged)
+        ``per_area`` is a ``{area: [chunk, ...]}`` mapping. ``merged``
+        is the de-duplicated, distance-sorted union of all per-area
+        chunks, capped at ``settings.MAX_CHUNKS_FOR_FINAL`` items.
+    """
+    from app.core.config import settings as _s
+    from app.services.corpus_readiness import AREA_TO_SOURCE_TYPES
+
+    if not legal_areas:
+        return {}, []
+
+    per_area_results: dict[str, list[dict[str, Any]]] = {}
+    seen: set[str] = set()
+    merged: list[dict[str, Any]] = []
+
+    top_k = _s.TOP_K_RETRIEVAL
+    threshold = _s.MAX_COSINE_DISTANCE
+
+    for area in legal_areas:
+        source_types = AREA_TO_SOURCE_TYPES.get(area, ())
+        if not source_types:
+            per_area_results[area] = []
+            continue
+
+        if _s.RETRIEVAL_MODE == "combined":
+            chunks = await retrieve_chunks_combined_filtered(
+                issues,
+                questions,
+                normalized_text,
+                source_types=source_types,
+                top_k=top_k,
+                threshold=threshold,
+                client=client,
+            )
+        else:
+            chunks = await retrieve_chunks_per_area(
+                questions,
+                source_types=source_types,
+                top_k=top_k,
+                threshold=threshold,
+                client=client,
+            )
+
+        per_area_results[area] = chunks
+        for c in chunks:
+            cid = c["chunk_id"]
+            if cid in seen:
+                continue
+            seen.add(cid)
+            merged.append(c)
+
+    # Sort merged by distance ascending; cap at MAX_CHUNKS_FOR_FINAL.
+    merged.sort(key=lambda c: c["distance"])
+    merged = merged[: _s.MAX_CHUNKS_FOR_FINAL]
+    return per_area_results, merged
+
+
+async def retrieve_chunks_combined_filtered(
+    issues: list[str],
+    questions: list[str],
+    normalized_text: str,
+    *,
+    source_types: tuple[str, ...],
+    top_k: int,
+    threshold: float,
+    client: OpenRouterClient | None = None,
+) -> list[dict[str, Any]]:
+    """Like :func:`retrieve_chunks_combined` but filtered to *source_types*.
+
+    Filters via ``LegalSource.source_type IN (...)`` so multi-area
+    retrieval can ask only for BGB chunks for the familienrecht area,
+    for example.
+    """
+    if not issues and not questions:
+        return []
+
+    parts: list[str] = []
+    if issues:
+        parts.append("Themen:\n" + "\n".join(f"- {issue}" for issue in issues))
+    if questions:
+        parts.append("Rechtsfragen:\n" + "\n".join(f"- {q}" for q in questions))
+    if normalized_text:
+        parts.append(f"Dokumentauszug:\n{normalized_text[:1200]}")
+    combined_query = "\n\n".join(parts)
+
+    embedding: list[float] | None = None
+    if client is not None:
+        embedding = await client.get_embedding(combined_query)
+    else:
+        from app.core.router import OpenRouterClient as _ORC
+        async with _ORC() as router:
+            embedding = await router.get_embedding(combined_query)
+
+    rows: list[dict[str, Any]] = []
+    async for session in get_async_session():
+        stmt = (
+            select(
+                ChunkEmbedding.chunk_id,
+                ChunkEmbedding.embedding.cosine_distance(embedding).label("distance"),
+                LegalChunk.text_content,
+                LegalChunk.hierarchy_path,
+                LegalChunk.unit_type,
+                LegalChunk.effective_date,
+                LegalChunk.legal_area,
+                LegalSource.source_type,
+                LegalSource.title,
+            )
+            .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
+            .join(LegalSource, LegalSource.id == LegalChunk.source_id)
+            .where(
+                ChunkEmbedding.embedding.cosine_distance(embedding) < threshold,
+                LegalSource.is_active.is_(True),
+                LegalSource.source_type.in_(source_types),
+            )
+            .order_by(ChunkEmbedding.embedding.cosine_distance(embedding).asc())
+            .limit(top_k)
+        )
+        result = await session.execute(stmt)
+        rows = result.mappings().all()
+        await session.close()
+        break
+
+    return [
+        {
+            "chunk_id": str(row["chunk_id"]),
+            "text_content": row["text_content"],
+            "hierarchy_path": row["hierarchy_path"],
+            "unit_type": row["unit_type"],
+            "effective_date": str(row["effective_date"]) if row["effective_date"] else "",
+            "source_type": row["source_type"],
+            "title": row["title"],
+            "legal_area": row["legal_area"],
+            "distance": float(row["distance"]),
+            "question_index": 0,
+        }
+        for row in rows
+    ]
+
+
+async def retrieve_chunks_per_area(
+    questions: list[str],
+    *,
+    source_types: tuple[str, ...],
+    top_k: int,
+    threshold: float,
+    client: OpenRouterClient | None = None,
+) -> list[dict[str, Any]]:
+    """Per-question retrieval filtered to a set of source_types.
+
+    Used by the multi-area path when RETRIEVAL_MODE != "combined".
+    """
+    if not questions:
+        return []
+
+    if client is not None:
+        embeddings = await client.get_embeddings_batch(questions)
+    else:
+        from app.core.router import OpenRouterClient as _ORC
+        async with _ORC() as router:
+            embeddings = await router.get_embeddings_batch(questions)
+
+    all_chunks: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    async for session in get_async_session():
+        for q_idx, emb in enumerate(embeddings):
+            stmt = (
+                select(
+                    ChunkEmbedding.chunk_id,
+                    ChunkEmbedding.embedding.cosine_distance(emb).label("distance"),
+                    LegalChunk.text_content,
+                    LegalChunk.hierarchy_path,
+                    LegalChunk.unit_type,
+                    LegalChunk.effective_date,
+                    LegalChunk.legal_area,
+                    LegalSource.source_type,
+                    LegalSource.title,
+                )
+                .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
+                .join(LegalSource, LegalSource.id == LegalChunk.source_id)
+                .where(
+                    ChunkEmbedding.embedding.cosine_distance(emb) < threshold,
+                    LegalSource.is_active.is_(True),
+                    LegalSource.source_type.in_(source_types),
+                )
+                .order_by(ChunkEmbedding.embedding.cosine_distance(emb).asc())
+                .limit(top_k)
+            )
+            result = await session.execute(stmt)
+            for row in result.mappings().all():
+                cid = str(row["chunk_id"])
+                if cid in seen:
+                    continue
+                seen.add(cid)
+                all_chunks.append(
+                    {
+                        "chunk_id": cid,
+                        "text_content": row["text_content"],
+                        "hierarchy_path": row["hierarchy_path"],
+                        "unit_type": row["unit_type"],
+                        "effective_date": str(row["effective_date"]) if row["effective_date"] else "",
+                        "source_type": row["source_type"],
+                        "title": row["title"],
+                        "legal_area": row["legal_area"],
+                        "distance": float(row["distance"]),
+                        "question_index": q_idx,
+                    }
+                )
+        await session.close()
+        break
+
+    all_chunks.sort(key=lambda c: c["distance"])
+    return all_chunks
+
+
 async def retrieve_chunks(
     questions: list[str],
     *,
@@ -277,6 +516,7 @@ async def retrieve_chunks_combined(
                 LegalChunk.hierarchy_path,
                 LegalChunk.unit_type,
                 LegalChunk.effective_date,
+                LegalChunk.legal_area,
                 LegalSource.source_type,
                 LegalSource.title,
             )
@@ -305,6 +545,7 @@ async def retrieve_chunks_combined(
                     else "",
                     "source_type": row["source_type"],
                     "title": row["title"],
+                    "legal_area": row["legal_area"],
                     "distance": float(row["distance"]),
                     "question_index": 0,
                 }

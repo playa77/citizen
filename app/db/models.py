@@ -3,9 +3,15 @@
 Mirrors the DDL from Technical Specification §4.1 exactly:
   legal_source → legal_chunk → chunk_embedding
   case_run → pipeline_stage_log, claim → evidence_binding
+
+Plus (migration 006):
+  intake_session — multi-turn intake interview state
+  case_run_area  — many-to-many link between a case_run and one or more
+                   legal_areas (sozialrecht, erbrecht, …)
+  legal_chunk.legal_area — explicit area tag for retrieval filtering
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.3.0
 
 from datetime import date, datetime
 from typing import Any
@@ -54,6 +60,24 @@ SOURCE_TYPE_ALLOWED = (
     "sgb1", "sgb2", "sgb3", "sgb9", "sgb12", "sgbx",
     "bgb", "vwvfg", "sgg",
     "weisung", "bsg",
+    # New: general-legal-assistant legal areas (migration 006).
+    "erbstg", "hoefev", "kschg", "burlg", "tvg",
+)
+
+# Legal area values used in case_run_area.legal_area and
+# legal_chunk.legal_area. The closed set is enforced via CHECK
+# constraints in the DB; this Python tuple is the source of truth.
+LEGAL_AREA_ALLOWED: tuple[str, ...] = (
+    "sozialrecht",
+    "erbrecht",
+    "schenkungsrecht",
+    "familienrecht",
+    "mietrecht",
+    "arbeitsrecht",
+    "vertragsrecht",
+    "verwaltungsrecht",
+    "strafrecht",
+    "andere",
 )
 
 
@@ -118,6 +142,7 @@ class LegalChunk(Base):
     hierarchy_path: Mapped[str] = mapped_column(Text, nullable=False)
     text_content: Mapped[str] = mapped_column(Text, nullable=False)
     effective_date: Mapped[date] = mapped_column(Date, nullable=False)
+    legal_area: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     # Relationships
@@ -136,6 +161,7 @@ class LegalChunk(Base):
         ),
         Index("idx_chunk_source", "source_id"),
         Index("idx_chunk_hierarchy", "hierarchy_path"),
+        Index("idx_legal_chunk_legal_area", "legal_area"),
         UniqueConstraint("source_id", "hierarchy_path", "text_content", name="uq_legal_chunk_source_hierarchy_text"),
     )
 
@@ -561,4 +587,131 @@ class ConversationDocument(Base):
 
     __table_args__ = (
         Index("idx_document_conversation", "conversation_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 12. intake_session
+# ---------------------------------------------------------------------------
+
+INTAKE_STATUS_ALLOWED = ("active", "completed", "abandoned")
+
+
+class IntakeSession(Base):
+    """Persistent state for a multi-turn intake interview.
+
+    Every case is preceded by a 2–8 turn interview where the LLM asks
+    focused legal questions to disambiguate the case. This table records
+    the conversation, the turn count, and the eventual ``intake_result``
+    containing the chosen ``primary_area`` and ``secondary_areas``.
+
+    The same row is referenced from ``case_run_area.intake_session_id``
+    so the pipeline can later trace which intake produced a case.
+    """
+
+    __tablename__ = "intake_session"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
+    session_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="active",
+    )
+    turn_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0",
+    )
+    max_turns: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="8",
+    )
+    messages: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSONB, nullable=True,
+    )
+    intake_result: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB, nullable=True,
+    )
+    primary_area: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    secondary_areas: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String(50)), nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(), onupdate=func.now(),
+    )
+
+    # Relationships
+    case_run_areas: Mapped[list["CaseRunArea"]] = relationship(
+        "CaseRunArea", back_populates="intake_session",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            f"status IN ({_sql_in(INTAKE_STATUS_ALLOWED)})",
+            name="ck_intake_session_status",
+        ),
+        CheckConstraint(
+            "turn_count >= 0 AND turn_count <= max_turns",
+            name="ck_intake_session_turn_count",
+        ),
+        Index("idx_intake_session_id", "session_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 13. case_run_area
+# ---------------------------------------------------------------------------
+
+
+class CaseRunArea(Base):
+    """Many-to-many link between a ``case_run`` and a ``legal_area``.
+
+    A single case can span one or more legal areas (e.g. an Erbrecht +
+    Familienrecht succession dispute). The ``is_primary`` flag marks
+    the area the LLM selected as the dominant one.
+    """
+
+    __tablename__ = "case_run_area"
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
+    case_run_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("case_run.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    legal_area: Mapped[str] = mapped_column(String(50), nullable=False)
+    is_primary: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false",
+    )
+    intake_session_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("intake_session.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(),
+    )
+
+    # Relationships
+    intake_session: Mapped["IntakeSession | None"] = relationship(
+        "IntakeSession", back_populates="case_run_areas",
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "case_run_id", "legal_area", name="uq_case_run_area_case_area",
+        ),
+        CheckConstraint(
+            f"legal_area IN ({_sql_in(LEGAL_AREA_ALLOWED)})",
+            name="ck_case_run_area_legal_area",
+        ),
+        Index("idx_case_run_area_case", "case_run_id"),
+        Index("idx_case_run_area_area", "legal_area"),
     )

@@ -49,17 +49,17 @@ SAMPLE_NORMALIZED = (
 def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
     """Create dummy ``app.services.reasoning`` module with async stubs."""
 
-    async def classify_issues(text: str) -> list[str]:
+    async def classify_issues(text: str, *, system_prompt: str | None = None) -> list[str]:
         return ["SGB II § 31 — Kürzung der Leistung"]
 
-    async def decompose_questions(text: str) -> list[str]:
+    async def decompose_questions(text: str, *, system_prompt: str | None = None) -> list[str]:
         return [
             "War die Kürzung nach § 31 SGB II rechtmäßig?",
             "Welche Mitwirkungspflichten wurden verletzt?",
             "Kann die Kürzung angefochten werden?",
         ]
 
-    async def triage_document(normalized_text: str) -> dict[str, list[str]]:
+    async def triage_document(normalized_text: str, *, system_prompt: str | None = None) -> dict[str, list[str]]:
         return {
             "issues": ["SGB II § 31 — Kürzung der Leistung"],
             "questions": [
@@ -70,7 +70,10 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
         }
 
     async def construct_claims(
-        chunks: list[dict[str, Any]], questions: list[str]
+        chunks: list[dict[str, Any]],
+        questions: list[str],
+        *,
+        system_prompt: str | None = None,
     ) -> list[dict[str, Any]]:
         return [
             {
@@ -81,7 +84,10 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
         ]
 
     async def verify_claims(
-        claims: list[dict[str, Any]], chunks: list[dict[str, Any]]
+        claims: list[dict[str, Any]],
+        chunks: list[dict[str, Any]],
+        *,
+        system_prompt: str | None = None,
     ) -> list[dict[str, Any]]:
         return [
             {
@@ -92,7 +98,7 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
             }
         ]
 
-    async def generate_output(verified_claims: list[dict[str, Any]]) -> dict[str, str]:
+    async def generate_output(verified_claims: list[dict[str, Any]], *, system_prompt: str | None = None) -> dict[str, str]:
         return {
             "sachverhalt": "Der Antragsteller erhielt einen Kürzungsbescheid.",
             "rechtliche_wuerdigung": "§ 31 SGB II erfordert Prüfung.",
@@ -107,6 +113,8 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
         issues: list[str],
         questions: list[str],
         chunks: list[dict[str, Any]],
+        *,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
         """Stub for WP-007 combined final answer."""
         return {
@@ -145,6 +153,8 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
         issues: list[str],
         questions: list[str],
         chunks: list[dict[str, Any]],
+        *,
+        system_prompt: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Stub streaming version of grounded answer."""
         result = await generate_grounded_answer(
@@ -160,6 +170,8 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
         questions: list[str],
         claims: list[dict[str, Any]],
         chunks: list[dict[str, Any]],
+        *,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
         """Stub for adversarial legal review."""
         return {
@@ -227,12 +239,31 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
             }
         ]
 
+    async def retrieve_chunks_for_areas(
+        legal_areas: list[str],
+        issues: list[str],
+        questions: list[str],
+        normalized_text: str,
+        *,
+        client=None,
+    ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+        chunks = [
+            {
+                "id": "chunk-1",
+                "text": "§ 31 Abs. 1 SGB II: …",
+                "hierarchy_path": "SGB II > § 31 > Abs. 1",
+            }
+        ]
+        per_area: dict[str, list[dict[str, Any]]] = {a: list(chunks) for a in legal_areas}
+        return per_area, list(chunks)
+
     import sys
     import types
 
     mod = types.ModuleType("app.services.retrieval")
     mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
     mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
+    mod.retrieve_chunks_for_areas = retrieve_chunks_for_areas  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", mod)
 
 

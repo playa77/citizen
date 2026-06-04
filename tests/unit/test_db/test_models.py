@@ -39,7 +39,7 @@ def _check_constraints(table: type[models.Base]) -> list[CheckConstraint]:
 
 def test_exactly_eight_tables() -> None:
     tables = models.Base.metadata.tables
-    assert len(tables) == 12, f"Expected 12 tables, got {len(tables)}: {list(tables)}"
+    assert len(tables) == 14, f"Expected 14 tables, got {len(tables)}: {list(tables)}"
 
 
 def test_expected_table_names() -> None:
@@ -56,6 +56,8 @@ def test_expected_table_names() -> None:
         "conversation",
         "conversation_message",
         "conversation_document",
+        "intake_session",
+        "case_run_area",
     }
     actual = set(models.Base.metadata.tables.keys())
     assert actual == expected, f"Missing: {expected - actual}; Extra: {actual - expected}"
@@ -88,9 +90,14 @@ class TestLegalSource:
         assert _column_names(self.TABLE) == expected
 
     def test_source_type_check_constraint(self) -> None:
-        """source_type IN ('sgb2', 'sgbx', 'weisung', 'bsg')."""
+        """source_type IN (sgb*, bgb, vwvfg, sgg, weisung, bsg, erbstg, hoefev, ...)."""
         ck = _check_constraints(self.TABLE)
-        assert any("sgb2" in str(c.sqltext) for c in ck)
+        sql = " ".join(str(c.sqltext) for c in ck)
+        # Old narrow set still in constraint.
+        assert "sgb2" in sql
+        # New general-legal-assistant set present.
+        assert "erbstg" in sql
+        assert "hoefev" in sql
 
     def test_chunks_relationship(self) -> None:
         rel = models.LegalSource.chunks
@@ -116,6 +123,7 @@ class TestLegalChunk:
             "hierarchy_path",
             "text_content",
             "effective_date",
+            "legal_area",
             "created_at",
         }
         assert _column_names(self.TABLE) == expected

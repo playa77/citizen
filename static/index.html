@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen — Legal Reasoning Engine</title>
-    <!-- Semantic Version: 0.3.0 -->
+    <!-- Semantic Version: 0.4.0 -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -50,9 +50,30 @@
             </header>
 
             <main>
-                <!-- Upload Section -->
+                <!-- Step Indicator -->
+                <section class="section step-indicator" id="step-indicator">
+                    <div class="step active" data-step="1">
+                        <span class="step-num">1</span>
+                        <span class="step-label">Schildern</span>
+                    </div>
+                    <div class="step" data-step="2">
+                        <span class="step-num">2</span>
+                        <span class="step-label">Interview</span>
+                    </div>
+                    <div class="step" data-step="3">
+                        <span class="step-num">3</span>
+                        <span class="step-label">Bestätigung &amp; Analyse</span>
+                    </div>
+                </section>
+
+                <!-- Step 1: Schildern (case description) -->
                 <section id="upload-section" class="section">
-                    <h2>Dokument hochladen</h2>
+                    <h2>1. Fall schildern</h2>
+                    <p class="step-help">
+                        Beschreiben Sie Ihren Fall oder laden Sie ein Dokument hoch.
+                        Im nächsten Schritt stellt Ihnen Citizen ein paar Rückfragen,
+                        um die Analyse auf das passende Rechtsgebiet zuzuschneiden.
+                    </p>
                     <div class="upload-area" id="upload-area">
                         <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.txt,.html,.htm,.eml" hidden>
                         <div class="upload-prompt">
@@ -80,7 +101,72 @@
                             placeholder="Text direkt eingeben oder einfügen..."
                             rows="8"
                         ></textarea>
-                        <button id="use-text-btn" class="btn btn-primary" disabled>Text verwenden</button>
+                    </div>
+
+                    <div class="step-nav">
+                        <button id="use-text-btn" class="btn btn-primary" disabled>
+                            Fall aufnehmen →
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Step 2: Intake Interview -->
+                <section id="intake-section" class="section hidden">
+                    <h2>2. Interview</h2>
+                    <p class="step-help">
+                        Citizen stellt Ihnen ein paar kurze Rückfragen, um Ihren
+                        Fall besser einzuordnen (max. 8 Fragen).
+                    </p>
+                    <div class="intake-messages" id="intake-messages"></div>
+                    <div class="intake-input-area">
+                        <textarea
+                            id="intake-input"
+                            class="intake-input"
+                            placeholder="Antwort eingeben..."
+                            rows="2"
+                            disabled
+                        ></textarea>
+                        <button id="intake-send-btn" class="btn btn-primary" disabled>
+                            Antworten
+                        </button>
+                    </div>
+                    <div class="intake-meta">
+                        <span id="intake-turn-counter">Frage 1 von max. 8</span>
+                        <button id="intake-confirm-btn" class="btn btn-small">Interview beenden</button>
+                    </div>
+                    <div class="step-nav">
+                        <button id="intake-back-btn" class="btn btn-small">← Zurück</button>
+                    </div>
+                </section>
+
+                <!-- Step 3: Confirmation + Pipeline -->
+                <section id="confirmation-section" class="section hidden">
+                    <h2>3. Bestätigung &amp; Analyse</h2>
+                    <p class="step-help">
+                        Citizen hat Ihren Fall eingeordnet. Bitte prüfen Sie die
+                        Auswahl der Rechtsgebiete und passen Sie sie bei Bedarf an.
+                    </p>
+
+                    <div class="preset-card" id="preset-card">
+                        <h3>Rechtsgebiete für diesen Fall</h3>
+                        <div class="preset-card-body" id="preset-card-body">
+                            <!-- Areas rendered as checkboxes by JS -->
+                        </div>
+                        <div class="preset-card-summary" id="preset-card-summary"></div>
+                        <div class="preset-card-missing hidden" id="preset-card-missing">
+                            <h4>Fehlende Quellen</h4>
+                            <p id="preset-card-missing-text"></p>
+                            <div class="preset-card-actions">
+                                <button id="preset-load-missing-btn" class="btn btn-primary">
+                                    Fehlende Quellen jetzt laden
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-nav">
+                        <button id="confirmation-back-btn" class="btn btn-small">← Zurück</button>
+                        <button id="analyze-btn" class="btn btn-primary">Analyse starten</button>
                     </div>
                 </section>
 
@@ -240,12 +326,33 @@
                     </div>
                 </div>
 
+                <!-- 409 — missing-sources modal -->
+                <div id="missing-sources-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <h2>Quellen fehlen</h2>
+                        <p id="missing-sources-message">
+                            Für die ausgewählten Rechtsgebiete sind noch nicht
+                            alle nötigen Quellen im Corpus. Citizen kann die
+                            Analyse erst starten, wenn diese geladen sind.
+                        </p>
+                        <ul id="missing-sources-list" class="missing-sources-list"></ul>
+                        <div class="modal-actions">
+                            <button id="missing-sources-cancel-btn" class="btn btn-small">
+                                Abbrechen
+                            </button>
+                            <button id="missing-sources-load-btn" class="btn btn-primary">
+                                Quellen jetzt laden
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Error Display -->
                 <div id="error-display" class="error-display hidden"></div>
             </main>
 
             <footer>
-                <p>Citizen v0.3.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p>Citizen v0.4.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
             </footer>
         </div>
 
@@ -407,7 +514,7 @@
             </main>
 
             <footer>
-                <p>Citizen v0.3.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p>Citizen v0.4.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
             </footer>
         </div>
 

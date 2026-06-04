@@ -94,6 +94,18 @@ class PipelineState:
     final_output: dict[str, str] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     stream_output_lines: list[str] = field(default_factory=list)
+    # legal_areas: list of legal_area keys (e.g. ["sozialrecht"] or
+    # ["erbrecht", "familienrecht"]) selected for this case. When empty
+    # the pipeline behaves exactly as before — fully backward compatible.
+    legal_areas: list[str] = field(default_factory=list)
+    # intake_session_id: optional reference to the IntakeSession that
+    # produced the legal_areas + enriched input_text. Persisted on
+    # case_run_area rows after the pipeline finishes.
+    intake_session_id: str | None = None
+    # per_area_chunks: per-area retrieved chunks keyed by legal_area
+    # (only populated when legal_areas is non-empty). The merged
+    # retrieved_chunks field is the union, capped at MAX_CHUNKS_FOR_FINAL.
+    per_area_chunks: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -193,17 +205,25 @@ async def _stage_normalization(state: PipelineState) -> None:
 
 async def _stage_classification(state: PipelineState) -> None:
     """Stage 2 — LLM identifies legal topics at stake."""
+    from app.services.prompts import get_prompts
     from app.services.reasoning import classify_issues
 
-    state.issues = await classify_issues(state.normalized_text)
+    system_prompt = get_prompts(state.legal_areas)["classification"]
+    state.issues = await classify_issues(
+        state.normalized_text, system_prompt=system_prompt,
+    )
     logger.info("Classification complete (%d issues)", len(state.issues))
 
 
 async def _stage_decomposition(state: PipelineState) -> None:
     """Stage 3 — extract 3-5 explicit legal questions."""
+    from app.services.prompts import get_prompts
     from app.services.reasoning import decompose_questions
 
-    state.questions = await decompose_questions(state.normalized_text)
+    system_prompt = get_prompts(state.legal_areas)["decomposition"]
+    state.questions = await decompose_questions(
+        state.normalized_text, system_prompt=system_prompt,
+    )
     logger.info("Decomposition complete (%d questions)", len(state.questions))
 
 
@@ -219,6 +239,7 @@ async def _run_classification_and_decomposition_stages(
     SSE events are emitted in the canonical order: classification first, then
     decomposition.
     """
+    from app.services.prompts import get_prompts
     from app.services.reasoning import (
         classify_issues,
         decompose_questions,
@@ -230,8 +251,11 @@ async def _run_classification_and_decomposition_stages(
     # ── WP-006: combined triage path ───────────────────────────────────
     if cfg._get_settings().COMBINE_TRIAGE_STAGES:
         logger.info("  → launching combined triage (classification + decomposition)")
+        system_prompt = get_prompts(state.legal_areas)["triage"]
         try:
-            triage_result = await triage_document(state.normalized_text)
+            triage_result = await triage_document(
+                state.normalized_text, system_prompt=system_prompt,
+            )
         except Exception as exc:
             logger.exception("Combined triage failed")
             state.errors.append(f"triage (classification+decomposition): {exc}")
@@ -342,6 +366,7 @@ async def _run_final_stages(
     SSE events are emitted in the canonical order: construction first, then
     verification, then generation.
     """
+    from app.services.prompts import get_prompts
     from app.services.verification import verify_claims_against_chunks
 
     t0 = time.monotonic()
@@ -352,6 +377,7 @@ async def _run_final_stages(
             "  → launching combined grounded answer "
             "(construction + verification + generation)"
         )
+        grounded_prompt = get_prompts(state.legal_areas)["grounded_answer"]
 
         if stream_progress and cfg._get_settings().ENABLE_PROGRESS_STREAM:
             from app.services.reasoning import generate_grounded_answer_stream
@@ -367,6 +393,7 @@ async def _run_final_stages(
                     state.issues,
                     state.questions,
                     state.retrieved_chunks,
+                    system_prompt=grounded_prompt,
                 ):
                     if item["type"] == "token":
                         accumulated_text.append(item["content"])
@@ -405,6 +432,7 @@ async def _run_final_stages(
                     state.issues,
                     state.questions,
                     state.retrieved_chunks,
+                    system_prompt=grounded_prompt,
                 )
             except Exception as exc:
                 logger.exception("Combined grounded answer failed")
@@ -531,8 +559,31 @@ async def _stage_retrieval(state: PipelineState) -> None:
     Uses combined mode (one embedding for issues+questions+text) when
     ``settings.RETRIEVAL_MODE == "combined"``, falling back to
     per-question embeddings otherwise.
+
+    Multi-area: when ``state.legal_areas`` is non-empty, retrieval is
+    run once per area and the results merged + de-duplicated. The
+    per-area splits are also kept in ``state.per_area_chunks`` for
+    logging/debugging.
     """
-    from app.services.retrieval import retrieve_chunks, retrieve_chunks_combined
+    from app.services.retrieval import (
+        retrieve_chunks,
+        retrieve_chunks_combined,
+        retrieve_chunks_for_areas,
+    )
+
+    if state.legal_areas:
+        state.per_area_chunks, state.retrieved_chunks = await retrieve_chunks_for_areas(
+            state.legal_areas,
+            state.issues,
+            state.questions,
+            state.normalized_text,
+        )
+        logger.info(
+            "Per-area retrieval complete (areas=%s, %d unique chunks)",
+            state.legal_areas,
+            len(state.retrieved_chunks),
+        )
+        return
 
     if cfg._get_settings().RETRIEVAL_MODE == "combined":
         state.retrieved_chunks = await retrieve_chunks_combined(
@@ -548,17 +599,25 @@ async def _stage_retrieval(state: PipelineState) -> None:
 
 async def _stage_construction(state: PipelineState) -> None:
     """Stage 5 — build claims with confidence scores and types."""
+    from app.services.prompts import get_prompts
     from app.services.reasoning import construct_claims
 
-    state.claims = await construct_claims(state.retrieved_chunks, state.questions)
+    system_prompt = get_prompts(state.legal_areas)["claim_construction"]
+    state.claims = await construct_claims(
+        state.retrieved_chunks, state.questions, system_prompt=system_prompt,
+    )
     logger.info("Construction complete (%d claims)", len(state.claims))
 
 
 async def _stage_verification(state: PipelineState) -> None:
     """Stage 6 — cross-reference claims against source text."""
+    from app.services.prompts import get_prompts
     from app.services.reasoning import verify_claims
 
-    state.verified_claims = await verify_claims(state.claims, state.retrieved_chunks)
+    system_prompt = get_prompts(state.legal_areas)["verification"]
+    state.verified_claims = await verify_claims(
+        state.claims, state.retrieved_chunks, system_prompt=system_prompt,
+    )
     logger.info("Verification complete (%d verified claims)", len(state.verified_claims))
 
 
@@ -571,6 +630,7 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
 
     Gracefully skips if the LLM call fails so the pipeline can continue.
     """
+    from app.services.prompts import get_prompts
     from app.services.reasoning import adversarial_review
 
     # Use verified claims if available, otherwise raw claims.
@@ -589,6 +649,7 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
         }
         return
 
+    system_prompt = get_prompts(state.legal_areas)["adversarial_review"]
     try:
         result = await adversarial_review(
             normalized_text=state.normalized_text,
@@ -596,6 +657,7 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
             questions=state.questions,
             claims=claims_to_review,
             chunks=state.retrieved_chunks,
+            system_prompt=system_prompt,
         )
         state.adversarial_review = result
 
@@ -631,9 +693,13 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
 
 async def _stage_generation(state: PipelineState) -> None:
     """Stage 8 — format into mandatory 7-part structure."""
+    from app.services.prompts import get_prompts
     from app.services.reasoning import generate_output
 
-    state.final_output = await generate_output(state.verified_claims)
+    system_prompt = get_prompts(state.legal_areas)["output"]
+    state.final_output = await generate_output(
+        state.verified_claims, system_prompt=system_prompt,
+    )
     logger.info("Generation complete (sections: %s)", list(state.final_output.keys()))
 
 

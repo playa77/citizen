@@ -2595,3 +2595,251 @@ body {
         font-size: var(--font-size-small);
     }
 }
+
+/* ==========================================================================
+   v0.4.0 — 3-step intake flow styles
+   ========================================================================== */
+
+.step-indicator {
+    display: flex;
+    gap: var(--spacing-md, 1rem);
+    padding: var(--spacing-md, 1rem) 0;
+    margin-bottom: var(--spacing-md, 1rem);
+    border-bottom: 1px solid var(--color-border, #ddd);
+}
+
+.step-indicator .step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-muted, #888);
+}
+
+.step-indicator .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: var(--color-bg-muted, #eee);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.step-indicator .step.active .step-num {
+    background: var(--color-primary, #3b82f6);
+    color: white;
+}
+
+.step-indicator .step.completed .step-num {
+    background: var(--color-success, #10b981);
+    color: white;
+}
+
+.step-indicator .step.active {
+    color: var(--color-text, #111);
+    font-weight: 600;
+}
+
+.step-help {
+    color: var(--color-text-muted, #666);
+    margin-bottom: var(--spacing-md, 1rem);
+    font-size: 0.95rem;
+}
+
+.step-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-lg, 1.5rem);
+    gap: var(--spacing-md, 1rem);
+}
+
+/* Intake section */
+.intake-messages {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 8px;
+    padding: var(--spacing-md, 1rem);
+    background: var(--color-bg, #fafafa);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.intake-msg-bubble {
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    max-width: 80%;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.intake-msg-user .intake-msg-bubble {
+    background: var(--color-primary, #3b82f6);
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.intake-msg-assistant .intake-msg-bubble {
+    background: var(--color-bg-muted, #e5e7eb);
+    color: var(--color-text, #111);
+    align-self: flex-start;
+}
+
+.intake-input-area {
+    display: flex;
+    gap: var(--spacing-sm, 0.5rem);
+    align-items: flex-end;
+}
+
+.intake-input {
+    flex: 1;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--color-border, #ccc);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.intake-input:disabled {
+    background: var(--color-bg-muted, #f5f5f5);
+    cursor: not-allowed;
+}
+
+.intake-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-sm, 0.5rem);
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #666);
+}
+
+/* Preset card */
+.preset-card {
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 8px;
+    padding: var(--spacing-lg, 1.5rem);
+    background: var(--color-bg-card, #fff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.preset-card h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.preset-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.preset-area-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 4px;
+}
+
+.preset-area-item:hover {
+    background: var(--color-bg-muted, #f5f5f5);
+}
+
+.preset-area-label {
+    font-weight: 500;
+}
+
+.preset-primary-badge {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.5rem;
+    background: var(--color-primary, #3b82f6);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.preset-area-add select {
+    padding: 0.4rem 0.6rem;
+    border: 1px dashed var(--color-border, #ccc);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text-muted, #666);
+    cursor: pointer;
+    min-width: 280px;
+}
+
+.preset-card-summary {
+    padding: 0.75rem;
+    background: var(--color-bg-muted, #f5f5f5);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    margin-top: var(--spacing-sm, 0.5rem);
+    line-height: 1.4;
+}
+
+.preset-card-missing {
+    margin-top: var(--spacing-md, 1rem);
+    padding: var(--spacing-md, 1rem);
+    background: rgba(239, 68, 68, 0.05);
+    border-left: 4px solid #ef4444;
+    border-radius: 4px;
+}
+
+.preset-card-missing h4 {
+    margin: 0 0 0.5rem 0;
+    color: #b91c1c;
+}
+
+.preset-card-actions {
+    margin-top: 0.5rem;
+}
+
+/* Missing sources modal */
+.missing-sources-list {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin: 0.5rem 0 1rem 0;
+    line-height: 1.6;
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--spacing-sm, 0.5rem);
+    justify-content: flex-end;
+    margin-top: var(--spacing-md, 1rem);
+}
+
+/* Case chat sidebar — Rechtsgebiet pill */
+.case-session-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.case-area-pill {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    background: var(--color-bg-muted, #e5e7eb);
+    color: var(--color-text, #111);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.case-area-pill.primary {
+    background: var(--color-primary, #3b82f6);
+    color: white;
+}
