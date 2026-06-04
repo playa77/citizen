@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     OPENROUTER_API_KEY: str
     EMBEDDING_API_KEY: str = ""  # separate OpenRouter key for embedding calls
-    PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
-    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
+    PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
+    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-pro"
     FALLBACK_MODEL_2: str = "/openrouter/free"
     MAX_RETRIES: int = 1
     REQUEST_TIMEOUT: float = 25.0
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     OCR_JPG_QUALITY: int = 84
     OCR_CONTRAST_FACTOR: float = 2.0
     OCR_BW_THRESHOLD: int = 128
-    OCR_SYNTHESIS_MODEL: str = "deepseek/deepseek-v4-flash"  # LLM for comparing & correcting dual-OCR results
+    OCR_SYNTHESIS_MODEL: str = "deepseek/deepseek-v4-pro"  # LLM for comparing & correcting dual-OCR results
     # OCR performance controls (WP-012)
     ENABLE_OCR_LLM_SYNTHESIS: bool = False   # If False, skip LLM synthesis and combine OCR outputs locally
     MAX_OCR_SYNTHESIS_CHARS: int = 6000      # Max chars of combined OCR text sent to LLM synthesis

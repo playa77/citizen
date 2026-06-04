@@ -1196,7 +1196,7 @@ async def synthesize_and_correct_text(
     """Compare two OCR results and produce a single corrected text.
 
     Uses the configured ``OCR_SYNTHESIS_MODEL`` (default:
-    ``deepseek/deepseek-v4-flash``) via OpenRouter to:
+    ``deepseek/deepseek-v4-pro``) via OpenRouter to:
 
     1. Compare both OCR versions and reconcile differences.
     2. Apply spell-checking and grammar correction.

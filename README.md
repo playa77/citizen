@@ -47,7 +47,7 @@ Citizen is a local-first, evidence-constrained legal reasoning engine for German
 | **Database** | PostgreSQL 16 + `pgvector` + `tsvector` |
 | **ORM / Migrations** | SQLAlchemy 2.0 (async), Alembic (6 migrations) |
 | **Frontend** | Vanilla HTML/JS/CSS (v0.4.0) |
-| **LLMs** | OpenRouter (deepseek/deepseek-v4-flash for inference, openai/text-embedding-3-small for embeddings) |
+| **LLMs** | OpenRouter (deepseek/deepseek-v4-pro for inference, openai/text-embedding-3-small for embeddings) |
 | **OCR** | pdfplumber → PyMuPDF → Tesseract (German) |
 | **Tooling** | ruff (formatting & linting), mypy (strict), pytest (unit + integration) |
 
@@ -230,7 +230,7 @@ citizen/
 |---|---|---|---|
 | **LLM Keys** | `OPENROUTER_API_KEY` | — | Key for LLM inference |
 | | `EMBEDDING_API_KEY` | `""` | Separate key for embeddings (falls back to `OPENROUTER_API_KEY`) |
-| **Models** | `PRIMARY_MODEL` | `deepseek/deepseek-v4-flash` | Primary reasoning model |
+| **Models** | `PRIMARY_MODEL` | `deepseek/deepseek-v4-pro` | Primary reasoning model |
 | | `EMBEDDING_MODEL` | `openai/text-embedding-3-small` | Embedding model |
 | | `TRIAGE_MODEL` / `FINAL_MODEL` | — | Per-stage model overrides |
 | **Pipeline** | `COMBINE_TRIAGE_STAGES` | `True` | Merge classification + decomposition |

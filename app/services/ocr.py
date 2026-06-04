@@ -14,7 +14,7 @@ Pipeline
    - Version A: greyscale + sharpening + contrast enhancement.
    - Version B: greyscale + sharpening + b/w threshold.
    Both are fed to Tesseract independently with ``lang=deu``.
-5. LLM synthesis via ``OCR_SYNTHESIS_MODEL`` (default ``deepseek/deepseek-v4-flash``):
+5. LLM synthesis via ``OCR_SYNTHESIS_MODEL`` (default ``deepseek/deepseek-v4-pro``):
    compare both OCR results, reconcile differences, apply spell/grammar correction.
 6. Normalize cleaned text via ``app.utils.text.normalize_text``.
 7. Return UTF-8 string.

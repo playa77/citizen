@@ -133,8 +133,8 @@ citizen/
 |----------|------|----------|---------|-------------|
 | `DATABASE_URL` | `str` | Yes | `postgresql+asyncpg://user:pass@localhost:5432/legal_engine` | Async SQLAlchemy connection string |
 | `OPENROUTER_API_KEY` | `str` | Yes | `""` | OpenRouter authentication token |
-| `PRIMARY_MODEL` | `str` | No | `deepseek/deepseek-v4-flash` | First-attempt LLM identifier |
-| `FALLBACK_MODEL_1` | `str` | No | `deepseek/deepseek-v4-flash` | Secondary fallback |
+| `PRIMARY_MODEL` | `str` | No | `deepseek/deepseek-v4-pro` | First-attempt LLM identifier |
+| `FALLBACK_MODEL_1` | `str` | No | `deepseek/deepseek-v4-pro` | Secondary fallback |
 | `FALLBACK_MODEL_2` | `str` | No | `/openrouter/free` | Ultimate fallback |
 | `MAX_RETRIES` | `int` | No | `3` | Max retry attempts per model before fallback |
 | `REQUEST_TIMEOUT` | `float` | No | `45.0` | Seconds before HTTP timeout |
@@ -154,8 +154,8 @@ citizen/
 ```env
 DATABASE_URL=postgresql+asyncpg://legal_user:secure_password_123@localhost:5432/citizen_db
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-PRIMARY_MODEL=deepseek/deepseek-v4-flash
-FALLBACK_MODEL_1=deepseek/deepseek-v4-flash
+PRIMARY_MODEL=deepseek/deepseek-v4-pro
+FALLBACK_MODEL_1=deepseek/deepseek-v4-pro
 FALLBACK_MODEL_2=/openrouter/free
 MAX_RETRIES=3
 REQUEST_TIMEOUT=45.0
@@ -298,8 +298,8 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str
     OPENROUTER_API_KEY: str
-    PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
-    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
+    PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
+    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-pro"
     FALLBACK_MODEL_2: str = "/openrouter/free"
     MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 45.0

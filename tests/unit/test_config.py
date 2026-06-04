@@ -114,7 +114,7 @@ class TestSettingsValidation:
 
         assert s.DATABASE_URL == "postgresql+asyncpg://user:pass@localhost:5432/test"
         assert s.OPENROUTER_API_KEY == "sk-test-key"
-        assert s.PRIMARY_MODEL == "deepseek/deepseek-v4-flash"
+        assert s.PRIMARY_MODEL == "deepseek/deepseek-v4-pro"
         assert s.MAX_FILE_SIZE_MB == 25
         assert s.PIPELINE_TIMEOUT_SEC == 120
 
