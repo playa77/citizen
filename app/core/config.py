@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     OPENROUTER_API_KEY: str
+    EMBEDDING_API_KEY: str = ""  # separate OpenRouter key for embedding calls
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-flash"
     FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
     FALLBACK_MODEL_2: str = "/openrouter/free"

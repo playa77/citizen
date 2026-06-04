@@ -24,7 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     environment:
       # Override DATABASE_URL to use the compose db service hostname.
       DATABASE_URL: postgresql+asyncpg://testuser:testpassword@db:5432/testdb

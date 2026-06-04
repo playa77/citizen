@@ -40,6 +40,17 @@ def _headers() -> dict[str, str]:
         "Content-Type": "application/json",
     }
 
+def _embedding_headers() -> dict[str, str]:
+    """Build headers for embedding API calls, using a separate API key when configured."""
+    settings_now = settings
+    api_key = settings_now.EMBEDDING_API_KEY or settings_now.OPENROUTER_API_KEY
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "http://localhost:8000",
+        "X-Title": "Citizen Legal Engine",
+        "Content-Type": "application/json",
+    }
+
 
 class RouterExhaustedError(Exception):
     """Raised when all models in the fallback chain have been exhausted."""
@@ -336,7 +347,7 @@ class OpenRouterClient:
             resp = await self._client.post(
                 _EMBEDDING_URL,
                 json=payload,
-                headers=_headers(),
+                headers=_embedding_headers(),
             )
             req_elapsed = time.monotonic() - req_start
             resp.raise_for_status()
@@ -402,7 +413,7 @@ class OpenRouterClient:
         texts: Sequence[str],
         *,
         model: str | None = None,
-        concurrency: int = 8,
+        concurrency: int = 2,
     ) -> list[list[float]]:
         """Generate embeddings for multiple texts with bounded concurrency.
 
