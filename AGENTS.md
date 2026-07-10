@@ -2,19 +2,121 @@
 
 ## Project
 
-Citizen is a local-first, evidence-constrained legal reasoning engine for German social law (SGB II/X). Python 3.11+, FastAPI, SQLAlchemy async, PostgreSQL + pgvector, vanilla HTML/JS/CSS frontend with SSE streaming.
+Local-first, evidence-constrained legal reasoning engine for German law (multi-area: SGB,
+BGB, Erbrecht, Mietrecht, Arbeitsrecht, etc.). Python 3.11+, FastAPI, SQLAlchemy async,
+PostgreSQL 16 + pgvector, vanilla HTML/JS/CSS frontend with SSE streaming.
+
+**Package manager:** `uv` (see `uv.lock` — though it's excluded from OpenCode context via
+`.opencodeignore`). Dependencies are pinned in `pyproject.toml`.
 
 **Key constraints:**
-- All LLM calls go through `app/core/router.py` (fault-tolerant with fallback chains)
-- API endpoints in `app/api/routes/`
-- Database models in `app/db/models.py`, migrations via Alembic
-- Frontend is vanilla JS — no frameworks
-- Strict mypy, ruff formatting (line-length 100)
-- Tests with pytest, asyncio_mode = auto
+- All LLM calls go through `app/core/router.py` (OpenRouter with fallback chain:
+  `PRIMARY_MODEL → FALLBACK_MODEL_1 → FALLBACK_MODEL_2`)
+- API endpoints in `app/api/routes/` (9 route modules, 30+ endpoints)
+- Database models in `app/db/models.py` (13 ORM models), migrations via Alembic (6 migrations)
+- Frontend in `static/` — vanilla JS, no frameworks. Three modes: Analyze, Chat, Settings.
+  Frontend version in `index.html` (v0.4.0), JS/CSS at v0.3.0.
+- Settings loaded from `.env` via `pydantic-settings`. `settings` is a lazy singleton
+  (see Gotchas below).
+- Strict mypy (`pyproject.toml` `strict = true`), ruff formatting (line-length 100, rules
+  `E,F,W,I,UP,B,C4,SIM,RUF`), pytest with `asyncio_mode = auto`
 
-## Repository Map
+## Commands
 
-Before working on any task, check if `codemap.md` exists in the project root or relevant subdirectories.
+```bash
+# Install (uses uv)
+uv pip install -e ".[dev]"
+
+# Lint & format
+ruff check app/ tests/
+ruff format --check app/ tests/
+mypy app/
+
+# Tests — conftest.py sets default DATABASE_URL and OPENROUTER_API_KEY env vars
+# so unit tests run without a live database or real API key.
+pytest tests/unit/ -v
+
+# Integration tests require a running PostgreSQL with pgvector + alembic applied:
+alembic upgrade head
+pytest tests/integration/ -v
+
+# All tests
+pytest -v
+
+# Run the app (needs DATABASE_URL + OPENROUTER_API_KEY in .env)
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+## Gotchas
+
+### `settings` singleton — don't import at module level in test files
+`app/core/config.py` exposes `settings` via `__getattr__`, which lazily creates a
+`Settings()` that reads `.env`. If you `from app.core.config import settings` at module
+level *before* env vars are set, it picks up whatever env was active at import time.
+`tests/conftest.py` sets `DATABASE_URL` and `OPENROUTER_API_KEY` as early defaults, but
+if you need to override settings in a test, use `monkeypatch.setenv` *before* importing
+anything from `app.core.config`.
+
+### Alembic DB URL — ini value is dead
+`alembic.ini` has a hardcoded `sqlalchemy.url`, but `alembic/env.py` overrides it with
+`os.getenv("DATABASE_URL")` at runtime. Always set `DATABASE_URL` before running alembic.
+The ini URL exists only as a fallback and does not match any real database.
+
+### Disclaimer header required for all API calls
+All `/api/*` routes (except `/api/v1/meta/*`, `/static`, `/health`, `/docs`, `/redoc`)
+require `X-Disclaimer-Ack: v0.1.0` header. Missing header → HTTP 403. The middleware is
+`app/middleware/disclaimer.py`. OPTIONS preflight requests bypass this check.
+
+### `.corpus_sources.json` — runtime state, not tracked
+User corpus source preferences are persisted to `.corpus_sources.json` in the project
+root (analogous to `.secret_salt`). Both are in `.gitignore`. Don't create or modify
+these files in code changes; they're runtime artifacts.
+
+### Integration tests require live PostgreSQL + pgvector
+Integration tests (`tests/integration/`) need a running database with the pgvector
+extension. Run `alembic upgrade head` before them. Unit tests do not need a database.
+
+### No CI, no pre-commit hooks
+There are no GitHub Actions workflows or pre-commit config. All quality checks must
+be run manually: `ruff check`, `ruff format --check`, `mypy app/`, `pytest`.
+
+### Frontend is versioned per file
+`index.html` header comment says v0.4.0. `app.js` and `style.css` say v0.3.0.
+The HTML version is the authoritative frontend version.
+
+### LLM router: two client instances, lazy close
+`app/services/reasoning.py` and `app/services/chat_reasoning.py` each hold their own
+`OpenRouterClient` instances. Both are closed in the FastAPI lifespan shutdown handler.
+The OpenRouter client supports both streaming (`chat_completion_stream`) and
+non-streaming (`chat_completion`) with identical fallback logic.
+
+### PDF parsing: dual-fallback chain
+OCR is `pdfplumber` → `PyMuPDF` → `Tesseract` (German). The OCR service is
+`app/services/ocr.py`. LLM-based OCR synthesis is opt-in (`ENABLE_OCR_LLM_SYNTHESIS`
+defaults to `False`).
+
+## Design documents
+`devdocs/` contains `design_document.md`, `technical_specification.md`, and
+`ui_testing_guide.md`. Consult these for architectural context before making deep
+changes to the pipeline, schema, or frontend.
+
+## Directories of note
+
+| Path | Purpose |
+|---|---|
+| `app/core/pipeline.py` | 9-stage SSE analysis orchestrator |
+| `app/core/router.py` | OpenRouter client (inference + embeddings) |
+| `app/core/config.py` | Settings singleton + app version helpers |
+| `app/db/models.py` | All 13 ORM models |
+| `app/db/session.py` | Async session factory (reused by tests) |
+| `app/services/` | 18 service modules (reasoning, retrieval, calculation, etc.) |
+| `app/middleware/` | Disclaimer + rate-limit middleware |
+| `app/api/routes/` | 9 route modules |
+| `static/` | Frontend: `index.html`, `app.js`, `style.css` |
+| `alembic/versions/` | 6 migrations (001–006) |
+| `tests/unit/` | Unit tests (no DB needed) |
+| `tests/integration/` | Integration tests (DB required) |
+| `scripts/` | `benchmark_analyze.py` — SSE pipeline latency measurement |
 
 ## Persistent Memory
 
@@ -76,3 +178,17 @@ Before working on any task, check if `codemap.md` exists in the project root or 
 - Frontend: sidebar case session list, section toolbar actions (re-run, edit, flag, confirm, copy, export), dark-theme chat, comparison overlay with diff highlighting
 - Entry points: auto-navigate after fresh analysis, or select from case session list
 - Version bumped: 0.2.0 → 0.3.0 in index.html, style.css, app.js
+
+### 2026-07-10: AGENTS.md restructured — operational sections added
+
+- Package manager is `uv` (not pip — `uv.lock` exists but is excluded from OpenCode context)
+- Frontend version: `index.html` at v0.4.0, `app.js`/`style.css` at v0.3.0 (README's v0.4.0 reference is correct for the HTML)
+- No CI, no pre-commit hooks — all quality checks manual
+- Alembic `env.py` overrides `alembic.ini` DB URL with `DATABASE_URL` env var; the ini URL is dead code
+- `settings` singleton in `app/core/config.py` uses lazy `__getattr__` — dangerous to import at module level before env is configured
+- All `/api/*` routes require `X-Disclaimer-Ack` header (except `/api/v1/meta/*`, `/static`, `/health`, `/docs`, `/redoc`)
+- `.corpus_sources.json` is runtime state in project root, analogous to `.secret_salt` — not tracked in git
+- LLM router: two separate `OpenRouterClient` instances (`reasoning.py` + `chat_reasoning.py`), both closed in lifespan shutdown
+- DB now 13 tables (added `intake_session` + `case_run_area` via migration 006)
+- 16 supported statute source types (added erbstg, hoefev, kschg, burlg, tvg)
+- devdocs/ has 3 files: design, technical spec, UI testing guide
