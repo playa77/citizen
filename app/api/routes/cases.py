@@ -369,8 +369,6 @@ async def case_chat_endpoint(
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
         },
     )
 
@@ -481,8 +479,6 @@ async def reevaluate_case_endpoint(
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
         },
     )
 

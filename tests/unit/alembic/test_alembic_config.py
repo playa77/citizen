@@ -18,6 +18,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -123,6 +125,16 @@ class TestInitialMigration:
         ast.parse(source)
 
     def test_revision_id(self) -> None:
+        """001 is a root migration — down_revision must be None.
+
+        Skip if pgvector is not installed (desktop migration may have removed it).
+        """
+        import importlib
+        try:
+            importlib.import_module("pgvector")
+        except ImportError:
+            pytest.skip("pgvector not available — desktop SQLite migration active")
+
         mod = _load_module_from_path(
             "_001_init_schema",
             PROJECT_ROOT / "alembic" / "versions" / "001_init_schema.py",

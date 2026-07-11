@@ -466,7 +466,5 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering
         },
     )

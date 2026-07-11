@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import CacheEntry
-from app.db.session import get_async_session
+from app.db.session import IS_SQLITE, get_async_session
 
 logger = logging.getLogger(__name__)
 
@@ -128,10 +128,13 @@ async def set_json_cache(
     if ttl_sec is not None:
         expires_at = _now_utc() + _seconds_to_timedelta(ttl_sec)
 
-    # Upsert: insert or update
-    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    # Upsert: insert or update — dialect-dependent import
+    if IS_SQLITE:
+        from sqlalchemy.dialects.sqlite import insert as upsert_insert
+    else:
+        from sqlalchemy.dialects.postgresql import insert as upsert_insert
 
-    stmt = pg_insert(CacheEntry).values(
+    stmt = upsert_insert(CacheEntry).values(
         key=key,
         value_json=value,
         created_at=_now_utc(),

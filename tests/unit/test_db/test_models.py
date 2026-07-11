@@ -173,10 +173,11 @@ class TestChunkEmbedding:
         fks = list(models.ChunkEmbedding.__table__.foreign_keys)
         assert any(fk.column.table.name == "legal_chunk" and fk.ondelete == "CASCADE" for fk in fks)
 
-    def test_vector_dimension(self) -> None:
+    def test_embedding_column_type(self) -> None:
+        """embedding column is LargeBinary (BLOB) for dialect-agnostic vector storage."""
+        from sqlalchemy import LargeBinary
         col = models.ChunkEmbedding.__table__.c.embedding
-        # pgvector columns expose a .dim attribute on the vector type.
-        assert col.type.dim == 1536
+        assert isinstance(col.type, LargeBinary)
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ import os
 # most unit tests (and the session module doesn't call engine.connect() on import).
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql+asyncpg://test:test@localhost:5432/test_citizen",
+    "sqlite+aiosqlite:///:memory:",
 )
 
 # Provide a dummy OpenRouter API key so settings doesn't fail at import.

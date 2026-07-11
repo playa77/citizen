@@ -10,7 +10,6 @@ with a JSON payload describing the error.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -36,46 +35,18 @@ def _is_excluded_path(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in EXCLUDED_PREFIXES)
 
 
-def _compute_ip_hash(request: Request, salt: str) -> str:
-    """Compute a hash of the client's IP address for audit logging.
-
-    Parameters
-    ----------
-    request :
-        The incoming request.
-    salt :
-        The application's secret salt.
-
-    Returns
-    -------
-    str
-        A short hex digest of the IP + salt combination.
-    """
-    # Try to get real IP (handles proxy headers)
-    client_ip = request.headers.get("X-Forwarded-For", "")
-    if not client_ip:
-        client_ip = request.headers.get("X-Real-IP", "")
-    if not client_ip and request.client:
-        client_ip = request.client.host
-    if not client_ip:
-        client_ip = "unknown"
-
-    # Take first IP if there are multiple (X-Forwarded-For can contain a list)
-    client_ip = client_ip.split(",")[0].strip()
-
-    combined = f"{client_ip}:{salt}"
-    return hashlib.sha256(combined.encode("utf-8")).hexdigest()[:16]
-
-
 class DisclaimerMiddleware(BaseHTTPMiddleware):
     """Middleware that enforces disclaimer acceptance on API routes.
+
+    Desktop context — no client IP tracking; ``disclaimer_ip_hash`` is set to
+    ``"desktop"`` as a static placeholder.
 
     This middleware:
     1. Skips non-API paths (health, docs, static).
     2. Checks for the presence of the ``X-Disclaimer-Ack`` header.
     3. Validates that the header value matches the current disclaimer version.
     4. On failure, returns a 403 with a JSON error payload.
-    5. On success, attaches the acceptance metadata to the request state for logging.
+    5. On success, records acceptance metadata on ``request.state``.
     """
 
     def __init__(
@@ -138,17 +109,16 @@ class DisclaimerMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # Compute and attach acceptance metadata for downstream logging
-        ip_hash = _compute_ip_hash(request, self._settings.DISCLAIMER_SALT)
+        # Attach acceptance metadata (desktop context — no IP tracking)
+        ip_hash = "desktop"
         request.state.disclaimer_accepted = True
         request.state.disclaimer_version = expected_version
         request.state.disclaimer_ip_hash = ip_hash
 
         logger.debug(
-            "Disclaimer acknowledged: version=%s, path=%s, ip_hash=%s",
+            "Disclaimer acknowledged: version=%s, path=%s",
             expected_version,
             request.url.path,
-            ip_hash,
         )
 
         return await call_next(request)

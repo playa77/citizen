@@ -14,6 +14,7 @@ import hashlib
 import json
 import logging
 import re
+import struct
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.router import OpenRouterClient
 from app.db.models import ChunkEmbedding, LegalChunk, LegalSource
+from app.db.session import IS_SQLITE
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -1249,20 +1251,34 @@ async def _upsert_embedding(
 ) -> None:
     """Insert or update a ChunkEmbedding row for the given legal chunk.
 
-    Uses PostgreSQL ``ON CONFLICT DO UPDATE`` on ``chunk_id + model_name``
-    to atomically upsert the embedding vector.
+    Uses ``ON CONFLICT DO UPDATE`` on ``chunk_id + model_name``
+    to atomically upsert the embedding vector.  The import is dialect-
+    dependent: pgvector (PostgreSQL) uses a PostgreSQL-specific insert,
+    while SQLite uses the sqlite dialect.
+
+    On SQLite the embedding ``list[float]`` is serialised to a
+    little-endian float32 ``blob`` via ``struct.pack`` so it matches
+    the ``LargeBinary`` / BLOB column.
     """
-    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    if IS_SQLITE:
+        from sqlalchemy.dialects.sqlite import insert as upsert_insert
+    else:
+        from sqlalchemy.dialects.postgresql import insert as upsert_insert
 
     embedding_vec = chunk["embedding"]
+    if IS_SQLITE:
+        embedding_blob = struct.pack(f"<{len(embedding_vec)}f", *embedding_vec)
+    else:
+        embedding_blob = embedding_vec  # pgvector handles list natively
+
     model_name = settings.EMBEDDING_MODEL
 
-    stmt = pg_insert(ChunkEmbedding).values(
+    stmt = upsert_insert(ChunkEmbedding).values(
         chunk_id=legal_chunk.id,
-        embedding=embedding_vec,
+        embedding=embedding_blob,
         model_name=model_name,
     ).on_conflict_do_update(
         index_elements=["chunk_id", "model_name"],
-        set_={"embedding": embedding_vec},
+        set_={"embedding": embedding_blob},
     )
     await session.execute(stmt)

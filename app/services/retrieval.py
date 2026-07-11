@@ -1,8 +1,9 @@
-"""Retrieval engine: pgvector query, diversity constraints, and metadata join.
+"""Retrieval engine: vector similarity query, diversity constraints, and metadata join.
 
 Given a list of legal questions, this module:
 1. Generates an embedding for each question via the OpenRouter embedding API.
-2. Queries ``chunk_embedding`` using the ``<->`` cosine distance operator.
+2. Queries ``chunk_embedding`` using the cosine distance operator (pgvector
+   or sqlite-vec, depending on the dialect-agnostic backend).
 3. Filters results by ``MAX_COSINE_DISTANCE`` (cosine distance < threshold).
 4. Enforces ``TOP_K_RETRIEVAL`` per question.
 5. Joins with ``legal_chunk`` to fetch ``text_content``, ``hierarchy_path``,
@@ -11,20 +12,21 @@ Given a list of legal questions, this module:
 7. Returns a list of rich dictionaries.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from sqlalchemy import Select, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.router import EmbeddingError, OpenRouterClient
-from app.db.models import ChunkEmbedding, LegalChunk, LegalSource
+from app.db.models import LegalChunk, LegalSource
 from app.db.session import get_async_session
+from app.db.vector_backend import cosine_distance
 
 logger = logging.getLogger(__name__)
 
@@ -152,43 +154,45 @@ async def retrieve_chunks_combined_filtered(
 
     rows: list[dict[str, Any]] = []
     async for session in get_async_session():
-        stmt = (
-            select(
-                ChunkEmbedding.chunk_id,
-                ChunkEmbedding.embedding.cosine_distance(embedding).label("distance"),
-                LegalChunk.text_content,
-                LegalChunk.hierarchy_path,
-                LegalChunk.unit_type,
-                LegalChunk.effective_date,
-                LegalChunk.legal_area,
-                LegalSource.source_type,
-                LegalSource.title,
-            )
-            .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
-            .join(LegalSource, LegalSource.id == LegalChunk.source_id)
-            .where(
-                ChunkEmbedding.embedding.cosine_distance(embedding) < threshold,
-                LegalSource.is_active.is_(True),
-                LegalSource.source_type.in_(source_types),
-            )
-            .order_by(ChunkEmbedding.embedding.cosine_distance(embedding).asc())
-            .limit(top_k)
+        rows = await cosine_distance(
+            session,
+            embedding=embedding,
+            table_name="chunk_embedding",
+            id_column="chunk_id",
+            vector_column="embedding",
+            top_k=top_k,
+            threshold=threshold,
+            extra_joins=[
+                "JOIN legal_chunk lc ON lc.id = ce.chunk_id",
+                "JOIN legal_source ls ON ls.id = lc.source_id",
+            ],
+            extra_columns=[
+                "lc.text_content",
+                "lc.hierarchy_path",
+                "lc.unit_type",
+                "lc.effective_date",
+                "lc.legal_area",
+                "ls.source_type",
+                "ls.title",
+            ],
+            extra_conditions=[
+                "ls.is_active = 1",
+                f"ls.source_type IN ({', '.join(repr(st) for st in source_types)})",
+            ],
         )
-        result = await session.execute(stmt)
-        rows = result.mappings().all()
         await session.close()
         break
 
     return [
         {
-            "chunk_id": str(row["chunk_id"]),
-            "text_content": row["text_content"],
-            "hierarchy_path": row["hierarchy_path"],
-            "unit_type": row["unit_type"],
-            "effective_date": str(row["effective_date"]) if row["effective_date"] else "",
-            "source_type": row["source_type"],
-            "title": row["title"],
-            "legal_area": row["legal_area"],
+            "chunk_id": str(row["id"]),
+            "text_content": row["lc_text_content"],
+            "hierarchy_path": row["lc_hierarchy_path"],
+            "unit_type": row["lc_unit_type"],
+            "effective_date": str(row["lc_effective_date"]) if row["lc_effective_date"] else "",
+            "source_type": row["ls_source_type"],
+            "title": row["ls_title"],
+            "legal_area": row["lc_legal_area"],
             "distance": float(row["distance"]),
             "question_index": 0,
         }
@@ -223,44 +227,47 @@ async def retrieve_chunks_per_area(
 
     async for session in get_async_session():
         for q_idx, emb in enumerate(embeddings):
-            stmt = (
-                select(
-                    ChunkEmbedding.chunk_id,
-                    ChunkEmbedding.embedding.cosine_distance(emb).label("distance"),
-                    LegalChunk.text_content,
-                    LegalChunk.hierarchy_path,
-                    LegalChunk.unit_type,
-                    LegalChunk.effective_date,
-                    LegalChunk.legal_area,
-                    LegalSource.source_type,
-                    LegalSource.title,
-                )
-                .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
-                .join(LegalSource, LegalSource.id == LegalChunk.source_id)
-                .where(
-                    ChunkEmbedding.embedding.cosine_distance(emb) < threshold,
-                    LegalSource.is_active.is_(True),
-                    LegalSource.source_type.in_(source_types),
-                )
-                .order_by(ChunkEmbedding.embedding.cosine_distance(emb).asc())
-                .limit(top_k)
+            rows = await cosine_distance(
+                session,
+                embedding=emb,
+                table_name="chunk_embedding",
+                id_column="chunk_id",
+                vector_column="embedding",
+                top_k=top_k,
+                threshold=threshold,
+                extra_joins=[
+                    "JOIN legal_chunk lc ON lc.id = ce.chunk_id",
+                    "JOIN legal_source ls ON ls.id = lc.source_id",
+                ],
+                extra_columns=[
+                    "lc.text_content",
+                    "lc.hierarchy_path",
+                    "lc.unit_type",
+                    "lc.effective_date",
+                    "lc.legal_area",
+                    "ls.source_type",
+                    "ls.title",
+                ],
+                extra_conditions=[
+                    "ls.is_active = 1",
+                    f"ls.source_type IN ({', '.join(repr(st) for st in source_types)})",
+                ],
             )
-            result = await session.execute(stmt)
-            for row in result.mappings().all():
-                cid = str(row["chunk_id"])
+            for row in rows:
+                cid = str(row["id"])
                 if cid in seen:
                     continue
                 seen.add(cid)
                 all_chunks.append(
                     {
                         "chunk_id": cid,
-                        "text_content": row["text_content"],
-                        "hierarchy_path": row["hierarchy_path"],
-                        "unit_type": row["unit_type"],
-                        "effective_date": str(row["effective_date"]) if row["effective_date"] else "",
-                        "source_type": row["source_type"],
-                        "title": row["title"],
-                        "legal_area": row["legal_area"],
+                        "text_content": row["lc_text_content"],
+                        "hierarchy_path": row["lc_hierarchy_path"],
+                        "unit_type": row["lc_unit_type"],
+                        "effective_date": str(row["lc_effective_date"]) if row["lc_effective_date"] else "",
+                        "source_type": row["ls_source_type"],
+                        "title": row["ls_title"],
+                        "legal_area": row["lc_legal_area"],
                         "distance": float(row["distance"]),
                         "question_index": q_idx,
                     }
@@ -310,40 +317,39 @@ async def retrieve_chunks(
             logger.error("Embedding generation failed for retrieval: %s", exc)
             raise RetrievalError(f"Embedding API failure during retrieval: {exc}") from exc
 
-    # Step 2 — query pgvector per question and aggregate results
+    # Step 2 — query vector backend per question and aggregate results
     all_chunks: list[dict[str, Any]] = []
     seen_chunk_ids: set[str] = set()
 
     async for session in get_async_session():
         for q_idx, q_embedding in enumerate(question_embeddings):
-            stmt = (
-                select(
-                    ChunkEmbedding.id.label("embedding_id"),
-                    ChunkEmbedding.chunk_id,
-                    ChunkEmbedding.embedding.cosine_distance(q_embedding).label("distance"),
-                    LegalChunk.id.label("lc_id"),
-                    LegalChunk.text_content,
-                    LegalChunk.hierarchy_path,
-                    LegalChunk.unit_type,
-                    LegalChunk.effective_date,
-                    LegalSource.source_type,
-                    LegalSource.title,
-                )
-                .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
-                .join(LegalSource, LegalSource.id == LegalChunk.source_id)
-                .where(
-                    ChunkEmbedding.embedding.cosine_distance(q_embedding) < threshold,
-                    LegalSource.is_active.is_(True),
-                )
-                .order_by(ChunkEmbedding.embedding.cosine_distance(q_embedding).asc())
-                .limit(top_k)
+            rows = await cosine_distance(
+                session,
+                embedding=q_embedding,
+                table_name="chunk_embedding",
+                id_column="chunk_id",
+                vector_column="embedding",
+                top_k=top_k,
+                threshold=threshold,
+                extra_joins=[
+                    "JOIN legal_chunk lc ON lc.id = ce.chunk_id",
+                    "JOIN legal_source ls ON ls.id = lc.source_id",
+                ],
+                extra_columns=[
+                    "lc.text_content",
+                    "lc.hierarchy_path",
+                    "lc.unit_type",
+                    "lc.effective_date",
+                    "ls.source_type",
+                    "ls.title",
+                ],
+                extra_conditions=[
+                    "ls.is_active = 1",
+                ],
             )
 
-            result = await session.execute(stmt)
-            rows = result.mappings().all()
-
             for row in rows:
-                cid = str(row["chunk_id"])
+                cid = str(row["id"])
                 if cid in seen_chunk_ids:
                     continue
                 seen_chunk_ids.add(cid)
@@ -351,14 +357,14 @@ async def retrieve_chunks(
                 all_chunks.append(
                     {
                         "chunk_id": cid,
-                        "text_content": row["text_content"],
-                        "hierarchy_path": row["hierarchy_path"],
-                        "unit_type": row["unit_type"],
-                        "effective_date": str(row["effective_date"])
-                        if row["effective_date"]
+                        "text_content": row["lc_text_content"],
+                        "hierarchy_path": row["lc_hierarchy_path"],
+                        "unit_type": row["lc_unit_type"],
+                        "effective_date": str(row["lc_effective_date"])
+                        if row["lc_effective_date"]
                         else "",
-                        "source_type": row["source_type"],
-                        "title": row["title"],
+                        "source_type": row["ls_source_type"],
+                        "title": row["ls_title"],
                         "distance": float(row["distance"]),
                         "question_index": q_idx,
                     }
@@ -396,7 +402,7 @@ async def retrieve_chunks(
         )
 
     logger.info(
-        "Retrieval complete: %d unique chunks for %d questions " "(threshold=%.2f, top_k=%d)",
+        "Retrieval complete: %d unique chunks for %d questions (threshold=%.2f, top_k=%d)",
         len(all_chunks),
         len(questions),
         threshold,
@@ -417,7 +423,7 @@ async def retrieve_chunks_combined(
     Instead of embedding each question separately (N embedding requests),
     this builds one rich German search query from issues, questions, and
     the first 1200 characters of the normalized document text, then
-    generates one embedding and queries pgvector once.
+    generates one embedding and queries the vector backend once.
 
     Parameters
     ----------
@@ -503,49 +509,48 @@ async def retrieve_chunks_combined(
                     await session.close()
                 break
 
-    # Step 2 — query pgvector once
+    # Step 2 — query vector backend once
     all_chunks: list[dict[str, Any]] = []
     async for session in get_async_session():
-        stmt = (
-            select(
-                ChunkEmbedding.id.label("embedding_id"),
-                ChunkEmbedding.chunk_id,
-                ChunkEmbedding.embedding.cosine_distance(embedding).label("distance"),
-                LegalChunk.id.label("lc_id"),
-                LegalChunk.text_content,
-                LegalChunk.hierarchy_path,
-                LegalChunk.unit_type,
-                LegalChunk.effective_date,
-                LegalChunk.legal_area,
-                LegalSource.source_type,
-                LegalSource.title,
-            )
-            .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
-            .join(LegalSource, LegalSource.id == LegalChunk.source_id)
-            .where(
-                ChunkEmbedding.embedding.cosine_distance(embedding) < threshold,
-                LegalSource.is_active.is_(True),
-            )
-            .order_by(ChunkEmbedding.embedding.cosine_distance(embedding).asc())
-            .limit(top_k)
+        rows = await cosine_distance(
+            session,
+            embedding=embedding,
+            table_name="chunk_embedding",
+            id_column="chunk_id",
+            vector_column="embedding",
+            top_k=top_k,
+            threshold=threshold,
+            extra_joins=[
+                "JOIN legal_chunk lc ON lc.id = ce.chunk_id",
+                "JOIN legal_source ls ON ls.id = lc.source_id",
+            ],
+            extra_columns=[
+                "lc.text_content",
+                "lc.hierarchy_path",
+                "lc.unit_type",
+                "lc.effective_date",
+                "lc.legal_area",
+                "ls.source_type",
+                "ls.title",
+            ],
+            extra_conditions=[
+                "ls.is_active = 1",
+            ],
         )
-
-        result = await session.execute(stmt)
-        rows = result.mappings().all()
 
         for row in rows:
             all_chunks.append(
                 {
-                    "chunk_id": str(row["chunk_id"]),
-                    "text_content": row["text_content"],
-                    "hierarchy_path": row["hierarchy_path"],
-                    "unit_type": row["unit_type"],
-                    "effective_date": str(row["effective_date"])
-                    if row["effective_date"]
+                    "chunk_id": str(row["id"]),
+                    "text_content": row["lc_text_content"],
+                    "hierarchy_path": row["lc_hierarchy_path"],
+                    "unit_type": row["lc_unit_type"],
+                    "effective_date": str(row["lc_effective_date"])
+                    if row["lc_effective_date"]
                     else "",
-                    "source_type": row["source_type"],
-                    "title": row["title"],
-                    "legal_area": row["legal_area"],
+                    "source_type": row["ls_source_type"],
+                    "title": row["ls_title"],
+                    "legal_area": row["lc_legal_area"],
                     "distance": float(row["distance"]),
                     "question_index": 0,
                 }
@@ -658,7 +663,7 @@ async def _execute_query(
     top_k: int,
     threshold: float,
 ) -> list[dict[str, Any]]:
-    """Internal helper: execute the pgvector similarity query.
+    """Internal helper: execute the vector similarity query.
 
     Parameters
     ----------
@@ -676,41 +681,40 @@ async def _execute_query(
     list[dict[str, Any]]
         Retrieved chunks with metadata.
     """
-    dist_col = ChunkEmbedding.embedding.cosine_distance(embedding)
-
-    stmt: Select[tuple[Any, ...]] = (
-        select(
-            ChunkEmbedding.chunk_id,
-            dist_col.label("distance"),
-            LegalChunk.text_content,
-            LegalChunk.hierarchy_path,
-            LegalChunk.unit_type,
-            LegalChunk.effective_date,
-            LegalSource.source_type,
-            LegalSource.title,
-        )
-        .join(LegalChunk, LegalChunk.id == ChunkEmbedding.chunk_id)
-        .join(LegalSource, LegalSource.id == LegalChunk.source_id)
-        .where(
-            dist_col < threshold,
-            LegalSource.is_active.is_(True),
-        )
-        .order_by(dist_col.asc())
-        .limit(top_k)
+    rows = await cosine_distance(
+        session,
+        embedding=embedding,
+        table_name="chunk_embedding",
+        id_column="chunk_id",
+        vector_column="embedding",
+        top_k=top_k,
+        threshold=threshold,
+        extra_joins=[
+            "JOIN legal_chunk lc ON lc.id = ce.chunk_id",
+            "JOIN legal_source ls ON ls.id = lc.source_id",
+        ],
+        extra_columns=[
+            "lc.text_content",
+            "lc.hierarchy_path",
+            "lc.unit_type",
+            "lc.effective_date",
+            "ls.source_type",
+            "ls.title",
+        ],
+        extra_conditions=[
+            "ls.is_active = 1",
+        ],
     )
-
-    result = await session.execute(stmt)
-    rows = result.mappings().all()
 
     return [
         {
-            "chunk_id": str(row["chunk_id"]),
-            "text_content": row["text_content"],
-            "hierarchy_path": row["hierarchy_path"],
-            "unit_type": row["unit_type"],
-            "effective_date": str(row["effective_date"]) if row["effective_date"] else "",
-            "source_type": row["source_type"],
-            "title": row["title"],
+            "chunk_id": str(row["id"]),
+            "text_content": row["lc_text_content"],
+            "hierarchy_path": row["lc_hierarchy_path"],
+            "unit_type": row["lc_unit_type"],
+            "effective_date": str(row["lc_effective_date"]) if row["lc_effective_date"] else "",
+            "source_type": row["ls_source_type"],
+            "title": row["ls_title"],
             "distance": float(row["distance"]),
         }
         for row in rows

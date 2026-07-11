@@ -13,12 +13,12 @@ Plus (migration 006):
 
 # Semantic Version: 0.3.0
 
+import uuid
 from datetime import date, datetime
 from typing import Any
-from uuid import UUID
 
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Date,
@@ -26,13 +26,14 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    UniqueConstraint,
+    LargeBinary,
     String,
     Text,
+    UniqueConstraint,
+    Uuid,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+import sqlalchemy as sa
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -86,10 +87,10 @@ class LegalSource(Base):
 
     __tablename__ = "legal_source"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
     source_type: Mapped[str] = mapped_column(String(50), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -97,7 +98,7 @@ class LegalSource(Base):
     effective_date: Mapped[date] = mapped_column(Date, nullable=False)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     version_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=sa.text("1"))
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
@@ -128,13 +129,13 @@ class LegalChunk(Base):
 
     __tablename__ = "legal_chunk"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    source_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("legal_source.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -176,17 +177,20 @@ class ChunkEmbedding(Base):
 
     __tablename__ = "chunk_embedding"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    chunk_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    chunk_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("legal_chunk.id", ondelete="CASCADE"),
         nullable=False,
     )
-    embedding: Mapped[Any] = mapped_column(Vector(VECTOR_DIM), nullable=False)
+    # The embedding column — vector type varies by dialect. For SQLite, stored as BLOB via sqlite-vec.
+    # For PostgreSQL, stored as pgvector Vector type.
+    # The vector_backend module in app/db/vector_backend.py handles the dialect-specific query layer.
+    embedding: Mapped[Any] = mapped_column(LargeBinary, nullable=False)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
@@ -194,13 +198,6 @@ class ChunkEmbedding(Base):
     chunk: Mapped["LegalChunk"] = relationship("LegalChunk", back_populates="embeddings")
 
     __table_args__ = (
-        Index(
-            "idx_embedding_vector",
-            "embedding",
-            postgresql_using="ivfflat",
-            postgresql_with={"lists": 100},
-            postgresql_ops={"embedding": "vector_cosine_ops"},
-        ),
         UniqueConstraint("chunk_id", "model_name", name="uq_chunk_embedding_chunk_model"),
     )
 
@@ -217,24 +214,24 @@ class CaseRun(Base):
 
     __tablename__ = "case_run"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
     session_id: Mapped[str] = mapped_column(String(100), nullable=False)
     input_text: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    llm_fallback_chain: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
-    legal_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    llm_fallback_chain: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    legal_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now(), onupdate=func.now()
     )
-    chat_history: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    user_edits: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    chat_history: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    user_edits: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     stage_logs: Mapped[list["PipelineStageLog"]] = relationship(
@@ -274,19 +271,19 @@ class PipelineStageLog(Base):
 
     __tablename__ = "pipeline_stage_log"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    case_run_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    case_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("case_run.id", ondelete="CASCADE"),
         nullable=False,
     )
     stage_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    input_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    output_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    input_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    output_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     error_trace: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
@@ -315,13 +312,13 @@ class Claim(Base):
 
     __tablename__ = "claim"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    case_run_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    case_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("case_run.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -329,7 +326,7 @@ class Claim(Base):
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
     claim_type: Mapped[str] = mapped_column(String(30), nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
-    user_adjudication: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    user_adjudication: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     case_run: Mapped["CaseRun"] = relationship("CaseRun", back_populates="claims")
@@ -365,7 +362,7 @@ class CacheEntry(Base):
     __tablename__ = "cache_entry"
 
     key: Mapped[str] = mapped_column(String(128), primary_key=True)
-    value_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=False)
+    value_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
@@ -384,18 +381,18 @@ class EvidenceBinding(Base):
 
     __tablename__ = "evidence_binding"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    claim_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    claim_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("claim.id", ondelete="CASCADE"),
         nullable=False,
     )
-    chunk_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    chunk_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("legal_chunk.id", ondelete="RESTRICT"),
         nullable=False,
     )
@@ -436,21 +433,21 @@ class LegalParameter(Base):
 
     __tablename__ = "legal_parameter"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
     parameter_key: Mapped[str] = mapped_column(String(200), nullable=False)
     value_numeric: Mapped[float | None] = mapped_column(Float, nullable=True)
-    value_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    value_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     domain: Mapped[str] = mapped_column(String(50), nullable=False, server_default="sgb2")
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
-    source_chunk_id: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True),
+    source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
         ForeignKey("legal_chunk.id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -483,10 +480,10 @@ class Conversation(Base):
 
     __tablename__ = "conversation"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -519,13 +516,13 @@ class ConversationMessage(Base):
 
     __tablename__ = "conversation_message"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    conversation_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("conversation.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -559,20 +556,20 @@ class ConversationDocument(Base):
 
     __tablename__ = "conversation_document"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    conversation_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("conversation.id", ondelete="CASCADE"),
         nullable=False,
     )
     original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
     normalized_text: Mapped[str] = mapped_column(Text, nullable=False)
-    case_run_id: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True),
+    case_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
         ForeignKey("case_run.id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -611,10 +608,10 @@ class IntakeSession(Base):
 
     __tablename__ = "intake_session"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
     session_id: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(
@@ -627,14 +624,14 @@ class IntakeSession(Base):
         Integer, nullable=False, server_default="8",
     )
     messages: Mapped[list[dict[str, Any]] | None] = mapped_column(
-        JSONB, nullable=True,
+        JSON, nullable=True,
     )
     intake_result: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB, nullable=True,
+        JSON, nullable=True,
     )
     primary_area: Mapped[str | None] = mapped_column(String(50), nullable=True)
     secondary_areas: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String(50)), nullable=True,
+        JSON, nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now(),
@@ -676,22 +673,22 @@ class CaseRunArea(Base):
 
     __tablename__ = "case_run_area"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         primary_key=True,
-        server_default=func.gen_random_uuid(),
+        default=uuid.uuid4,
     )
-    case_run_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+    case_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("case_run.id", ondelete="CASCADE"),
         nullable=False,
     )
     legal_area: Mapped[str] = mapped_column(String(50), nullable=False)
     is_primary: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="false",
+        Boolean, nullable=False, server_default=sa.text("0"),
     )
-    intake_session_id: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True),
+    intake_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
         ForeignKey("intake_session.id", ondelete="SET NULL"),
         nullable=True,
     )

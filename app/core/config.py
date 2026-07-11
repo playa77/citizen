@@ -1,4 +1,4 @@
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-07-10 — Desktop app support
 
 import secrets
 import tomllib
@@ -29,7 +29,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    DATABASE_URL: str
+    DATABASE_URL: str = "sqlite+aiosqlite:///citizen.db"
+    DATA_DIR: str = ""  # Desktop data directory — set by Electron at runtime
     OPENROUTER_API_KEY: str
     EMBEDDING_API_KEY: str = ""  # separate OpenRouter key for embedding calls
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
@@ -38,16 +39,20 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 1
     REQUEST_TIMEOUT: float = 25.0
     MAX_FILE_SIZE_MB: int = 25
-    DB_POOL_SIZE: int = 10
+    DB_POOL_SIZE: int = 10  # PostgreSQL only — ignored for SQLite
     OCR_DPI: int = 300
     OCR_JPG_QUALITY: int = 84
     OCR_CONTRAST_FACTOR: float = 2.0
     OCR_BW_THRESHOLD: int = 128
-    OCR_SYNTHESIS_MODEL: str = "deepseek/deepseek-v4-pro"  # LLM for comparing & correcting dual-OCR results
+    OCR_SYNTHESIS_MODEL: str = (
+        "deepseek/deepseek-v4-pro"  # LLM for comparing & correcting dual-OCR results
+    )
     # OCR performance controls (WP-012)
-    ENABLE_OCR_LLM_SYNTHESIS: bool = False   # If False, skip LLM synthesis and combine OCR outputs locally
-    MAX_OCR_SYNTHESIS_CHARS: int = 6000      # Max chars of combined OCR text sent to LLM synthesis
-    OCR_MAX_PAGES: int = 10                  # Max PDF pages processed by image-based OCR; 0 = unlimited
+    ENABLE_OCR_LLM_SYNTHESIS: bool = (
+        False  # If False, skip LLM synthesis and combine OCR outputs locally
+    )
+    MAX_OCR_SYNTHESIS_CHARS: int = 6000  # Max chars of combined OCR text sent to LLM synthesis
+    OCR_MAX_PAGES: int = 10  # Max PDF pages processed by image-based OCR; 0 = unlimited
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 10
@@ -57,7 +62,9 @@ class Settings(BaseSettings):
     RETRIEVAL_KEYWORD_FALLBACK: bool = True
     TOP_K_KEYWORD: int = 5
     CORPUS_SOURCES: list[str] = ["sgb2", "sgbx"]
-    CORPUS_INGESTION_TIMEOUT_SEC: int = 900  # 15 min timeout for full corpus scrape+embed+upsert (WP-014)
+    CORPUS_INGESTION_TIMEOUT_SEC: int = (
+        900  # 15 min timeout for full corpus scrape+embed+upsert (WP-014)
+    )
     PIPELINE_TIMEOUT_SEC: int = 120
     TRIAGE_TIMEOUT_SEC: float = 20.0
     FINAL_TIMEOUT_SEC: float = 75.0
@@ -75,15 +82,15 @@ class Settings(BaseSettings):
     ENABLE_CALCULATION_CHECK: bool = True
     CALCULATION_MODEL: str | None = None  # None = use PRIMARY_MODEL
     CALCULATION_TIMEOUT_SEC: float = 45.0
+    # Rate limiting — 0 = disabled (desktop app, no rate limiting needed)
+    RATE_LIMIT_REQUESTS: int = 0
+    RATE_LIMIT_WINDOW: int = 60
     # Caching (WP-011)
     ENABLE_CACHE: bool = True
     CACHE_TTL_SEC: int = 86400
     LOG_LEVEL: str = "INFO"
-    CORS_ORIGINS: list[str] = ["http://localhost:8000"]
     ENABLE_PROGRESS_STREAM: bool = True  # Whether to stream model output during analysis progress
     DISCLAIMER_VERSION: str = "v0.1.0"
-    RATE_LIMIT_REQUESTS: int = 60
-    RATE_LIMIT_WINDOW: int = 60
 
     @property
     def DISCLAIMER_SALT(self) -> str:
