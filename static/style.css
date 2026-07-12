@@ -2770,6 +2770,20 @@ body {
     font-weight: 500;
 }
 
+/* WP-02: Experimental badge for non-primary legal areas */
+.experimental-badge {
+    margin-left: 0.35rem;
+    padding: 0.1rem 0.45rem;
+    background: #f59e0b;
+    color: #1a1a1a;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    cursor: help;
+}
+
 .preset-area-add select {
     padding: 0.4rem 0.6rem;
     border: 1px dashed var(--color-border, #ccc);

@@ -2674,6 +2674,20 @@
         andere: 'Andere',
     };
 
+    // WP-02: Support tier for legal areas (v1.0.0 scope cut)
+    const LEGAL_AREA_TIER = {
+        sozialrecht: 'supported',
+        erbrecht: 'experimental',
+        schenkungsrecht: 'experimental',
+        familienrecht: 'experimental',
+        mietrecht: 'experimental',
+        arbeitsrecht: 'experimental',
+        vertragsrecht: 'experimental',
+        verwaltungsrecht: 'experimental',
+        strafrecht: 'experimental',
+        andere: 'experimental',
+    };
+
     function gotoStep(step) {
         state.currentStep = step;
         elements.uploadSection.classList.toggle('hidden', step !== 1);
@@ -2822,12 +2836,17 @@
 
         body.innerHTML = areas.map((area, i) => {
             const label = LEGAL_AREA_LABELS[area] || area;
+            const tier = LEGAL_AREA_TIER[area] || 'experimental';
             const isPrimary = i === 0;
+            const expBadge = tier !== 'supported'
+                ? '<span class="experimental-badge" title="Noch kein evaluierter Goldstandard verfügbar. Ergebnisse können unzuverlässig sein.">experimentell</span>'
+                : '';
             return `
                 <label class="preset-area-item">
                     <input type="checkbox" data-area="${escapeHtml(area)}" ${i < areas.length ? 'checked' : ''}>
                     <span class="preset-area-label">${escapeHtml(label)}</span>
                     ${isPrimary ? '<span class="preset-primary-badge">Hauptgebiet</span>' : ''}
+                    ${expBadge}
                 </label>
             `;
         }).join('');

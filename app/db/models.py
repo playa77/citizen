@@ -81,6 +81,24 @@ LEGAL_AREA_ALLOWED: tuple[str, ...] = (
     "andere",
 )
 
+# WP-02: Support tier mapping — used by frontend and API to render
+# experimental badges on non-primary legal areas for v1.0.0.
+# "supported" = primary v1.0.0 claim (SGB II / Sozialrecht)
+# "experimental" = structurally supported, no goldset, use at own risk
+# "unsupported" = reserved for future (none yet)
+LEGAL_AREA_TIER: dict[str, str] = {
+    "sozialrecht": "supported",
+    "erbrecht": "experimental",
+    "schenkungsrecht": "experimental",
+    "familienrecht": "experimental",
+    "mietrecht": "experimental",
+    "arbeitsrecht": "experimental",
+    "vertragsrecht": "experimental",
+    "verwaltungsrecht": "experimental",
+    "strafrecht": "experimental",
+    "andere": "experimental",
+}
+
 
 class LegalSource(Base):
     """Root record for a legal document."""
