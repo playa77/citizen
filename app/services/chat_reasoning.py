@@ -18,7 +18,7 @@ from typing import Any
 
 from app.core.config import settings
 from app.core.pipeline import PipelineState, run_pipeline
-from app.core.router import OpenRouterClient
+from app.core.router import get_shared_client
 from app.services.retrieval import retrieve_chunks_combined
 from app.utils.text import normalize_text
 from app.utils.tokens import trim_text
@@ -119,7 +119,7 @@ async def generate_chat_response(
     conversation_id :
         Optional identifier for logging.
     """
-    client = _get_client()
+    client = get_shared_client()
     last_message = messages[-1]["content"] if messages else ""
 
     # ── Build retrieval query ──────────────────────────────────────────
@@ -203,26 +203,9 @@ async def generate_chat_response(
 
 
 # ---------------------------------------------------------------------------
+# (Shared LLM client is in app.core.router via get_shared_client())
 # Private helpers
 # ---------------------------------------------------------------------------
-
-
-_client: OpenRouterClient | None = None
-
-
-def _get_client() -> OpenRouterClient:
-    global _client
-    if _client is None:
-        _client = OpenRouterClient()
-    return _client
-
-
-async def close_client() -> None:
-    """Close the shared OpenRouter HTTP client."""
-    global _client
-    if _client is not None:
-        await _client._client.aclose()
-        _client = None
 
 
 def _build_document_context(document_texts: list[str]) -> str:

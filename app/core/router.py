@@ -448,3 +448,57 @@ class OpenRouterClient:
 
     async def __aexit__(self, *exc_info: object) -> None:
         await self.close()
+
+
+# ---------------------------------------------------------------------------
+# Shared client factory + contextvars (WP-00.5 / D-8)
+# ---------------------------------------------------------------------------
+
+import contextvars
+
+_shared_client: OpenRouterClient | None = None
+_case_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("case_id", default=None)
+
+
+def get_shared_client() -> OpenRouterClient:
+    """Return the single shared OpenRouterClient, creating it lazily on first call.
+
+    All service modules MUST use this instead of their own _get_client() singletons.
+    """
+    global _shared_client
+    if _shared_client is None:
+        _shared_client = OpenRouterClient()
+    return _shared_client
+
+
+def set_case_context(case_id: str) -> contextvars.Token:
+    """Set the case_id for the current async context. Returns a token for reset.
+
+    Usage in a pipeline:
+        token = set_case_context("case-uuid-123")
+        try:
+            # all LLM calls in this context carry the case_id
+            ...
+        finally:
+            _case_id_var.reset(token)
+    """
+    return _case_id_var.set(case_id)
+
+
+def get_case_context() -> str | None:
+    """Return the current case_id, or None. Used by the egress guard (WP-31)."""
+    return _case_id_var.get()
+
+
+def reset_client() -> None:
+    """Reset the shared client. Used in tests."""
+    global _shared_client
+    _shared_client = None
+
+
+async def close_client() -> None:
+    """Gracefully close the shared client's HTTP transport."""
+    global _shared_client
+    if _shared_client is not None:
+        await _shared_client.close()
+        _shared_client = None

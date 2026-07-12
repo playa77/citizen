@@ -27,7 +27,7 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from app.core.router import OpenRouterClient
+from app.core.router import get_shared_client
 from app.services.prompts import SOCIALRECHT_PROMPTS
 from app.utils.tokens import trim_text, estimate_tokens
 
@@ -42,18 +42,7 @@ class JSONParseError(Exception):
     """Raised when the LLM returns malformed JSON even after a retry."""
 
 
-# ---------------------------------------------------------------------------
-# Shared LLM client
-# ---------------------------------------------------------------------------
-
-_client: OpenRouterClient | None = None
-
-
-def _get_client() -> OpenRouterClient:
-    global _client
-    if _client is None:
-        _client = OpenRouterClient()
-    return _client
+# (Shared LLM client is in app.core.router via get_shared_client())
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +209,7 @@ async def classify_issues(
         A list of identified legal issue labels.
     """
     logger.info("classify_issues: starting (input=%d chars)", len(normalized_text))
-    client = _get_client()
+    client = get_shared_client()
     from app.core.config import settings as _s
     triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
     sys_msg = system_prompt if system_prompt is not None else _CLASSIFICATION_SYSTEM
@@ -279,7 +268,7 @@ async def decompose_questions(
         A list of extracted legal questions.
     """
     logger.info("decompose_questions: starting (input=%d chars)", len(normalized_text))
-    client = _get_client()
+    client = get_shared_client()
     from app.core.config import settings as _s
     triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
     sys_msg = system_prompt if system_prompt is not None else _DECOMPOSITION_SYSTEM
@@ -381,7 +370,7 @@ async def triage_document(
         triage_model,
         triage_timeout,
     )
-    client = _get_client()
+    client = get_shared_client()
 
     trimmed_input = trim_text(normalized_text, triage_input_chars)
     input_tokens = estimate_tokens(trimmed_input + sys_msg + _STRICT_SUFFIX)
@@ -536,7 +525,7 @@ async def adversarial_review(
         final_model,
         final_timeout,
     )
-    client = _get_client()
+    client = get_shared_client()
 
     # Build chunk context (cap to manageable size, using top N by retrieval score).
     chunk_lines: list[str] = []
@@ -726,7 +715,7 @@ async def generate_grounded_answer_stream(
         final_model,
         final_timeout,
     )
-    client = _get_client()
+    client = get_shared_client()
 
     # Build chunk context (same logic as generate_grounded_answer).
     chunk_lines: list[str] = []
@@ -908,7 +897,7 @@ async def construct_claims(
         ``claim_type``, ``question``.
     """
     logger.info("construct_claims: starting (%d chunks, %d questions)", len(chunks), len(questions))
-    client = _get_client()
+    client = get_shared_client()
     from app.core.config import settings as _s
     sys_msg = system_prompt if system_prompt is not None else _CLAIM_CONSTRUCTION_SYSTEM
 
@@ -1005,7 +994,7 @@ async def verify_claims(
         return []
 
     logger.info("verify_claims: starting (%d claims, %d chunks)", len(claims), len(chunks))
-    client = _get_client()
+    client = get_shared_client()
     from app.core.config import settings as _s
     sys_msg = system_prompt if system_prompt is not None else _VERIFICATION_SYSTEM
 
@@ -1108,7 +1097,7 @@ async def generate_output(
         ``ergebnis``, ``handlungsempfehlung``, ``entwurf``, ``unsicherheiten``.
     """
     logger.info("generate_output: starting (%d verified claims)", len(verified_claims))
-    client = _get_client()
+    client = get_shared_client()
     from app.core.config import settings as _s
     sys_msg = system_prompt if system_prompt is not None else _OUTPUT_SYSTEM
 
@@ -1219,7 +1208,7 @@ async def synthesize_and_correct_text(
     """
     from app.core.config import settings as s
 
-    client = _get_client()
+    client = get_shared_client()
 
     # Truncate each version to stay within context limits.
     a_text = ocr_version_a[:max_input_chars]
@@ -1275,23 +1264,4 @@ async def synthesize_and_correct_text(
     return corrected
 
 
-# ---------------------------------------------------------------------------
-# Reset helper (for tests)
-# ---------------------------------------------------------------------------
 
-
-def reset_client() -> None:
-    """Reset the module-level ``_client`` singleton. Useful in unit tests."""
-    global _client
-    _client = None
-
-
-async def close_client() -> None:
-    """Close the module-level OpenRouter client and free resources.
-
-    For use in application shutdown hooks.
-    """
-    global _client
-    if _client is not None:
-        await _client.close()
-        _client = None

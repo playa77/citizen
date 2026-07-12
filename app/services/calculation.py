@@ -20,10 +20,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.core.router import get_shared_client
 from app.services.reasoning import (
     JSONParseError,
     _STRICT_SUFFIX,
-    _get_client,
     _parse_json_response,
 )
 from app.services.rules_engine import process_extraction
@@ -149,12 +149,7 @@ def cross_check_extraction(
     return warnings
 
 
-# ---------------------------------------------------------------------------
-# Reset / close helpers (re-exported for test convenience)
-# ---------------------------------------------------------------------------
-
-reset_client = __import__("app.services.reasoning", fromlist=["reset_client"]).reset_client
-close_client = __import__("app.services.reasoning", fromlist=["close_client"]).close_client
+# (Shared client helpers are in app.core.router via get_shared_client()/close_client())
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +318,7 @@ async def check_calculations(
         calculation_timeout,
     )
 
-    client = _get_client()
+    client = get_shared_client()
 
     # ── Build the user prompt (shared between extraction and explanation) ──
     user_parts: list[str] = []

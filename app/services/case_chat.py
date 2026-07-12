@@ -17,7 +17,7 @@ from typing import Any
 
 from app.core.config import settings
 from app.core.pipeline import PipelineState, StageExecutionError, execute_stage
-from app.core.router import OpenRouterClient
+from app.core.router import get_shared_client
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,7 @@ async def generate_case_chat_response(
     case_id :
         Optional identifier for logging.
     """
-    client = _get_client()
+    client = get_shared_client()
 
     # ── Build system prompt with pipeline context ───────────────────────
     system_parts = [_CASE_CHAT_SYSTEM_PROMPT]
@@ -360,22 +360,7 @@ async def run_targeted_reevaluate(
 # ---------------------------------------------------------------------------
 
 
-_client: OpenRouterClient | None = None
-
-
-def _get_client() -> OpenRouterClient:
-    global _client
-    if _client is None:
-        _client = OpenRouterClient()
-    return _client
-
-
-async def close_client() -> None:
-    """Close the shared OpenRouter HTTP client."""
-    global _client
-    if _client is not None:
-        await _client._client.aclose()
-        _client = None
+# (Shared LLM client is in app.core.router via get_shared_client())
 
 
 # ---------------------------------------------------------------------------

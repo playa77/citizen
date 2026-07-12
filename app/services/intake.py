@@ -29,7 +29,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.router import OpenRouterClient
+from app.core.router import get_shared_client
 from app.db.models import LEGAL_AREA_ALLOWED, IntakeSession
 from app.utils.tokens import trim_text
 
@@ -49,24 +49,7 @@ class IntakeTurnLimitReached(IntakeError):
     """Raised when the user tries to continue past the turn cap."""
 
 
-# ---------------------------------------------------------------------------
-# Shared LLM client
-# ---------------------------------------------------------------------------
-
-_client: OpenRouterClient | None = None
-
-
-def _get_client() -> OpenRouterClient:
-    global _client
-    if _client is None:
-        _client = OpenRouterClient()
-    return _client
-
-
-def reset_client() -> None:
-    """Reset module-level client singleton (test helper)."""
-    global _client
-    _client = None
+# (Shared LLM client is in app.core.router via get_shared_client())
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +301,7 @@ async def _call_llm(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Call the LLM and parse the response into a dict."""
     from app.core.config import settings as s
 
-    client = _get_client()
+    client = get_shared_client()
     raw = await client.chat_completion(
         messages,
         temperature=0.1,

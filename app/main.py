@@ -74,17 +74,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
     # Shutdown
-    from app.services.chat_reasoning import close_client as close_chat_client
-    from app.services.reasoning import close_client as close_reasoning_client
+    from app.core.router import close_client
 
     try:
-        await close_reasoning_client()
+        await close_client()
     except Exception:
-        logging.getLogger(__name__).warning("Failed to close reasoning client gracefully")
-    try:
-        await close_chat_client()
-    except Exception:
-        logging.getLogger(__name__).warning("Failed to close chat reasoning client gracefully")
+        logging.getLogger(__name__).warning("Failed to close shared router client gracefully")
     logger.info("Citizen %s shutting down", get_app_version_tag())
 
 
