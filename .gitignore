@@ -113,3 +113,7 @@ citizen.zip
 QWEN.md
 docker-compose.yml  # take out before release
 deploy_db.sh
+
+# Eval — goldsets are tracked; results and run outputs are not
+eval/results/
+eval/__pycache__/
