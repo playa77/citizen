@@ -40,21 +40,9 @@ Ein Rechtsstaat ist ein Versprechen: dass Rechte nicht davon abhängen, wer man
 ist und was man sich leisten kann. Dieses Versprechen ist nur so viel wert wie
 seine Durchsetzbarkeit. Ein Recht, das man nicht kennt, eine Frist, die man
 verpasst, eine Berechnung, die man nicht prüfen kann — das ist auf dem Papier
-ein Recht und in der Wirklichkeit keines. Man kann das mit John F. Kennedy
-sagen, der einer anderen Generation zurief:
+ein Recht und in der Wirklichkeit keines. 
 
-> *"Ask not what your country can do for you — ask what you can do for your
-> country."*
-
-Übersetzt in dieses Land und diese Zeit: **Frag nicht nur, was der Rechtsstaat
-für dich tut — frag, was du für den Rechtsstaat tun kannst.** Dieses Projekt ist
-meine Antwort auf diese Frage. Ich kann Software bauen, die exakt die Lücke
-schließt, an der das Versprechen reißt. Das Problem liegt in meiner Stadt —
-deren Jobcenter zuletzt die höchste Fehlerquote Deutschlands hatte. Es *nicht*
-zu tun, obwohl ich es kann, wäre die eigentlich erklärungsbedürftige
-Entscheidung.
-
-Dahinter liegt ein zweiter Grund, der über das Sozialrecht hinausweist. Wir
+Dazu kommt heute ein zweiter Grund, der über das Sozialrecht hinausweist. Wir
 stehen am Anfang eines Übergangs, in dem maschinelle Intelligenz zur
 Grundinfrastruktur wird — und Übergänge haben eine tückische Eigenschaft: **Sie
 frieren die Machtverteilung ein, die im Moment des Übergangs besteht.**
