@@ -1,33 +1,40 @@
 # Legal Notice and Disclaimer
 
-**Author:** github.com/playa77
+**Version:** 1.1.0
+
+**Date:** 2026-07-13
+
+**Supersedes:** Version of 2026-05-09 (retroactively designated as Version 1.0.0)
+
+**Author:** www.github.com/playa77
 
 **Repository:** https://github.com/playa77/citizen
-
-**Date:** 2026-05-09
 
 This document contains legal notices and disclaimers. It does not replace or
 modify the applicable open-source license terms unless expressly stated.
 
-This software is licensed under the MIT License.
+This software is provided under the MIT License and **gratuitously**. By
+providing, accessing, or using it, no fee, exchange, or service relationship
+is created.
 
-See `LICENSE`
-
-To the extent this disclaimer contains contractual terms, they apply only to
+To the extent this document contains contractual terms, they apply only to
 the maximum extent permitted by applicable mandatory law.
+
+Changes to this document follow semantic versioning; the change history is at
+the end of this document.
 
 ---
 
 ## 1. Nature of the Software
 
 This repository contains personal, bespoke software developed primarily for the
-author's own use, documentation, experimentation, and reference.
+author's own use, documentation, experimentation, and personal reference.
 
 The software has not been designed, tested, audited, certified, or approved for
 production use, commercial use, public deployment, safety-critical systems,
 security-critical systems, medical systems, financial systems, legal practice,
-or any other environment where failure, malfunction, data loss, incorrect
-outputs, or security issues could cause harm.
+or professional legal advice, or any other environment where failure,
+malfunction, data loss, incorrect outputs, or security issues could cause harm.
 
 Public availability of this repository does not constitute a product offering,
 professional service, legal service, recommendation, warranty, or
@@ -40,9 +47,22 @@ experimental, and personal reference purposes only.
 
 It does not constitute legal advice, professional consultation, legal
 representation, or a substitute for advice from a qualified lawyer or other
-qualified professional. No attorney-client relationship, mandate, fiduciary
-relationship, advisory relationship, or other professional relationship is
-formed by accessing, installing, running, or using this software.
+qualified professional.
+
+The author does not act in specific third-party matters within the meaning of
+§ 2 (1) of the German Legal Services Act (Rechtsdienstleistungsgesetz, RDG).
+The software operates schematically according to predetermined rules, procedures,
+and verification steps; no case-specific legal review by the author takes place.
+Users who apply the software to their own documents and their own affairs handle
+their own legal matters (self-assistance). Use of the software in the context of
+advising or assisting third parties is permitted only to those entities and persons
+who are authorized to do so under the RDG or other provisions; responsibility for
+the existence of such authorization and for the advice itself rests solely with
+those entities and persons.
+
+No attorney-client relationship, mandate, fiduciary relationship, advisory
+relationship, or other professional legal relationship is formed by accessing,
+installing, running, or using this software.
 
 You must not rely on this software as the sole basis for legal decisions,
 filings, applications, objections, appeals, communications with authorities,
@@ -73,36 +93,60 @@ where applicable, checking original statutes, regulations, administrative
 materials, court decisions, official publications, deadlines, procedural
 requirements, and professional legal advice.
 
-## 4. Data Processing, Privacy, and Third-Party API Notice
+## 4. Data Processing, Data Protection, and Inference Profiles
 
-This software may operate locally in part, but it may also transmit prompts,
-normalized text, metadata, documents, excerpts, embeddings, or other input data
-to third-party providers, including large language model providers and external
-API services such as OpenRouter or other configured providers.
+The software stores data locally. To the extent the software uses external
+services for processing (in particular language model and embedding services),
+this is done exclusively through configurable, versioned **inference profiles**.
+The currently active profile is displayed in the application and indicated in
+generated documents.
 
-By using the software, you acknowledge that data you provide may be processed
-by third-party systems, potentially on servers outside your country or
-jurisdiction, including in regions with different data protection laws and
-standards.
+The software provides the following profiles in particular:
 
-The author does not control third-party providers and does not guarantee their
-security practices, availability, data retention practices, deletion practices,
-training-use policies, anonymization, confidentiality, regulatory compliance,
-or compliance with the GDPR or other privacy laws.
+- **eu-avv** (default for use within organizations): Before every external
+  processing operation, direct identifiers (in particular names, addresses,
+  reference numbers, bank details, contact data, dates of birth) are replaced
+  by a technically enforced pseudonymization stage. Transmission takes place
+  exclusively to endpoints in the European Union that are permitted in the
+  profile configuration, on the basis of a data processing agreement (DPA).
+  A technical egress guard blocks transmissions to non-permitted destinations
+  as well as transmissions of recognized plaintext identifiers.
+- **extern-openrouter** (self-assistance and development operation):
+  Pseudonymized input data may be transmitted to external providers, including
+  to servers outside your country or legal jurisdiction, including regions with
+  different data protection laws and data protection standards.
+- **on-prem** (if configured): no external transmission.
 
-This disclaimer is not a privacy policy. If you deploy, operate, modify,
-redistribute, or provide this software to others, you are solely responsible
-for determining your own obligations under applicable data protection,
-confidentiality, professional secrecy, consumer protection, and information
-security laws.
+Pseudonymization covers direct identifiers according to the documented rule set.
+Residual risks — in particular, potential identifiability from the remaining
+case context as well as misdetection of individual items — cannot be ruled out.
+Pseudonymized data remain personal data within the meaning of the GDPR.
 
-Do not enter personal data, special-category data, confidential information,
-privileged information, trade secrets, client data, government identifiers,
-financial information, health information, or other sensitive information
-unless you have determined that you have a valid legal basis, appropriate
-provider terms, appropriate technical and organizational measures, and all
-required consents, notices, contracts, data processing agreements, and security
-controls.
+The author does not control third-party providers and does not — even if a data
+processing agreement exists — warrant or guarantee their security measures,
+availability, data storage, deletion practices, use for training purposes,
+confidentiality, regulatory compliance, or compliance with the GDPR or other
+data protection laws. The selection, vetting, and contractual engagement of
+external providers is the responsibility of whoever operates the software.
+
+Anyone who applies the software to **their own** documents and data as a data
+subject decides on this under their own responsibility and consents under the
+respectively active profile. Anyone who processes data of **third parties**
+with the software (in particular advisory centers and other organizations) is
+themselves the controller within the meaning of the GDPR and is solely
+responsible for determining and complying with all obligations under applicable
+data protection law, confidentiality law (in particular the German social data
+protection provisions of § 35 SGB I, §§ 67 ff. SGB X), professional law,
+consumer protection law, and information security law — including the legal
+basis, information of data subjects, required consent, data processing
+agreements, technical and organizational measures, records of processing
+activities, and, where required, a data protection impact assessment.
+
+Special categories of personal data, confidential information, privileged
+information, trade secrets, client data, and other sensitive information may
+only be entered or processed if the above prerequisites are met.
+
+This disclaimer is not a privacy policy.
 
 You are solely responsible for any data you input, process, transmit, store, or
 disclose using the software.
@@ -133,6 +177,10 @@ title, and non-infringement, are disclaimed.
 
 ## 6. Limitation of Liability
 
+The software is provided gratuitously. To the extent permitted by law,
+liability is therefore additionally governed by the legal standards applicable
+to gratuitous transfers and gifts.
+
 To the maximum extent permitted by applicable law, the author, contributors,
 maintainers, and affiliates, if any, shall not be liable for any claims,
 damages, losses, liabilities, costs, or expenses arising out of or in
@@ -158,11 +206,22 @@ negligence, strict liability, warranty, statutory duty, professional duty, or
 otherwise, even if the author has been advised of the possibility of such
 damages.
 
-Nothing in this disclaimer excludes or limits liability where such exclusion or
-limitation is not permitted by applicable mandatory law, including liability
-for willful misconduct, gross negligence, injury to life, body, or health,
-mandatory product liability, fraud, fraudulent concealment of defects, an
-express guarantee, or any rights that cannot legally be waived or limited.
+The above limitations of liability apply only to the extent permitted by
+applicable mandatory law.
+
+In particular, liability remains unaffected for:
+
+- willful misconduct;
+- gross negligence, to the extent exclusion is not permitted by law;
+- injury to life, body, or health;
+- mandatory provisions of product liability law;
+- fraudulent concealment of a defect;
+- an expressly assumed guarantee; and
+- all other cases in which liability cannot be excluded or limited by law.
+
+If the user is a consumer within the meaning of § 13 BGB (German Civil Code),
+the above limitations apply only insofar as they do not violate mandatory
+consumer protection provisions.
 
 ## 7. User Responsibility and Assumption of Risk
 
@@ -234,7 +293,33 @@ while preserving its intended purpose as closely as legally possible.
 ## 12. Acknowledgment
 
 By accessing, installing, running, interacting with, or using this software,
-you acknowledge that you have read and understood this disclaimer and that you
-use the software at your own risk.
+you confirm that you have read and understood this disclaimer and that you use
+the software at your own risk.
+
+The application requires an express confirmation of acknowledgment upon first
+start and after material changes to this document, and records locally the
+confirmed version (version number and checksum of the document, timestamp,
+application version). The version displayed and confirmed in the application at
+any given time is authoritative. Documents and reports generated by the
+software indicate the underlying version in the footer.
 
 If you do not agree with this disclaimer, do not use the software.
+
+---
+
+## Change History
+
+- **1.1.0 (2026-07-13):** Versioning and change history introduced.
+  Preamble: gratuitous nature of the provision expressly clarified.
+  § 2: RDG clarification added (no activity in specific third-party matters,
+  schematic mode of operation, self-assistance character, use in advising third
+  parties only by authorized persons). § 4: completely rewritten — description
+  of versioned inference profiles (eu-avv / extern-openrouter / on-prem),
+  technically enforced pseudonymization and its limits; delimitation of
+  responsibility between self-assistance use of own data and processing of
+  third-party data (GDPR controller, social data protection provisions).
+  § 6: reference to legal standards for gratuitous transfers added.
+  § 12: app-side first-time confirmation with recorded document version added.
+  §§ 3, 5, 7–11 unchanged.
+- **1.0.0 (2026-05-09):** Original version (published at the time without
+  version designation).

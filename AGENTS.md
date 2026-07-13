@@ -12,10 +12,10 @@ PostgreSQL 16 + pgvector, vanilla HTML/JS/CSS frontend with SSE streaming.
 **Key constraints:**
 - All LLM calls go through `app/core/router.py` (OpenRouter with fallback chain:
   `PRIMARY_MODEL → FALLBACK_MODEL_1 → FALLBACK_MODEL_2`)
-- API endpoints in `app/api/routes/` (9 route modules, 30+ endpoints)
-- Database models in `app/db/models.py` (13 ORM models), migrations via Alembic (6 migrations)
+- API endpoints in `app/api/routes/` (12 route modules, 30+ endpoints)
+- Database models in `app/db/models.py` (14 ORM models + 1 abstract base), migrations via Alembic (10 migrations)
 - Frontend in `static/` — vanilla JS, no frameworks. Three modes: Analyze, Chat, Settings.
-  Frontend version in `index.html` (v0.4.0), JS/CSS at v0.3.0.
+  All frontend files at v1.0.0.
 - Settings loaded from `.env` via `pydantic-settings`. `settings` is a lazy singleton
   (see Gotchas below).
 - Strict mypy (`pyproject.toml` `strict = true`), ruff formatting (line-length 100, rules
@@ -84,11 +84,11 @@ be run manually: `ruff check`, `ruff format --check`, `mypy app/`, `pytest`.
 `index.html` header comment says v0.4.0. `app.js` and `style.css` say v0.3.0.
 The HTML version is the authoritative frontend version.
 
-### LLM router: two client instances, lazy close
-`app/services/reasoning.py` and `app/services/chat_reasoning.py` each hold their own
-`OpenRouterClient` instances. Both are closed in the FastAPI lifespan shutdown handler.
-The OpenRouter client supports both streaming (`chat_completion_stream`) and
-non-streaming (`chat_completion`) with identical fallback logic.
+### LLM router: single shared client via `get_shared_client()`
+`app/core/router.py` exposes a single `get_shared_client()` singleton and `close_client()`.
+All service modules (`reasoning.py`, `chat_reasoning.py`, `intake.py`, `case_chat.py`,
+`calculation.py`) obtain the client through `get_shared_client()`. A single `close_client()`
+call in the FastAPI lifespan shutdown handler closes it.
 
 ### PDF parsing: dual-fallback chain
 OCR is `pdfplumber` → `PyMuPDF` → `Tesseract` (German). The OCR service is
@@ -109,9 +109,9 @@ changes to the pipeline, schema, or frontend.
 | `app/core/config.py` | Settings singleton + app version helpers |
 | `app/db/models.py` | All 13 ORM models |
 | `app/db/session.py` | Async session factory (reused by tests) |
-| `app/services/` | 18 service modules (reasoning, retrieval, calculation, etc.) |
+| `app/services/` | 23 service modules (reasoning, retrieval, calculation, etc.) |
 | `app/middleware/` | Disclaimer + rate-limit middleware |
-| `app/api/routes/` | 9 route modules |
+| `app/api/routes/` | 12 route modules |
 | `static/` | Frontend: `index.html`, `app.js`, `style.css` |
 | `alembic/versions/` | 6 migrations (001–006) |
 | `tests/unit/` | Unit tests (no DB needed) |
@@ -182,13 +182,25 @@ changes to the pipeline, schema, or frontend.
 ### 2026-07-10: AGENTS.md restructured — operational sections added
 
 - Package manager is `uv` (not pip — `uv.lock` exists but is excluded from OpenCode context)
-- Frontend version: `index.html` at v0.4.0, `app.js`/`style.css` at v0.3.0 (README's v0.4.0 reference is correct for the HTML)
+- Frontend version: all three files (index.html, app.js, style.css) at v1.0.0
 - No CI, no pre-commit hooks — all quality checks manual
 - Alembic `env.py` overrides `alembic.ini` DB URL with `DATABASE_URL` env var; the ini URL is dead code
 - `settings` singleton in `app/core/config.py` uses lazy `__getattr__` — dangerous to import at module level before env is configured
 - All `/api/*` routes require `X-Disclaimer-Ack` header (except `/api/v1/meta/*`, `/static`, `/health`, `/docs`, `/redoc`)
 - `.corpus_sources.json` is runtime state in project root, analogous to `.secret_salt` — not tracked in git
-- LLM router: two separate `OpenRouterClient` instances (`reasoning.py` + `chat_reasoning.py`), both closed in lifespan shutdown
+- LLM router: single shared `OpenRouterClient` via `get_shared_client()`; all service modules use it
 - DB now 13 tables (added `intake_session` + `case_run_area` via migration 006)
 - 16 supported statute source types (added erbstg, hoefev, kschg, burlg, tvg)
+- DB now 14 tables (added `intake_session` + `case_run_area` via migration 006)
+- 16 supported statute source types (added erbstg, hoefev, kschg, burlg, tvg)
 - devdocs/ has 3 files: design, technical spec, UI testing guide
+
+### 2026-07-13: Documentation refreshed to match v1.0.0
+
+- pyproject.toml version: 1.0.0. Frontend: all three files at v1.0.0. App: 0.2.0 (main.py).
+- 12 API route modules, 23 service modules, 14 DB tables, 10 Alembic migrations.
+- 33 test files (~11,700 lines), 696 unit test functions collected (plus integration tests hidden by missing sqlite-vec dependency).
+- LLM router consolidated to single `get_shared_client()` singleton (WP-00.5).
+- New services since 2026-07-10: `document_generators`, `fristen`, `inference_profiles`, `ocr_quality`, `presets`, `pseudonymization`, `regime`. New routes: `documents`, `eval_reports`, `goldset`, `ocr`.
+- DISCLAIMER_DE.md at v1.1.0 with inference profiles section. DISCLAIMER_EN.md being brought to parity.
+- README.md AGENTS.md counts corrected to match current implementation.

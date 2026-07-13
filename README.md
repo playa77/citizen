@@ -45,13 +45,13 @@ Citizen is a local-first, evidence-constrained legal reasoning engine for German
 |---|---|
 | **Backend** | FastAPI, Uvicorn (SSE streaming) |
 | **Database** | PostgreSQL 16 + `pgvector` + `tsvector` |
-| **ORM / Migrations** | SQLAlchemy 2.0 (async), Alembic (6 migrations) |
+| **ORM / Migrations** | SQLAlchemy 2.0 (async), Alembic (10 migrations) |
 | **Frontend** | Vanilla HTML/JS/CSS (v0.4.0) |
 | **LLMs** | OpenRouter (deepseek/deepseek-v4-pro for inference, openai/text-embedding-3-small for embeddings) |
 | **OCR** | pdfplumber → PyMuPDF → Tesseract (German) |
 | **Tooling** | ruff (formatting & linting), mypy (strict), pytest (unit + integration) |
 
-## Database Schema (13 Tables)
+## Database Schema (14 Tables)
 
 | # | Table | Purpose |
 |---|---|---|
@@ -68,7 +68,7 @@ Citizen is a local-first, evidence-constrained legal reasoning engine for German
 | 11 | `conversation_message` | Single message (user/assistant/system) |
 | 12 | `conversation_document` | Document attached to conversation |
 | 13 | `intake_session` | Multi-turn intake interview |
-| 13b | `case_run_area` | Many-to-many case_run ↔ legal_area |
+| 14 | `case_run_area` | Many-to-many case_run ↔ legal_area |
 
 ## 16 Supported Statute Source Types
 
@@ -175,48 +175,59 @@ docker compose down
 
 ```
 citizen/
-├── alembic/                              # 6 migrations
+├── alembic/                              # 10 migrations
 │   └── versions/
 │       ├── 001_init_schema.py
 │       ├── 002_add_cache_entry.py
 │       ├── 003_add_conversations.py
 │       ├── 004_add_legal_parameter.py
 │       ├── 005_add_case_chat_fields.py
-│       └── 006_add_intake_and_legal_areas.py
+│       ├── 006_add_intake_and_legal_areas.py
+│       ├── 007_sqlite_baseline.py
+│       ├── 008_fix_stage_name_allowed.py
+│       ├── 009_add_regime_and_notes_to_legal_parameter.py
+│       └── 010_add_pii_mapping_to_case_run.py
 ├── app/
-│   ├── api/routes/                       # 9 route modules
+│   ├── api/routes/                       # 12 route modules
 │   │   ├── analyze.py                    # Pipeline analysis (SSE)
 │   │   ├── cases.py                      # Case CRUD, chat, re-eval, adjudication
 │   │   ├── conversations.py              # Multi-turn chat
 │   │   ├── corpus.py                     # Corpus management
+│   │   ├── documents.py                  # Action document generation
+│   │   ├── eval_reports.py               # Eval report browser
+│   │   ├── goldset.py                    # Goldset browser (Prüfstand)
 │   │   ├── ingest.py                     # Document ingestion & OCR
 │   │   ├── intake.py                     # Multi-turn intake interviews
 │   │   ├── meta.py                       # Metadata endpoints
+│   │   ├── ocr.py                        # OCR quality assessment
 │   │   └── presets.py                    # Pipeline presets
 │   ├── core/
 │   │   ├── config.py                     # Pydantic settings
 │   │   ├── pipeline.py                   # 9-stage SSE orchestrator
 │   │   └── router.py                     # LLM router with fallback chain
 │   ├── db/
-│   │   ├── models.py                     # 13 ORM models
-│   │   └── session.py                    # Async session factory
+│   │   ├── models.py                     # 14 ORM models
+│   │   ├── session.py                    # Async session factory
+│   │   └── vector_backend.py             # pgvector ↔ sqlite-vec abstraction
 │   ├── middleware/
 │   │   ├── disclaimer.py                 # Consent enforcement
 │   │   └── rate_limit.py                 # Sliding-window rate limiter
-│   ├── services/                         # 18 service modules
+│   ├── services/                         # 23 service modules
 │   │   ├── audit.py, cache.py, calculation.py
 │   │   ├── case_chat.py, chat_reasoning.py, conversation.py
-│   │   ├── corpus.py, corpus_readiness.py
-│   │   ├── intake.py, ocr.py, parameter_store.py
-│   │   ├── presets.py, prompts.py, reasoning.py
-│   │   ├── retrieval.py, rules_engine.py, verification.py
+│   │   ├── corpus.py, corpus_readiness.py, document_generators.py
+│   │   ├── fristen.py, inference_profiles.py, intake.py
+│   │   ├── ocr.py, ocr_quality.py, parameter_store.py
+│   │   ├── presets.py, prompts.py, pseudonymization.py
+│   │   ├── reasoning.py, regime.py, retrieval.py
+│   │   ├── rules_engine.py, verification.py
 │   ├── utils/                            # image, pdf, text, tokens
 │   └── main.py                           # App entry point
 ├── static/                               # Frontend v0.4.0
 │   ├── index.html                        # 3 modes: Analyze, Chat, Settings
 │   ├── app.js                            # Vanilla JS logic
 │   └── style.css                         # Dark theme
-├── tests/                                # 26 test files (~6,800 lines)
+├── tests/                                # 33 test files (~11,700 lines)
 ├── scripts/
 ├── docker-compose.yml
 ├── Dockerfile
