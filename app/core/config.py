@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 10
-    MAX_COSINE_DISTANCE: float = 0.95
+    MAX_COSINE_DISTANCE: float = 0.55  # Cosine distance = 1 - cosine similarity. 0.55 means similarity ≥ 0.45.
     MAX_COSINE_DISTANCE_STRICT: float = 0.85
     RETRIEVAL_MODE: str = "combined"  # "combined" or "per_question"
     RETRIEVAL_KEYWORD_FALLBACK: bool = True
@@ -91,6 +91,17 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     ENABLE_PROGRESS_STREAM: bool = True  # Whether to stream model output during analysis progress
     DISCLAIMER_VERSION: str = "v0.1.0"
+    PSEUDONYMIZATION_ENABLED: bool = True  # WP-30 — pseudonymize PII before LLM calls
+    # WP-42 — OCR quality gate
+    OCR_QUALITY_ENABLED: bool = True
+    OCR_QUALITY_MIN_SCORE: float = 0.3  # refuse to proceed below this
+    OCR_QUALITY_WARN_SCORE: float = 0.8  # warn below this
+    INFERENCE_PROFILE: str = "eu-avv"  # WP-31 — active inference profile name
+    AVV_OVERRIDE: bool = False  # WP-31 — allow non-signed profiles without signed AVV
+    # WP-14 — Prüfstand: goldset YAML path and eval results directory.
+    # Goldset version change is a config change, not a code change (acceptance criterion).
+    GOLDSET_PATH: str = "eval/goldsets/goldset-v0.1.0.yaml"
+    EVAL_RESULTS_DIR: str = "eval/results"
 
     @property
     def DISCLAIMER_SALT(self) -> str:

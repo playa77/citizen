@@ -93,7 +93,8 @@ class TestSettingsValidation:
             Settings(_env_file=tmp_path / ".env.does.not.exist")
 
         errors = str(exc_info.value)
-        assert "DATABASE_URL" in errors
+        assert "OPENROUTER_API_KEY" in errors
+        # DATABASE_URL now has a default value (SQLite), so it's no longer required.
 
     def test_valid_env_creates_settings(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings
@@ -137,10 +138,11 @@ class TestSettingsValidation:
         assert s.OCR_DPI == 300
         assert s.OCR_JPG_QUALITY == 84
         assert s.TOP_K_RETRIEVAL == 10
-        assert s.MAX_COSINE_DISTANCE == 0.95
+        assert s.MAX_COSINE_DISTANCE == 0.55
         assert s.LOG_LEVEL == "INFO"
         assert s.DISCLAIMER_VERSION == "v0.1.0"
 
+    @pytest.mark.skip(reason="WP-00.5: CORS_ORIGINS field removed from Settings model")
     def test_cors_origins_parses_json_list(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings
 
