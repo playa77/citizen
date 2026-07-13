@@ -83,7 +83,9 @@ async def post_continue_intake(
     async with async_session_factory() as db:
         try:
             return await continue_intake(
-                db, intake_id=intake_id, user_message=message,
+                db,
+                intake_id=intake_id,
+                user_message=message,
             )
         except IntakeTurnLimitReached as exc:
             raise _err(str(exc), code=status.HTTP_409_CONFLICT) from exc

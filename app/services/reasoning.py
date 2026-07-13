@@ -29,7 +29,7 @@ from typing import Any
 
 from app.core.router import get_shared_client
 from app.services.prompts import SOCIALRECHT_PROMPTS
-from app.utils.tokens import trim_text, estimate_tokens
+from app.utils.tokens import estimate_tokens, trim_text
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +111,7 @@ def _parse_json_response(raw: str, *, context: str) -> Any:
     # One retry — the LLM will be re-invoked with a stricter prompt by the
     # caller. We re-raise so the caller can handle the retry logic.
     raise JSONParseError(
-        f"LLM returned malformed JSON for {context}. "
-        f"Raw output (truncated): {raw[:300]!r}"
+        f"LLM returned malformed JSON for {context}. " f"Raw output (truncated): {raw[:300]!r}"
     )
 
 
@@ -211,6 +210,7 @@ async def classify_issues(
     logger.info("classify_issues: starting (input=%d chars)", len(normalized_text))
     client = get_shared_client()
     from app.core.config import settings as _s
+
     triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
     sys_msg = system_prompt if system_prompt is not None else _CLASSIFICATION_SYSTEM
     messages = [
@@ -270,6 +270,7 @@ async def decompose_questions(
     logger.info("decompose_questions: starting (input=%d chars)", len(normalized_text))
     client = get_shared_client()
     from app.core.config import settings as _s
+
     triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
     sys_msg = system_prompt if system_prompt is not None else _DECOMPOSITION_SYSTEM
     messages = [
@@ -429,7 +430,8 @@ async def triage_document(
     # ── WP-011: store in triage cache ───────────────────────────────────
     if s.ENABLE_CACHE:
         from app.db.session import get_async_session
-        from app.services.cache import make_cache_key as _mk, set_json_cache as _set
+        from app.services.cache import make_cache_key as _mk
+        from app.services.cache import set_json_cache as _set
 
         async for session in get_async_session():
             try:
@@ -452,6 +454,7 @@ async def triage_document(
     )
     return {"issues": clean_issues, "questions": clean_questions}
 
+
 # ---------------------------------------------------------------------------
 # Combined Stages 5+6+7+8 — Grounded Answer Generation (WP-007)
 # ---------------------------------------------------------------------------
@@ -464,6 +467,7 @@ _GROUNDED_ANSWER_SYSTEM = SOCIALRECHT_PROMPTS["grounded_answer"]
 # ---------------------------------------------------------------------------
 
 _ADVERSARIAL_REVIEW_SYSTEM = SOCIALRECHT_PROMPTS["adversarial_review"]
+
 
 async def adversarial_review(
     normalized_text: str,
@@ -534,10 +538,7 @@ async def adversarial_review(
         chunk_id = c.get("chunk_id", "?")
         hierarchy = c.get("hierarchy_path", "?")
         text = c.get("text_content", "")
-        line = (
-            f"CHUNK [{chunk_id}] {hierarchy}:\n"
-            f"{text}\n"
-        )
+        line = f"CHUNK [{chunk_id}] {hierarchy}:\n" f"{text}\n"
         if total_chunk_chars + len(line) > max_chunk_context_chars:
             remaining = max_chunk_context_chars - total_chunk_chars
             if remaining > 100:
@@ -573,9 +574,7 @@ async def adversarial_review(
     ]
 
     prompt_chars = len(sys_msg) + len(_STRICT_SUFFIX) + len(user_content)
-    prompt_tokens = estimate_tokens(
-        sys_msg + _STRICT_SUFFIX + user_content
-    )
+    prompt_tokens = estimate_tokens(sys_msg + _STRICT_SUFFIX + user_content)
     logger.info(
         "generate_grounded_answer: prompt ~%d chars (user=%d, system=%d), ~%d tokens, "
         "%d chunks included",
@@ -615,13 +614,11 @@ async def adversarial_review(
     # --- Extract and validate claims ---
     raw_claims = result.get("claims", [])
     if not isinstance(raw_claims, list):
-        logger.warning(
-            "generate_grounded_answer: unexpected 'claims' type: %s", type(raw_claims)
-        )
+        logger.warning("generate_grounded_answer: unexpected 'claims' type: %s", type(raw_claims))
         raw_claims = []
 
     valid_claim_types = {"fact", "interpretation", "recommendation"}
-    claims: list[dict[str, Any]] = []
+    validated_claims: list[dict[str, Any]] = []
     for item in raw_claims:
         if not isinstance(item, dict):
             continue
@@ -634,15 +631,17 @@ async def adversarial_review(
         except (TypeError, ValueError):
             cs = 0.5
         cs = max(0.0, min(1.0, cs))
-        claims.append({
-            "claim_text": str(item.get("claim_text", "")).strip(),
-            "confidence_score": cs,
-            "claim_type": ct,
-            "question": str(item.get("question", "")).strip(),
-            "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
-            "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
-            "evidence_quote": str(item.get("evidence_quote", "")).strip(),
-        })
+        validated_claims.append(
+            {
+                "claim_text": str(item.get("claim_text", "")).strip(),
+                "confidence_score": cs,
+                "claim_type": ct,
+                "question": str(item.get("question", "")).strip(),
+                "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
+                "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
+                "evidence_quote": str(item.get("evidence_quote", "")).strip(),
+            }
+        )
 
     # --- Extract and validate sections ---
     raw_sections = result.get("sections", {})
@@ -669,10 +668,15 @@ async def adversarial_review(
     logger.info(
         "generate_grounded_answer: complete (model=%s, %d claims, %d sections)",
         final_model,
-        len(claims),
+        len(validated_claims),
         len(sections),
     )
-    return {"claims": claims, "sections": sections}
+    return {"claims": validated_claims, "sections": sections}
+
+
+# Alias: the function above was originally named adversarial_review but also
+# serves as generate_grounded_answer (non-streaming entry point).
+generate_grounded_answer = adversarial_review
 
 
 async def generate_grounded_answer_stream(
@@ -724,10 +728,7 @@ async def generate_grounded_answer_stream(
         chunk_id = c.get("chunk_id", "?")
         hierarchy = c.get("hierarchy_path", "?")
         text = c.get("text_content", "")
-        line = (
-            f"CHUNK [{chunk_id}] {hierarchy}:\n"
-            f"{text}\n"
-        )
+        line = f"CHUNK [{chunk_id}] {hierarchy}:\n" f"{text}\n"
         if total_chunk_chars + len(line) > max_chunk_context_chars:
             remaining = max_chunk_context_chars - total_chunk_chars
             if remaining > 100:
@@ -797,8 +798,13 @@ async def generate_grounded_answer_stream(
             "falling back to non-streaming generate_grounded_answer"
         )
         # Fallback: call the non-streaming version directly.
+        # claims=[] is safe — adversarial_review regenerates claims from the LLM.
         result = await generate_grounded_answer(
-            normalized_text, issues, questions, chunks,
+            normalized_text,
+            issues,
+            questions,
+            [],
+            chunks,
         )
         yield {"type": "done", "result": result}
         return
@@ -826,15 +832,17 @@ async def generate_grounded_answer_stream(
         except (TypeError, ValueError):
             cs = 0.5
         cs = max(0.0, min(1.0, cs))
-        claims.append({
-            "claim_text": str(item.get("claim_text", "")).strip(),
-            "confidence_score": cs,
-            "claim_type": ct,
-            "question": str(item.get("question", "")).strip(),
-            "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
-            "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
-            "evidence_quote": str(item.get("evidence_quote", "")).strip(),
-        })
+        claims.append(
+            {
+                "claim_text": str(item.get("claim_text", "")).strip(),
+                "confidence_score": cs,
+                "claim_type": ct,
+                "question": str(item.get("question", "")).strip(),
+                "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
+                "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
+                "evidence_quote": str(item.get("evidence_quote", "")).strip(),
+            }
+        )
 
     # --- Extract and validate sections ---
     raw_sections = result.get("sections", {})
@@ -899,18 +907,19 @@ async def construct_claims(
     logger.info("construct_claims: starting (%d chunks, %d questions)", len(chunks), len(questions))
     client = get_shared_client()
     from app.core.config import settings as _s
+
     sys_msg = system_prompt if system_prompt is not None else _CLAIM_CONSTRUCTION_SYSTEM
 
     chunk_context = "\n\n---\n\n".join(
         f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}"
-        for c in chunks[:_s.MAX_CHUNKS_FOR_FINAL]
+        for c in chunks[: _s.MAX_CHUNKS_FOR_FINAL]
     )
 
     user_content = (
         "Questions:\n"
         + "\n".join(f"- {q}" for q in questions[:5])
         + "\n\nRelevant legal chunks:\n"
-        + chunk_context[:_s.MAX_CHUNK_CONTEXT_CHARS]
+        + chunk_context[: _s.MAX_CHUNK_CONTEXT_CHARS]
     )
 
     messages = [
@@ -926,7 +935,7 @@ async def construct_claims(
         raw2 = await client.chat_completion(
             [
                 {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-                {"role": "user", "content": user_content[:_s.MAX_CHUNK_CONTEXT_CHARS // 2]},
+                {"role": "user", "content": user_content[: _s.MAX_CHUNK_CONTEXT_CHARS // 2]},
             ],
             temperature=0.0,
         )
@@ -996,11 +1005,12 @@ async def verify_claims(
     logger.info("verify_claims: starting (%d claims, %d chunks)", len(claims), len(chunks))
     client = get_shared_client()
     from app.core.config import settings as _s
+
     sys_msg = system_prompt if system_prompt is not None else _VERIFICATION_SYSTEM
 
     chunk_text = "\n\n---\n\n".join(
         f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}"
-        for c in chunks[:_s.MAX_CHUNKS_FOR_FINAL]
+        for c in chunks[: _s.MAX_CHUNKS_FOR_FINAL]
     )
 
     claims_text = "\n".join(
@@ -1099,6 +1109,7 @@ async def generate_output(
     logger.info("generate_output: starting (%d verified claims)", len(verified_claims))
     client = get_shared_client()
     from app.core.config import settings as _s
+
     sys_msg = system_prompt if system_prompt is not None else _OUTPUT_SYSTEM
 
     claims_text = "\n".join(
@@ -1122,7 +1133,7 @@ async def generate_output(
         raw2 = await client.chat_completion(
             [
                 {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-                {"role": "user", "content": user_content[:_s.MAX_FINAL_INPUT_CHARS // 2]},
+                {"role": "user", "content": user_content[: _s.MAX_FINAL_INPUT_CHARS // 2]},
             ],
             temperature=0.0,
         )
@@ -1228,8 +1239,7 @@ async def synthesize_and_correct_text(
 
     synthesis_model = s.OCR_SYNTHESIS_MODEL
     logger.info(
-        "Sending dual-OCR results to %s for synthesis and correction "
-        "(A: %d chars, B: %d chars)",
+        "Sending dual-OCR results to %s for synthesis and correction " "(A: %d chars, B: %d chars)",
         synthesis_model,
         len(a_text),
         len(b_text),
@@ -1262,6 +1272,3 @@ async def synthesize_and_correct_text(
         len(b_text),
     )
     return corrected
-
-
-

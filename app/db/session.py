@@ -37,11 +37,11 @@ if IS_SQLITE:
     # ── Per-connection event listeners ──────────────────────────────────
     # Every new connection from the pool must load the sqlite-vec extension
     # (C4 fix) and apply per-connection PRAGMAs (C5 fix).
-    from sqlalchemy import event
     import sqlite_vec
+    from sqlalchemy import event
 
     @event.listens_for(engine.sync_engine, "connect")
-    def _init_sqlite_connection(dbapi_conn: Any, connection_record: Any) -> None:  # noqa: ARG001
+    def _init_sqlite_connection(dbapi_conn: Any, connection_record: Any) -> None:
         """Load sqlite-vec extension and set per-connection PRAGMAs."""
         # C4: load sqlite-vec on every connection so vec_distance_cosine()
         # is available regardless of which pool connection is used.

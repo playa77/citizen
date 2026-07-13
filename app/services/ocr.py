@@ -44,8 +44,9 @@ logger = logging.getLogger(__name__)
 
 class DualOCRResult(NamedTuple):
     """Tesseract output from both preprocessed image versions."""
+
     greyscale_contrast: str  # OCR text from greyscale + contrast image
-    black_white: str         # OCR text from black-and-white thresholded image
+    black_white: str  # OCR text from black-and-white thresholded image
 
 
 class OCRFailedError(Exception):
@@ -119,7 +120,9 @@ async def process_document(file: UploadFile, *, synthesize: bool | None = None) 
 
     logger.info(
         "Ingestion: content_type=%s size=%d bytes ocr_llm_synthesis=%s",
-        content_type, len(raw_bytes), synthesize,
+        content_type,
+        len(raw_bytes),
+        synthesize,
     )
 
     # Route by MIME type.
@@ -145,7 +148,9 @@ async def process_document(file: UploadFile, *, synthesize: bool | None = None) 
 # ---------------------------------------------------------------------------
 
 
-async def _process_pdf(raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True) -> str:  # pragma: no cover
+async def _process_pdf(
+    raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True
+) -> str:  # pragma: no cover
     """Attempt text extraction first; fall back to image-based dual-OCR if empty."""
     # Tier 1 + 2: pdfplumber → PyMuPDF (via existing pdf.py)
     # These are sync but fast — run inline.
@@ -175,7 +180,11 @@ def _scale_if_needed(image: Image.Image, max_dim: int = _MAX_IMAGE_DIMENSION) ->
     new_size = (int(w * scale), int(h * scale))
     logger.info(
         "Downscaling image from %dx%d to %dx%d (exceeded %d px limit)",
-        w, h, new_size[0], new_size[1], max_dim,
+        w,
+        h,
+        new_size[0],
+        new_size[1],
+        max_dim,
     )
     return image.resize(new_size, Image.Resampling.LANCZOS)
 
@@ -236,7 +245,9 @@ def _run_dual_ocr_on_image(image: Image.Image, cfg: config.Settings) -> DualOCRR
     return DualOCRResult(greyscale_contrast=text_a, black_white=text_b)
 
 
-async def _ocr_pdf_pages(raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True) -> str:  # pragma: no cover
+async def _ocr_pdf_pages(
+    raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True
+) -> str:  # pragma: no cover
     """Render PDF pages to images, run dual-OCR per page, combine and synthesize.
 
     Respects ``OCR_MAX_PAGES``: only the first N pages are processed via OCR.
@@ -255,13 +266,17 @@ async def _ocr_pdf_pages(raw_bytes: bytes, cfg: config.Settings, *, synthesize: 
             logger.warning(
                 "PDF has %d pages but OCR_MAX_PAGES is %d — only processing first %d pages. "
                 "Set OCR_MAX_PAGES=0 to process all pages.",
-                total_pages, max_pages, max_pages,
+                total_pages,
+                max_pages,
+                max_pages,
             )
             pages_to_process = max_pages
         else:
             pages_to_process = total_pages
 
-        logger.info("PDF has %d total pages — running dual-OCR on %d", total_pages, pages_to_process)
+        logger.info(
+            "PDF has %d total pages — running dual-OCR on %d", total_pages, pages_to_process
+        )
 
         # Run page OCR in a thread pool — pytesseract is CPU-bound and
         # blocks the GIL, so offloading prevents event-loop stalls.
@@ -275,7 +290,8 @@ async def _ocr_pdf_pages(raw_bytes: bytes, cfg: config.Settings, *, synthesize: 
             pages_text_b.append(result.black_white)
             logger.debug(
                 "PDF page %d/%d OCR done: A=%d chars, B=%d chars",
-                i + 1, pages_to_process,
+                i + 1,
+                pages_to_process,
                 len(result.greyscale_contrast),
                 len(result.black_white),
             )
@@ -296,7 +312,9 @@ async def _ocr_pdf_pages(raw_bytes: bytes, cfg: config.Settings, *, synthesize: 
 # ---------------------------------------------------------------------------
 
 
-async def _process_image(raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True) -> str:  # pragma: no cover
+async def _process_image(
+    raw_bytes: bytes, cfg: config.Settings, *, synthesize: bool = True
+) -> str:  # pragma: no cover
     """Load image with Pillow, standardize, dual-preprocess, run Tesseract on both versions."""
     img = Image.open(io.BytesIO(raw_bytes))
     result = await asyncio.to_thread(_run_dual_ocr_on_image, img, cfg)
@@ -360,7 +378,5 @@ async def _synthesize_ocr_text(text_a: str, text_b: str) -> str:
     try:
         return await synthesize_and_correct_text(text_a, text_b)
     except Exception as exc:
-        logger.error(
-            "OCR synthesis LLM call failed: %s. Using concatenation fallback.", exc
-        )
+        logger.error("OCR synthesis LLM call failed: %s. Using concatenation fallback.", exc)
         return f"{text_a}\n{text_b}"

@@ -25,6 +25,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import pytest_asyncio
 
+from app.core.router import reset_client
+
 from app.services.reasoning import (
     JSONParseError,
     _parse_json_response,
@@ -32,10 +34,13 @@ from app.services.reasoning import (
     construct_claims,
     decompose_questions,
     generate_output,
-    reset_client,
     triage_document,
     verify_claims,
 )
+
+# WP-00.5: _get_client was replaced by get_shared_client imported from app.core.router
+# Patch at the usage site (app.services.reasoning.get_shared_client) not the
+# definition site (app.core.router.get_shared_client) because of local imports.
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -148,9 +153,9 @@ class TestParseJsonResponse:
 class TestClassifyIssues:
     @pytest_asyncio.fixture(autouse=True)
     async def _patch_client(self) -> None:
-        """Patch ``_get_client`` to return a mock with valid JSON."""
+        """Patch ``get_shared_client`` to return a mock with valid JSON."""
         self._patcher = patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": ["KdU", "Meldefrist"]})),
         )
         self._patcher.start()
@@ -163,7 +168,7 @@ class TestClassifyIssues:
 
     async def test_empty_issues_returns_empty_list(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": []})),
         ).start()
         result = await classify_issues(_SAMPLE_TEXT)
@@ -171,7 +176,7 @@ class TestClassifyIssues:
 
     async def test_non_list_issues_returns_empty(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": "not a list"})),
         ).start()
         result = await classify_issues(_SAMPLE_TEXT)
@@ -179,7 +184,7 @@ class TestClassifyIssues:
 
     async def test_strips_empty_entries(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": ["  ", "KdU", ""]})),
         ).start()
         result = await classify_issues(_SAMPLE_TEXT)
@@ -195,7 +200,7 @@ class TestDecomposeQuestions:
     @pytest_asyncio.fixture(autouse=True)
     async def _patch_client(self) -> None:
         self._patcher = patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(
                 json.dumps({"questions": ["Ist § 22 anwendbar?", "Wie hoch ist der Regelsatz?"]})
             ),
@@ -211,7 +216,7 @@ class TestDecomposeQuestions:
 
     async def test_empty_questions_returns_empty_list(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"questions": []})),
         ).start()
         result = await decompose_questions(_SAMPLE_TEXT)
@@ -219,7 +224,7 @@ class TestDecomposeQuestions:
 
     async def test_non_list_returns_empty(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"questions": "single question"})),
         ).start()
         result = await decompose_questions(_SAMPLE_TEXT)
@@ -247,7 +252,7 @@ class TestTriageDocument:
     @pytest_asyncio.fixture(autouse=True)
     async def _patch_client(self) -> None:
         self._patcher = patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(self.TRIAGE_VALID),
         )
         self._patcher.start()
@@ -273,7 +278,7 @@ class TestTriageDocument:
 
     async def test_empty_lists_returned_when_fields_missing(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({})),
         ).start()
         result = await triage_document(_SAMPLE_TEXT)
@@ -281,7 +286,7 @@ class TestTriageDocument:
 
     async def test_non_list_issues_returns_empty(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(
                 json.dumps({"issues": "not a list", "questions": ["q"]})
             ),
@@ -292,7 +297,7 @@ class TestTriageDocument:
 
     async def test_non_list_questions_returns_empty(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(
                 json.dumps({"issues": ["i"], "questions": "not a list"})
             ),
@@ -303,7 +308,7 @@ class TestTriageDocument:
 
     async def test_strips_empty_entries(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(
                 json.dumps({"issues": ["  ", "KdU", ""], "questions": ["Q", "  "]})
             ),
@@ -320,7 +325,7 @@ class TestTriageDocument:
                 self.TRIAGE_VALID,
             ]
         )
-        with patch("app.services.reasoning._get_client", return_value=mock):
+        with patch("app.services.reasoning.get_shared_client", return_value=mock):
             result = await triage_document(_SAMPLE_TEXT)
 
         assert mock.chat_completion.call_count == 2
@@ -350,7 +355,7 @@ class TestConstructClaims:
             },
         ]
         self._patcher = patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(claims_payload)),
         )
         self._patcher.start()
@@ -374,7 +379,7 @@ class TestConstructClaims:
             }
         ]
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
         result = await construct_claims([], [])
@@ -390,7 +395,7 @@ class TestConstructClaims:
             }
         ]
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
         result = await construct_claims([], [])
@@ -398,7 +403,7 @@ class TestConstructClaims:
 
     async def test_non_dict_items_skipped(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(["string item", 42])),
         ).start()
         result = await construct_claims([], [])
@@ -406,7 +411,7 @@ class TestConstructClaims:
 
     async def test_non_list_response_returns_empty(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"unexpected": "object"})),
         ).start()
         result = await construct_claims([], [])
@@ -422,7 +427,7 @@ class TestConstructClaims:
             }
         ]
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
         result = await construct_claims([], [])
@@ -448,7 +453,7 @@ class TestVerifyClaims:
     @pytest_asyncio.fixture(autouse=True)
     async def _patch_client(self) -> None:
         self._patcher = patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(self.VALID_RESPONSE)),
         )
         self._patcher.start()
@@ -474,7 +479,7 @@ class TestVerifyClaims:
 
     async def test_non_list_response_returns_defaults(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"unexpected": "object"})),
         ).start()
         claims = [{"claim_text": "test", "confidence_score": 0.5, "claim_type": "fact"}]
@@ -494,7 +499,7 @@ class TestVerifyClaims:
             }
         ]
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
         claims = [{"claim_text": "x", "confidence_score": 0.5, "claim_type": "fact"}]
@@ -511,7 +516,7 @@ class TestGenerateOutput:
     @pytest_asyncio.fixture(autouse=True)
     async def _patch_client(self) -> None:
         self._patcher = patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(_VALID_OUTPUT_JSON),
         )
         self._patcher.start()
@@ -543,7 +548,7 @@ class TestGenerateOutput:
 
     async def test_missing_keys_default_to_empty_string(self) -> None:
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"sachverhalt": "only this key"})),
         ).start()
         result = await generate_output([])
@@ -555,7 +560,7 @@ class TestGenerateOutput:
         """A response that is a plain string (not a JSON object) should yield
         all empty-string defaults."""
         patch(
-            "app.services.reasoning._get_client",
+            "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response('"just a string"'),
         ).start()
         result = await generate_output([])
@@ -581,7 +586,7 @@ class TestJSONParsingRetry:
                 json.dumps({"issues": ["retry worked"]}),
             ]
         )
-        with patch("app.services.reasoning._get_client", return_value=mock):
+        with patch("app.services.reasoning.get_shared_client", return_value=mock):
             result = await classify_issues(_SAMPLE_TEXT)
 
         assert mock.chat_completion.call_count == 2
@@ -595,7 +600,7 @@ class TestJSONParsingRetry:
                 json.dumps({"questions": ["retried question"]}),
             ]
         )
-        with patch("app.services.reasoning._get_client", return_value=mock):
+        with patch("app.services.reasoning.get_shared_client", return_value=mock):
             result = await decompose_questions(_SAMPLE_TEXT)
 
         assert mock.chat_completion.call_count == 2
@@ -618,7 +623,7 @@ class TestJSONParsingRetry:
                 ),
             ]
         )
-        with patch("app.services.reasoning._get_client", return_value=mock):
+        with patch("app.services.reasoning.get_shared_client", return_value=mock):
             result = await construct_claims(_SAMPLE_CHUNKS, ["q"])
 
         assert mock.chat_completion.call_count == 2
@@ -643,7 +648,7 @@ class TestJSONParsingRetry:
             ]
         )
         claims = [{"claim_text": "x", "confidence_score": 0.5, "claim_type": "fact"}]
-        with patch("app.services.reasoning._get_client", return_value=mock):
+        with patch("app.services.reasoning.get_shared_client", return_value=mock):
             result = await verify_claims(claims, _SAMPLE_CHUNKS)
 
         assert mock.chat_completion.call_count == 2
@@ -657,7 +662,7 @@ class TestJSONParsingRetry:
                 _VALID_OUTPUT_JSON,
             ]
         )
-        with patch("app.services.reasoning._get_client", return_value=mock):
+        with patch("app.services.reasoning.get_shared_client", return_value=mock):
             result = await generate_output([])
 
         assert mock.chat_completion.call_count == 2
@@ -671,12 +676,12 @@ class TestJSONParsingRetry:
 
 class TestResetClient:
     def test_reset_sets_client_to_none(self) -> None:
-        from app.services import reasoning
+        from app.core import router
 
-        reasoning._client = AsyncMock()
-        assert reasoning._client is not None
+        router._shared_client = AsyncMock()
+        assert router._shared_client is not None
         reset_client()
-        assert reasoning._client is None
+        assert router._shared_client is None
 
 
 # ===========================================================================

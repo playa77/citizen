@@ -25,7 +25,6 @@ from app.services.prompts import (
     ERBRECHT_PROMPTS,
     REGISTRY,
     SOCIALRECHT_PROMPTS,
-    _combine_prompts,
     get_prompts,
 )
 from app.services.reasoning import (
@@ -141,7 +140,7 @@ class TestMultiAreaCombine:
 
     def test_combined_triage_includes_preamble(self) -> None:
         result = get_prompts(["sozialrecht", "erbrecht"])
-        assert "Rechtsexperte" in result["triage"]
+        assert "Experte für deutsches Sozialrecht sowie deutsches Erbrecht" in result["triage"]
         # The preamble explicitly mentions multi-area.
         assert "mehrere Rechtsgebiete" in result["triage"]
 
@@ -155,27 +154,6 @@ class TestMultiAreaCombine:
         result = get_prompts(["erbrecht", "schenkungsrecht"])
         # Should equal ERBRECHT_PROMPTS (no combine needed).
         assert result == ERBRECHT_PROMPTS
-
-
-# ---------------------------------------------------------------------------
-# 4. _combine_prompts helper
-# ---------------------------------------------------------------------------
-
-
-class TestCombinePromptsHelper:
-    def test_empty(self) -> None:
-        assert _combine_prompts([]) == ""
-
-    def test_single(self) -> None:
-        assert _combine_prompts(["foo"]) == "foo"
-
-    def test_two_includes_preamble(self) -> None:
-        out = _combine_prompts(["alpha", "beta"])
-        assert "Rechtsexperte" in out
-        assert "alpha" in out
-        assert "beta" in out
-        # Separator between.
-        assert "---" in out
 
 
 # ---------------------------------------------------------------------------

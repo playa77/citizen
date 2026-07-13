@@ -202,9 +202,9 @@ async def test_check_calculations_successful_pipeline() -> None:
     assert assessment["summary"] == "Test summary from explanation LLM"
     assert assessment["recommended_action"] == "Widerspruch"
 
-    # Total discrepancies from the engine (3 of 6 entries have discrepancies).
-    assert assessment["total_discrepancies"] == 3
-    assert assessment["total_amount_eur"] == 560.0  # 164 + 198 + 198
+    # Total discrepancies from the engine (3 original + 3 reconciliation entries).
+    assert assessment["total_discrepancies"] == 6
+    assert assessment["total_amount_eur"] == 2158.0  # 164 + 198 + 198 + 702 + 448 + 448
     # Mixed directions default to "zulasten" in _build_overall_assessment.
     assert assessment["direction"] == "zulasten"
 
@@ -236,16 +236,16 @@ async def test_check_calculations_explanation_fallback() -> None:
 
     # The engine's discrepancy data should still be intact.
     disc_entries = [c for c in calcs if c["discrepancy_found"]]
-    assert len(disc_entries) == 3
+    assert len(disc_entries) == 6
 
     # ── overall_assessment (fallback — no LLM summary) ──────────────────
     assessment = result["overall_assessment"]
     # Since _llm_explain returned None, the engine's templated summary
     # should be used instead.
     assert len(assessment["summary"]) > 0
-    assert "3" in assessment["summary"] or "drei" in assessment["summary"].lower() or "560" in assessment["summary"]
-    assert "560" in assessment["summary"], (
-        "Expected the fallback summary to mention the total amount (560.00 EUR)"
+    assert "6" in assessment["summary"] or "sechs" in assessment["summary"].lower() or "2158" in assessment["summary"]
+    assert "2158" in assessment["summary"], (
+        "Expected the fallback summary to mention the total amount (2158.00 EUR)"
     )
-    assert assessment["total_discrepancies"] == 3
-    assert assessment["total_amount_eur"] == 560.0
+    assert assessment["total_discrepancies"] == 6
+    assert assessment["total_amount_eur"] == 2158.0

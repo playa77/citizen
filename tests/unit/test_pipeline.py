@@ -522,7 +522,13 @@ class TestPipelineTimeout:
         monkeypatch.setattr("app.core.pipeline._collect_single_stage", _slow_collect)
         monkeypatch.setattr(
             "app.core.pipeline.cfg._get_settings",
-            lambda: type("Settings", (), {"PIPELINE_TIMEOUT_SEC": 1})(),
+            lambda: type("Settings", (), {
+                "PIPELINE_TIMEOUT_SEC": 1,
+                "PSEUDONYMIZATION_ENABLED": False,
+                "OCR_QUALITY_ENABLED": False,
+                "OCR_QUALITY_MIN_SCORE": 0.3,
+                "OCR_QUALITY_WARN_SCORE": 0.8,
+            })(),
         )
 
         state = PipelineState(input_text=SAMPLE_INPUT)

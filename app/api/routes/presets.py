@@ -37,8 +37,8 @@ _SUGGEST_SYSTEM = (
     + "\n".join(f"- {p['id']}: {p['name']} — {p['description']}" for p in list_presets())
     + "\n\nZugelassene Rechtsgebiete: "
     + ", ".join(LEGAL_AREA_ALLOWED)
-    + "\n\nAntworte GENAU mit einem JSON-Objekt: {\"preset_id\": \"<id>\", "
-    "\"primary_area\": \"<legal_area>\", \"secondary_areas\": [\"<legal_area>\", ...]}.\n"
+    + '\n\nAntworte GENAU mit einem JSON-Objekt: {"preset_id": "<id>", '
+    '"primary_area": "<legal_area>", "secondary_areas": ["<legal_area>", ...]}.\n'
     "Gib ausschließlich gültiges JSON zurück."
 )
 
@@ -48,11 +48,15 @@ _KEYWORD_FALLBACK: list[tuple[str, str, tuple[str, ...]]] = [
     ("erbe-mit-familie", "erbrecht", ("geschieden", "scheidung", "zugewinn", "ex-mann", "ex-frau")),
     ("schenkung-zu-lebzeiten", "schenkungsrecht", ("schenkung", "schenken", "verschenk")),
     ("hofesuebergabe", "erbrecht", ("hof", "landwirtschaft", "höfeordnung")),
-    ("sozialrecht-allgemein", "sozialrecht", ("jobcenter", "bürgergeld", "sanktion", "sozialamt", "sgb")),
+    (
+        "sozialrecht-allgemein",
+        "sozialrecht",
+        ("jobcenter", "bürgergeld", "sanktion", "sozialamt", "sgb"),
+    ),
 ]
 
 
-def _keyword_suggest(text: str) -> dict[str, str]:
+def _keyword_suggest(text: str) -> dict[str, Any]:
     haystack = (text or "").lower()
     best = ("sozialrecht-allgemein", "sozialrecht")
     best_score = 0
@@ -64,7 +68,7 @@ def _keyword_suggest(text: str) -> dict[str, str]:
     return {"preset_id": best[0], "primary_area": best[1], "secondary_areas": []}
 
 
-async def _call_llm_suggest(text: str) -> dict[str, str]:
+async def _call_llm_suggest(text: str) -> dict[str, Any]:
     """Call the LLM to suggest a preset. Always uses LLM; on failure falls
     back to keyword matching per the plan (Decision #7)."""
     client = OpenRouterClient()

@@ -12,7 +12,6 @@ Endpoints:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
@@ -24,8 +23,8 @@ from uuid import UUID
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from app.core import config as cfg
 from app.db.session import async_session_factory
+from app.services.audit import AuditRecord, persist_audit_record
 from app.services.chat_reasoning import generate_chat_response, run_first_message_pipeline
 from app.services.conversation import (
     add_document,
@@ -39,11 +38,9 @@ from app.services.conversation import (
     get_documents,
     get_messages,
     list_conversations,
-    message_to_dict,
     remove_document,
 )
 from app.services.ocr import process_document
-from app.services.audit import AuditRecord, persist_audit_record
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -126,7 +123,9 @@ async def get_conversation_endpoint(conversation_id: UUID) -> dict[str, Any]:
             include_documents=True,
         )
         if conv is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+            )
         return conversation_detail_to_dict(conv)
 
 
@@ -136,7 +135,9 @@ async def delete_conversation_endpoint(conversation_id: UUID) -> dict[str, str]:
     async with async_session_factory() as db:
         deleted = await delete_conversation(db, conversation_id)
         if not deleted:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+            )
         await db.commit()
         return {"status": "deleted", "id": str(conversation_id)}
 
@@ -176,7 +177,9 @@ async def send_message_endpoint(
             include_documents=True,
         )
         if conv is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+            )
 
         # Count prior user messages (conv.messages was loaded before add_message).
         prior_user_message_count = sum(1 for m in conv.messages if m.role == "user")
@@ -220,9 +223,7 @@ async def send_message_endpoint(
                                     fo.get("entwurf", ""),
                                     fo.get("unsicherheiten", ""),
                                 ]
-                                accumulated_response = "\n\n".join(
-                                    s for s in sections if s
-                                )
+                                accumulated_response = "\n\n".join(s for s in sections if s)
                         except (json.JSONDecodeError, KeyError):
                             pass
             else:
@@ -295,7 +296,9 @@ async def add_document_endpoint(
     async with async_session_factory() as db:
         conv = await get_conversation(db, conversation_id)
         if conv is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+            )
 
         try:
             ocr_text = await process_document(file)

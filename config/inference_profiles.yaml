@@ -1,0 +1,75 @@
+# Version: 0.1.0
+# Citizen inference profiles — YAML + restart only to switch.
+# Each profile defines the model, temperature, host allowlist, and
+# compliance settings for all LLM/embedding calls.
+
+profiles:
+  eu-avv:
+    label: "EU-AVV (Default — NGO Build)"
+    data_residency: "eu-only"
+    avv_status: "signed"
+    pseudonymization: "required"
+    host_allowlist:
+      - "openrouter.ai"
+      - "api.openai.com"
+    per_stage:
+      classification:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.0
+      decomposition:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.0
+      retrieval:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.0
+      generation:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.3
+      adversarial_review:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.0
+      embeddings:
+        model: "openai/text-embedding-3-small"
+        temperature: 0.0
+    capability_manifest:
+      streaming: true
+      function_calling: false
+      vision: false
+      max_tokens: 128000
+
+  extern-openrouter:
+    label: "External OpenRouter (Development)"
+    data_residency: "any"
+    avv_status: "not-signed"
+    pseudonymization: "required"
+    host_allowlist:
+      - "openrouter.ai"
+    per_stage:
+      classification:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.0
+      generation:
+        model: "deepseek/deepseek-r1"
+        temperature: 0.3
+      embeddings:
+        model: "openai/text-embedding-3-small"
+        temperature: 0.0
+    capability_manifest:
+      streaming: true
+      function_calling: false
+      vision: false
+      max_tokens: 128000
+
+  on-prem:
+    label: "On-Premise LLM (Disabled)"
+    data_residency: "on-prem"
+    avv_status: "signed"
+    pseudonymization: "optional"
+    host_allowlist: []
+    per_stage: {}
+    capability_manifest:
+      streaming: false
+      function_calling: false
+      vision: false
+      max_tokens: 4096
+    enabled: false

@@ -1,7 +1,31 @@
 """API routes package — re-export submodules for convenient inclusion in main.py."""
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0
 
-from . import analyze, conversations, corpus, ingest, meta
+from . import (
+    analyze,
+    cases,
+    conversations,
+    corpus,
+    documents,
+    eval_reports,
+    goldset,
+    ingest,
+    intake,
+    meta,
+    presets,
+)
 
-__all__ = ["analyze", "conversations", "corpus", "ingest", "meta"]
+__all__ = [
+    "analyze",
+    "cases",
+    "conversations",
+    "corpus",
+    "documents",
+    "eval_reports",
+    "goldset",
+    "ingest",
+    "intake",
+    "meta",
+    "presets",
+]

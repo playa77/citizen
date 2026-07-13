@@ -22,8 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
-import re
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -102,40 +101,105 @@ _INTAKE_SYSTEM = (
 
 _AREA_KEYWORDS: dict[str, tuple[str, ...]] = {
     "sozialrecht": (
-        "jobcenter", "bürgergeld", "sozialamt", "sanktion", "harzt iv", "harzt 2",
-        "sgb", "sozialhilfe", "arbeitslosengeld", "kosten der unterkunft",
-        "eingliederungsvereinbarung", "aufstocker", "regelsatz",
+        "jobcenter",
+        "bürgergeld",
+        "sozialamt",
+        "sanktion",
+        "harzt iv",
+        "harzt 2",
+        "sgb",
+        "sozialhilfe",
+        "arbeitslosengeld",
+        "kosten der unterkunft",
+        "eingliederungsvereinbarung",
+        "aufstocker",
+        "regelsatz",
     ),
     "erbrecht": (
-        "erbe", "testament", "erbfolge", "erbschein", "pflichtteil", "nachlass",
-        "verstorb", "hinterblieb", "miterb", "erbanteil", "erbvertrag", "erblasser",
+        "erbe",
+        "testament",
+        "erbfolge",
+        "erbschein",
+        "pflichtteil",
+        "nachlass",
+        "verstorb",
+        "hinterblieb",
+        "miterb",
+        "erbanteil",
+        "erbvertrag",
+        "erblasser",
     ),
     "schenkungsrecht": (
-        "schenkung", "schenken", "verschenk", "schenkungsvertrag", "freibetrag schenkung",
+        "schenkung",
+        "schenken",
+        "verschenk",
+        "schenkungsvertrag",
+        "freibetrag schenkung",
     ),
     "familienrecht": (
-        "scheidung", "geschieden", "unterhalt", "sorgerecht", "umgangsrecht", "ehe",
-        "famili", "kindesunterhalt", "trennungsunterhalt", "zugewinn", "ex-mann", "ex-frau",
+        "scheidung",
+        "geschieden",
+        "unterhalt",
+        "sorgerecht",
+        "umgangsrecht",
+        "ehe",
+        "famili",
+        "kindesunterhalt",
+        "trennungsunterhalt",
+        "zugewinn",
+        "ex-mann",
+        "ex-frau",
     ),
     "mietrecht": (
-        "miete", "vermieter", "mieter", "wohnung", "kündigung wohnung",
-        "mietminderung", "kaution", "nebenkosten",
+        "miete",
+        "vermieter",
+        "mieter",
+        "wohnung",
+        "kündigung wohnung",
+        "mietminderung",
+        "kaution",
+        "nebenkosten",
     ),
     "arbeitsrecht": (
-        "arbeitgeber", "kündigung arbeit", "abfindung", "arbeitsvertrag",
-        "betriebsrat", "kündigungsschutz", "abmahnung", "lohn", "gehalt",
+        "arbeitgeber",
+        "kündigung arbeit",
+        "abfindung",
+        "arbeitsvertrag",
+        "betriebsrat",
+        "kündigungsschutz",
+        "abmahnung",
+        "lohn",
+        "gehalt",
     ),
     "vertragsrecht": (
-        "vertrag", "kaufvertrag", "werkvertrag", "darlehen", "rücktritt",
-        "gewährleistung", "garantie", "widerruf",
+        "vertrag",
+        "kaufvertrag",
+        "werkvertrag",
+        "darlehen",
+        "rücktritt",
+        "gewährleistung",
+        "garantie",
+        "widerruf",
     ),
     "verwaltungsrecht": (
-        "verwaltungsakt", "widerspruch", "baugenehmigung", "gewerbe",
-        "ausländerbehörde", "führerschein", "bußgeldbescheid",
+        "verwaltungsakt",
+        "widerspruch",
+        "baugenehmigung",
+        "gewerbe",
+        "ausländerbehörde",
+        "führerschein",
+        "bußgeldbescheid",
     ),
     "strafrecht": (
-        "anzeige", "strafanzeige", "verfahren", "vorwurf", "tat",
-        "strafrecht", "bewährung", "geldstrafe", "freiheitsstrafe",
+        "anzeige",
+        "strafanzeige",
+        "verfahren",
+        "vorwurf",
+        "tat",
+        "strafrecht",
+        "bewährung",
+        "geldstrafe",
+        "freiheitsstrafe",
     ),
 }
 
@@ -170,9 +234,9 @@ def _fallback_areas_from_text(text: str) -> tuple[str, list[str]]:
 _STRICT_SUFFIX = (
     "\n\nIMPORTANT: Respond with *only* valid JSON matching the schema above. "
     "No prose, no markdown fences, no explanation. If you cannot produce "
-    "valid JSON matching the schema, return {\"done\": true, \"question\": \"\", "
-    "\"primary_area\": \"andere\", \"secondary_areas\": [], "
-    "\"summary\": \"\", \"facts\": [], \"dates\": [], \"parties\": []}."
+    'valid JSON matching the schema, return {"done": true, "question": "", '
+    '"primary_area": "andere", "secondary_areas": [], '
+    '"summary": "", "facts": [], "dates": [], "parties": []}.'
 )
 
 
@@ -188,7 +252,7 @@ def _parse_intake_response(raw: str) -> dict[str, Any]:
         text = text.rsplit("\n", 1)[0] if "\n" in text else text[:-3]
     text = text.strip()
     try:
-        return json.loads(text)
+        return cast("dict[str, Any]", json.loads(text))
     except (json.JSONDecodeError, ValueError):
         pass
     # Tolerant: find first balanced JSON object.
@@ -215,7 +279,7 @@ def _parse_intake_response(raw: str) -> dict[str, Any]:
             depth -= 1
             if depth == 0:
                 try:
-                    return json.loads(text[start : i + 1])
+                    return cast("dict[str, Any]", json.loads(text[start : i + 1]))
                 except (json.JSONDecodeError, ValueError) as exc:
                     raise IntakeError(f"Malformed JSON: {exc}") from exc
     raise IntakeError("Unbalanced JSON braces in LLM response")
@@ -379,7 +443,10 @@ async def start_intake(
 
     if llm_result.get("done"):
         return await _finalise_session(
-            session, intake_session, initial_text, llm_result,
+            session,
+            intake_session,
+            initial_text,
+            llm_result,
         )
 
     # Otherwise persist the first assistant turn.
@@ -412,9 +479,7 @@ async def continue_intake(
         raise IntakeError("Intake was abandoned")
 
     if intake_session.turn_count >= intake_session.max_turns:
-        raise IntakeTurnLimitReached(
-            f"Intake reached its cap of {intake_session.max_turns} turns"
-        )
+        raise IntakeTurnLimitReached(f"Intake reached its cap of {intake_session.max_turns} turns")
 
     if not (user_message or "").strip():
         raise IntakeError("user_message must be non-empty")
@@ -433,9 +498,7 @@ async def continue_intake(
         llm_result = await _call_llm(messages)
     except IntakeError as exc:
         logger.warning("continue_intake: LLM parse failed (%s); forcing finalize", exc)
-        primary, secondary = _fallback_areas_from_text(
-            initial_text + " " + user_message
-        )
+        primary, secondary = _fallback_areas_from_text(initial_text + " " + user_message)
         llm_result = {
             "done": True,
             "question": "",
@@ -456,7 +519,10 @@ async def continue_intake(
 
     if llm_result.get("done") or intake_session.turn_count >= intake_session.max_turns:
         return await _finalise_session(
-            session, intake_session, initial_text, llm_result,
+            session,
+            intake_session,
+            initial_text,
+            llm_result,
             extra_user_message=user_message,
         )
 
@@ -483,9 +549,7 @@ async def finalize_intake(
     if history and history[0].get("role") == "user":
         initial_text = str(history[0].get("content", ""))
 
-    all_user_text = " ".join(
-        m.get("content", "") for m in history if m.get("role") == "user"
-    )
+    all_user_text = " ".join(m.get("content", "") for m in history if m.get("role") == "user")
     primary, secondary = _fallback_areas_from_text(all_user_text or initial_text)
     llm_result = {
         "done": True,
@@ -498,7 +562,10 @@ async def finalize_intake(
         "parties": [],
     }
     return await _finalise_session(
-        session, intake_session, initial_text, llm_result,
+        session,
+        intake_session,
+        initial_text,
+        llm_result,
     )
 
 
@@ -563,7 +630,7 @@ async def _finalise_session(
         all_text = initial_text
         if extra_user_message:
             all_text = f"{all_text}\n{extra_user_message}"
-        for entry in (intake_session.messages or []):
+        for entry in intake_session.messages or []:
             all_text = f"{all_text}\n{entry.get('content', '')}"
         primary_norm, _ = _fallback_areas_from_text(all_text)
 

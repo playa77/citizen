@@ -8,7 +8,7 @@ database.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -66,11 +66,7 @@ async def list_conversations(
     limit: int = 50,
 ) -> list[Conversation]:
     """Return recent conversations ordered by *updated_at* descending."""
-    stmt = (
-        select(Conversation)
-        .order_by(Conversation.updated_at.desc())
-        .limit(limit)
-    )
+    stmt = select(Conversation).order_by(Conversation.updated_at.desc()).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -97,7 +93,7 @@ async def touch_conversation(db: AsyncSession, conversation_id: UUID) -> None:
     await db.execute(
         update(Conversation)
         .where(Conversation.id == conversation_id)
-        .values(updated_at=datetime.now(timezone.utc)),
+        .values(updated_at=datetime.now(UTC)),
     )
 
 

@@ -16,9 +16,13 @@ from app.api.routes import (
     cases,
     conversations,
     corpus,
+    documents,
+    eval_reports,
+    goldset,
     ingest,
     intake,
     meta,
+    ocr,
     presets,
 )
 from app.core.config import get_app_version, get_app_version_tag, settings
@@ -37,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Citizen %s starting up — LOG_LEVEL=%s", get_app_version_tag(), settings.LOG_LEVEL)
 
     # SQLite: initialise WAL mode, busy timeout, and foreign keys (no-op for PostgreSQL).
-    from app.db.session import IS_SQLITE, _init_sqlite  # type: ignore[attr-defined]
+    from app.db.session import IS_SQLITE, _init_sqlite, async_session_factory
 
     if IS_SQLITE:
         await _init_sqlite()
@@ -55,7 +59,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # On SQLite fresh DB, stamp directly to the SQLite baseline migration
         # to skip PostgreSQL-only migrations 001-006.
         if settings.DATABASE_URL.startswith("sqlite"):
-            from sqlalchemy import create_engine, inspect as sa_inspect
+            from sqlalchemy import create_engine
+            from sqlalchemy import inspect as sa_inspect
 
             sync_url = settings.DATABASE_URL.replace("+aiosqlite", "")
             sync_engine = create_engine(sync_url)
@@ -71,6 +76,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Alembic migrations applied successfully.")
     except Exception as exc:
         logger.warning("Alembic migration skipped or failed: %s. Continuing anyway.", exc)
+
+    # Preload the legal parameter cache for synchronous param() lookups.
+    from app.services.parameter_store import reload_parameter_cache
+
+    try:
+        async with async_session_factory() as session:
+            await reload_parameter_cache(session)
+        logger.info("Legal parameter cache populated.")
+    except Exception as exc:
+        logger.warning("Parameter cache population failed: %s. Continuing anyway.", exc)
+
+    # WP-31: Validate active inference profile at startup
+    try:
+        from app.services.inference_profiles import (
+            get_active_profile,
+            validate_profile,
+        )
+
+        profile = get_active_profile()
+        warnings = validate_profile(profile)
+        logger.info(
+            "Active inference profile: %s (label=%r, avv_status=%s, pseudonymization=%s)",
+            profile.name,
+            profile.label,
+            profile.avv_status,
+            profile.pseudonymization,
+        )
+        if warnings:
+            for w in warnings:
+                logger.warning("Inference profile warning: %s", w)
+    except ValueError as exc:
+        logger.error(
+            "Inference profile validation FAILED — starting in limited mode: %s",
+            exc,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Inference profile loading skipped: %s. Continuing anyway.",
+            exc,
+        )
 
     yield
     # Shutdown
@@ -104,6 +149,10 @@ app.include_router(corpus.router, prefix="/api/v1", tags=["corpus"])
 app.include_router(intake.router, prefix="/api/v1", tags=["intake"])
 app.include_router(presets.router, prefix="/api/v1", tags=["presets"])
 app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
+app.include_router(ocr.router, prefix="/api/v1", tags=["ocr"])
+app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
+app.include_router(goldset.router, prefix="/api/v1", tags=["goldset"])
+app.include_router(eval_reports.router, prefix="/api/v1", tags=["eval_reports"])
 
 
 @app.get("/health")
@@ -121,6 +170,7 @@ async def root() -> FileResponse:
 if __name__ == "__main__":
     import argparse
     import os
+
     import uvicorn
 
     parser = argparse.ArgumentParser(description="Citizen Desktop Backend")

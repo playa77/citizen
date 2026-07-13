@@ -1,6 +1,6 @@
 /**
  * Citizen — Legal Reasoning Engine Frontend
-     * @version 0.3.0
+ *     @version 1.0.0
  *
  * Handles:
  * - Disclaimer acceptance modal with localStorage persistence
@@ -11,7 +11,8 @@
  * - Conversational chat interface with sidebar
  * - Multi-turn conversations with SSE streaming (pipeline + RAG modes)
  * - Document upload within conversations
- * - Mode toggle between Analyze and Chat views
+ * - Mode toggle between Analyze, Prüfstand, Chat, and Settings views
+ * - WP-14 Prüfstand: goldset browser, eval overlay, demo mode with comparison
  */
 
 (function() {
@@ -100,8 +101,12 @@
         stageList: document.getElementById('stage-list'),
         streamOutput: document.getElementById('stream-output'),
         streamOutputContent: document.getElementById('stream-output-content'),
-        resultsSection: document.getElementById('results-section'),
-        resultsContainer: document.getElementById('results-container'),
+        // Result Report (WP-41) — #results-section was renamed to #result-report-section;
+        // resultsSection is kept as an alias so existing call sites keep working.
+        resultsSection: document.getElementById('result-report-section'),
+        // Result Report (WP-41)
+        resultReportSection: document.getElementById('result-report-section'),
+        resultReportContent: document.getElementById('result-report-content'),
         errorDisplay: document.getElementById('error-display'),
         corpusUpdateBtn: document.getElementById('corpus-update-btn'),
         corpusProgress: document.getElementById('corpus-progress'),
@@ -112,6 +117,11 @@
         // Mode toggle
         modeAnalyzeBtn: document.getElementById('mode-analyze-btn'),
         modeChatBtn: document.getElementById('mode-chat-btn'),
+        rechtsstandValue: document.getElementById('rechtsstand-value'),
+        rechtsstandIndicator: document.getElementById('rechtsstand-indicator'),
+        profileBanner: document.getElementById('profile-banner'),
+        profileBannerLabel: document.getElementById('profile-banner-label'),
+        footerProfile: document.getElementById('footer-profile'),
         // Chat mode
         chatMode: document.getElementById('chat-mode'),
         chatSidebar: document.getElementById('chat-sidebar'),
@@ -168,6 +178,21 @@
         caseComparePanels: document.getElementById('case-compare-panels'),
         caseCompareLeft: document.getElementById('case-compare-left'),
         caseCompareRight: document.getElementById('case-compare-right'),
+        // Prüfstand mode (WP-14)
+        pruefstandMode: document.getElementById('pruefstand-mode'),
+        modePruefstandBtn: document.getElementById('mode-pruefstand-btn'),
+        pruefstandLoading: document.getElementById('pruefstand-loading'),
+        pruefstandError: document.getElementById('pruefstand-error'),
+        pruefstandContent: document.getElementById('pruefstand-content'),
+        pruefstandGallerySection: document.getElementById('pruefstand-gallery-section'),
+        pruefstandGallery: document.getElementById('pruefstand-gallery'),
+        pruefstandDetailSection: document.getElementById('pruefstand-detail-section'),
+        pruefstandDetailContent: document.getElementById('pruefstand-detail-content'),
+        pruefstandBackBtn: document.getElementById('pruefstand-back-btn'),
+        pruefstandDemoSection: document.getElementById('pruefstand-demo-section'),
+        pruefstandDemoContent: document.getElementById('pruefstand-demo-content'),
+        pruefstandDemoBackBtn: document.getElementById('pruefstand-demo-back-btn'),
+        footerProfilePruefstand: document.getElementById('footer-profile-pruefstand'),
     };
 
     // =========================================================================
@@ -209,6 +234,12 @@
         caseChatAbortController: null,
         caseIsStreaming: false,
         compareCaseData: null,
+        // Prüfstand mode state (WP-14)
+        goldsetData: null,           // full goldset manifest from GET /api/v1/goldset
+        goldsetCaseDetail: null,     // current case detail from GET /api/v1/goldset/{id}
+        evalReports: [],             // eval report summaries from GET /api/v1/eval/reports
+        pruefstandDemoStreaming: false,
+        pruefstandDemoResult: null,  // final pipeline output from demo analysis
     };
 
     // =========================================================================
@@ -330,6 +361,87 @@
             message = text || message;
         }
         throw new Error(message);
+    }
+
+    // =========================================================================
+    // Rechtsstand Indicator
+    // =========================================================================
+
+    /** Fetch legal-timestamp endpoint and update the Rechtsstand display. */
+    async function fetchRechtsstand() {
+        try {
+            const resp = await fetch(API_BASE + '/meta/legal-timestamp', {
+                method: 'GET',
+                headers: buildHeaders({ 'Accept': 'application/json' }),
+            });
+            if (!resp.ok) {
+                elements.rechtsstandValue.textContent = 'unbekannt';
+                return;
+            }
+            const data = await resp.json();
+
+            // Use corpus_freshness as the primary date; fall back to parameter_freshness
+            const freshnessStr = data.corpus_freshness || data.parameter_freshness;
+            if (!freshnessStr) {
+                elements.rechtsstandValue.textContent = 'keine Daten';
+                return;
+            }
+
+            // Format DD.MM.YYYY
+            const parts = freshnessStr.split('-');
+            const formatted = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : freshnessStr;
+            elements.rechtsstandValue.textContent = formatted;
+
+            // Check if older than 90 days
+            const freshnessDate = new Date(freshnessStr + 'T00:00:00');
+            const now = new Date();
+            const diffDays = (now - freshnessDate) / (1000 * 60 * 60 * 24);
+            if (diffDays > 180) {
+                elements.rechtsstandIndicator.classList.add('rechtsstand--stale');
+            } else if (diffDays > 90) {
+                elements.rechtsstandIndicator.classList.add('rechtsstand--warning');
+            }
+        } catch {
+            elements.rechtsstandValue.textContent = 'Fehler';
+        }
+    }
+
+    /** Fetch active inference profile and update the header banner + footer. */
+    async function fetchActiveProfile() {
+        try {
+            const resp = await fetch(API_BASE + '/meta/active-profile', {
+                method: 'GET',
+                headers: buildHeaders({ 'Accept': 'application/json' }),
+            });
+            if (!resp.ok) {
+                elements.profileBannerLabel.textContent = 'Profil-Fehler';
+                elements.profileBanner.className = 'profile-banner profile-banner--not-signed';
+                return;
+            }
+            const data = await resp.json();
+
+            // Update header banner
+            elements.profileBannerLabel.textContent = data.profile;
+            const avvClass = data.avv_status === 'signed' ? 'profile-banner--signed'
+                : data.data_residency === 'on-prem' ? 'profile-banner--on-prem'
+                : 'profile-banner--not-signed';
+            elements.profileBanner.className = 'profile-banner ' + avvClass;
+            elements.profileBanner.title = data.label;
+
+            // Update footer
+            const profileText = data.label + ' | AVV: ' + data.avv_status;
+            elements.footerProfile.textContent = profileText;
+            if (elements.footerProfilePruefstand) {
+                elements.footerProfilePruefstand.textContent = profileText;
+            }
+        } catch {
+            elements.profileBannerLabel.textContent = '?';
+            elements.profileBanner.className = 'profile-banner profile-banner--not-signed';
+            elements.footerProfile.textContent = '';
+            if (elements.footerProfilePruefstand) {
+                elements.footerProfilePruefstand.textContent = '';
+            }
+        }
     }
 
     // =========================================================================
@@ -561,6 +673,12 @@
             return;
         }
 
+        // WP-42: OCR quality event — show ConfidenceRibbon in progress area
+        if (event.stage === 'ocr_quality') {
+            handleOcrQualityEvent(event);
+            return;
+        }
+
         // Corpus health warning event
         if (event.stage === 'corpus_health') {
             handleCorpusHealthEvent(event);
@@ -583,6 +701,8 @@
         if (event.case_run_id) {
             // Persist and auto-navigate to case chat
             state.activeCaseId = event.case_run_id;
+            // Update the doc-generation button now that we have a case_run_id
+            updateDocActionButton(event.case_run_id);
             if (state._pendingCaseOutput) {
                 loadCaseSession(event.case_run_id, state._pendingCaseOutput);
                 state._pendingCaseOutput = null;
@@ -626,6 +746,115 @@
         }
     }
 
+    /**
+     * Handle OCR quality SSE events (WP-42).
+     * Renders a ConfidenceRibbon in the progress section.
+     */
+    function handleOcrQualityEvent(event) {
+        const payload = event.payload || {};
+        const status = event.status || 'info'; // 'warning', 'info', or 'error'
+
+        // Remove any existing OCR quality ribbon
+        const existing = document.querySelector('.c-confidence-ribbon');
+        if (existing) existing.remove();
+
+        const ribbon = document.createElement('div');
+        ribbon.className = 'c-confidence-ribbon level-' + (payload.level || 'good');
+        ribbon.id = 'ocr-quality-ribbon';
+
+        const scorePct = payload.score !== undefined ? Math.round(payload.score * 100) : 0;
+        const levelLabels = {
+            good: 'Gut',
+            acceptable: 'Ausreichend',
+            poor: 'Gering',
+            unusable: 'Unbrauchbar',
+        };
+        const levelLabel = levelLabels[payload.level] || payload.level || 'Unbekannt';
+
+        // Build header
+        let html = '<div class="c-confidence-ribbon-header">';
+        html += '<div class="c-confidence-ribbon-label">OCR-Qualität</div>';
+        html += '<div class="c-confidence-ribbon-level-badge">' + escapeHtml(levelLabel) + '</div>';
+        html += '<div class="c-confidence-ribbon-score">' + scorePct + '%</div>';
+        html += '</div>';
+
+        // Score bar
+        html += '<div class="c-confidence-ribbon-track">';
+        html += '<div class="c-confidence-ribbon-fill" style="width: ' + scorePct + '%;"></div>';
+        html += '</div>';
+
+        // Details
+        html += '<div class="c-confidence-ribbon-details">';
+
+        // Language detection
+        if (payload.language_detected) {
+            const langLabel = payload.language_detected === 'de' ? 'Deutsch' : 'Unbekannt';
+            html += '<div class="c-confidence-ribbon-detail-row">';
+            html += '<span>Sprache</span><span>' + escapeHtml(langLabel) + '</span>';
+            html += '</div>';
+        }
+
+        // Readable words
+        if (payload.readable_words_pct !== undefined) {
+            const rwPct = Math.round(payload.readable_words_pct * 100);
+            html += '<div class="c-confidence-ribbon-detail-row">';
+            html += '<span>Lesbare Wörter</span><span>' + rwPct + '%</span>';
+            html += '</div>';
+        }
+
+        // Warnings (shown if present)
+        const warnings = payload.warnings || [];
+        if (warnings.length > 0) {
+            for (const w of warnings) {
+                const cssClass = status === 'warning'
+                    ? 'c-confidence-ribbon-warning'
+                    : 'c-confidence-ribbon-detail-row';
+                html += '<div class="' + cssClass + '">' + escapeHtml(w) + '</div>';
+            }
+        }
+
+        // Issues list
+        const issues = payload.issues || [];
+        if (issues.length > 0) {
+            html += '<ul class="c-confidence-ribbon-issues">';
+            for (const issue of issues) {
+                html += '<li>' + escapeHtml(issue) + '</li>';
+            }
+            html += '</ul>';
+        }
+
+        // Recommendations
+        const recommendations = payload.recommendations || [];
+        if (recommendations.length > 0) {
+            html += '<ul class="c-confidence-ribbon-recommendations">';
+            for (const rec of recommendations) {
+                html += '<li>' + escapeHtml(rec) + '</li>';
+            }
+            html += '</ul>';
+        }
+
+        html += '</div>'; // .c-confidence-ribbon-details
+
+        ribbon.innerHTML = html;
+
+        // Insert the ribbon at the top of the progress section (after progress bar)
+        const progressSection = elements.progressSection;
+        const progressBar = elements.progressBar;
+        if (progressBar && progressBar.parentElement) {
+            progressBar.parentElement.after(ribbon);
+        } else {
+            progressSection.insertBefore(ribbon, elements.stageList);
+        }
+
+        // If quality is "unusable", show error and stop further processing
+        if (payload.level === 'unusable') {
+            const errorMsg = 'OCR-Qualität unzureichend. Die Analyse kann nicht gestartet werden. ' +
+                'Bitte laden Sie das Dokument in höherer Qualität (300 dpi, Schwarz/Weiß) hoch ' +
+                'oder geben Sie den Text manuell ein.';
+            showError(errorMsg);
+        }
+    }
+
     function updateStage(stageName, status, payload) {
         const stage = document.querySelector(`#analyze-mode .stage[data-stage="${stageName}"]`);
         if (!stage) return;
@@ -650,9 +879,1451 @@
     function renderResults(output) {
         // Save the output for when case_run_id arrives
         state._pendingCaseOutput = output;
-        // Hide progress but keep results section hidden until case is persisted
+        // Hide progress section, show the Result Report
         elements.progressSection.classList.add('hidden');
         elements.streamOutput.classList.add('hidden');
+        renderResultReport(output, state.activeCaseId);
+    }
+
+    // =========================================================================
+    // Result Report (WP-41) — rich report using shared components
+    // Reuses: renderDeadlineBanner, renderFristTimelineSVG, renderCalcDiffTable,
+    // renderClaimItem, c-trap-callout, c-next-steps from WP-14.
+    // =========================================================================
+
+    /**
+     * Render the full Result Report into #result-report-section.
+     * Page order per design doc §11.1:
+     *   1. Case header (title + export)
+     *   2. DeadlineBanner (hero)
+     *   3. SummaryBlock (ergebnis section)
+     *   4. ClaimList (findings from adversarial + berechnungspruefung)
+     *   5. CalcDiffTable (from berechnungspruefung)
+     *   6. FristTimeline (mini)
+     *   7. TrapCallouts (from unsicherheiten)
+     *   8. NextSteps (from handlungsempfehlung)
+     *   9. Document generation panel
+     *  10. Footer (disclaimer + metadata)
+     */
+    function renderResultReport(output, caseRunId) {
+        if (!output || typeof output !== 'object') {
+            elements.resultReportContent.innerHTML =
+                '<div class="report-error">Keine Ausgabedaten erhalten.</div>';
+            elements.resultReportSection.classList.remove('hidden');
+            elements.caseChatSection.classList.add('hidden');
+            return;
+        }
+
+        // Extract structured data from the pipeline's final_output dict.
+        const fristData = extractFristFromOutput(output);
+        const calcData = extractCalcFromOutput(output);
+        const findings = extractFindingsFromOutput(output);
+        const traps = extractTrapsFromOutput(output);
+        const nextSteps = extractNextStepsFromOutput(output);
+        const assessment = determineOverallAssessment(output, findings, calcData);
+
+        // 1. Case header actions (back + chat buttons)
+        const actionsEl = document.getElementById('report-case-actions');
+        if (actionsEl) {
+            actionsEl.innerHTML =
+                '<button class="btn btn-small" id="report-back-btn" title="Zurück zur Eingabe">← Neuer Fall</button>' +
+                '<button class="btn btn-small" id="report-chat-btn" title="Fall im Chat öffnen">Chat öffnen</button>';
+        }
+
+        // 2. DeadlineBanner (hero) — 5 urgency states via renderDeadlineBanner
+        const deadlineEl = document.getElementById('deadline-banner');
+        if (deadlineEl) {
+            deadlineEl.innerHTML = renderDeadlineBanner(fristData);
+        }
+
+        // 3. Summary block — overall assessment + plain-German ergebnis text
+        const summaryEl = document.getElementById('result-summary');
+        if (summaryEl) {
+            summaryEl.innerHTML = renderSummaryBlock(output, assessment);
+        }
+
+        // 4. Findings (ClaimList) — traffic-light items via renderClaimItem(ctx='report')
+        const findingsEl = document.getElementById('findings-list');
+        if (findingsEl) {
+            if (findings.length > 0) {
+                let html = '<h3 class="report-section-heading">Befunde</h3>';
+                html += '<div class="c-claim-list">';
+                for (const f of findings) {
+                    html += renderClaimItem(f, 'report');
+                }
+                html += '</div>';
+                findingsEl.innerHTML = html;
+            } else {
+                findingsEl.innerHTML = '';
+            }
+        }
+
+        // 5. CalcDiffTable — only populated if reconciliation data exists
+        const calcEl = document.getElementById('calculation-diff');
+        if (calcEl) {
+            if (calcData.rows.length > 0) {
+                let html = '<h3 class="report-section-heading">Berechnung</h3>';
+                html += renderCalcDiffTable(calcData.rows);
+                if (calcData.summary) {
+                    html += '<div class="report-calc-summary">' + escapeHtml(calcData.summary) + '</div>';
+                }
+                calcEl.innerHTML = html;
+            } else {
+                calcEl.innerHTML = '';
+            }
+        }
+
+        // 6. FristTimeline — full SVG timeline via renderFristTimelineSVG
+        const fristEl = document.getElementById('frist-timeline');
+        if (fristEl) {
+            if (fristData && fristData.aufgabe_zur_post) {
+                fristEl.innerHTML = '<h3 class="report-section-heading">Fristen-Verlauf</h3>' +
+                    '<div class="c-frist-timeline">' + renderFristTimelineSVG(fristData, true) + '</div>';
+            } else {
+                fristEl.innerHTML = '';
+            }
+        }
+
+        // 7. Trap callouts — amber warning boxes via .c-trap-callout
+        const trapsEl = document.getElementById('traps-list');
+        if (trapsEl) {
+            if (traps.length > 0) {
+                let html = '<h3 class="report-section-heading">Bekannte Fallen &amp; Unsicherheiten</h3>';
+                for (const trap of traps) {
+                    html += '<div class="c-trap-callout"><strong>Falle:</strong> ' + escapeHtml(trap) + '</div>';
+                }
+                trapsEl.innerHTML = html;
+            } else {
+                trapsEl.innerHTML = '';
+            }
+        }
+
+        // 8. Next steps — numbered action checklist via .c-next-steps
+        const stepsEl = document.getElementById('next-steps');
+        if (stepsEl) {
+            if (nextSteps.length > 0) {
+                let html = '<div class="c-next-steps">';
+                html += '<h4>Nächste Schritte</h4>';
+                html += '<ol class="next-steps-list">';
+                for (const step of nextSteps) {
+                    html += '<li>' + escapeHtml(step) + '</li>';
+                }
+                html += '</ol></div>';
+                stepsEl.innerHTML = html;
+            } else {
+                stepsEl.innerHTML = '';
+            }
+        }
+
+        // 9. Document generation panel — POST /api/v1/documents/generate
+        const docEl = document.getElementById('doc-actions');
+        if (docEl) {
+            docEl.innerHTML = renderDocActions(caseRunId);
+        }
+
+        // 10. Footer — disclaimer version + active inference profile
+        const footerEl = document.getElementById('report-footer');
+        if (footerEl) {
+            footerEl.innerHTML = renderReportFooter();
+        }
+
+        elements.resultReportSection.classList.remove('hidden');
+        elements.caseChatSection.classList.add('hidden');
+
+        // Wire up all buttons inside the report
+        wireReportButtons(caseRunId);
+
+        // Copy the active inference-profile label into the footer
+        const footerProfile = document.getElementById('report-footer-profile');
+        if (footerProfile && elements.footerProfile) {
+            footerProfile.textContent = elements.footerProfile.textContent;
+        }
+    }
+
+    /**
+     * Render the summary block: verdict badge + plain-German ergebnis text.
+     * Uses the assessment (green/red/gray) determined from findings + calc.
+     */
+    function renderSummaryBlock(output, assessment) {
+        const ergebnisText = output.ergebnis || '';
+        if (!ergebnisText) return '';
+
+        let html = '<h3 class="report-section-heading">Zusammenfassung</h3>';
+        html += '<div class="report-summary ' + assessment.cssClass + '">';
+        html += '<div class="report-summary-verdict">';
+        html += '<span class="verdict-dot ' + assessment.color + '"></span>';
+        html += '<span class="report-summary-label">' + escapeHtml(assessment.label) + '</span>';
+        html += '</div>';
+        html += '<div class="report-summary-text">' + escapeHtml(ergebnisText) + '</div>';
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * Render the document-generation panel: three doc-type buttons + status/output areas.
+     * Buttons are disabled until a case_run_id is known.
+     */
+    function renderDocActions(caseRunId) {
+        const disabled = caseRunId ? '' : ' disabled';
+        let html = '<h3 class="report-section-heading">Dokument erstellen</h3>';
+        html += '<div class="report-doc-buttons">';
+        html += '<button class="btn btn-primary report-doc-btn" id="doc-gen-widerspruch-btn" ' +
+                'data-doc-type="widerspruch"' + disabled + '>✎ Widerspruchsschreiben erstellen</button>';
+        html += '<button class="btn btn-small report-doc-btn" id="doc-gen-akteneinsicht-btn" ' +
+                'data-doc-type="akteneinsichtsantrag_25"' + disabled + '>Akteneinsicht beantragen</button>';
+        html += '<button class="btn btn-small report-doc-btn" id="doc-gen-ueberpruefung-btn" ' +
+                'data-doc-type="ueberpruefungsantrag_44"' + disabled + '>Überprüfungsantrag (§ 44)</button>';
+        html += '</div>';
+        html += '<div class="report-doc-status hidden" id="report-doc-status"></div>';
+        html += '<div class="report-doc-output hidden" id="report-doc-output"></div>';
+        return html;
+    }
+
+    /**
+     * Render the report footer: disclaimer line + active profile placeholder.
+     */
+    function renderReportFooter() {
+        let html = '<p class="report-footer-disclaimer">Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>';
+        html += '<p class="footer-profile" id="report-footer-profile"></p>';
+        return html;
+    }
+
+    /**
+     * Update the doc-generation buttons once case_run_id is known.
+     */
+    function updateDocActionButton(caseRunId) {
+        document.querySelectorAll('#result-report-section .report-doc-buttons button').forEach(btn => {
+            btn.disabled = false;
+            btn.dataset.caseRunId = caseRunId;
+        });
+    }
+
+    /**
+     * Wire up all buttons in the result report.
+     */
+    function wireReportButtons(caseRunId) {
+        const backBtn = document.getElementById('report-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                elements.resultReportSection.classList.add('hidden');
+                elements.uploadSection.classList.remove('hidden');
+                elements.stepIndicator.classList.remove('hidden');
+                // Reset to step 1
+                state.currentStep = 1;
+                showStep(1);
+            });
+        }
+
+        const chatBtn = document.getElementById('report-chat-btn');
+        if (chatBtn) {
+            chatBtn.addEventListener('click', () => {
+                if (state.activeCaseId) {
+                    loadCaseSession(state.activeCaseId);
+                }
+            });
+        }
+
+        // Document generation buttons
+        document.querySelectorAll('#result-report-section .report-doc-buttons button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const docType = btn.dataset.docType;
+                const runId = caseRunId || state.activeCaseId || btn.dataset.caseRunId;
+                if (runId) {
+                    generateDocument(docType, runId);
+                }
+            });
+        });
+    }
+
+    /**
+     * Generate a document via POST /api/v1/documents/generate.
+     */
+    async function generateDocument(docType, caseRunId) {
+        const statusEl = document.getElementById('report-doc-status');
+        const outputEl = document.getElementById('report-doc-output');
+        if (!statusEl || !outputEl) return;
+
+        statusEl.textContent = 'Dokument wird erstellt …';
+        statusEl.classList.remove('hidden');
+        outputEl.classList.add('hidden');
+
+        try {
+            const response = await fetch(API_BASE + '/documents/generate', {
+                method: 'POST',
+                headers: buildHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
+                body: JSON.stringify({
+                    case_run_id: caseRunId,
+                    doc_type: docType,
+                }),
+            });
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+            const data = await response.json();
+
+            statusEl.textContent = 'Dokument erstellt: ' + (data.title || docType);
+            statusEl.classList.add('report-doc-success');
+
+            // Render the document text
+            let html = '<div class="report-doc-rendered">';
+            html += '<div class="report-doc-rendered-header">';
+            html += '<span class="report-doc-type">' + escapeHtml(data.document_type || docType) + '</span>';
+            html += '<button class="btn btn-small" id="doc-copy-btn">Kopieren</button>';
+            html += '<button class="btn btn-small" id="doc-download-btn">Herunterladen</button>';
+            html += '</div>';
+            html += '<pre class="report-doc-text">' + escapeHtml(data.rendered_text || '') + '</pre>';
+            if (data.warnings && data.warnings.length > 0) {
+                html += '<div class="report-doc-warnings"><strong>Hinweise:</strong><ul>';
+                for (const w of data.warnings) {
+                    html += '<li>' + escapeHtml(w) + '</li>';
+                }
+                html += '</ul></div>';
+            }
+            html += '</div>';
+            outputEl.innerHTML = html;
+            outputEl.classList.remove('hidden');
+
+            // Wire copy/download
+            const copyBtn = document.getElementById('doc-copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(data.rendered_text || '').then(() => {
+                        copyBtn.textContent = 'Kopiert!';
+                        setTimeout(() => { copyBtn.textContent = 'Kopieren'; }, 2000);
+                    });
+                });
+            }
+            const downloadBtn = document.getElementById('doc-download-btn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    downloadText((data.title || docType) + '.txt', data.rendered_text || '');
+                });
+            }
+        } catch (err) {
+            statusEl.textContent = 'Fehler: ' + err.message;
+            statusEl.classList.add('report-doc-error');
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Pipeline output extractors — parse the pipeline's final_output dict
+    // into the shapes expected by the shared render functions.
+    // -------------------------------------------------------------------------
+
+    /**
+     * Extract frist data from pipeline output.
+     * The pipeline may store frist info in the generation stage output or
+     * in a dedicated frist_berechnung key. We try to reconstruct from
+     * the sachverhalt/rechtliche_wuerdigung text if structured data is absent.
+     */
+    function extractFristFromOutput(output) {
+        // Check for structured frist data (injected by pipeline or stage logs)
+        if (output.frist_berechnung && typeof output.frist_berechnung === 'object') {
+            return normalizeFristData(output.frist_berechnung);
+        }
+        // Try parsing a JSON string
+        if (output.frist_berechnung && typeof output.frist_berechnung === 'string') {
+            try {
+                return normalizeFristData(JSON.parse(output.frist_berechnung));
+            } catch { /* fall through */ }
+        }
+        // No structured frist data — return null (banner shows "Keine Fristdaten")
+        return null;
+    }
+
+    /**
+     * Normalize a frist dict (from pipeline or stage logs) into the shape
+     * expected by renderDeadlineBanner and renderFristTimelineSVG.
+     */
+    function normalizeFristData(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        return {
+            frist_ende: raw.frist_ende || raw.fristEnde || null,
+            frist_ende_rechnerisch: raw.frist_ende_rechnerisch || null,
+            bekanntgabe_fiktion: raw.bekanntgabe || raw.bekanntgabe_fiktion || null,
+            aufgabe_zur_post: raw.aufgabe_zur_post || null,
+            bescheid_datum: raw.bescheid_datum || null,
+            status: raw.frist_typ === 'kein_va' ? 'kein_verwaltungsakt' : (raw.status || null),
+            rollover_applied: raw.rollover_applied || false,
+            oq1_flag: raw.oq1_flag || false,
+        };
+    }
+
+    /**
+     * Extract calculation diff rows from berechnungspruefung.
+     * The pipeline stores this as a JSON string with structure:
+     *   { calculations_found: [...], overall_assessment: {...} }
+     * Each calculation has: label, jobcenter_wert, korrekter_wert, differenz, etc.
+     */
+    function extractCalcFromOutput(output) {
+        const result = { rows: [], summary: null };
+        let calcRaw = output.berechnungspruefung;
+        if (!calcRaw) return result;
+
+        // Parse JSON string if needed
+        if (typeof calcRaw === 'string') {
+            try {
+                calcRaw = JSON.parse(calcRaw);
+            } catch {
+                // Not JSON — it's an error message string
+                return { rows: [], summary: calcRaw };
+            }
+        }
+        if (!calcRaw || typeof calcRaw !== 'object') return result;
+
+        // Extract summary
+        const overall = calcRaw.overall_assessment || {};
+        if (overall.summary) {
+            let summary = overall.summary;
+            if (overall.total_discrepancies && overall.total_discrepancies > 0) {
+                summary += ' (' + overall.total_discrepancies + ' Abweichung(en)';
+                if (overall.total_amount_eur) {
+                    summary += ', ' + formatEuro(overall.total_amount_eur);
+                }
+                summary += ')';
+            }
+            result.summary = summary;
+        }
+
+        // Extract rows from calculations_found
+        const calcs = calcRaw.calculations_found || [];
+        for (const calc of calcs) {
+            const jobcenter = calc.jobcenter_wert ?? calc.jobcenter_ergebnis ?? calc.authority_value ?? null;
+            const correct = calc.korrekter_wert ?? calc.korrekt ?? calc.deterministic_result ?? null;
+            const delta = calc.differenz ?? calc.discrepancy_amount_eur ?? null;
+            // Only include rows that have at least one numeric value
+            if (jobcenter !== null || correct !== null) {
+                result.rows.push({
+                    label: calc.label || calc.computation_label || 'Wert',
+                    jobcenter: jobcenter !== null ? Number(jobcenter) : null,
+                    correct: correct !== null ? Number(correct) : null,
+                    delta: delta !== null && delta !== undefined ? Number(delta) :
+                           (jobcenter !== null && correct !== null ? round2(correct - jobcenter) : null),
+                });
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Extract findings (claims) from adversarial_pruefung.
+     * The pipeline stores this as a JSON string with structure:
+     *   { reviews: [...], overall_assessment: {...} }
+     * Each review has: claim_text, verdict, key_risks, etc.
+     */
+    function extractFindingsFromOutput(output) {
+        const findings = [];
+        let advRaw = output.adversarial_pruefung;
+        if (!advRaw) return findings;
+
+        if (typeof advRaw === 'string') {
+            try {
+                advRaw = JSON.parse(advRaw);
+            } catch {
+                return findings; // error message string — skip
+            }
+        }
+        if (!advRaw || typeof advRaw !== 'object') return findings;
+
+        const reviews = advRaw.reviews || [];
+        for (const review of reviews) {
+            findings.push({
+                id: review.claim_id || review.id || '',
+                issue: review.claim_text || review.claim || review.issue || '',
+                assessment: review.verdict || review.assessment || '',
+                norm_chain: review.norm_chain || review.relevant_norms || [],
+                sub_issues: review.key_risks || [],
+            });
+        }
+
+        // Also extract procedural errors as findings
+        const overall = advRaw.overall_assessment || {};
+        const procErrors = overall.procedural_errors_found || [];
+        for (const err of procErrors) {
+            if (typeof err === 'string') {
+                findings.push({
+                    id: 'proc-error',
+                    issue: err,
+                    assessment: 'rechtswidrig_zulasten',
+                    norm_chain: [],
+                    sub_issues: [],
+                });
+            } else if (err && err.error) {
+                findings.push({
+                    id: err.id || 'proc-error',
+                    issue: err.error || err.description || '',
+                    assessment: 'rechtswidrig_zulasten',
+                    norm_chain: err.norms || [],
+                    sub_issues: [],
+                });
+            }
+        }
+        return findings;
+    }
+
+    /**
+     * Extract trap callouts from the unsicherheiten section.
+     * The pipeline output has a text block; we split by bullet points.
+     */
+    function extractTrapsFromOutput(output) {
+        const traps = [];
+        const unsicher = output.unsicherheiten || '';
+        if (!unsicher) return traps;
+
+        // Split by bullet markers (•, -, *) and filter
+        const lines = unsicher.split('\n');
+        let current = '';
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                if (current) { traps.push(current); current = ''; }
+                continue;
+            }
+            if (/^[•\-\*]\s/.test(trimmed)) {
+                if (current) traps.push(current);
+                current = trimmed.replace(/^[•\-\*]\s*/, '');
+            } else {
+                current = current ? current + ' ' + trimmed : trimmed;
+            }
+        }
+        if (current) traps.push(current);
+        return traps;
+    }
+
+    /**
+     * Extract next steps from handlungsempfehlung.
+     * Split by numbered items or bullet points.
+     */
+    function extractNextStepsFromOutput(output) {
+        const steps = [];
+        const raw = output.handlungsempfehlung || '';
+        if (!raw) return steps;
+
+        // Try splitting by numbered list (1. 2. 3.)
+        const numbered = raw.match(/\d+\.\s+[^\n]+/g);
+        if (numbered && numbered.length > 0) {
+            for (const item of numbered) {
+                steps.push(item.replace(/^\d+\.\s*/, '').trim());
+            }
+            return steps;
+        }
+
+        // Try splitting by bullets
+        const lines = raw.split('\n');
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (/^[•\-\*]\s/.test(trimmed)) {
+                steps.push(trimmed.replace(/^[•\-\*]\s*/, ''));
+            } else if (trimmed && !trimmed.match(/^\d+\./)) {
+                // Non-empty, non-numbered line — include as a step
+                steps.push(trimmed);
+            }
+        }
+        // Filter out empty/placeholder steps
+        return steps.filter(s => s.length > 3);
+    }
+
+    /**
+     * Determine the overall assessment for the summary block.
+     * Uses the ergebnis text, findings, and calc data to pick a verdict.
+     */
+    function determineOverallAssessment(output, findings, calcData) {
+        const ergebnis = (output.ergebnis || '').toLowerCase();
+
+        // Check for kein Verwaltungsakt
+        if (ergebnis.includes('kein verwaltungsakt') || ergebnis.includes('kein va')) {
+            return { color: 'gray', label: 'Kein Verwaltungsakt', cssClass: 'report-summary-gray' };
+        }
+
+        // Check findings for errors
+        const errorCount = findings.filter(f =>
+            (f.assessment || '').includes('rechtswidrig_zulasten') ||
+            (f.assessment || '').includes('error_against_user')
+        ).length;
+
+        // Check calc for discrepancies
+        const calcDiscrepancies = calcData.rows.filter(r =>
+            r.delta !== null && r.delta !== undefined && Math.abs(r.delta) > 0.01
+        ).length;
+
+        if (errorCount > 0 || calcDiscrepancies > 0) {
+            if (ergebnis.includes('teilweise') || (errorCount > 0 && calcDiscrepancies === 0)) {
+                return { color: 'red', label: 'Fehler zulasten gefunden', cssClass: 'report-summary-red' };
+            }
+            return { color: 'red', label: 'Fehler zulasten gefunden', cssClass: 'report-summary-red' };
+        }
+
+        // Check for "hält stand" / "rechtmaessig"
+        if (ergebnis.includes('hält') && ergebnis.includes('stand') ||
+            ergebnis.includes('rechtmaessig') || ergebnis.includes('rechtmäßig')) {
+            return { color: 'green', label: 'Bescheid hält der Prüfung stand', cssClass: 'report-summary-green' };
+        }
+
+        // Default: neutral/unclear
+        return { color: 'gray', label: 'Prüfung abgeschlossen', cssClass: 'report-summary-gray' };
+    }
+
+    function round2(val) {
+        return Math.round(val * 100) / 100;
+    }
+
+    // =========================================================================
+    // Prüfstand Mode (WP-14) — Goldset Browser, Eval Overlay, Demo Mode
+    // =========================================================================
+
+    /**
+     * Fetch the goldset manifest and render the header + gallery.
+     * The YAML is parsed server-side; this function only ever touches JSON.
+     */
+    async function fetchGoldset() {
+        if (!elements.pruefstandLoading) return;
+        elements.pruefstandLoading.classList.remove('hidden');
+        elements.pruefstandError.classList.add('hidden');
+        elements.pruefstandContent.classList.add('hidden');
+        elements.pruefstandGallerySection.classList.add('hidden');
+
+        try {
+            const response = await fetch(API_BASE + '/goldset', {
+                method: 'GET',
+                headers: buildHeaders({ 'Accept': 'application/json' }),
+            });
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+            state.goldsetData = await response.json();
+            renderPruefstandHeader(state.goldsetData);
+            renderCaseGallery(state.goldsetData.cases);
+            elements.pruefstandContent.classList.remove('hidden');
+            elements.pruefstandGallerySection.classList.remove('hidden');
+        } catch (err) {
+            elements.pruefstandError.textContent = 'Fehler beim Laden des Goldsets: ' + err.message;
+            elements.pruefstandError.classList.remove('hidden');
+        } finally {
+            elements.pruefstandLoading.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Fetch eval report summaries and render the aggregate tile.
+     * Empty state is a clean "Noch keine Prüfläufe" — never fake numbers.
+     */
+    async function fetchEvalReports() {
+        try {
+            const response = await fetch(API_BASE + '/eval/reports', {
+                method: 'GET',
+                headers: buildHeaders({ 'Accept': 'application/json' }),
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            state.evalReports = data.reports || [];
+            // Update the eval overlay in the DOM if the header has been rendered
+            const overlayContainer = document.getElementById('eval-overlay-container');
+            if (overlayContainer) {
+                overlayContainer.innerHTML = renderEvalOverlay(state.evalReports);
+            }
+        } catch (err) {
+            // Silent fail — eval overlay is non-critical
+            console.error('Eval reports fetch failed:', err);
+        }
+    }
+
+    /**
+     * Fetch a single goldset case (full detail) and render the two-column view.
+     */
+    async function fetchGoldsetCase(caseId) {
+        elements.pruefstandDetailContent.innerHTML = '<div class="pruefstand-loading">Fall wird geladen …</div>';
+        elements.pruefstandGallerySection.classList.add('hidden');
+        elements.pruefstandDetailSection.classList.remove('hidden');
+
+        try {
+            const response = await fetch(API_BASE + '/goldset/' + encodeURIComponent(caseId), {
+                method: 'GET',
+                headers: buildHeaders({ 'Accept': 'application/json' }),
+            });
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+            state.goldsetCaseDetail = await response.json();
+            elements.pruefstandDetailContent.innerHTML = renderCaseDetail(state.goldsetCaseDetail);
+            wireDetailButtons(caseId);
+        } catch (err) {
+            elements.pruefstandDetailContent.innerHTML =
+                '<div class="pruefstand-error">Fehler beim Laden des Falls: ' + escapeHtml(err.message) + '</div>';
+        }
+    }
+
+    /**
+     * Start a demo analysis: POST the goldset case text through the pipeline.
+     * Streams SSE events, then shows the comparison view.
+     */
+    async function startDemoAnalysis(caseId) {
+        if (state.pruefstandDemoStreaming) return;
+        state.pruefstandDemoStreaming = true;
+        state.pruefstandDemoResult = null;
+
+        elements.pruefstandDetailSection.classList.add('hidden');
+        elements.pruefstandDemoSection.classList.remove('hidden');
+        elements.pruefstandDemoContent.innerHTML = renderDemoProgress(caseId);
+
+        const stagesOrder = ['normalization', 'classification', 'decomposition', 'retrieval',
+            'construction', 'verification', 'adversarial_review', 'calculation_check', 'generation'];
+
+        try {
+            const response = await fetch(
+                API_BASE + '/goldset/' + encodeURIComponent(caseId) + '/analyze',
+                {
+                    method: 'POST',
+                    headers: buildHeaders({ 'Accept': 'text/event-stream' }),
+                }
+            );
+            if (!response.ok) {
+                await handleApiError(response);
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            const completedStages = new Set();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const event = JSON.parse(line.slice(6));
+                        // Handle stage progress
+                        if (event.stage && event.stage !== 'stream_output' && event.stage !== 'corpus_health') {
+                            if (event.status === 'complete' || event.status === 'done') {
+                                completedStages.add(event.stage);
+                                updateDemoProgress(event.stage, 'complete');
+                            } else if (event.status === 'running' || event.status === 'started') {
+                                updateDemoProgress(event.stage, 'active');
+                            }
+                        }
+                        // Handle final output (from the goldset route's final event)
+                        if (event.final_output) {
+                            state.pruefstandDemoResult = event.final_output;
+                        }
+                        // Handle error
+                        if (event.error) {
+                            throw new Error(event.detail || 'Pipeline fehlgeschlagen');
+                        }
+                    } catch (parseErr) {
+                        // Re-throw if it's our explicit error
+                        if (parseErr.message && parseErr.message.includes('Pipeline')) throw parseErr;
+                        console.error('SSE parse error:', parseErr);
+                    }
+                }
+            }
+
+            // Render comparison view
+            if (state.pruefstandDemoResult && state.goldsetCaseDetail) {
+                elements.pruefstandDemoContent.innerHTML =
+                    renderDemoComparison(state.goldsetCaseDetail, state.pruefstandDemoResult);
+            } else if (state.goldsetCaseDetail) {
+                // Pipeline finished but no final_output — show what we have
+                elements.pruefstandDemoContent.innerHTML =
+                    '<div class="pruefstand-error">Pipeline abgeschlossen, aber keine Ausgabe erhalten.</div>';
+            }
+        } catch (err) {
+            elements.pruefstandDemoContent.innerHTML =
+                '<div class="pruefstand-error">Demo-Analyse fehlgeschlagen: ' + escapeHtml(err.message) + '</div>';
+        } finally {
+            state.pruefstandDemoStreaming = false;
+        }
+    }
+
+    function updateDemoProgress(stageName, status) {
+        const stageEl = document.querySelector('.demo-progress-stage[data-stage="' + stageName + '"]');
+        if (!stageEl) return;
+        stageEl.classList.remove('active', 'complete');
+        stageEl.classList.add(status);
+        const icon = stageEl.querySelector('.demo-progress-stage-icon');
+        if (icon) {
+            icon.textContent = status === 'complete' ? '✓' : '◉';
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Render functions — return HTML strings
+    // -------------------------------------------------------------------------
+
+    /**
+     * Render the Prüfstand header: badges, eval tile, baseline cards, open questions.
+     */
+    function renderPruefstandHeader(data) {
+        const g = data.goldset;
+        const badges = [
+            { label: 'Goldset', value: 'v' + g.version },
+            { label: 'Rechtsstand', value: formatDate(g.rechtsstand) },
+            { label: 'Fälle', value: g.case_count },
+            { label: 'Referenzdatum', value: formatDate(g.evaluation_reference_date) },
+        ];
+
+        let html = '<div class="pruefstand-badges">';
+        for (const b of badges) {
+            html += '<span class="pruefstand-badge"><strong>' + escapeHtml(b.label) +
+                    ':</strong> ' + escapeHtml(String(b.value)) + '</span>';
+        }
+        html += '</div>';
+        html += '<p class="pruefstand-notice">Hinweis: Es handelt sich um synthetische, fiktive Fälle.</p>';
+
+        // Eval overlay tile
+        html += '<div id="eval-overlay-container">' + renderEvalOverlay(state.evalReports) + '</div>';
+
+        // Baseline cards
+        html += '<h2 class="pruefstand-section-heading">Rechtliche Basislinien</h2>';
+        html += '<div class="pruefstand-baseline-grid">';
+        html += renderBaselineRegelbedarf(g.legal_baseline);
+        html += renderBaselineFreibetraege(g.legal_baseline);
+        html += renderBaselineSanktionen(g.legal_baseline);
+        html += renderBaselineFristen(g.legal_baseline);
+        html += '</div>';
+
+        // Open questions
+        if (g.open_questions && g.open_questions.length > 0) {
+            html += '<h2 class="pruefstand-section-heading">Bewusst offene Rechtsfragen</h2>';
+            html += '<div class="open-questions-section">';
+            for (const q of g.open_questions) {
+                html += '<div class="open-question-item">';
+                html += '<div class="open-question-topic">' + escapeHtml(q.topic) + '</div>';
+                html += '<div class="open-question-note">' + escapeHtml(q.note) + '</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
+        elements.pruefstandContent.innerHTML = html;
+    }
+
+    /**
+     * Render the eval overlay tile — latest run summary or clean empty state.
+     */
+    function renderEvalOverlay(reports) {
+        if (!reports || reports.length === 0) {
+            return '<div class="c-eval-overlay">' +
+                '<div class="eval-tile eval-tile-empty" aria-label="Keine Prüfläufe vorhanden">' +
+                '<div class="eval-tile-icon">○</div>' +
+                '<div class="eval-tile-body">' +
+                '<div class="eval-tile-title">Eval-Status</div>' +
+                '<div class="eval-tile-summary">Noch keine Prüfläufe</div>' +
+                '</div></div></div>';
+        }
+
+        // Show the latest report (first in the list — sorted reverse by filename)
+        const latest = reports[0];
+        const agg = latest.aggregate || {};
+        const passCount = agg.fully_passed_cases !== undefined ? agg.fully_passed_cases : '—';
+        const totalCount = latest.case_count || '—';
+
+        return '<div class="c-eval-overlay">' +
+            '<div class="eval-tile eval-tile-populated">' +
+            '<div class="eval-tile-icon">✓</div>' +
+            '<div class="eval-tile-body">' +
+            '<div class="eval-tile-title">Letzter Prüflauf</div>' +
+            '<div class="eval-tile-summary">' + escapeHtml(String(passCount)) + '/' +
+            escapeHtml(String(totalCount)) + ' Fälle vollständig bestanden</div>' +
+            '</div>' +
+            '<div class="eval-tile-meta">' +
+            (latest.git_sha ? 'SHA ' + escapeHtml(latest.git_sha.slice(0, 7)) + '<br>' : '') +
+            (latest.run_timestamp ? escapeHtml(formatDateTime(latest.run_timestamp)) : '') +
+            '</div></div></div>';
+    }
+
+    function renderBaselineRegelbedarf(lb) {
+        const rb = lb.regelbedarf_2026 || {};
+        let body = '';
+        if (rb.note) {
+            body += '<p class="baseline-card-note">' + escapeHtml(rb.note.slice(0, 120)) + '…</p>';
+        }
+        body += '<table class="baseline-table">';
+        if (rb.rbs1_alleinstehend !== undefined) {
+            body += '<tr><td>Alleinstehend (RBS 1)</td><td>' + formatEuro(rb.rbs1_alleinstehend) + '</td></tr>';
+        }
+        if (rb.rbs2_partner !== undefined) {
+            body += '<tr><td>Partner (RBS 2)</td><td>' + formatEuro(rb.rbs2_partner) + '</td></tr>';
+        }
+        body += '</table>';
+        return '<div class="baseline-card"><h4>Regelbedarf 2026</h4>' + body + '</div>';
+    }
+
+    function renderBaselineFreibetraege(lb) {
+        const ek = lb.einkommen_absetzbetraege_11b || {};
+        let body = '';
+        if (ek.grundabsetzung !== undefined) {
+            body += '<table class="baseline-table"><tr><td>Grundabsetzung</td><td>' +
+                    formatEuro(ek.grundabsetzung) + '</td></tr></table>';
+        }
+        // Step graphic (Treppengrafik)
+        if (ek.staffel && ek.staffel.length > 0) {
+            body += '<div class="freibetrag-staircase">';
+            ek.staffel.forEach((step, i) => {
+                const heightClass = 'stair-step-height-' + Math.min(i + 1, 3);
+                body += '<div class="stair-step ' + heightClass + '">' +
+                    '<span class="stair-step-pct">' + step.prozent + '%</span>' +
+                    '<span class="stair-step-range">' + formatEuro(step.von) + '–' + formatEuro(step.bis) + '</span>' +
+                    '</div>';
+            });
+            body += '</div>';
+        }
+        return '<div class="baseline-card"><h4>§ 11b Freibeträge</h4>' + body + '</div>';
+    }
+
+    function renderBaselineSanktionen(lb) {
+        const sk = lb.sanktionen_neues_recht || {};
+        let body = '<div class="sanktionen-summary">';
+        if (sk.pflichtverletzung_31a) {
+            const p = sk.pflichtverletzung_31a;
+            body += '<p><strong>§ 31a Pflichtverletzung:</strong> ' +
+                    (p.minderung_prozent_regelbedarf || '?') + '% für ' +
+                    (p.dauer_monate || '?') + ' Monate</p>';
+        }
+        if (sk.meldeversaeumnis_32) {
+            const m = sk.meldeversaeumnis_32;
+            body += '<p><strong>§ 32 Meldeversäumnis:</strong> ' +
+                    escapeHtml(m.erstes_versaeumnis || '') + '</p>';
+        }
+        if (sk.aufschiebende_wirkung) {
+            body += '<p><strong>Widerspruch:</strong> Keine aufschiebende Wirkung (§ 39 Nr. 1 SGB II)</p>';
+        }
+        body += '</div>';
+        return '<div class="baseline-card"><h4>Sanktionen (neues Recht)</h4>' + body + '</div>';
+    }
+
+    function renderBaselineFristen(lb) {
+        const fm = lb.fristen_model || {};
+        let body = '';
+        if (fm.bekanntgabefiktion) {
+            body += '<p class="baseline-card-note"><strong>Bekanntgabefiktion:</strong> ' +
+                    escapeHtml(fm.bekanntgabefiktion.slice(0, 100)) + '…</p>';
+        }
+        if (fm.widerspruchsfrist) {
+            body += '<p class="baseline-card-note"><strong>Widerspruchsfrist:</strong> 1 Monat ab Bekanntgabe</p>';
+        }
+        // Render the full FristTimeline SVG as the showpiece
+        body += renderFristTimelineSVG({
+            aufgabe_zur_post: '2026-07-06',
+            bekanntgabe_fiktion: '2026-07-10',
+            frist_ende: '2026-08-10',
+            frist_ende_rechnerisch: null,
+            rollover_applied: false,
+        }, true);
+        return '<div class="baseline-card"><h4>Fristen-Modell</h4>' + body + '</div>';
+    }
+
+    /**
+     * Render the case gallery as a grid of cards.
+     */
+    function renderCaseGallery(cases) {
+        if (!cases || cases.length === 0) {
+            elements.pruefstandGallery.innerHTML = '<p class="pruefstand-loading">Keine Fälle im Goldset.</p>';
+            return;
+        }
+        let html = '';
+        for (const c of cases) {
+            const colorClass = 'verdict-' + (c.assessment_color || 'gray');
+            const dotClass = c.assessment_color || 'gray';
+            const icon = c.assessment_color === 'red' ? '✕' :
+                         c.assessment_color === 'green' ? '✓' : '—';
+            html += '<div class="pruefstand-card ' + colorClass + '" data-case-id="' + escapeHtml(c.id) + '">';
+            html += '<div class="pruefstand-card-id">' + escapeHtml(c.id) + '</div>';
+            html += '<div class="pruefstand-card-title">' + escapeHtml(c.title) + '</div>';
+            html += '<div class="pruefstand-card-category">' + escapeHtml(c.category_label || c.category) + '</div>';
+            html += '<div class="pruefstand-card-difficulty">Schwierigkeit: ' +
+                    escapeHtml(c.difficulty_label || c.difficulty) + '</div>';
+            html += '<div class="pruefstand-card-verdict ' + dotClass + '">' +
+                    '<span class="verdict-dot ' + dotClass + '"></span>' +
+                    '<span class="verdict-icon">' + icon + '</span>' +
+                    escapeHtml(c.assessment_label || '') + '</div>';
+            html += '<div class="pruefstand-card-cta">Details anzeigen →</div>';
+            html += '</div>';
+        }
+        elements.pruefstandGallery.innerHTML = html;
+
+        // Wire up card clicks
+        elements.pruefstandGallery.querySelectorAll('.pruefstand-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const caseId = card.dataset.caseId;
+                if (caseId) fetchGoldsetCase(caseId);
+            });
+        });
+    }
+
+    /**
+     * Render the two-column case detail: letter (left) + findings (right).
+     */
+    function renderCaseDetail(caseData) {
+        let html = '<h2 class="pruefstand-detail-title">' + escapeHtml(caseData.title) + '</h2>';
+        html += '<div class="pruefstand-detail-meta">';
+        html += '<span><strong>' + escapeHtml(caseData.id) + '</strong></span>';
+        html += '<span>' + escapeHtml(caseData.category_label || caseData.category) + '</span>';
+        html += '<span>Schwierigkeit: ' + escapeHtml(caseData.difficulty_label || caseData.difficulty) + '</span>';
+        html += '<span class="pruefstand-card-verdict ' + (caseData.assessment_color || 'gray') + '">' +
+                '<span class="verdict-dot ' + (caseData.assessment_color || 'gray') + '"></span>' +
+                escapeHtml(caseData.assessment_label || '') + '</span>';
+        html += '</div>';
+
+        // Demo CTA
+        html += '<button class="demo-cta-btn" id="demo-start-btn" data-case-id="' + escapeHtml(caseData.id) + '">' +
+                '▶ Diesen Fall live analysieren</button>';
+
+        html += '<div class="pruefstand-detail">';
+
+        // Left column: input document as Behördenbrief
+        html += '<div class="detail-column detail-left">';
+        html += '<h3>Eingangsdokument</h3>';
+        html += '<div class="c-letter-render">' + escapeHtml(caseData.input_document.text) + '</div>';
+        html += '</div>';
+
+        // Right column: findings, calc, frist, traps, next steps
+        html += '<div class="detail-column detail-right">';
+        html += '<h3>Erwartete Befunde</h3>';
+
+        // DeadlineBanner (static)
+        html += renderDeadlineBanner(caseData.widerspruchsfrist);
+
+        // FristTimeline (mini)
+        if (caseData.widerspruchsfrist && caseData.widerspruchsfrist.aufgabe_zur_post) {
+            html += '<div class="c-frist-timeline mini">' +
+                    renderFristTimelineSVG(caseData.widerspruchsfrist, false) + '</div>';
+        }
+
+        // ClaimList (findings)
+        if (caseData.findings && caseData.findings.length > 0) {
+            html += '<div class="c-claim-list">';
+            for (const f of caseData.findings) {
+                html += renderClaimItem(f);
+            }
+            html += '</div>';
+        }
+
+        // CalcDiffTable
+        if (caseData.calc_diff_rows && caseData.calc_diff_rows.length > 0) {
+            html += renderCalcDiffTable(caseData.calc_diff_rows);
+        }
+
+        // Citations
+        if (caseData.citations && caseData.citations.length > 0) {
+            html += '<h3 class="pruefstand-section-heading" style="font-size:1rem;margin-top:1rem;">Normen</h3>';
+            html += '<div class="citations-list">';
+            for (const c of caseData.citations) {
+                html += '<div class="citation-item">';
+                html += '<span class="citation-norm">' + escapeHtml(c.norm) + '</span>';
+                if (c.rolle) {
+                    html += '<span class="citation-role">' + escapeHtml(c.rolle) + '</span>';
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
+        // TrapCallouts
+        if (caseData.known_traps && caseData.known_traps.length > 0) {
+            html += '<h3 class="pruefstand-section-heading" style="font-size:1rem;margin-top:1rem;">Bekannte Fallen</h3>';
+            for (const trap of caseData.known_traps) {
+                html += '<div class="c-trap-callout"><strong>Falle</strong>' + escapeHtml(trap) + '</div>';
+            }
+        }
+
+        // NextSteps
+        if (caseData.actionable_next_steps && caseData.actionable_next_steps.length > 0) {
+            html += '<div class="c-next-steps"><h4>Nächste Schritte</h4><ol class="next-steps-list">';
+            for (const step of caseData.actionable_next_steps) {
+                html += '<li>' + escapeHtml(step) + '</li>';
+            }
+            html += '</ol></div>';
+        }
+
+        html += '</div>'; // detail-right
+        html += '</div>'; // pruefstand-detail
+        return html;
+    }
+
+    /**
+     * Render a single claim item (finding) with verdict icon and § chips.
+     * The context flag ('report' | 'pruefstand' | 'demo') changes only the
+     * finding label per design doc §2.3 — never the optics.
+     */
+    function renderClaimItem(finding, context) {
+        context = context || 'report';
+        const assessment = finding.assessment || '';
+        // Map assessment strings to verdict colors
+        let color = 'gray';
+        let icon = '—';
+        let label = 'Hinweis';
+        if (assessment.includes('rechtswidrig_zulasten') || assessment.includes('error_against_user')) {
+            color = 'red'; icon = '✕'; label = 'Fehler zulasten gefunden';
+        } else if (assessment.includes('rechtmaessig') || assessment.includes('bescheid_correct')) {
+            color = 'green'; icon = '✓'; label = 'Bescheid hält stand';
+        } else if (assessment.includes('hinweis') || assessment.includes('unclear')) {
+            color = 'amber'; icon = '!'; label = 'Hinweis';
+        }
+        // Context flag: "Erwarteter Befund" in pruefstand, "Befund" in report/demo
+        const labelText = context === 'pruefstand' ? 'Erwarteter Befund — ' + label : label;
+
+        let html = '<div class="c-claim-item verdict-' + color + '">';
+        html += '<div class="claim-item-icon ' + color + '">' + icon + '</div>';
+        html += '<div class="claim-item-body">';
+        html += '<div class="claim-item-title">' + escapeHtml(finding.issue) + '</div>';
+        html += '<div class="claim-item-assessment">' + escapeHtml(labelText) + '</div>';
+        // § chips from norm_chain
+        if (finding.norm_chain && finding.norm_chain.length > 0) {
+            html += '<div class="claim-item-chips">';
+            for (const norm of finding.norm_chain) {
+                html += '<span class="c-section-chip">' + escapeHtml(norm) + '</span>';
+            }
+            html += '</div>';
+        }
+        html += '</div></div>';
+        return html;
+    }
+
+    /**
+     * Render the CalcDiffTable: Jobcenter vs. Korrekt vs. Differenz.
+     */
+    function renderCalcDiffTable(rows) {
+        let html = '<table class="c-calc-diff"><caption>Gegenüberstellung Jobcenter-Berechnung und korrekter Berechnung.</caption>';
+        html += '<thead><tr><th>Position</th><th>Jobcenter</th><th>Korrekt</th><th>Differenz</th></tr></thead>';
+        html += '<tbody>';
+        for (const row of rows) {
+            html += '<tr>';
+            html += '<td>' + escapeHtml(row.label) + '</td>';
+            html += '<td>' + (row.jobcenter !== null ? formatEuro(row.jobcenter) : '<span class="calc-row-na">—</span>') + '</td>';
+            html += '<td class="correct-col">' + (row.correct !== null ? formatEuro(row.correct) : '<span class="calc-row-na">—</span>') + '</td>';
+            // Delta cell
+            if (row.delta !== null && row.delta !== undefined) {
+                const deltaClass = row.delta > 0 ? 'delta-positive' :
+                                   row.delta < 0 ? 'delta-negative' : 'delta-zero';
+                const arrow = row.delta > 0 ? ' ▲' : row.delta < 0 ? ' ▼' : ' —';
+                html += '<td class="' + deltaClass + '" aria-label="' +
+                        (row.delta > 0 ? 'plus' : row.delta < 0 ? 'minus' : 'null') + ' ' +
+                        Math.abs(row.delta).toFixed(2) + ' Euro">' +
+                        (row.delta > 0 ? '+' : '') + formatEuro(row.delta) + arrow + '</td>';
+            } else {
+                html += '<td class="calc-row-na">—</td>';
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        return html;
+    }
+
+    /**
+     * Render the DeadlineBanner — the hero showing frist status.
+     */
+    function renderDeadlineBanner(frist) {
+        if (!frist) {
+            return '<div class="c-deadline-banner state-no-va">' +
+                   '<div><div class="deadline-banner-label">Widerspruchsfrist</div>' +
+                   '<div class="deadline-banner-date">—</div></div>' +
+                   '<div class="deadline-banner-days">Keine Fristdaten</div></div>';
+        }
+
+        // Handle kein_verwaltungsakt
+        if (frist.status === 'kein_verwaltungsakt' || frist.frist_ende === null) {
+            return '<div class="c-deadline-banner state-no-va">' +
+                   '<div><div class="deadline-banner-label">Widerspruchsfrist</div>' +
+                   '<div class="deadline-banner-date">Kein Verwaltungsakt</div>' +
+                   '<div class="deadline-banner-subline">Keine Frist läuft</div></div>' +
+                   '<div class="deadline-banner-days">—</div></div>';
+        }
+
+        const fristDate = frist.frist_ende;
+        const today = new Date();
+        const fristObj = new Date(fristDate);
+        const daysRemaining = Math.ceil((fristObj - today) / (1000 * 60 * 60 * 24));
+
+        let stateClass = 'state-normal';
+        let daysLabel = '';
+        let subline = '';
+        if (daysRemaining < 0) {
+            stateClass = 'state-lapsed';
+            daysLabel = 'Frist abgelaufen';
+            subline = '§ 44 SGB X Wiedereinsetzung prüfen';
+        } else if (daysRemaining <= 3) {
+            stateClass = 'state-urgent-red';
+            daysLabel = 'NUR NOCH ' + daysRemaining + ' TAGE';
+        } else if (daysRemaining <= 7) {
+            stateClass = 'state-urgent-amber';
+            daysLabel = 'noch ' + daysRemaining + ' Tage — jetzt handeln';
+        } else {
+            daysLabel = 'noch ' + daysRemaining + ' Tage';
+        }
+
+        if (frist.rollover_applied) {
+            subline += (subline ? ' · ' : '') + 'Werktag-Rollover angewandt';
+        }
+
+        return '<div class="c-deadline-banner ' + stateClass + '">' +
+               '<div><div class="deadline-banner-label">Widerspruchsfrist</div>' +
+               '<div class="deadline-banner-date">' + formatDate(fristDate) + '</div>' +
+               (subline ? '<div class="deadline-banner-subline">' + escapeHtml(subline) + '</div>' : '') + '</div>' +
+               '<div class="deadline-banner-days">' + escapeHtml(daysLabel) + '</div></div>';
+    }
+
+    /**
+     * Render the FristTimeline as an inline SVG — the showpiece visualization.
+     * Four stations: Aufgabe zur Post → Bekanntgabefiktion → Fristende → Rollover (if applicable).
+     */
+    function renderFristTimelineSVG(frist, isFull) {
+        if (!frist || !frist.aufgabe_zur_post) return '';
+
+        const stations = [];
+        stations.push({
+            label: 'Aufgabe zur Post',
+            date: frist.aufgabe_zur_post,
+            delta: null,
+        });
+        if (frist.bekanntgabe_fiktion) {
+            stations.push({
+                label: 'Bekanntgabe (fingiert)',
+                date: frist.bekanntgabe_fiktion,
+                delta: '+4 Tage Fiktion',
+            });
+        }
+        if (frist.frist_ende) {
+            const isRollover = frist.rollover_applied;
+            stations.push({
+                label: isRollover ? 'Fristende (rollt auf Werktag)' : 'Fristende Widerspruch',
+                date: frist.frist_ende,
+                delta: '+1 Monat',
+                isFinal: true,
+            });
+            if (isRollover && frist.frist_ende_rechnerisch) {
+                stations.push({
+                    label: 'Rollt auf Werktag',
+                    date: frist.frist_ende,
+                    delta: '↻ Werktag',
+                    isRollover: true,
+                });
+            }
+        }
+
+        if (stations.length < 2) return '';
+
+        // SVG layout — viewBox scales from 320px to 4K
+        const width = 800;
+        const height = isFull ? 120 : 60;
+        const margin = 60;
+        const stationY = isFull ? 55 : 30;
+        const dateY = isFull ? 80 : 45;
+        const labelY = isFull ? 100 : 55;
+        const deltaY = isFull ? 20 : 15;
+        const spacing = (width - 2 * margin) / (stations.length - 1);
+
+        let svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMidYMid meet" role="img">';
+        svg += '<title>Fristen-Verlauf</title>';
+        svg += '<desc>Horizontaler Zeitstrahl der Widerspruchsfrist-Berechnung</desc>';
+
+        // Connectors
+        for (let i = 0; i < stations.length - 1; i++) {
+            const x1 = margin + i * spacing;
+            const x2 = margin + (i + 1) * spacing;
+            svg += '<line class="tl-connector" x1="' + x1 + '" y1="' + stationY + '" x2="' + x2 + '" y2="' + stationY + '"/>';
+
+            // Delta label above connector
+            if (isFull && stations[i + 1].delta) {
+                const midX = (x1 + x2) / 2;
+                const labelWidth = stations[i + 1].delta.length * 6 + 12;
+                svg += '<rect class="tl-delta-bg" x="' + (midX - labelWidth / 2) + '" y="' + (deltaY - 10) +
+                       '" width="' + labelWidth + '" height="16" rx="3"/>';
+                svg += '<text class="tl-delta-label" x="' + midX + '" y="' + deltaY + '">' +
+                       escapeHtml(stations[i + 1].delta) + '</text>';
+            }
+        }
+
+        // Stations
+        for (let i = 0; i < stations.length; i++) {
+            const x = margin + i * spacing;
+            const s = stations[i];
+            const r = s.isFinal ? 10 : 7;
+
+            if (s.isRollover) {
+                // Rollover station — amber dashed arc
+                svg += '<path class="tl-rollover-arc" d="M ' + (x - spacing) + ' ' + (stationY - 15) +
+                       ' Q ' + x + ' ' + (stationY - 35) + ' ' + x + ' ' + stationY + '"/>';
+                svg += '<circle class="tl-station-rollover" cx="' + x + '" cy="' + stationY + '" r="' + r + '"/>';
+            } else if (s.isFinal) {
+                svg += '<circle class="tl-station-final" cx="' + x + '" cy="' + stationY + '" r="' + r + '"/>';
+            } else {
+                svg += '<circle class="tl-station" cx="' + x + '" cy="' + stationY + '" r="' + r + '"/>';
+            }
+
+            if (isFull) {
+                svg += '<text class="tl-date" x="' + x + '" y="' + dateY + '">' + formatDate(s.date) + '</text>';
+                svg += '<text class="tl-station-label" x="' + x + '" y="' + labelY + '">' +
+                       escapeHtml(s.label) + '</text>';
+            }
+        }
+
+        svg += '</svg>';
+        return svg;
+    }
+
+    /**
+     * Render the demo progress UI while the pipeline is streaming.
+     */
+    function renderDemoProgress(caseId) {
+        const stages = [
+            ['normalization', 'Normalisierung'],
+            ['classification', 'Klassifikation'],
+            ['decomposition', 'Fragezerlegung'],
+            ['retrieval', 'Retrieval'],
+            ['construction', 'Anspruchsaufbau'],
+            ['verification', 'Verifikation'],
+            ['adversarial_review', 'Rechtsprüfung'],
+            ['calculation_check', 'Berechnungsprüfung'],
+            ['generation', 'Ausgabe'],
+        ];
+        let html = '<div class="demo-progress">';
+        html += '<div class="demo-progress-title">Live-Analyse läuft — Fall ' + escapeHtml(caseId) + '</div>';
+        html += '<div class="demo-progress-stages">';
+        for (const [key, label] of stages) {
+            html += '<div class="demo-progress-stage" data-stage="' + key + '">' +
+                    '<span class="demo-progress-stage-icon">○</span>' +
+                    '<span>' + label + '</span></div>';
+        }
+        html += '</div></div>';
+        return html;
+    }
+
+    /**
+     * Render the demo comparison: expected (left) vs actual pipeline output (right).
+     */
+    function renderDemoComparison(caseData, pipelineResult) {
+        let html = '<h2 class="pruefstand-detail-title">Vergleich: Erwartet vs. Pipeline-Ergebnis</h2>';
+        html += '<div class="pruefstand-detail-meta">';
+        html += '<span><strong>' + escapeHtml(caseData.id) + '</strong></span>';
+        html += '<span>' + escapeHtml(caseData.title) + '</span>';
+        html += '</div>';
+
+        html += '<div class="pruefstand-demo-comparison">';
+
+        // Left: expected findings
+        html += '<div class="demo-column expected">';
+        html += '<h3>Erwartete Befunde <span class="demo-match-badge match">Goldset</span></h3>';
+
+        // Expected deadline
+        html += renderDeadlineBanner(caseData.widerspruchsfrist);
+
+        // Expected findings
+        if (caseData.findings && caseData.findings.length > 0) {
+            html += '<div class="c-claim-list">';
+            for (const f of caseData.findings) {
+                html += renderClaimItem(f);
+            }
+            html += '</div>';
+        }
+
+        // Expected calc
+        if (caseData.calc_diff_rows && caseData.calc_diff_rows.length > 0) {
+            html += renderCalcDiffTable(caseData.calc_diff_rows);
+        }
+        html += '</div>';
+
+        // Right: actual pipeline output
+        html += '<div class="demo-column actual">';
+        html += '<h3>Pipeline-Ergebnis <span class="demo-match-badge mismatch">Live</span></h3>';
+
+        if (pipelineResult && typeof pipelineResult === 'object') {
+            // Render each section of the pipeline output
+            const sectionLabels = {
+                sachverhalt: 'Sachverhalt',
+                rechtliche_wuerdigung: 'Rechtliche Würdigung',
+                ergebnis: 'Ergebnis',
+                handlungsempfehlung: 'Handlungsempfehlung',
+                entwurf: 'Entwurf',
+                unsicherheiten: 'Unsicherheiten',
+                adversarial_pruefung: 'Adversariale Rechtsprüfung',
+                berechnungspruefung: 'Berechnungsprüfung',
+            };
+            for (const [key, label] of Object.entries(sectionLabels)) {
+                if (pipelineResult[key]) {
+                    let content = pipelineResult[key];
+                    // Try to parse JSON-encoded sections (adversarial/berechnungspruefung)
+                    if (typeof content === 'string' && content.startsWith('{')) {
+                        try {
+                            const parsed = JSON.parse(content);
+                            content = JSON.stringify(parsed, null, 2);
+                        } catch { /* keep original */ }
+                    }
+                    html += '<div class="demo-pipeline-section">';
+                    html += '<div class="demo-pipeline-section-title">' + escapeHtml(label) + '</div>';
+                    html += '<div class="demo-pipeline-output">' + escapeHtml(String(content)) + '</div>';
+                    html += '</div>';
+                }
+            }
+            // Show any other sections not in the label map
+            for (const key of Object.keys(pipelineResult)) {
+                if (!sectionLabels[key] && pipelineResult[key]) {
+                    html += '<div class="demo-pipeline-section">';
+                    html += '<div class="demo-pipeline-section-title">' + escapeHtml(key) + '</div>';
+                    html += '<div class="demo-pipeline-output">' + escapeHtml(String(pipelineResult[key])) + '</div>';
+                    html += '</div>';
+                }
+            }
+        } else {
+            html += '<div class="pruefstand-error">Keine Pipeline-Ausgabe erhalten.</div>';
+        }
+
+        html += '</div>'; // demo-column actual
+        html += '</div>'; // demo-comparison
+        return html;
+    }
+
+    /**
+     * Wire up buttons inside the case detail view (demo CTA).
+     */
+    function wireDetailButtons(caseId) {
+        const demoBtn = document.getElementById('demo-start-btn');
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => startDemoAnalysis(caseId));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Formatting helpers (Prüfstand-specific)
+    // -------------------------------------------------------------------------
+
+    /** Format an ISO date string as DD.MM.YYYY. */
+    function formatDate(isoStr) {
+        if (!isoStr) return '—';
+        try {
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return isoStr;
+            return String(d.getDate()).padStart(2, '0') + '.' +
+                   String(d.getMonth() + 1).padStart(2, '0') + '.' +
+                   d.getFullYear();
+        } catch { return isoStr; }
+    }
+
+    /** Format an ISO datetime string as DD.MM.YYYY HH:MM. */
+    function formatDateTime(isoStr) {
+        if (!isoStr) return '—';
+        try {
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return isoStr;
+            return formatDate(isoStr) + ' ' +
+                   String(d.getHours()).padStart(2, '0') + ':' +
+                   String(d.getMinutes()).padStart(2, '0');
+        } catch { return isoStr; }
+    }
+
+    /** Format a number as German euro amount (1.234,56 €). */
+    function formatEuro(val) {
+        if (val === null || val === undefined) return '—';
+        const num = Number(val);
+        if (isNaN(num)) return String(val);
+        return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     }
 
     // =========================================================================
@@ -911,6 +2582,7 @@
         elements.analyzeMode.classList.add('hidden');
         elements.chatMode.classList.add('hidden');
         elements.settingsMode.classList.add('hidden');
+        if (elements.pruefstandMode) elements.pruefstandMode.classList.add('hidden');
 
         // Deactivate all mode buttons in all headers
         document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
@@ -918,6 +2590,7 @@
         if (mode === 'analyze') {
             elements.analyzeMode.classList.remove('hidden');
             document.querySelectorAll('.mode-btn[data-mode="analyze"]').forEach(btn => btn.classList.add('active'));
+            fetchRechtsstand();
         } else if (mode === 'chat') {
             elements.chatMode.classList.remove('hidden');
             document.querySelectorAll('.mode-btn[data-mode="chat"]').forEach(btn => btn.classList.add('active'));
@@ -930,6 +2603,15 @@
             if (state.availableSources.length === 0) {
                 loadSettingsSources();
             }
+        } else if (mode === 'pruefstand') {
+            elements.pruefstandMode.classList.remove('hidden');
+            document.querySelectorAll('.mode-btn[data-mode="pruefstand"]').forEach(btn => btn.classList.add('active'));
+            // Lazy-load goldset on first entry; refresh eval reports each time
+            if (!state.goldsetData) {
+                fetchGoldset();
+            }
+            fetchEvalReports();
+            fetchActiveProfile();
         }
     }
 
@@ -1287,7 +2969,7 @@
     async function loadCaseSession(caseId, preloadedOutput) {
         state.activeCaseId = caseId;
         elements.caseChatSection.classList.remove('hidden');
-        elements.resultsSection.classList.add('hidden');
+        if (elements.resultReportSection) elements.resultReportSection.classList.add('hidden');
         elements.caseChatInput.disabled = false;
         elements.caseChatSendBtn.disabled = false;
         elements.caseChatMessages.innerHTML = '';
@@ -3069,9 +4751,12 @@
         elements.modeAnalyzeBtn.addEventListener('click', () => switchMode('analyze'));
         elements.modeChatBtn.addEventListener('click', () => switchMode('chat'));
         elements.modeSettingsBtn.addEventListener('click', () => switchMode('settings'));
+        if (elements.modePruefstandBtn) {
+            elements.modePruefstandBtn.addEventListener('click', () => switchMode('pruefstand'));
+        }
 
-        // Also wire up mode buttons within settings-mode header (different DOM nodes)
-        document.querySelectorAll('#settings-mode .mode-btn').forEach(btn => {
+        // Also wire up mode buttons within settings-mode and pruefstand-mode headers
+        document.querySelectorAll('#settings-mode .mode-btn, #pruefstand-mode .mode-btn').forEach(btn => {
             btn.addEventListener('click', () => switchMode(btn.dataset.mode));
         });
 
@@ -3098,6 +4783,27 @@
 
         elements.settingsSaveBtn.addEventListener('click', handleSettingsSave);
         elements.settingsReloadBtn.addEventListener('click', handleSettingsReload);
+
+        // =========================================================================
+        // Prüfstand Mode Event Listeners (WP-14)
+        // =========================================================================
+
+        if (elements.pruefstandBackBtn) {
+            elements.pruefstandBackBtn.addEventListener('click', () => {
+                elements.pruefstandDetailSection.classList.add('hidden');
+                elements.pruefstandDemoSection.classList.add('hidden');
+                elements.pruefstandGallerySection.classList.remove('hidden');
+                state.goldsetCaseDetail = null;
+                state.pruefstandDemoResult = null;
+            });
+        }
+        if (elements.pruefstandDemoBackBtn) {
+            elements.pruefstandDemoBackBtn.addEventListener('click', () => {
+                elements.pruefstandDemoSection.classList.add('hidden');
+                elements.pruefstandDetailSection.classList.remove('hidden');
+                state.pruefstandDemoResult = null;
+            });
+        }
 
         // =========================================================================
         // Case Chat Event Listeners
@@ -3156,6 +4862,9 @@
         if (accepted) {
             elements.disclaimerModal.classList.add('hidden');
             elements.app.classList.remove('hidden');
+            // Fetch the Rechtsstand indicator and active profile immediately and on each mode switch
+            fetchRechtsstand();
+            fetchActiveProfile();
         }
 
         // Default mode

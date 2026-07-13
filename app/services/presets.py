@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # The 5 flat presets defined in the plan. Each preset is keyed by a
 # short slug; ``legal_areas`` lists the area keys in priority order
 # (primary first). ``description`` is the German long form shown in the

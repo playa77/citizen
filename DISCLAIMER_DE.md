@@ -1,20 +1,29 @@
 # Rechtlicher Hinweis und Haftungsausschluss
 
+**Version:** 1.1.0
+
+**Stand:** 2026-07-12
+
+**Ersetzt:** Fassung vom 2026-05-09 (rückwirkend als Version 1.0.0 geführt)
+
 **Autor:** www.github.com/playa77
 
 **Repository:** https://github.com/playa77/citizen
-
-**Datum:** 2026-05-09
 
 Dieses Dokument enthält rechtliche Hinweise und Haftungsausschlüsse. Es ersetzt
 oder ändert die anwendbaren Open-Source-Lizenzbedingungen nicht, sofern dies
 nicht ausdrücklich angegeben ist.
 
-Diese Software wird unter der MIT-Lizenz bereitgestellt.
+Diese Software wird unter der MIT-Lizenz und **unentgeltlich** bereitgestellt.
+Durch die Bereitstellung, den Abruf oder die Nutzung entsteht kein Entgelt-,
+Austausch- oder Dienstverhältnis.
 
 Soweit dieses Dokument vertragliche Regelungen enthält, gelten diese nur im
 gesetzlich zulässigen Umfang und vorbehaltlich zwingender gesetzlicher
 Vorschriften.
+
+Änderungen an diesem Dokument folgen semantischer Versionierung; die
+Änderungshistorie befindet sich am Ende des Dokuments.
 
 ---
 
@@ -45,6 +54,18 @@ Bildungs-, Experimentier- und persönlichen Referenzzwecken.
 Sie stellt keine Rechtsberatung, keine professionelle Beratung, keine
 anwaltliche Vertretung und keinen Ersatz für die Beratung durch einen
 qualifizierten Rechtsanwalt oder sonstigen qualifizierten Berufsträger dar.
+
+Der Autor wird nicht in konkreten fremden Angelegenheiten im Sinne des § 2
+Abs. 1 des Rechtsdienstleistungsgesetzes (RDG) tätig. Die Software arbeitet
+schematisch nach vorgegebenen Regeln, Verfahren und Prüfschritten; eine
+rechtliche Prüfung des Einzelfalls durch den Autor findet nicht statt.
+Nutzerinnen und Nutzer, die die Software auf eigene Dokumente und eigene
+Angelegenheiten anwenden, besorgen ihre eigenen Rechtsangelegenheiten
+(Selbsthilfe). Der Einsatz der Software im Rahmen der Beratung oder
+Unterstützung Dritter ist ausschließlich solchen Stellen und Personen
+gestattet, die hierzu nach dem RDG oder anderen Vorschriften befugt sind; die
+Verantwortung für das Vorliegen dieser Befugnis und für die Beratung selbst
+liegt allein bei diesen Stellen und Personen.
 
 Durch den Zugriff auf die Software, ihre Installation, Ausführung oder Nutzung
 entsteht kein Mandatsverhältnis, Treuhandverhältnis, Beratungsverhältnis,
@@ -83,40 +104,64 @@ Verordnungen, Verwaltungsvorschriften, Gerichtsentscheidungen, amtlichen
 Veröffentlichungen, Fristen, Verfahrensanforderungen und professionellem
 Rechtsrat.
 
-## 4. Datenverarbeitung, Datenschutz und Drittanbieter-APIs
+## 4. Datenverarbeitung, Datenschutz und Inferenzprofile
 
-Diese Software kann teilweise lokal ausgeführt werden. Sie kann jedoch auch
-Prompts, normalisierte Texte, Metadaten, Dokumente, Auszüge, Embeddings oder
-sonstige Eingabedaten an Drittanbieter übermitteln, insbesondere an Anbieter
-großer Sprachmodelle und externe API-Dienste wie OpenRouter oder andere
-konfigurierte Anbieter.
+Die Datenhaltung der Software erfolgt lokal. Soweit die Software externe
+Dienste zur Verarbeitung nutzt (insbesondere Sprachmodell- und
+Embedding-Dienste), geschieht dies ausschließlich über konfigurierbare,
+versionierte **Inferenzprofile**. Das jeweils aktive Profil wird in der
+Anwendung angezeigt und in erzeugten Dokumenten ausgewiesen.
 
-Durch die Nutzung der Software erkennen Sie an, dass von Ihnen bereitgestellte
-Daten durch Drittsysteme verarbeitet werden können, möglicherweise auf Servern
-außerhalb Ihres Landes oder Ihrer Rechtsordnung, einschließlich Regionen mit
-abweichenden Datenschutzgesetzen und Datenschutzstandards.
+Die Software sieht insbesondere folgende Profile vor:
 
-Der Autor kontrolliert Drittanbieter nicht und übernimmt keine Gewährleistung
-oder Garantie für deren Sicherheitsmaßnahmen, Verfügbarkeit,
-Datenspeicherung, Löschpraktiken, Verwendung zu Trainingszwecken,
-Anonymisierung, Vertraulichkeit, regulatorische Compliance oder Einhaltung der
-DSGVO oder anderer Datenschutzgesetze.
+- **eu-avv** (Standard für den Einsatz in Organisationen): Vor jeder externen
+  Verarbeitung werden direkte Identifikatoren (insbesondere Namen, Anschriften,
+  Kennnummern, Kontodaten, Kontaktdaten, Geburtsdaten) durch eine technisch
+  erzwungene Pseudonymisierungsstufe ersetzt. Die Übermittlung erfolgt
+  ausschließlich an in der Profilkonfiguration freigegebene Endpunkte in der
+  Europäischen Union auf Grundlage eines Auftragsverarbeitungsvertrags. Ein
+  technischer Egress-Guard blockiert Übermittlungen an nicht freigegebene
+  Ziele sowie Übermittlungen erkannter Klartext-Identifikatoren.
+- **extern-openrouter** (Selbsthilfe- und Entwicklungsbetrieb):
+  Pseudonymisierte Eingabedaten können an externe Anbieter übermittelt werden,
+  auch an Server außerhalb Ihres Landes oder Ihrer Rechtsordnung,
+  einschließlich Regionen mit abweichenden Datenschutzgesetzen und
+  Datenschutzstandards.
+- **on-prem** (sofern konfiguriert): keine externe Übermittlung.
 
-Dieser Haftungsausschluss ist keine Datenschutzerklärung. Wenn Sie diese
-Software bereitstellen, betreiben, verändern, weiterverbreiten oder Dritten
-zugänglich machen, sind Sie allein dafür verantwortlich, Ihre eigenen Pflichten
-nach anwendbarem Datenschutzrecht, Geheimhaltungsrecht, Berufsrecht,
+Die Pseudonymisierung erfasst direkte Identifikatoren nach dem dokumentierten
+Regelwerk. Restrisiken — insbesondere eine mögliche Identifizierbarkeit aus
+dem verbleibenden Fallkontext sowie Fehlerkennungen einzelner Angaben — können
+nicht ausgeschlossen werden. Pseudonymisierte Daten bleiben personenbezogene
+Daten im Sinne der DSGVO.
+
+Der Autor kontrolliert Drittanbieter nicht und übernimmt — auch bei Bestehen
+eines Auftragsverarbeitungsvertrags — keine Gewährleistung oder Garantie für
+deren Sicherheitsmaßnahmen, Verfügbarkeit, Datenspeicherung, Löschpraktiken,
+Verwendung zu Trainingszwecken, Vertraulichkeit, regulatorische Compliance
+oder Einhaltung der DSGVO oder anderer Datenschutzgesetze. Die Auswahl,
+Prüfung und vertragliche Einbindung externer Anbieter obliegt demjenigen, der
+die Software betreibt.
+
+Wer die Software als betroffene Person auf **eigene** Dokumente und Daten
+anwendet, entscheidet hierüber eigenverantwortlich und informiert unter dem
+jeweils aktiven Profil. Wer mit der Software Daten **Dritter** verarbeitet
+(insbesondere Beratungsstellen und sonstige Organisationen), ist selbst
+Verantwortlicher im Sinne der DSGVO und allein dafür verantwortlich, sämtliche
+Pflichten nach anwendbarem Datenschutzrecht, Geheimhaltungsrecht (insbesondere
+dem Sozialgeheimnis nach § 35 SGB I, §§ 67 ff. SGB X), Berufsrecht,
 Verbraucherschutzrecht und Informationssicherheitsrecht zu bestimmen und
-einzuhalten.
+einzuhalten — einschließlich Rechtsgrundlage, Information der Betroffenen,
+erforderlicher Einwilligungen, Auftragsverarbeitungsverträge, technischer und
+organisatorischer Maßnahmen, Verarbeitungsverzeichnis und, soweit
+erforderlich, Datenschutz-Folgenabschätzung.
 
-Geben Sie keine personenbezogenen Daten, besonderen Kategorien
-personenbezogener Daten, vertraulichen Informationen, privilegierten
-Informationen, Geschäftsgeheimnisse, Mandantendaten, staatlichen Kennungen,
-Finanzinformationen, Gesundheitsinformationen oder sonstigen sensiblen
-Informationen ein, sofern Sie nicht festgestellt haben, dass eine gültige
-Rechtsgrundlage, geeignete Anbieterbedingungen, angemessene technische und
-organisatorische Maßnahmen sowie alle erforderlichen Einwilligungen, Hinweise,
-Verträge, Auftragsverarbeitungsverträge und Sicherheitsmaßnahmen vorliegen.
+Besondere Kategorien personenbezogener Daten, vertrauliche Informationen,
+privilegierte Informationen, Geschäftsgeheimnisse, Mandantendaten sowie
+sonstige sensible Informationen dürfen nur eingegeben oder verarbeitet werden,
+wenn die vorgenannten Voraussetzungen erfüllt sind.
+
+Dieser Haftungsausschluss ist keine Datenschutzerklärung.
 
 Sie sind allein verantwortlich für alle Daten, die Sie unter Verwendung der
 Software eingeben, verarbeiten, übermitteln, speichern oder offenlegen.
@@ -148,6 +193,10 @@ Eignung für einen bestimmten Zweck, Rechtsmängelfreiheit, Nichtverletzung von
 Rechten Dritter und Freiheit von Sachmängeln.
 
 ## 6. Haftungsbeschränkung
+
+Die Software wird unentgeltlich bereitgestellt. Soweit gesetzlich zulässig,
+richtet sich die Haftung daher zusätzlich nach den für unentgeltliche
+Überlassungen und Zuwendungen geltenden gesetzlichen Maßstäben.
 
 Soweit gesetzlich zulässig, haften der Autor, Mitwirkende, Maintainer und
 verbundene Unternehmen, soweit vorhanden, nicht für Ansprüche, Schäden,
@@ -274,5 +323,33 @@ mit ihr oder sonstige Nutzung bestätigen Sie, dass Sie diesen
 Haftungsausschluss gelesen und verstanden haben und die Software auf eigene
 Gefahr nutzen.
 
+Die Anwendung verlangt beim ersten Start sowie nach maßgeblichen Änderungen
+dieses Dokuments eine ausdrückliche Bestätigung der Kenntnisnahme und
+protokolliert lokal die bestätigte Fassung (Versionsnummer und Prüfsumme des
+Dokuments, Zeitpunkt, Anwendungsversion). Maßgeblich ist jeweils die in der
+Anwendung angezeigte und bestätigte Fassung dieses Dokuments. Von der Software
+erzeugte Dokumente und Berichte weisen die zugrunde liegende Fassung im
+Fußbereich aus.
+
 Wenn Sie mit diesem Haftungsausschluss nicht einverstanden sind, nutzen Sie
 die Software nicht.
+
+---
+
+## Änderungshistorie
+
+- **1.1.0 (2026-07-12):** Versionierung und Änderungshistorie eingeführt.
+  Präambel: Unentgeltlichkeit der Bereitstellung ausdrücklich klargestellt.
+  § 2: RDG-Klarstellung ergänzt (keine Tätigkeit in konkreten fremden
+  Angelegenheiten, schematische Arbeitsweise, Selbsthilfe-Charakter, Einsatz
+  in der Beratung Dritter nur durch hierzu Befugte). § 4: vollständig neu
+  gefasst — Beschreibung der versionierten Inferenzprofile (eu-avv /
+  extern-openrouter / on-prem), der technisch erzwungenen Pseudonymisierung
+  und ihrer Grenzen; Verantwortlichkeitsabgrenzung zwischen
+  Selbsthilfe-Nutzung eigener Daten und Verarbeitung von Daten Dritter
+  (DSGVO-Verantwortlicher, Sozialgeheimnis). § 6: Hinweis auf die für
+  unentgeltliche Überlassungen geltenden Haftungsmaßstäbe ergänzt. § 12:
+  App-seitige Erst-Bestätigung mit protokollierter Dokumentversion ergänzt.
+  §§ 3, 5, 7–11 unverändert.
+- **1.0.0 (2026-05-09):** Ursprüngliche Fassung (seinerzeit unversioniert
+  veröffentlicht).

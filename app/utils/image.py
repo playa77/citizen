@@ -18,8 +18,9 @@ _STANDARD_QUALITY = 84
 
 class PreprocessedPair(NamedTuple):
     """Two preprocessed versions of the same image for dual-OCR."""
+
     greyscale_contrast: Image.Image  # Greyscale with enhanced contrast
-    black_white: Image.Image         # Fully thresholded to black & white
+    black_white: Image.Image  # Fully thresholded to black & white
 
 
 def standardize_to_jpg(image: Image.Image) -> Image.Image:

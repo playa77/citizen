@@ -1,18 +1,26 @@
-"""OpenRouter client with deterministic fallback chain and embedding support."""
+"""OpenRouter client with deterministic fallback chain and embedding support.
+
+Includes egress guard (WP-31) that enforces host allowlisting and PII scanning
+for every outbound LLM/embedding call.
+"""
 
 # Semantic Version: 0.1.0
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
+import unicodedata
 from collections.abc import AsyncGenerator, Sequence
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
 from app.core.config import settings
+from app.services.pseudonymization import PiiMapping
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +38,7 @@ def _deduplicate_preserve_order(items: list[str]) -> list[str]:
             result.append(item)
     return result
 
+
 def _headers() -> dict[str, str]:
     """Build headers dynamically so settings are not frozen at import time."""
     settings_now = settings  # triggers lazy load via __getattr__
@@ -39,6 +48,7 @@ def _headers() -> dict[str, str]:
         "X-Title": "Citizen Legal Engine",
         "Content-Type": "application/json",
     }
+
 
 def _embedding_headers() -> dict[str, str]:
     """Build headers for embedding API calls, using a separate API key when configured."""
@@ -58,6 +68,98 @@ class RouterExhaustedError(Exception):
 
 class EmbeddingError(Exception):
     """Raised when the embedding API fails."""
+
+
+class EgressBlockedError(Exception):
+    """Raised when an outbound LLM call is blocked by the egress guard.
+
+    Attributes:
+        reason: Human-readable explanation (safe for logging).
+        category: Machine-readable category (``"host_violation"`` or ``"pii_leak"``).
+    """
+
+    def __init__(self, reason: str, category: str) -> None:
+        self.reason = reason
+        self.category = category
+        super().__init__(f"Egress blocked [{category}]: {reason}")
+
+
+# ---------------------------------------------------------------------------
+# Egress guard (WP-31)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_for_egress_check(text: str) -> str:
+    """Casefold and strip diacritics for PII matching.
+
+    Normalizes so that ``"Müller"`` matches ``"MUELLER"`` (casefold handles ß→ss,
+    ü→ue, etc. in certain locales). We also run NFKD decomposition and strip
+    combining marks to catch composed vs decomposed forms.
+    """
+    # NFKD decomposition splits è → e + combining grave
+    decomposed = unicodedata.normalize("NFKD", text)
+    # Strip combining marks (category Mn)
+    ascii_approx = "".join(c for c in decomposed if unicodedata.category(c) != "Mn")
+    return ascii_approx.casefold()
+
+
+def _egress_check(url: str, payload: dict[str, Any]) -> None:
+    """Check outbound LLM/embedding calls against the active profile.
+
+    Two checks are performed:
+    1. **Host allowlist** — the target hostname must be in the active profile.
+    2. **PII scan** — if the profile requires pseudonymization and a case context
+       exists with a PiiMapping, the payload is scanned for known PII values.
+
+    Args:
+        url: The full request URL.
+        payload: The JSON-serializable request body.
+
+    Raises:
+        EgressBlockedError: If either check fails.
+    """
+    # Import here to avoid circular imports at module level
+    from app.services.inference_profiles import get_active_profile
+    from app.services.pseudonymization import get_known_values
+
+    profile = get_active_profile()
+
+    # ── 1. Host check ──────────────────────────────────────────────────────
+    host = urlparse(url).hostname or ""
+    if host not in profile.host_allowlist:
+        raise EgressBlockedError(
+            reason=f"Host {host!r} not in allowlist for profile {profile.name!r}",
+            category="host_violation",
+        )
+
+    # ── 2. PII scan ────────────────────────────────────────────────────────
+    # Only scan if the profile requires pseudonymization AND we have a case context
+    if profile.pseudonymization != "required":
+        return
+
+    mapping = get_pii_context()  # Returns PiiMapping | None (contextvar)
+    if mapping is None:
+        return
+
+    known = get_known_values(mapping)
+    if not known:
+        return
+
+    payload_str = str(payload)
+    normalized_payload = _normalize_for_egress_check(payload_str)
+
+    for original_value in known:
+        normalized_value = _normalize_for_egress_check(original_value)
+        if not normalized_value:
+            continue
+        # Check for the normalized value within the normalized payload
+        # Also check for casefolded variants with common mutations
+        if normalized_value in normalized_payload:
+            # ── CRITICAL: NEVER log the cleartext PII value! ──────────────
+            raise EgressBlockedError(
+                reason="PII detected in outbound payload",
+                category="pii_leak",
+            )
 
 
 class OpenRouterClient:
@@ -132,6 +234,7 @@ class OpenRouterClient:
                         "messages": messages,
                         "temperature": temperature,
                     }
+                    _egress_check(_API_URL, payload)
                     logger.info(
                         "chat_completion → sending (model=%s, attempt=%d/%d, msg_chars=%d)",
                         current_model,
@@ -245,6 +348,7 @@ class OpenRouterClient:
                         "temperature": temperature,
                         "stream": True,
                     }
+                    _egress_check(_API_URL, payload)
                     logger.info(
                         "chat_completion_stream → streaming (model=%s, attempt=%d/%d, msg_chars=%d)",
                         current_model,
@@ -343,6 +447,7 @@ class OpenRouterClient:
                 "model": model_name,
                 "input": text,
             }
+            _egress_check(_EMBEDDING_URL, payload)
             req_start = time.monotonic()
             resp = await self._client.post(
                 _EMBEDDING_URL,
@@ -355,7 +460,11 @@ class OpenRouterClient:
             # ── Detect OpenRouter-level error responses ─────────────────
             if "error" in body and "data" not in body:
                 err_detail = body["error"]
-                err_msg = err_detail.get("message", str(err_detail)) if isinstance(err_detail, dict) else str(err_detail)
+                err_msg = (
+                    err_detail.get("message", str(err_detail))
+                    if isinstance(err_detail, dict)
+                    else str(err_detail)
+                )
                 fail_elapsed = time.monotonic() - req_start
                 logger.error(
                     "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=api_error): %s | body=%s",
@@ -458,6 +567,9 @@ import contextvars
 
 _shared_client: OpenRouterClient | None = None
 _case_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("case_id", default=None)
+_pii_mapping_var: contextvars.ContextVar[PiiMapping | None] = contextvars.ContextVar(
+    "pii_mapping", default=None
+)
 
 
 def get_shared_client() -> OpenRouterClient:
@@ -471,7 +583,7 @@ def get_shared_client() -> OpenRouterClient:
     return _shared_client
 
 
-def set_case_context(case_id: str) -> contextvars.Token:
+def set_case_context(case_id: str) -> contextvars.Token[str | None]:
     """Set the case_id for the current async context. Returns a token for reset.
 
     Usage in a pipeline:
@@ -488,6 +600,19 @@ def set_case_context(case_id: str) -> contextvars.Token:
 def get_case_context() -> str | None:
     """Return the current case_id, or None. Used by the egress guard (WP-31)."""
     return _case_id_var.get()
+
+
+def set_pii_context(mapping: PiiMapping | None) -> contextvars.Token[PiiMapping | None]:
+    """Set the PiiMapping for the current async context. Returns a token for reset.
+
+    Used by the pipeline to make the PII mapping available to the egress guard.
+    """
+    return _pii_mapping_var.set(mapping)
+
+
+def get_pii_context() -> PiiMapping | None:
+    """Return the current PiiMapping, or None. Used by the egress guard (WP-31)."""
+    return _pii_mapping_var.get()
 
 
 def reset_client() -> None:

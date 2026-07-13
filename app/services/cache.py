@@ -15,21 +15,21 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import CacheEntry
-from app.db.session import IS_SQLITE, get_async_session
+from app.db.session import IS_SQLITE
 
 logger = logging.getLogger(__name__)
 
 
 def _now_utc() -> datetime:
     """Return current UTC as a naive datetime (DB is without timezone)."""
-    return datetime.now(tz=timezone.utc).replace(tzinfo=None)
+    return datetime.now(tz=UTC).replace(tzinfo=None)
 
 
 def make_cache_key(namespace: str, model: str, text: str) -> str:
@@ -132,20 +132,24 @@ async def set_json_cache(
     if IS_SQLITE:
         from sqlalchemy.dialects.sqlite import insert as upsert_insert
     else:
-        from sqlalchemy.dialects.postgresql import insert as upsert_insert
+        from sqlalchemy.dialects.postgresql import insert as upsert_insert  # type: ignore[assignment]
 
-    stmt = upsert_insert(CacheEntry).values(
-        key=key,
-        value_json=value,
-        created_at=_now_utc(),
-        expires_at=expires_at,
-    ).on_conflict_do_update(
-        index_elements=["key"],
-        set_={
-            "value_json": value,
-            "created_at": _now_utc(),
-            "expires_at": expires_at,
-        },
+    stmt = (
+        upsert_insert(CacheEntry)
+        .values(
+            key=key,
+            value_json=value,
+            created_at=_now_utc(),
+            expires_at=expires_at,
+        )
+        .on_conflict_do_update(
+            index_elements=["key"],
+            set_={
+                "value_json": value,
+                "created_at": _now_utc(),
+                "expires_at": expires_at,
+            },
+        )
     )
     await session.execute(stmt)
     await session.commit()
@@ -155,4 +159,5 @@ async def set_json_cache(
 def _seconds_to_timedelta(seconds: int) -> Any:
     """Convert seconds to a timedelta. Lazy import to avoid top-level import."""
     from datetime import timedelta
+
     return timedelta(seconds=seconds)

@@ -17,6 +17,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -33,7 +34,6 @@ from sqlalchemy import (
     Uuid,
     func,
 )
-import sqlalchemy as sa
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -58,11 +58,23 @@ class Base(DeclarativeBase):
 # ---------------------------------------------------------------------------
 
 SOURCE_TYPE_ALLOWED = (
-    "sgb1", "sgb2", "sgb3", "sgb9", "sgb12", "sgbx",
-    "bgb", "vwvfg", "sgg",
-    "weisung", "bsg",
+    "sgb1",
+    "sgb2",
+    "sgb3",
+    "sgb9",
+    "sgb12",
+    "sgbx",
+    "bgb",
+    "vwvfg",
+    "sgg",
+    "weisung",
+    "bsg",
     # New: general-legal-assistant legal areas (migration 006).
-    "erbstg", "hoefev", "kschg", "burlg", "tvg",
+    "erbstg",
+    "hoefev",
+    "kschg",
+    "burlg",
+    "tvg",
 )
 
 # Legal area values used in case_run_area.legal_area and
@@ -181,7 +193,12 @@ class LegalChunk(Base):
         Index("idx_chunk_source", "source_id"),
         Index("idx_chunk_hierarchy", "hierarchy_path"),
         Index("idx_legal_chunk_legal_area", "legal_area"),
-        UniqueConstraint("source_id", "hierarchy_path", "text_content", name="uq_legal_chunk_source_hierarchy_text"),
+        UniqueConstraint(
+            "source_id",
+            "hierarchy_path",
+            "text_content",
+            name="uq_legal_chunk_source_hierarchy_text",
+        ),
     )
 
 
@@ -250,6 +267,7 @@ class CaseRun(Base):
     )
     chat_history: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     user_edits: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    pii_mapping: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     stage_logs: Mapped[list["PipelineStageLog"]] = relationship(
@@ -385,9 +403,7 @@ class CacheEntry(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
-    __table_args__ = (
-        Index("idx_cache_expires", "expires_at"),
-    )
+    __table_args__ = (Index("idx_cache_expires", "expires_at"),)
 
 
 # ---------------------------------------------------------------------------
@@ -463,6 +479,8 @@ class LegalParameter(Base):
     value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     domain: Mapped[str] = mapped_column(String(50), nullable=False, server_default="sgb2")
+    regime: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -506,19 +524,25 @@ class Conversation(Base):
     )
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(),
+        nullable=False,
+        server_default=func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(), onupdate=func.now(),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships
     messages: Mapped[list["ConversationMessage"]] = relationship(
-        "ConversationMessage", back_populates="conversation",
-        cascade="all, delete-orphan", order_by="ConversationMessage.created_at",
+        "ConversationMessage",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="ConversationMessage.created_at",
     )
     documents: Mapped[list["ConversationDocument"]] = relationship(
-        "ConversationDocument", back_populates="conversation",
+        "ConversationDocument",
+        back_populates="conversation",
         cascade="all, delete-orphan",
     )
 
@@ -548,12 +572,14 @@ class ConversationMessage(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(),
+        nullable=False,
+        server_default=func.now(),
     )
 
     # Relationships
     conversation: Mapped["Conversation"] = relationship(
-        "Conversation", back_populates="messages",
+        "Conversation",
+        back_populates="messages",
     )
 
     __table_args__ = (
@@ -593,17 +619,17 @@ class ConversationDocument(Base):
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(),
+        nullable=False,
+        server_default=func.now(),
     )
 
     # Relationships
     conversation: Mapped["Conversation"] = relationship(
-        "Conversation", back_populates="documents",
+        "Conversation",
+        back_populates="documents",
     )
 
-    __table_args__ = (
-        Index("idx_document_conversation", "conversation_id"),
-    )
+    __table_args__ = (Index("idx_document_conversation", "conversation_id"),)
 
 
 # ---------------------------------------------------------------------------
@@ -634,34 +660,47 @@ class IntakeSession(Base):
     )
     session_id: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="active",
+        String(20),
+        nullable=False,
+        server_default="active",
     )
     turn_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default="0",
+        Integer,
+        nullable=False,
+        server_default="0",
     )
     max_turns: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default="8",
+        Integer,
+        nullable=False,
+        server_default="8",
     )
     messages: Mapped[list[dict[str, Any]] | None] = mapped_column(
-        JSON, nullable=True,
+        JSON,
+        nullable=True,
     )
     intake_result: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True,
+        JSON,
+        nullable=True,
     )
     primary_area: Mapped[str | None] = mapped_column(String(50), nullable=True)
     secondary_areas: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True,
+        JSON,
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(),
+        nullable=False,
+        server_default=func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(), onupdate=func.now(),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships
     case_run_areas: Mapped[list["CaseRunArea"]] = relationship(
-        "CaseRunArea", back_populates="intake_session",
+        "CaseRunArea",
+        back_populates="intake_session",
     )
 
     __table_args__ = (
@@ -704,7 +743,9 @@ class CaseRunArea(Base):
     )
     legal_area: Mapped[str] = mapped_column(String(50), nullable=False)
     is_primary: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=sa.text("0"),
+        Boolean,
+        nullable=False,
+        server_default=sa.text("0"),
     )
     intake_session_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
@@ -712,17 +753,21 @@ class CaseRunArea(Base):
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now(),
+        nullable=False,
+        server_default=func.now(),
     )
 
     # Relationships
     intake_session: Mapped["IntakeSession | None"] = relationship(
-        "IntakeSession", back_populates="case_run_areas",
+        "IntakeSession",
+        back_populates="case_run_areas",
     )
 
     __table_args__ = (
         UniqueConstraint(
-            "case_run_id", "legal_area", name="uq_case_run_area_case_area",
+            "case_run_id",
+            "legal_area",
+            name="uq_case_run_area_case_area",
         ),
         CheckConstraint(
             f"legal_area IN ({_sql_in(LEGAL_AREA_ALLOWED)})",

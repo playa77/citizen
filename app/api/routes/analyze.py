@@ -49,7 +49,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.pipeline import PipelineState, run_pipeline
-from app.db.models import CaseRun, CaseRunArea, Claim, EvidenceBinding, IntakeSession, PipelineStageLog
+from app.db.models import (
+    CaseRun,
+    CaseRunArea,
+    Claim,
+    EvidenceBinding,
+    IntakeSession,
+    PipelineStageLog,
+)
 from app.db.session import async_session_factory
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.corpus_readiness import check_preflight
@@ -150,7 +157,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
     session_id = str(uuid.uuid4())
 
     # Optional: legal_areas list + intake_session_id.
-    legal_areas_raw = payload.get("legal_areas") or []
+    legal_areas_raw: Any = payload.get("legal_areas") or []
     if isinstance(legal_areas_raw, str):
         legal_areas = [a.strip() for a in legal_areas_raw.split(",") if a.strip()]
     elif isinstance(legal_areas_raw, list):
@@ -175,7 +182,12 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                 preflight = await check_preflight(pre_db, legal_areas)
             except SQLAlchemyError as exc:
                 logger.warning("pre-flight DB error: %s", exc)
-                preflight = {"is_ready": True, "areas": {}, "missing_source_types": [], "ready_source_types": []}
+                preflight = {
+                    "is_ready": True,
+                    "areas": {},
+                    "missing_source_types": [],
+                    "ready_source_types": [],
+                }
         if not preflight["is_ready"]:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -313,9 +325,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
 
                     # Persist case_run_area rows for every selected legal area.
                     if state.legal_areas:
-                        primary = (
-                            state.legal_areas[0] if state.legal_areas else None
-                        )
+                        primary = state.legal_areas[0] if state.legal_areas else None
                         for area in state.legal_areas:
                             db.add(
                                 CaseRunArea(

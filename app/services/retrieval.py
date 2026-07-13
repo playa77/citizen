@@ -158,7 +158,7 @@ async def retrieve_chunks_for_areas(
             source_types=tuple(combined_source_types),
         )
         if norm_chunks:
-            seen_norm: set[str] = set(c["chunk_id"] for c in merged)
+            seen_norm: set[str] = {c["chunk_id"] for c in merged}
             for nc in norm_chunks:
                 nc_id = nc["chunk_id"]
                 if nc_id in seen_norm:
@@ -205,6 +205,7 @@ async def retrieve_chunks_combined_filtered(
         embedding = await client.get_embedding(combined_query)
     else:
         from app.core.router import OpenRouterClient as _ORC
+
         async with _ORC() as router:
             embedding = await router.get_embedding(combined_query)
 
@@ -285,6 +286,7 @@ async def retrieve_chunks_per_area(
         embeddings = await client.get_embeddings_batch(questions)
     else:
         from app.core.router import OpenRouterClient as _ORC
+
         async with _ORC() as router:
             embeddings = await router.get_embeddings_batch(questions)
 
@@ -330,7 +332,9 @@ async def retrieve_chunks_per_area(
                         "text_content": row["lc_text_content"],
                         "hierarchy_path": row["lc_hierarchy_path"],
                         "unit_type": row["lc_unit_type"],
-                        "effective_date": str(row["lc_effective_date"]) if row["lc_effective_date"] else "",
+                        "effective_date": str(row["lc_effective_date"])
+                        if row["lc_effective_date"]
+                        else "",
                         "source_type": row["ls_source_type"],
                         "title": row["ls_title"],
                         "legal_area": row["lc_legal_area"],
@@ -450,10 +454,7 @@ async def retrieve_chunks(
     all_chunks.sort(key=lambda c: c["distance"])
 
     # Step 4 — keyword fallback if too few results
-    if (
-        len(all_chunks) < _MIN_CHUNKS_FOR_FALLBACK
-        and settings.RETRIEVAL_KEYWORD_FALLBACK
-    ):
+    if len(all_chunks) < _MIN_CHUNKS_FOR_FALLBACK and settings.RETRIEVAL_KEYWORD_FALLBACK:
         logger.warning(
             "retrieve_chunks: nur %d Vektor-Ergebnisse (min=%d) – "
             "Stichwort-Fallback wird aktiviert",
@@ -569,7 +570,9 @@ async def retrieve_chunks_combined(
                 embedding = await router.get_embedding(combined_query)
             except EmbeddingError as exc:
                 logger.error("Combined embedding generation failed: %s", exc)
-                raise RetrievalError(f"Embedding API failure during combined retrieval: {exc}") from exc
+                raise RetrievalError(
+                    f"Embedding API failure during combined retrieval: {exc}"
+                ) from exc
 
         # ── WP-011: store embedding in cache ────────────────────────
         if settings.ENABLE_CACHE:
@@ -577,7 +580,9 @@ async def retrieve_chunks_combined(
                 try:
                     await set_json_cache(session, cache_key, embedding)
                 except Exception as exc:
-                    logger.warning("retrieve_chunks_combined: embedding cache write failed: %s", exc)
+                    logger.warning(
+                        "retrieve_chunks_combined: embedding cache write failed: %s", exc
+                    )
                 finally:
                     await session.close()
                 break
@@ -636,10 +641,7 @@ async def retrieve_chunks_combined(
     all_chunks.sort(key=lambda c: c["distance"])
 
     # Step 4 — keyword fallback if too few results
-    if (
-        len(all_chunks) < _MIN_CHUNKS_FOR_FALLBACK
-        and settings.RETRIEVAL_KEYWORD_FALLBACK
-    ):
+    if len(all_chunks) < _MIN_CHUNKS_FOR_FALLBACK and settings.RETRIEVAL_KEYWORD_FALLBACK:
         logger.warning(
             "retrieve_chunks_combined: nur %d Vektor-Ergebnisse (min=%d) – "
             "Stichwort-Fallback wird aktiviert",
@@ -937,17 +939,88 @@ async def retrieve_chunks_by_norm_reference(
 
 
 # German legal terms and common stop words
-_LEGAL_STOP_WORDS = frozenset({
-    "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "eines",
-    "einen", "einem", "und", "oder", "aber", "sondern", "doch", "nicht",
-    "auch", "als", "wie", "bei", "mit", "nach", "von", "aus", "zu", "zur",
-    "zum", "auf", "in", "im", "an", "am", "ist", "wird", "werden", "wurde",
-    "würde", "kann", "können", "soll", "sollen", "muss", "müssen", "hat",
-    "haben", "hätte", "hätten", "sein", "sind", "war", "waren", "wäre",
-    "dass", "durch", "für", "gegen", "ohne", "um", "über", "unter", "vor",
-    "zwischen", "bis", "ab", "seit", "außer", "innerhalb", "außerhalb",
-    "§", "abs", "satz", "nr", "bzw", "ggf", "z.b", "vgl",
-})
+_LEGAL_STOP_WORDS = frozenset(
+    {
+        "der",
+        "die",
+        "das",
+        "den",
+        "dem",
+        "des",
+        "ein",
+        "eine",
+        "einer",
+        "eines",
+        "einen",
+        "einem",
+        "und",
+        "oder",
+        "aber",
+        "sondern",
+        "doch",
+        "nicht",
+        "auch",
+        "als",
+        "wie",
+        "bei",
+        "mit",
+        "nach",
+        "von",
+        "aus",
+        "zu",
+        "zur",
+        "zum",
+        "auf",
+        "in",
+        "im",
+        "an",
+        "am",
+        "ist",
+        "wird",
+        "werden",
+        "wurde",
+        "würde",
+        "kann",
+        "können",
+        "soll",
+        "sollen",
+        "muss",
+        "müssen",
+        "hat",
+        "haben",
+        "hätte",
+        "hätten",
+        "sein",
+        "sind",
+        "war",
+        "waren",
+        "wäre",
+        "dass",
+        "durch",
+        "für",
+        "gegen",
+        "ohne",
+        "um",
+        "über",
+        "unter",
+        "vor",
+        "zwischen",
+        "bis",
+        "ab",
+        "seit",
+        "außer",
+        "innerhalb",
+        "außerhalb",
+        "§",
+        "abs",
+        "satz",
+        "nr",
+        "bzw",
+        "ggf",
+        "z.b",
+        "vgl",
+    }
+)
 
 
 def _extract_keywords(text: str, *, max_keywords: int = 8) -> list[str]:
@@ -1078,9 +1151,7 @@ async def retrieve_chunks_keyword(
                     "text_content": row["text_content"],
                     "hierarchy_path": row["hierarchy_path"],
                     "unit_type": row["unit_type"],
-                    "effective_date": str(row["effective_date"])
-                    if row["effective_date"]
-                    else "",
+                    "effective_date": str(row["effective_date"]) if row["effective_date"] else "",
                     "source_type": row["source_type"],
                     "title": row["title"],
                     "distance": 0.5,  # keyword results appear after vector results
@@ -1139,12 +1210,8 @@ def _rrf_fuse(
         return list(keyword_chunks)
 
     # Build rank maps (1-indexed position in each result list)
-    vec_ranks: dict[str, int] = {
-        c["chunk_id"]: i + 1 for i, c in enumerate(vector_chunks)
-    }
-    kw_ranks: dict[str, int] = {
-        c["chunk_id"]: i + 1 for i, c in enumerate(keyword_chunks)
-    }
+    vec_ranks: dict[str, int] = {c["chunk_id"]: i + 1 for i, c in enumerate(vector_chunks)}
+    kw_ranks: dict[str, int] = {c["chunk_id"]: i + 1 for i, c in enumerate(keyword_chunks)}
 
     # Compute RRF score for every unique chunk
     scored: list[tuple[str, float]] = []

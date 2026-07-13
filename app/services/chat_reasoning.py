@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -20,7 +19,6 @@ from app.core.config import settings
 from app.core.pipeline import PipelineState, run_pipeline
 from app.core.router import get_shared_client
 from app.services.retrieval import retrieve_chunks_combined
-from app.utils.text import normalize_text
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -125,9 +123,7 @@ async def generate_chat_response(
     # ── Build retrieval query ──────────────────────────────────────────
     search_query = last_message
     if document_texts:
-        doc_snippet = "\n".join(
-            trim_text(t, 800) for t in document_texts[:3]
-        )
+        doc_snippet = "\n".join(trim_text(t, 800) for t in document_texts[:3])
         search_query = f"Nutzerfrage: {last_message}\n\nDokumentauszug:\n{doc_snippet}"
 
     # ── Retrieve relevant legal chunks ─────────────────────────────────
@@ -268,10 +264,12 @@ def _trim_history(
             # Trim the oldest remaining message to fit budget.
             available = max_chars - total
             if available > 100:
-                result.append({
-                    "role": msg["role"],
-                    "content": trim_text(msg["content"], available),
-                })
+                result.append(
+                    {
+                        "role": msg["role"],
+                        "content": trim_text(msg["content"], available),
+                    }
+                )
             break
         result.append(msg)
         total += msg_chars

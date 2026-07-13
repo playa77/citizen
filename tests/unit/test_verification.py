@@ -1,18 +1,17 @@
-"""Unit tests for deterministic evidence verification (WP-008).
+"""Unit tests for deterministic evidence verification (WP-008 / WP-12).
 
 Tests the ``verify_claims_against_chunks()`` function from
 ``app/services/verification.py`` against all acceptance criteria.
 """
-
 from __future__ import annotations
 
 import time
 from typing import Any
 
-import pytest
-
-from app.services.verification import verify_claims_against_chunks
-
+from app.services.verification import (
+    _remove_hyphens,
+    verify_claims_against_chunks,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -54,12 +53,36 @@ def _chunk(
 
 
 # ---------------------------------------------------------------------------
+# Unit tests for helpers
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveHyphens:
+    """``_remove_hyphens`` behaves as expected."""
+
+    def test_no_hyphens_unchanged(self) -> None:
+        assert _remove_hyphens("Rechtsschutzversicherung") == "Rechtsschutzversicherung"
+
+    def test_simple_hyphen(self) -> None:
+        assert _remove_hyphens("Rechts-schutz") == "Rechtsschutz"
+
+    def test_multi_hyphen(self) -> None:
+        assert _remove_hyphens("Rechts-schutz-versicherung") == "Rechtsschutzversicherung"
+
+    def test_leading_trailing_hyphens(self) -> None:
+        assert _remove_hyphens("-leading-trailing-") == "leadingtrailing"
+
+    def test_empty_string(self) -> None:
+        assert _remove_hyphens("") == ""
+
+
+# ---------------------------------------------------------------------------
 # Acceptance criteria tests
 # ---------------------------------------------------------------------------
 
 
 class TestExactQuoteMatch:
-    """Claims with exact evidence quotes are marked verified."""
+    """Claims with exact evidence quotes are marked verified with status 'exakt'."""
 
     def test_exact_substring_match_verified_true(self) -> None:
         claim = _claim(evidence_quote="Der Anspruch besteht.")
@@ -67,7 +90,15 @@ class TestExactQuoteMatch:
         result = verify_claims_against_chunks([claim], [chunk])
         assert len(result) == 1
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "exakt"
         assert result[0]["confidence_score"] == 0.8
+
+    def test_exact_match_reasoning(self) -> None:
+        claim = _claim(evidence_quote="Der Anspruch besteht.")
+        chunk = _chunk(text_content="Der Anspruch besteht. Weitere Details.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        reasoning = result[0]["reasoning"]
+        assert "exakt" in reasoning.lower()
 
     def test_exact_match_preserves_all_fields(self) -> None:
         claim = _claim()
@@ -83,6 +114,7 @@ class TestExactQuoteMatch:
         assert vc["evidence_quote"] == "Der Anspruch besteht."
         # Added fields
         assert "verified" in vc
+        assert "verification_status" in vc
         assert "reasoning" in vc
 
     def test_multiple_claims_all_verified(self) -> None:
@@ -96,31 +128,86 @@ class TestExactQuoteMatch:
         ]
         result = verify_claims_against_chunks(claims, chunks)
         assert all(vc["verified"] for vc in result)
+        assert all(vc["verification_status"] == "exakt" for vc in result)
         assert result[0]["confidence_score"] == 0.8
         assert result[1]["confidence_score"] == 0.8
 
 
 class TestWhitespaceNormalizedMatch:
-    """Claims with whitespace-differing quotes are verified after normalization."""
+    """Claims with whitespace-differing quotes get status 'normalisiert'."""
 
     def test_normalized_whitespace_match(self) -> None:
         claim = _claim(evidence_quote="Der  Anspruch   besteht.")
         chunk = _chunk(text_content="Der Anspruch besteht. Weitere Details.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "normalisiert"
         assert result[0]["confidence_score"] == 0.8
+
+    def test_normalized_whitespace_reasoning(self) -> None:
+        claim = _claim(evidence_quote="Der  Anspruch   besteht.")
+        chunk = _chunk(text_content="Der Anspruch besteht. Weitere Details.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        reasoning = result[0]["reasoning"]
+        assert "whitespace-normalisiert" in reasoning.lower()
 
     def test_newlines_normalized(self) -> None:
         claim = _claim(evidence_quote="Abs. 1\nSatz 1")
         chunk = _chunk(text_content="Abs. 1 Satz 1 gilt entsprechend.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "normalisiert"
 
     def test_tabs_normalized(self) -> None:
         claim = _claim(evidence_quote="§ 1\tSatz 2")
         chunk = _chunk(text_content="§ 1 Satz 2 beschreibt.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "normalisiert"
+
+
+class TestHyphenationNormalizedMatch:
+    """Claims with hyphenated compound words match via hyphenation stripping."""
+
+    def test_hyphenated_quote_matches(self) -> None:
+        claim = _claim(evidence_quote="Rechts-schutz-versicherung")
+        chunk = _chunk(text_content="Rechtsschutzversicherung deckt alle Risiken.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "normalisiert"
+        assert result[0]["confidence_score"] == 0.8
+
+    def test_hyphenated_quote_reasoning(self) -> None:
+        claim = _claim(evidence_quote="Rechts-schutz-versicherung")
+        chunk = _chunk(text_content="Rechtsschutzversicherung deckt alle Risiken.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        reasoning = result[0]["reasoning"]
+        assert "bindestrich-normalisiert" in reasoning.lower()
+
+    def test_hyphenated_text_content_matches(self) -> None:
+        """Text content has hyphens, quote does not — still matches."""
+        claim = _claim(evidence_quote="Rechtsschutzversicherung")
+        chunk = _chunk(text_content="Die Rechts-schutz-versicherung gilt.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "normalisiert"
+
+    def test_both_hyphenated_matches(self) -> None:
+        """Both sides have hyphens (potentially different positions) — match."""
+        claim = _claim(evidence_quote="Arbeits-lo-sen-geld")
+        chunk = _chunk(text_content="Das Arbeitslosen-geld wird gezahlt.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "normalisiert"
+
+    def test_hyphenation_removes_only_hyphens(self) -> None:
+        """Hyphen removal doesn't change other characters; a non-match stays non-match."""
+        claim = _claim(evidence_quote="Wohn-geld-anspruch")
+        chunk = _chunk(text_content="Ein völlig anderer Text ohne Bezug.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        # "Wohngeldanspruch" is not in "Ein völlig anderer Text ohne Bezug."
+        assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
 
 
 class TestDowngradeOnNoMatch:
@@ -131,6 +218,7 @@ class TestDowngradeOnNoMatch:
         chunk = _chunk(text_content="Ganz anderer Inhalt.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
     def test_high_confidence_capped_at_045(self) -> None:
@@ -138,6 +226,7 @@ class TestDowngradeOnNoMatch:
         chunk = _chunk(text_content="Korrektes Zitat hier.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] == 0.45
 
     def test_low_confidence_preserved_when_below_045(self) -> None:
@@ -145,6 +234,7 @@ class TestDowngradeOnNoMatch:
         claim = _claim(confidence_score=0.3, evidence_quote="Falsches Zitat")
         chunk = _chunk(text_content="Anderer Text.")
         result = verify_claims_against_chunks([claim], [chunk])
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] == 0.3
 
     def test_partial_not_enough(self) -> None:
@@ -154,6 +244,7 @@ class TestDowngradeOnNoMatch:
         chunk = _chunk(text_content="Der Anspruch besteht.")  # only part
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
 
 
 class TestMissingEvidenceFields:
@@ -164,6 +255,7 @@ class TestMissingEvidenceFields:
         chunk = _chunk()
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
     def test_missing_evidence_quote(self) -> None:
@@ -171,6 +263,7 @@ class TestMissingEvidenceFields:
         chunk = _chunk()
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
     def test_both_missing(self) -> None:
@@ -178,6 +271,7 @@ class TestMissingEvidenceFields:
         chunk = _chunk()
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
     def test_none_values_handled(self) -> None:
@@ -193,6 +287,7 @@ class TestMissingEvidenceFields:
         chunk = _chunk()
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
 
@@ -204,6 +299,7 @@ class TestChunkNotFound:
         chunk = _chunk(chunk_id="chunk-001")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.35
 
     def test_chunk_not_found_low_confidence(self) -> None:
@@ -211,6 +307,7 @@ class TestChunkNotFound:
         chunk = _chunk(chunk_id="chunk-001")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] == 0.35
 
 
@@ -222,6 +319,7 @@ class TestEmptyChunkText:
         chunk = _chunk(text_content="")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
     def test_whitespace_only_text_content(self) -> None:
@@ -231,19 +329,21 @@ class TestEmptyChunkText:
         # "   \n\t  " is truthy in Python, so it won't hit the empty-check.
         # The match will fail (normalized "Something" vs ""), downgrading to 0.45.
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.45
 
 
 class TestReasoningField:
     """The ``reasoning`` field is a short German string explaining the result."""
 
-    def test_reasoning_when_verified(self) -> None:
+    def test_reasoning_when_verified_exact(self) -> None:
         claim = _claim()
         chunk = _chunk()
         result = verify_claims_against_chunks([claim], [chunk])
         reasoning = result[0]["reasoning"]
         assert isinstance(reasoning, str)
         assert len(reasoning) > 0
+        assert "exakt" in reasoning.lower()
         assert "chunk-001" in reasoning.lower() or "Chunk" in reasoning
 
     def test_reasoning_when_not_verified(self) -> None:
@@ -260,7 +360,9 @@ class TestReasoningField:
         result = verify_claims_against_chunks([claim], [chunk])
         reasoning = result[0]["reasoning"]
         assert isinstance(reasoning, str)
-        assert "evidence_chunk_id" in reasoning.lower() or "evidence_quote" in reasoning.lower() or "Überprüfung" in reasoning
+        assert ("evidence_chunk_id" in reasoning.lower()
+                or "evidence_quote" in reasoning.lower()
+                or "Überprüfung" in reasoning)
 
 
 class TestEdgeCases:
@@ -274,6 +376,7 @@ class TestEdgeCases:
         claim = _claim()
         result = verify_claims_against_chunks([claim], [])
         assert result[0]["verified"] is False
+        assert result[0]["verification_status"] == "unverifiziert"
         assert result[0]["confidence_score"] <= 0.35
 
     def test_claim_not_mutate_input(self) -> None:
@@ -282,6 +385,7 @@ class TestEdgeCases:
         verify_claims_against_chunks([original], [chunk])
         # Original should not have verified/reasoning injected
         assert "verified" not in original
+        assert "verification_status" not in original
 
     def test_chunk_id_type_coercion(self) -> None:
         """evidence_chunk_id is str()'d; integer IDs are handled."""
@@ -290,6 +394,7 @@ class TestEdgeCases:
         chunk = _chunk(chunk_id="42", text_content=f"Kontext. {quote} Ende.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "exakt"
 
     def test_multiple_chunks_same_id_last_wins(self) -> None:
         claims = [_claim(evidence_chunk_id="c1", evidence_quote="First text.")]
@@ -299,6 +404,7 @@ class TestEdgeCases:
         ]
         result = verify_claims_against_chunks(claims, chunks)
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "exakt"
 
     def test_confidence_near_boundary(self) -> None:
         """Confidence at exactly 0.45 on match should be preserved."""
@@ -312,6 +418,7 @@ class TestEdgeCases:
         chunk = _chunk(text_content="Quote. Text.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "exakt"
         # Clamped to 1.0 during extraction, then preserved on match
         assert result[0]["confidence_score"] == 1.0
 
@@ -320,6 +427,26 @@ class TestEdgeCases:
         chunk = _chunk(text_content="Other.")
         result = verify_claims_against_chunks([claim], [chunk])
         assert result[0]["confidence_score"] <= 0.45
+
+
+class TestStrategyPriority:
+    """Strategy priority verification: exact > whitespace > hyphenation."""
+
+    def test_exact_preferred_over_whitespace(self) -> None:
+        """If both exact and whitespace match, status is 'exakt'."""
+        claim = _claim(evidence_quote="Der Anspruch besteht.")
+        chunk = _chunk(text_content="Der Anspruch besteht.")
+        result = verify_claims_against_chunks([claim], [chunk])
+        assert result[0]["verification_status"] == "exakt"
+
+    def test_whitespace_preferred_over_hyphenation(self) -> None:
+        """If both whitespace and hyphenation match, status is still normalisiert."""
+        quote = "  Der   Anspruch  "
+        text = "Der Anspruch besteht. Der Anspruch."
+        claim = _claim(evidence_quote=quote)
+        chunk = _chunk(text_content=text)
+        result = verify_claims_against_chunks([claim], [chunk])
+        assert result[0]["verification_status"] == "normalisiert"
 
 
 class TestPerformance:
@@ -353,7 +480,7 @@ class TestPerformance:
         assert elapsed < 0.2, f"Took {elapsed:.4f}s, expected <0.2s"
 
     def test_long_text_verification(self) -> None:
-        """Even with long chunk texts, matching is O(n*m) but fast."""
+        """Even with long chunk texts, matching is fast."""
         long_text = "Lorem ipsum " * 500 + "SPECIAL_MARKER" + " dolor " * 500
         claims = [_claim(evidence_quote="SPECIAL_MARKER")]
         chunks = [_chunk(text_content=long_text)]
@@ -361,4 +488,5 @@ class TestPerformance:
         result = verify_claims_against_chunks(claims, chunks)
         elapsed = time.monotonic() - start
         assert result[0]["verified"] is True
+        assert result[0]["verification_status"] == "exakt"
         assert elapsed < 0.02, f"Took {elapsed:.4f}s, expected <0.02s"

@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -127,12 +128,14 @@ class Widerspruchsfrist(BaseModel):
 
 
 # Valid overall_assessment values per evaluation_guide
-VALID_ASSESSMENTS: frozenset[str] = frozenset({
-    "rechtswidrig",
-    "teilweise_rechtswidrig",
-    "ueberwiegend_rechtmaessig",
-    "kein_verwaltungsakt",
-})
+VALID_ASSESSMENTS: frozenset[str] = frozenset(
+    {
+        "rechtswidrig",
+        "teilweise_rechtswidrig",
+        "ueberwiegend_rechtmaessig",
+        "kein_verwaltungsakt",
+    }
+)
 
 
 class Expected(BaseModel):
@@ -156,6 +159,26 @@ class Expected(BaseModel):
         return v
 
 
+class PiiSpan(BaseModel):
+    """A single PII span within the input document text."""
+
+    start: int
+    end: int
+    text: str
+
+
+class PiiAnnotation(BaseModel):
+    """PII annotation for a goldset case.
+
+    ``type`` is one of ``"person"``, ``"address"``, ``"birth_date"``,
+    ``"bg_nummer"``, ``"aktenzeichen"``, ``"iban"``, ``"phone"``, ``"email"``.
+    """
+
+    type: str
+    canonical: str
+    spans: list[PiiSpan]
+
+
 class GoldsetCase(BaseModel):
     id: str
     version: str
@@ -164,6 +187,8 @@ class GoldsetCase(BaseModel):
     difficulty: str
     input_document: InputDocument
     expected: Expected
+    pii_annotations: list[PiiAnnotation] = Field(default_factory=list)
+    negative_controls: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -208,9 +233,7 @@ def audit_goldset(doc: GoldsetDocument) -> list[str]:
 
     # Check legal_area
     if doc.goldset.legal_area not in LEGAL_AREA_ALLOWED:
-        warnings.append(
-            f"goldset.legal_area='{doc.goldset.legal_area}' not in LEGAL_AREA_ALLOWED"
-        )
+        warnings.append(f"goldset.legal_area='{doc.goldset.legal_area}' not in LEGAL_AREA_ALLOWED")
 
     # Check case count
     if len(doc.cases) != doc.goldset.case_count:
@@ -230,28 +253,122 @@ def audit_goldset(doc: GoldsetDocument) -> list[str]:
             warnings.append(f"Case {case.id}: unknown difficulty '{case.difficulty}'")
 
         # overall_assessment if present must be valid
-        if case.expected.overall_assessment:
-            if case.expected.overall_assessment not in VALID_ASSESSMENTS:
-                warnings.append(
-                    f"Case {case.id}: overall_assessment='{case.expected.overall_assessment}' not in {sorted(VALID_ASSESSMENTS)}"
-                )
+        oa = case.expected.overall_assessment
+        if oa is not None and oa not in VALID_ASSESSMENTS:
+            warnings.append(
+                f"Case {case.id}: overall_assessment='{case.expected.overall_assessment}' "
+                f"not in {sorted(VALID_ASSESSMENTS)}"
+            )
 
         # Check citations reference actual norms (soft check — corpus may differ)
-        if not case.expected.citations:
-            warnings.append(f"Case {case.id}: no expected citations defined")
+        if case.expected.citations is None:
+            warnings.append(f"Case {case.id}: expected.citations is None (should be a list)")
         if not case.expected.legal_issues:
             warnings.append(f"Case {case.id}: no expected legal_issues defined")
 
-        # Frist check: if widerspruchsfrist.frist_ende is a date string, parse it
-        frist = case.expected.widerspruchsfrist
-        if frist and isinstance(frist.frist_ende, str) and frist.frist_ende != "kein_verwaltungsakt":
-            try:
-                date.fromisoformat(frist.frist_ende)
-            except ValueError:
-                # "nicht_anwendbar" or similar special values — ok
-                pass
+            # Frist check: if widerspruchsfrist.frist_ende is a date string, parse it
+            frist = case.expected.widerspruchsfrist
+            if (
+                frist
+                and isinstance(frist.frist_ende, str)
+                and frist.frist_ende != "kein_verwaltungsakt"
+            ):
+                with suppress(ValueError):
+                    date.fromisoformat(frist.frist_ende)
+
+        # ── PII annotation validation ───────────────────────────────────
+        text = case.input_document.text
+
+        if case.pii_annotations:
+            # Check span offsets are within text
+            for ann in case.pii_annotations:
+                for span in ann.spans:
+                    if span.start < 0 or span.end > len(text):
+                        warnings.append(
+                            f"Case {case.id}: PII span ({span.start}, {span.end}) "
+                            f"out of bounds (text length={len(text)})"
+                        )
+                        continue
+                    actual = text[span.start : span.end]
+                    if actual != span.text:
+                        warnings.append(
+                            f"Case {case.id}: PII span text mismatch at "
+                            f"({span.start}, {span.end}): expected "
+                            f"{span.text!r}, got {actual!r}"
+                        )
+
+            # Check all canonical values appear in at least one span's text
+            for ann in case.pii_annotations:
+                canonical_found = False
+                for span in ann.spans:
+                    if ann.canonical in span.text or span.text in ann.canonical:
+                        canonical_found = True
+                        break
+                if not canonical_found:
+                    span_texts = " ".join(s.text for s in ann.spans)
+                    if ann.canonical not in span_texts:
+                        warnings.append(
+                            f"Case {case.id}: canonical value {ann.canonical!r} "
+                            f"not found in any span text"
+                        )
+
+            # Check no overlapping spans within same annotation type
+            all_spans: list[tuple[int, int, str]] = []
+            for ann in case.pii_annotations:
+                for span in ann.spans:
+                    all_spans.append((span.start, span.end, ann.type))
+            all_spans.sort()
+            for i in range(len(all_spans) - 1):
+                s1, e1, t1 = all_spans[i]
+                s2, e2, t2 = all_spans[i + 1]
+                if s2 < e1:
+                    # Allow full containment (one span inside another — common for
+                    # address components like PLZ within a full street address)
+                    if s2 >= s1 and e2 <= e1:
+                        continue  # span2 is fully contained in span1 — ok
+                    if s1 >= s2 and e1 <= e2:
+                        continue  # span1 is fully contained in span2 — ok
+                    warnings.append(
+                        f"Case {case.id}: overlapping PII spans: "
+                        f"({s1},{e1}) type={t1} overlaps with ({s2},{e2}) type={t2}"
+                    )
+
+        # ── Negative controls validation ───────────────────────────────
+        if case.negative_controls:
+            for nc in case.negative_controls:
+                if nc not in text:
+                    warnings.append(
+                        f"Case {case.id}: negative control {nc!r} not found in "
+                        f"input document text"
+                    )
 
     return warnings
+
+
+# ---------------------------------------------------------------------------
+# Version helpers
+# ---------------------------------------------------------------------------
+
+_SUPPORTED_VERSIONS: frozenset[str] = frozenset({"0.1.0", "0.2.0"})
+_LATEST_VERSION: str = "0.2.0"
+
+
+def resolve_goldset_path(version: str | None = None) -> str:
+    """Resolve goldset path for a given version (or latest).
+
+    Args:
+        version: Semver string (``"0.1.0"``, ``"0.2.0"``) or ``None`` for latest.
+
+    Returns:
+        File path to the goldset YAML.
+    """
+    if version is None:
+        version = _LATEST_VERSION
+    if version not in _SUPPORTED_VERSIONS:
+        raise ValueError(
+            f"Unsupported goldset version {version!r}. " f"Supported: {sorted(_SUPPORTED_VERSIONS)}"
+        )
+    return f"eval/goldsets/goldset-v{version}.yaml"
 
 
 # ---------------------------------------------------------------------------
@@ -259,17 +376,34 @@ def audit_goldset(doc: GoldsetDocument) -> list[str]:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import sys
+    import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    for p in sys.argv[1:] or ["eval/goldsets/goldset-v0.1.0.yaml"]:
-        doc = load_goldset(p)
-        print(f"Loaded: {doc.goldset.id} v{doc.goldset.version} — {len(doc.cases)} cases")
+    parser = argparse.ArgumentParser(description="Goldset loader / auditor")
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=None,
+        help="Path to goldset YAML (default: latest version)",
+    )
+    parser.add_argument(
+        "--version",
+        default=None,
+        help=f"Goldset version (default: {_LATEST_VERSION})",
+    )
+    args = parser.parse_args()
 
-        issues = audit_goldset(doc)
-        if issues:
-            for w in issues:
-                print(f"  ⚠ {w}")
-        else:
-            print("  ✓ Audit passed (no warnings)")
+    path = args.path
+    if path is None:
+        path = resolve_goldset_path(args.version)
+
+    doc = load_goldset(path)
+    print(f"Loaded: {doc.goldset.id} v{doc.goldset.version} — {len(doc.cases)} cases")
+
+    issues = audit_goldset(doc)
+    if issues:
+        for w in issues:
+            print(f"  ⚠ {w}")
+    else:
+        print("  ✓ Audit passed (no warnings)")

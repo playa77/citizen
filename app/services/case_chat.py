@@ -168,8 +168,7 @@ async def generate_case_chat_response(
 
     pipeline_context = _build_pipeline_context(pipeline_output)
     system_parts.append(
-        f"\n\nHier sind die vollständigen Analyseergebnisse des Falls:\n"
-        f"{pipeline_context}"
+        f"\n\nHier sind die vollständigen Analyseergebnisse des Falls:\n" f"{pipeline_context}"
     )
 
     if user_edits:
@@ -189,9 +188,7 @@ async def generate_case_chat_response(
 
     if claims:
         claims_prompt = _build_claims_context(claims)
-        system_parts.append(
-            f"\n\nDem Fall liegen folgende Claims zugrunde:\n{claims_prompt}"
-        )
+        system_parts.append(f"\n\nDem Fall liegen folgende Claims zugrunde:\n{claims_prompt}")
 
     # ── Build LLM message list ──────────────────────────────────────────
     llm_messages: list[dict[str, str]] = []
@@ -328,7 +325,7 @@ async def run_targeted_reevaluate(
         for evt in events:
             if evt.startswith("data: "):
                 try:
-                    parsed = json.loads(evt[len("data: "):].strip())
+                    parsed = json.loads(evt[len("data: ") :].strip())
                     if parsed.get("stage") == name and parsed.get("status") == "complete":
                         stage_payload["payload"] = parsed.get("payload")
                 except (json.JSONDecodeError, IndexError):
@@ -403,10 +400,7 @@ def _build_pipeline_context(pipeline_output: dict[str, str]) -> str:
         if total_chars >= max_chars:
             remaining = [k for k in _PIPELINE_SECTION_LABELS if k != key and k in pipeline_output]
             if remaining:
-                parts.append(
-                    f"… (weitere Abschnitte nicht im Kontext: "
-                    f"{', '.join(remaining)})"
-                )
+                parts.append(f"… (weitere Abschnitte nicht im Kontext: " f"{', '.join(remaining)})")
             break
 
     return "\n\n---\n\n".join(parts)
@@ -454,9 +448,7 @@ def _build_claims_context(claims: list[dict[str, Any]]) -> str:
         text = claim.get("text", claim.get("claim", ""))
         confidence = claim.get("confidence", claim.get("score", "?"))
         claim_type = claim.get("type", claim.get("claim_type", "?"))
-        parts.append(
-            f"Claim {i + 1} [{claim_type}] (confidence: {confidence}):\n{text}"
-        )
+        parts.append(f"Claim {i + 1} [{claim_type}] (confidence: {confidence}):\n{text}")
 
     if len(claims) > max_claims:
         parts.append(f"… und {len(claims) - max_claims} weitere Claims")
@@ -569,10 +561,12 @@ def _trim_history(
             # Trim the oldest remaining message to fit budget.
             available = max_chars - total
             if available > 100:
-                result.append({
-                    "role": msg["role"],
-                    "content": trim_text(msg["content"], available),
-                })
+                result.append(
+                    {
+                        "role": msg["role"],
+                        "content": trim_text(msg["content"], available),
+                    }
+                )
             break
         result.append(msg)
         total += msg_chars

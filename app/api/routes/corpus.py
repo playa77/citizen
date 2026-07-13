@@ -50,9 +50,7 @@ _job_store: dict[str, dict[str, Any]] = {}
 # ---------------------------------------------------------------------------
 
 
-async def _run_corpus_update(
-    job_id: str, override_sources: list[str] | None = None
-) -> None:
+async def _run_corpus_update(job_id: str, override_sources: list[str] | None = None) -> None:
     """Background task that executes the full corpus update pipeline.
 
     *override_sources*, when provided, takes precedence over both runtime
@@ -62,9 +60,7 @@ async def _run_corpus_update(
 
     async def _do_run() -> None:
         logger.info("Corpus update job started: job_id=%s", job_id)
-        _job_store[job_id].update(
-            status="running", substage="scraping", current_source=None
-        )
+        _job_store[job_id].update(status="running", substage="scraping", current_source=None)
 
         source_types = (
             override_sources
@@ -168,7 +164,10 @@ async def _run_corpus_update(
     except Exception as exc:
         logger.exception("Corpus update job failed: job_id=%s", job_id)
         _job_store[job_id].update(
-            status="failed", substage=None, error=str(exc), chunks_processed=0,
+            status="failed",
+            substage=None,
+            error=str(exc),
+            chunks_processed=0,
         )
 
 

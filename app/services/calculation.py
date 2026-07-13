@@ -22,8 +22,8 @@ from pydantic import BaseModel, Field
 
 from app.core.router import get_shared_client
 from app.services.reasoning import (
-    JSONParseError,
     _STRICT_SUFFIX,
+    JSONParseError,
     _parse_json_response,
 )
 from app.services.rules_engine import process_extraction
@@ -45,12 +45,8 @@ class ExtractionValues(BaseModel):
     regelbedarf_stufe: int | None = Field(
         None, description="Angewendete Regelbedarfsstufe (1 oder 2)"
     )
-    brutto_einkommen: float | None = Field(
-        None, description="Monatliches Bruttoeinkommen in EUR"
-    )
-    netto_einkommen: float | None = Field(
-        None, description="Monatliches Nettoeinkommen in EUR"
-    )
+    brutto_einkommen: float | None = Field(None, description="Monatliches Bruttoeinkommen in EUR")
+    netto_einkommen: float | None = Field(None, description="Monatliches Nettoeinkommen in EUR")
     freibetrag_authority: float | None = Field(
         None, description="Vom Jobcenter angesetzter Freibetrag in EUR"
     )
@@ -61,15 +57,9 @@ class ExtractionValues(BaseModel):
         None,
         description="Der für die Aufrechnung zugrunde gelegte Regelbedarf in EUR",
     )
-    kdu_unterkunft: float | None = Field(
-        None, description="Kaltmiete in EUR"
-    )
-    kdu_heizung: float | None = Field(
-        None, description="Heizkosten in EUR"
-    )
-    kdu_nebenkosten: float | None = Field(
-        None, description="Nebenkosten in EUR"
-    )
+    kdu_unterkunft: float | None = Field(None, description="Kaltmiete in EUR")
+    kdu_heizung: float | None = Field(None, description="Heizkosten in EUR")
+    kdu_nebenkosten: float | None = Field(None, description="Nebenkosten in EUR")
     kdu_gesamt_authority: float | None = Field(
         None, description="Von der Behörde angegebener KdU-Gesamtbetrag in EUR"
     )
@@ -81,44 +71,30 @@ class ExtractionValues(BaseModel):
         None,
         description="Von der Behörde festgesetzter Auszahlungsbetrag in EUR",
     )
-    sanktion_authority: float | None = Field(
-        None, description="Sanktionsbetrag in EUR"
-    )
-    mehrbedarf_authority: float | None = Field(
-        None, description="Mehrbedarf in EUR"
-    )
-    unterhaltszahlung: float | None = Field(
-        None, description="Unterhaltszahlung in EUR"
-    )
-    kindergeld: float | None = Field(
-        None, description="Kindergeld in EUR"
-    )
+    sanktion_authority: float | None = Field(None, description="Sanktionsbetrag in EUR")
+    mehrbedarf_authority: float | None = Field(None, description="Mehrbedarf in EUR")
+    unterhaltszahlung: float | None = Field(None, description="Unterhaltszahlung in EUR")
+    kindergeld: float | None = Field(None, description="Kindergeld in EUR")
 
 
 class ExtractionResult(BaseModel):
     """Full structured extraction from an SGB II document."""
 
-    person_type: str | None = Field(
-        None, description="alleinstehend | partner | alleinerziehend"
-    )
+    person_type: str | None = Field(None, description="alleinstehend | partner | alleinerziehend")
     has_minor_child: bool | None = Field(
         None, description="Minderjähriges Kind in der Bedarfsgemeinschaft"
     )
-    period_year: int | None = Field(
-        None, description="Jahr des Leistungszeitraums"
+    period_year: int | None = Field(None, description="Jahr des Leistungszeitraums")
+    extracted_values: ExtractionValues = Field(
+        default_factory=ExtractionValues,  # type: ignore[arg-type]
     )
-    extracted_values: ExtractionValues = Field(default_factory=ExtractionValues)
     authority_calculation_text: str = Field(
         "", description="Wie das Jobcenter die Berechnung beschreibt"
     )
-    extraction_notes: str = Field(
-        "", description="Unsicherheiten oder fehlende Angaben"
-    )
+    extraction_notes: str = Field("", description="Unsicherheiten oder fehlende Angaben")
 
 
-def cross_check_extraction(
-    extraction: dict[str, Any], document_text: str
-) -> list[str]:
+def cross_check_extraction(extraction: dict[str, Any], document_text: str) -> list[str]:
     """Verify that extracted numbers appear in the document text.
 
     Returns a list of warnings for values not found in the document.
@@ -137,9 +113,7 @@ def cross_check_extraction(
             str(int(value)) if value == int(value) else None,
             f"{value:.1f}".replace(".", ","),
         ]
-        found = any(
-            c and c in document_text for c in candidates if c is not None
-        )
+        found = any(c and c in document_text for c in candidates if c is not None)
         if not found:
             warnings.append(
                 f"Extrahierter Wert '{field_name}' = {value} konnte nicht "
@@ -369,10 +343,11 @@ async def check_calculations(
 
     # ── Fetch legal parameters from the DB ───────────────────────────
     from datetime import date as dt_date
+
     from app.services.parameter_store import (
         build_legal_snapshot,
-        get_parameter_numeric,
         get_parameter_json,
+        get_parameter_numeric,
     )
 
     period_year_val = extraction.get("period_year")
@@ -445,9 +420,7 @@ async def check_calculations(
     validated_calculations = _merge_explanations(calculations, explanation)
 
     # ── Build overall assessment ─────────────────────────────────────
-    overall_assessment = _build_overall_assessment(
-        validated_calculations, explanation
-    )
+    overall_assessment = _build_overall_assessment(validated_calculations, explanation)
 
     logger.info(
         "check_calculations: complete (model=%s, %d calculations found, "
@@ -557,7 +530,6 @@ async def _llm_explain(
     Returns the parsed JSON, or ``None`` if the call fails (caller falls back
     to the engine's templated commentary).
     """
-    from app.core.config import settings as s
 
     # Build an explanation prompt that includes the engine output so the
     # LLM can produce detailed commentary.
@@ -572,9 +544,7 @@ async def _llm_explain(
             "person_type": extraction.get("person_type"),
             "period_year": extraction.get("period_year"),
             "has_minor_child": extraction.get("has_minor_child"),
-            "authority_calculation_text": extraction.get(
-                "authority_calculation_text", ""
-            ),
+            "authority_calculation_text": extraction.get("authority_calculation_text", ""),
             "extraction_notes": extraction.get("extraction_notes", ""),
         },
         ensure_ascii=False,
@@ -609,9 +579,7 @@ async def _llm_explain(
         )
         result = _parse_json_response(raw, context="calculation explanation")
     except JSONParseError:
-        logger.warning(
-            "JSON parse error in explanation LLM — using engine commentary as fallback"
-        )
+        logger.warning("JSON parse error in explanation LLM — using engine commentary as fallback")
         return None
 
     if not isinstance(result, dict):
@@ -638,20 +606,18 @@ def _summarise_engine_output(
     """
     summary: list[dict[str, Any]] = []
     for i, calc in enumerate(calculations):
-        summary.append({
-            "index": i,
-            "label": calc.get("label"),
-            "computation_detail": calc.get("computed_values", {}).get(
-                "computation_detail", ""
-            ),
-            "deterministic_result": calc.get("computed_values", {}).get(
-                "deterministic_result"
-            ),
-            "discrepancy_found": calc.get("discrepancy_found"),
-            "discrepancy_amount_eur": calc.get("discrepancy_amount_eur"),
-            "discrepancy_direction": calc.get("discrepancy_direction"),
-            "relevant_rule": calc.get("relevant_rule"),
-        })
+        summary.append(
+            {
+                "index": i,
+                "label": calc.get("label"),
+                "computation_detail": calc.get("computed_values", {}).get("computation_detail", ""),
+                "deterministic_result": calc.get("computed_values", {}).get("deterministic_result"),
+                "discrepancy_found": calc.get("discrepancy_found"),
+                "discrepancy_amount_eur": calc.get("discrepancy_amount_eur"),
+                "discrepancy_direction": calc.get("discrepancy_direction"),
+                "relevant_rule": calc.get("relevant_rule"),
+            }
+        )
     return summary
 
 
@@ -678,16 +644,13 @@ def _merge_explanations(
                         idx = int(idx)
                     except (TypeError, ValueError):
                         continue
-                    commentary_by_index[idx] = str(
-                        item.get("commentary", "")
-
-                    ).strip()
+                    commentary_by_index[idx] = str(item.get("commentary", "")).strip()
 
     for i, calc in enumerate(engine_calculations):
         entry = dict(calc)  # shallow copy
 
         # Override commentary with LLM explanation if available.
-        if i in commentary_by_index and commentary_by_index[i]:
+        if commentary_by_index.get(i):
             entry["commentary"] = commentary_by_index[i]
 
         # Add extracted_numbers from the document_values for backward compat.
@@ -704,9 +667,7 @@ def _merge_explanations(
         entry["discrepancy_direction"] = dd
 
         try:
-            entry["discrepancy_amount_eur"] = float(
-                entry.get("discrepancy_amount_eur", 0.0)
-            )
+            entry["discrepancy_amount_eur"] = float(entry.get("discrepancy_amount_eur", 0.0))
         except (TypeError, ValueError):
             entry["discrepancy_amount_eur"] = 0.0
 

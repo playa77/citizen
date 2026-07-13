@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen — Legal Reasoning Engine</title>
-    <!-- Semantic Version: 0.4.0 -->
+    <!-- Semantic Version: 1.0.0 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -32,10 +35,22 @@
                         <h1>Citizen</h1>
                         <p class="subtitle">Legal Reasoning Engine — SGB II Bürgergeld (SGB X, SGG)</p>
                     </div>
-                    <div class="mode-toggle">
+                    <div class="header-actions">
+                        <div class="rechtsstand" id="rechtsstand-indicator" title="Rechtsstand der Parameter- und Corpusdaten">
+                            <span class="rechtsstand-label">Rechtsstand:</span>
+                            <span class="rechtsstand-value" id="rechtsstand-value">…</span>
+                        </div>
+                        <div class="profile-banner" id="profile-banner" title="Aktives Inference-Profil">
+                            <span class="profile-banner-label" id="profile-banner-label">…</span>
+                        </div>
+                        <div class="mode-toggle">
                         <button class="mode-btn active" data-mode="analyze" id="mode-analyze-btn">
                             <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             Analysieren
+                        </button>
+                        <button class="mode-btn" data-mode="pruefstand" id="mode-pruefstand-btn">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-4 6a4 4 0 0 0 3.5 6h7A4 4 0 0 0 19 14l-4-6V2"/><line x1="9" y1="2" x2="15" y2="2"/></svg>
+                            Prüfstand
                         </button>
                         <button class="mode-btn" data-mode="chat" id="mode-chat-btn">
                             <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -250,6 +265,44 @@
                     </div>
                 </section>
 
+                <!-- Result Report (WP-41 — rich report using shared components) -->
+                <section id="result-report-section" class="section hidden">
+                    <div class="report-result" id="result-report-content">
+                        <!-- Case header: title + export/back actions (populated by JS) -->
+                        <div class="report-case-header">
+                            <h2 class="report-case-title">Analyseergebnis</h2>
+                            <div class="report-case-actions" id="report-case-actions"></div>
+                        </div>
+
+                        <!-- 1. Hero deadline banner — 5 urgency states (normal/amber/red/lapsed/no-va) -->
+                        <div id="deadline-banner" class="report-region" aria-live="polite"></div>
+
+                        <!-- 2. Overall assessment summary (green/red/gray verdict) -->
+                        <section id="result-summary" class="report-region"></section>
+
+                        <!-- 3. Findings — claims rendered with .c-claim-list -->
+                        <section id="findings-list" class="report-region"></section>
+
+                        <!-- 4. Calculation diff — .c-calc-diff table (only populated if data exists) -->
+                        <section id="calculation-diff" class="report-region"></section>
+
+                        <!-- 5. Frist timeline container (.c-frist-timeline SVG) -->
+                        <section id="frist-timeline" class="report-region"></section>
+
+                        <!-- 6. Trap callout boxes (.c-trap-callout) -->
+                        <section id="traps-list" class="report-region"></section>
+
+                        <!-- 7. Numbered next-steps action list (.c-next-steps) -->
+                        <section id="next-steps" class="report-region"></section>
+
+                        <!-- 8. Document generation panel — POST /api/v1/documents/generate -->
+                        <section id="doc-actions" class="report-region"></section>
+
+                        <!-- 9. Footer: disclaimer + active profile -->
+                        <footer id="report-footer" class="report-footer"></footer>
+                    </div>
+                </section>
+
                 <!-- Case Chat (replaces static results view) -->
                 <section id="case-chat-section" class="section hidden">
                     <div class="case-chat-layout">
@@ -352,7 +405,7 @@
             </main>
 
             <footer>
-                <p>Citizen v0.4.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
             </footer>
         </div>
 
@@ -514,7 +567,83 @@
             </main>
 
             <footer>
-                <p>Citizen v0.4.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p class="footer-profile" id="footer-profile"></p>
+            </footer>
+        </div>
+
+        <!-- Prüfstand Mode (WP-14) -->
+        <div id="pruefstand-mode" class="hidden">
+            <header>
+                <div class="header-top">
+                    <div class="header-brand">
+                        <h1>Citizen</h1>
+                        <p class="subtitle">Prüfstand — Goldset & Evaluierung</p>
+                    </div>
+                    <div class="mode-toggle">
+                        <button class="mode-btn" data-mode="analyze">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Analysieren
+                        </button>
+                        <button class="mode-btn active" data-mode="pruefstand">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-4 6a4 4 0 0 0 3.5 6h7A4 4 0 0 0 19 14l-4-6V2"/><line x1="9" y1="2" x2="15" y2="2"/></svg>
+                            Prüfstand
+                        </button>
+                        <button class="mode-btn" data-mode="chat">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            Chat
+                        </button>
+                        <button class="mode-btn" data-mode="settings">
+                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            Einstellungen
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <!-- Prüfstand Header Area -->
+                <section class="section pruefstand-header" id="pruefstand-header-section">
+                    <div class="pruefstand-loading" id="pruefstand-loading">
+                        Goldset wird geladen …
+                    </div>
+                    <div class="pruefstand-error hidden" id="pruefstand-error"></div>
+                    <div class="pruefstand-content hidden" id="pruefstand-content">
+                        <!-- Populated by JS: badges, eval tile, baseline cards, open questions -->
+                    </div>
+                </section>
+
+                <!-- Case Gallery -->
+                <section class="section pruefstand-gallery-section hidden" id="pruefstand-gallery-section">
+                    <h2>Fall-Galerie</h2>
+                    <p class="pruefstand-notice">
+                        Hinweis: Es handelt sich um synthetische, fiktive Fälle.
+                    </p>
+                    <div class="pruefstand-gallery" id="pruefstand-gallery">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+
+                <!-- Case Detail -->
+                <section class="section pruefstand-detail-section hidden" id="pruefstand-detail-section">
+                    <button class="btn btn-small pruefstand-back-btn" id="pruefstand-back-btn">← Zurück zur Galerie</button>
+                    <div id="pruefstand-detail-content">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+
+                <!-- Demo Comparison -->
+                <section class="section pruefstand-demo-section hidden" id="pruefstand-demo-section">
+                    <button class="btn btn-small pruefstand-back-btn" id="pruefstand-demo-back-btn">← Zurück zum Fall</button>
+                    <div id="pruefstand-demo-content">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+                <p class="footer-profile" id="footer-profile-pruefstand"></p>
             </footer>
         </div>
 

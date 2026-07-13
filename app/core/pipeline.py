@@ -31,7 +31,7 @@ from sqlalchemy import func, select
 
 from app.core import config as cfg
 from app.db.models import LegalChunk
-from app.db.session import get_async_session, get_session_factory
+from app.db.session import get_async_session
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -47,6 +47,10 @@ class PipelineTimeoutError(Exception):
 
 class StageExecutionError(Exception):
     """Raised when a single pipeline stage fails irrecoverably."""
+
+
+class OcrQualityError(Exception):
+    """Raised when OCR quality is below the minimum threshold (WP-42)."""
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +110,15 @@ class PipelineState:
     # (only populated when legal_areas is non-empty). The merged
     # retrieved_chunks field is the union, capped at MAX_CHUNKS_FOR_FINAL.
     per_area_chunks: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    # WP-30: pseudonymization mapping for this case run
+    pii_mapping: dict[str, Any] | None = None
+    pseudonymization_warnings: list[str] = field(default_factory=list)
+    # legal_regime_banner: regime-awareness banner injected into LLM prompts
+    # for construction and generation stages (WP-24). Populated during
+    # classification/decomposition using the current date.
+    legal_regime_banner: str = ""
+    # WP-42: OCR quality report from pre-processing quality gate
+    ocr_quality_report: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +140,30 @@ _STAGES: list[str] = [
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+
+def _populate_regime_banner(state: PipelineState) -> None:
+    """Set ``state.legal_regime_banner`` based on the current date.
+
+    This function is called once after classification/triage completes so
+    that all subsequent pipeline stages can inject the regime-awareness
+    banner into their LLM prompts.
+
+    Currently uses ``date.today()`` as the reference date.  Future
+    enhancements may extract the Bescheid date from the normalized text
+    for historical cases.
+    """
+    from datetime import date as _dt
+
+    from app.services.regime import legal_regime, regime_banner
+
+    regime = legal_regime(_dt.today())
+    state.legal_regime_banner = regime_banner(regime)
+    logger.info(
+        "Regime banner set: regime=%s banner_len=%d",
+        regime,
+        len(state.legal_regime_banner),
+    )
 
 
 def _sse_event(stage: str, status: str, payload: dict[str, Any]) -> str:
@@ -181,11 +218,17 @@ def _stage_payload(
         payload["verified_claims"] = state.verified_claims
     elif stage_name == "adversarial_review":
         payload["review_count"] = len(state.adversarial_review.get("reviews", []))
-        payload["key_risks"] = state.adversarial_review.get("overall_assessment", {}).get("key_risks", [])
+        payload["key_risks"] = state.adversarial_review.get("overall_assessment", {}).get(
+            "key_risks", []
+        )
     elif stage_name == "calculation_check":
         payload["calculations_found"] = len(state.calculation_result.get("calculations_found", []))
-        payload["discrepancies"] = state.calculation_result.get("overall_assessment", {}).get("total_discrepancies", 0)
-        payload["total_amount_eur"] = state.calculation_result.get("overall_assessment", {}).get("total_amount_eur", 0.0)
+        payload["discrepancies"] = state.calculation_result.get("overall_assessment", {}).get(
+            "total_discrepancies", 0
+        )
+        payload["total_amount_eur"] = state.calculation_result.get("overall_assessment", {}).get(
+            "total_amount_eur", 0.0
+        )
     elif stage_name == "generation":
         payload["sections"] = list(state.final_output.keys())
 
@@ -210,7 +253,8 @@ async def _stage_classification(state: PipelineState) -> None:
 
     system_prompt = get_prompts(state.legal_areas)["classification"]
     state.issues = await classify_issues(
-        state.normalized_text, system_prompt=system_prompt,
+        state.normalized_text,
+        system_prompt=system_prompt,
     )
     logger.info("Classification complete (%d issues)", len(state.issues))
 
@@ -222,7 +266,8 @@ async def _stage_decomposition(state: PipelineState) -> None:
 
     system_prompt = get_prompts(state.legal_areas)["decomposition"]
     state.questions = await decompose_questions(
-        state.normalized_text, system_prompt=system_prompt,
+        state.normalized_text,
+        system_prompt=system_prompt,
     )
     logger.info("Decomposition complete (%d questions)", len(state.questions))
 
@@ -254,17 +299,20 @@ async def _run_classification_and_decomposition_stages(
         system_prompt = get_prompts(state.legal_areas)["triage"]
         try:
             triage_result = await triage_document(
-                state.normalized_text, system_prompt=system_prompt,
+                state.normalized_text,
+                system_prompt=system_prompt,
             )
         except Exception as exc:
             logger.exception("Combined triage failed")
             state.errors.append(f"triage (classification+decomposition): {exc}")
-            raise StageExecutionError(
-                f"Combined triage failed: {exc}"
-            ) from exc
+            raise StageExecutionError(f"Combined triage failed: {exc}") from exc
 
         state.issues = triage_result["issues"]
         state.questions = triage_result["questions"]
+
+        # WP-24: populate regime banner for subsequent LLM calls.
+        _populate_regime_banner(state)
+
         dur = int((time.monotonic() - t0) * 1000)
 
         logger.info(
@@ -278,7 +326,9 @@ async def _run_classification_and_decomposition_stages(
             stage="classification",
             status="complete",
             payload=_stage_payload(
-                state, stage_name="classification", duration_ms=dur,
+                state,
+                stage_name="classification",
+                duration_ms=dur,
             ),
         )
 
@@ -286,7 +336,9 @@ async def _run_classification_and_decomposition_stages(
             stage="decomposition",
             status="complete",
             payload=_stage_payload(
-                state, stage_name="decomposition", duration_ms=dur,
+                state,
+                stage_name="decomposition",
+                duration_ms=dur,
             ),
         )
         return
@@ -294,18 +346,12 @@ async def _run_classification_and_decomposition_stages(
     # ── WP-003: parallel path (legacy, COMBINE_TRIAGE_STAGES=False) ───
     logger.info("  → launching classification + decomposition in parallel")
 
-    cls_task = asyncio.create_task(
-        classify_issues(state.normalized_text), name="classification"
-    )
-    dec_task = asyncio.create_task(
-        decompose_questions(state.normalized_text), name="decomposition"
-    )
+    cls_task = asyncio.create_task(classify_issues(state.normalized_text), name="classification")
+    dec_task = asyncio.create_task(decompose_questions(state.normalized_text), name="decomposition")
 
     # Wait for both concurrently.  ``return_exceptions=True`` lets us inspect
     # each result individually and produce clear failure messages.
-    cls_result, dec_result = await asyncio.gather(
-        cls_task, dec_task, return_exceptions=True
-    )
+    cls_result, dec_result = await asyncio.gather(cls_task, dec_task, return_exceptions=True)
 
     cls_dur = int((time.monotonic() - t0) * 1000)
 
@@ -313,18 +359,21 @@ async def _run_classification_and_decomposition_stages(
     if isinstance(cls_result, BaseException):
         logger.exception("Stage classification failed in parallel batch")
         state.errors.append(f"classification: {cls_result}")
-        raise StageExecutionError(
-            f"Stage 'classification' failed: {cls_result}"
-        ) from cls_result
+        raise StageExecutionError(f"Stage 'classification' failed: {cls_result}") from cls_result
 
     state.issues = cls_result
     logger.info("Classification complete (%d issues)", len(state.issues))
+
+    # WP-24: populate regime banner for subsequent LLM calls.
+    _populate_regime_banner(state)
 
     yield _sse_event(
         stage="classification",
         status="complete",
         payload=_stage_payload(
-            state, stage_name="classification", duration_ms=cls_dur,
+            state,
+            stage_name="classification",
+            duration_ms=cls_dur,
         ),
     )
 
@@ -332,9 +381,7 @@ async def _run_classification_and_decomposition_stages(
     if isinstance(dec_result, BaseException):
         logger.exception("Stage decomposition failed in parallel batch")
         state.errors.append(f"decomposition: {dec_result}")
-        raise StageExecutionError(
-            f"Stage 'decomposition' failed: {dec_result}"
-        ) from dec_result
+        raise StageExecutionError(f"Stage 'decomposition' failed: {dec_result}") from dec_result
 
     state.questions = dec_result
     logger.info("Decomposition complete (%d questions)", len(state.questions))
@@ -345,7 +392,9 @@ async def _run_classification_and_decomposition_stages(
         stage="decomposition",
         status="complete",
         payload=_stage_payload(
-            state, stage_name="decomposition", duration_ms=dec_dur,
+            state,
+            stage_name="decomposition",
+            duration_ms=dec_dur,
         ),
     )
 
@@ -374,10 +423,13 @@ async def _run_final_stages(
     # ── WP-007: combined final stages path ────────────────────────────
     if cfg._get_settings().COMBINE_FINAL_STAGES:
         logger.info(
-            "  → launching combined grounded answer "
-            "(construction + verification + generation)"
+            "  → launching combined grounded answer " "(construction + verification + generation)"
         )
         grounded_prompt = get_prompts(state.legal_areas)["grounded_answer"]
+
+        # WP-24: inject regime awareness banner.
+        if state.legal_regime_banner:
+            grounded_prompt = f"{state.legal_regime_banner}\n\n{grounded_prompt}"
 
         if stream_progress and cfg._get_settings().ENABLE_PROGRESS_STREAM:
             from app.services.reasoning import generate_grounded_answer_stream
@@ -415,9 +467,7 @@ async def _run_final_stages(
                 state.errors.append(
                     f"grounded answer (construction+verification+generation): {exc}"
                 )
-                raise StageExecutionError(
-                    f"Combined grounded answer failed: {exc}"
-                ) from exc
+                raise StageExecutionError(f"Combined grounded answer failed: {exc}") from exc
 
             if llm_claims is None or sections is None:
                 raise StageExecutionError(
@@ -431,6 +481,7 @@ async def _run_final_stages(
                     state.normalized_text,
                     state.issues,
                     state.questions,
+                    [],  # claims — unused by grounded answer, regenerated from LLM
                     state.retrieved_chunks,
                     system_prompt=grounded_prompt,
                 )
@@ -439,15 +490,13 @@ async def _run_final_stages(
                 state.errors.append(
                     f"grounded answer (construction+verification+generation): {exc}"
                 )
-                raise StageExecutionError(
-                    f"Combined grounded answer failed: {exc}"
-                ) from exc
+                raise StageExecutionError(f"Combined grounded answer failed: {exc}") from exc
 
             llm_claims = grounded["claims"]
             sections = grounded["sections"]
 
         # -- Stage 5: Construction (populated from LLM claims) ---------------
-        state.claims = llm_claims
+        state.claims = llm_claims or []
         construct_dur = int((time.monotonic() - t0) * 1000)
 
         logger.info(
@@ -460,7 +509,9 @@ async def _run_final_stages(
             stage="construction",
             status="complete",
             payload=_stage_payload(
-                state, stage_name="construction", duration_ms=construct_dur,
+                state,
+                stage_name="construction",
+                duration_ms=construct_dur,
             ),
         )
 
@@ -482,12 +533,14 @@ async def _run_final_stages(
             stage="verification",
             status="complete",
             payload=_stage_payload(
-                state, stage_name="verification", duration_ms=verify_dur,
+                state,
+                stage_name="verification",
+                duration_ms=verify_dur,
             ),
         )
 
         # -- Stage 7: Generation (populated from LLM sections) ---------------
-        state.final_output = sections
+        state.final_output = sections or {}
         gen_dur = int((time.monotonic() - ver_start) * 1000)
 
         logger.info(
@@ -500,7 +553,9 @@ async def _run_final_stages(
             stage="generation",
             status="complete",
             payload=_stage_payload(
-                state, stage_name="generation", duration_ms=gen_dur,
+                state,
+                stage_name="generation",
+                duration_ms=gen_dur,
             ),
         )
         return
@@ -515,7 +570,9 @@ async def _run_final_stages(
         stage="construction",
         status="complete",
         payload=_stage_payload(
-            state, stage_name="construction", duration_ms=c_dur,
+            state,
+            stage_name="construction",
+            duration_ms=c_dur,
         ),
     )
 
@@ -528,7 +585,9 @@ async def _run_final_stages(
         stage="verification",
         status="complete",
         payload=_stage_payload(
-            state, stage_name="verification", duration_ms=v_dur,
+            state,
+            stage_name="verification",
+            duration_ms=v_dur,
         ),
     )
 
@@ -541,12 +600,13 @@ async def _run_final_stages(
         stage="generation",
         status="complete",
         payload=_stage_payload(
-            state, stage_name="generation", duration_ms=g_dur,
+            state,
+            stage_name="generation",
+            duration_ms=g_dur,
         ),
     )
     logger.info(
-        "Final stages complete (legacy): construction=%dms, verification=%dms, "
-        "generation=%dms",
+        "Final stages complete (legacy): construction=%dms, verification=%dms, " "generation=%dms",
         c_dur,
         v_dur,
         g_dur,
@@ -603,8 +663,15 @@ async def _stage_construction(state: PipelineState) -> None:
     from app.services.reasoning import construct_claims
 
     system_prompt = get_prompts(state.legal_areas)["claim_construction"]
+
+    # WP-24: inject regime awareness banner.
+    if state.legal_regime_banner:
+        system_prompt = f"{state.legal_regime_banner}\n\n{system_prompt}"
+
     state.claims = await construct_claims(
-        state.retrieved_chunks, state.questions, system_prompt=system_prompt,
+        state.retrieved_chunks,
+        state.questions,
+        system_prompt=system_prompt,
     )
     logger.info("Construction complete (%d claims)", len(state.claims))
 
@@ -616,7 +683,9 @@ async def _stage_verification(state: PipelineState) -> None:
 
     system_prompt = get_prompts(state.legal_areas)["verification"]
     state.verified_claims = await verify_claims(
-        state.claims, state.retrieved_chunks, system_prompt=system_prompt,
+        state.claims,
+        state.retrieved_chunks,
+        system_prompt=system_prompt,
     )
     logger.info("Verification complete (%d verified claims)", len(state.verified_claims))
 
@@ -697,8 +766,14 @@ async def _stage_generation(state: PipelineState) -> None:
     from app.services.reasoning import generate_output
 
     system_prompt = get_prompts(state.legal_areas)["output"]
+
+    # WP-24: inject regime awareness banner.
+    if state.legal_regime_banner:
+        system_prompt = f"{state.legal_regime_banner}\n\n{system_prompt}"
+
     state.final_output = await generate_output(
-        state.verified_claims, system_prompt=system_prompt,
+        state.verified_claims,
+        system_prompt=system_prompt,
     )
     logger.info("Generation complete (sections: %s)", list(state.final_output.keys()))
 
@@ -729,9 +804,7 @@ async def _stage_calculation_check(state: PipelineState) -> None:
         state.calculation_result = result
 
         # Inject calculation findings into final_output for the UI.
-        state.final_output["berechnungspruefung"] = json.dumps(
-            result, ensure_ascii=False, indent=2
-        )
+        state.final_output["berechnungspruefung"] = json.dumps(result, ensure_ascii=False, indent=2)
 
         discrepancies = result.get("overall_assessment", {}).get("total_discrepancies", 0)
         logger.info(
@@ -877,14 +950,102 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     logger.info("Starting pipeline (timeout=%ds)", timeout_sec)
 
     # -----------------------------------------------------------------------
+    # WP-42: OCR quality gate — assess before any LLM call
+    # -----------------------------------------------------------------------
+    if cfg._get_settings().OCR_QUALITY_ENABLED:
+        from app.services.ocr_quality import assess_ocr_quality
+
+        ocr_report = assess_ocr_quality(state.input_text)
+        # Store report as dict for frontend consumption
+        state.ocr_quality_report = {
+            "score": ocr_report.score,
+            "level": ocr_report.level,
+            "issues": ocr_report.issues,
+            "warnings": ocr_report.warnings,
+            "ocr_artifacts_detected": ocr_report.ocr_artifacts_detected,
+            "readable_words_pct": ocr_report.readable_words_pct,
+            "language_detected": ocr_report.language_detected,
+            "recommendations": ocr_report.recommendations,
+        }
+
+        min_score = cfg._get_settings().OCR_QUALITY_MIN_SCORE
+        warn_score = cfg._get_settings().OCR_QUALITY_WARN_SCORE
+
+        if ocr_report.score < min_score:
+            logger.warning(
+                "OCR quality gate: score=%.4f < min_score=%.2f — blocking pipeline",
+                ocr_report.score,
+                min_score,
+            )
+            raise OcrQualityError(
+                f"OCR-Qualität unzureichend (Score: {ocr_report.score:.1%}, "
+                f"erforderlich: >{min_score:.0%}). "
+                f"{' '.join(ocr_report.recommendations)}"
+            )
+
+        if ocr_report.score < warn_score:
+            logger.warning(
+                "OCR quality gate: score=%.4f < warn_score=%.2f — emitting warning",
+                ocr_report.score,
+                warn_score,
+            )
+            yield _sse_event(
+                stage="ocr_quality",
+                status="warning",
+                payload={
+                    "score": ocr_report.score,
+                    "level": ocr_report.level,
+                    "issues": ocr_report.issues,
+                    "warnings": ocr_report.warnings,
+                    "ocr_artifacts_detected": ocr_report.ocr_artifacts_detected,
+                    "readable_words_pct": ocr_report.readable_words_pct,
+                    "language_detected": ocr_report.language_detected,
+                    "recommendations": ocr_report.recommendations,
+                },
+            )
+        elif ocr_report.level == "acceptable":
+            yield _sse_event(
+                stage="ocr_quality",
+                status="info",
+                payload={
+                    "score": ocr_report.score,
+                    "level": ocr_report.level,
+                    "issues": ocr_report.issues,
+                    "warnings": ocr_report.warnings,
+                },
+            )
+        else:
+            # "good" — silent pass-through
+            logger.info(
+                "OCR quality gate: score=%.4f level=%s — proceeding silently",
+                ocr_report.score,
+                ocr_report.level,
+            )
+
+    # -----------------------------------------------------------------------
+    # WP-30: Pseudonymization gate — replace PII before any LLM call
+    # -----------------------------------------------------------------------
+    if cfg._get_settings().PSEUDONYMIZATION_ENABLED:
+        from app.services.pseudonymization import pseudonymize
+
+        pseudonymized_text, mapping = pseudonymize(state.input_text, None)
+        state.input_text = pseudonymized_text
+        state.pii_mapping = mapping.to_dict()
+        logger.info(
+            "Pseudonymization gate applied: %d persons, %d addresses, " "%d companies, %d IDs",
+            mapping.person_counter,
+            mapping.address_counter,
+            mapping.company_counter,
+            mapping.id_counter,
+        )
+
+    # -----------------------------------------------------------------------
     # Corpus health check (before pipeline begins)
     # -----------------------------------------------------------------------
     total_chunks = 0
     try:
         async for session in get_async_session():
-            total_chunks = await session.scalar(
-                select(func.count(LegalChunk.id))
-            ) or 0
+            total_chunks = await session.scalar(select(func.count(LegalChunk.id))) or 0
             await session.close()
             break
     except Exception as exc:
@@ -963,9 +1124,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
             stage_start = time.monotonic()
             try:
                 events = await asyncio.wait_for(
-                    _collect_async_gen(
-                        _run_classification_and_decomposition_stages(state)
-                    ),
+                    _collect_async_gen(_run_classification_and_decomposition_stages(state)),
                     timeout=max(remaining, 10.0),
                 )
             except TimeoutError:
@@ -998,9 +1157,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
             stage_start = time.monotonic()
             try:
                 events = await asyncio.wait_for(
-                    _collect_async_gen(
-                        _run_final_stages(state)
-                    ),
+                    _collect_async_gen(_run_final_stages(state)),
                     timeout=max(remaining, 10.0),
                 )
             except TimeoutError:
@@ -1068,9 +1225,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
                 if keyword_fallback
                 else "Stichwort-Fallback war deaktiviert."
             )
-            logger.warning(
-                "No legal chunks retrieved — stopping pipeline with safe output"
-            )
+            logger.warning("No legal chunks retrieved — stopping pipeline with safe output")
             state.final_output = {
                 "sachverhalt": state.normalized_text if state.normalized_text else "",
                 "rechtliche_wuerdigung": (
@@ -1101,21 +1256,27 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     logger.info("PIPELINE TIMING SUMMARY")
     logger.info("=" * 55)
     # Print the parallel/combined entries if present.
-    comb_dur = stage_timings.get("classification+decomposition", None)
+    comb_dur = stage_timings.get("classification+decomposition")
     if comb_dur is not None:
         logger.info("  %-18s %8.2fs  (parallel)", "classification", comb_dur)
         logger.info("  %-18s %8s", "decomposition", "↑")
 
-    final_comb_dur = stage_timings.get("construction+verification+generation", None)
+    final_comb_dur = stage_timings.get("construction+verification+generation")
     if final_comb_dur is not None:
         logger.info("  %-18s %8.2fs  (combined)", "construction", final_comb_dur)
         logger.info("  %-18s %8s", "verification", "↑")
         logger.info("  %-18s %8s", "generation", "↑")
 
     for stage_name in _STAGES:
-        if stage_name in ("classification", "decomposition", "construction", "verification", "generation"):
+        if stage_name in (
+            "classification",
+            "decomposition",
+            "construction",
+            "verification",
+            "generation",
+        ):
             continue  # already printed above
-        dur = stage_timings.get(stage_name, None)
+        dur = stage_timings.get(stage_name)
         if dur is not None:
             logger.info("  %-18s %8.2fs", stage_name, dur)
         else:
@@ -1131,4 +1292,27 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
             (total_staged / total_elapsed) * 100,
         )
     logger.info("=" * 55)
+
+    # -------------------------------------------------------------------
+    # WP-30: Depseudonymize final output — restore original PII for user
+    # -------------------------------------------------------------------
+    if state.pii_mapping is not None:
+        from app.services.pseudonymization import (
+            PiiMapping,
+            depseudonymize_output,
+        )
+
+        mapping = PiiMapping.from_dict(state.pii_mapping)
+        if mapping.placeholder_to_value:
+            for section_key in list(state.final_output.keys()):
+                value = state.final_output[section_key]
+                if isinstance(value, str):
+                    restored, warnings = depseudonymize_output(value, mapping)
+                    state.final_output[section_key] = restored
+                    state.pseudonymization_warnings.extend(f"{section_key}: {w}" for w in warnings)
+            logger.info(
+                "Depseudonymization complete with %d warning(s)",
+                len(state.pseudonymization_warnings),
+            )
+
     logger.info("Pipeline completed successfully.")

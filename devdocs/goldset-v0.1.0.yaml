@@ -1,0 +1,1364 @@
+# =============================================================================
+# Citizen — Golden Set for SGB II / SGB X Pipeline Evaluation
+# goldset-v0.1.0
+# =============================================================================
+# 10 synthetic but legally realistic Bescheid cases, verified against the
+# legal situation as of 2026-07-11 (post 13. SGB-II-ÄndG / "Grundsicherungsgeld").
+#
+# PURPOSE
+#   Regression evaluation of the Citizen pipeline:
+#     - issue recall            (expected.legal_issues[].id)
+#     - citation precision      (expected.citations[])
+#     - calculation exact-match (expected.calculation)
+#     - deadline exact-match    (expected.widerspruchsfrist)
+#     - trap awareness          (expected.known_traps[])
+#
+# PROVENANCE / DISCLAIMER
+#   All documents, persons, addresses, BG numbers and amounts are FICTIONAL.
+#   Ground-truth annotations reflect careful research, not legal advice.
+#   Version discipline: this file is immutable once tagged. Corrections go
+#   into goldset-v0.1.1+; new cases into goldset-v0.2.0+.
+# =============================================================================
+
+goldset:
+  id: goldset-sgb2-sgbx
+  version: 0.1.0
+  schema_version: 1.0.0
+  created: "2026-07-11"
+  rechtsstand: "2026-07-11"
+  evaluation_reference_date: "2026-07-11"   # "today" for all Frist open/lapsed judgments
+  legal_area: sozialrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW                  # NRW holiday calendar governs Fristende rollover
+  language: de
+  case_count: 10
+  provenance: synthetic
+
+  # ---------------------------------------------------------------------------
+  # VERIFIED LEGAL BASELINE (research date 2026-07-11)
+  # Every value below is load-bearing for at least one case.
+  # ---------------------------------------------------------------------------
+  legal_baseline:
+    reform_status:
+      note: >
+        13. Gesetz zur Änderung des SGB II ("neue Grundsicherung"), verkündet
+        BGBl. 2026 I Nr. 107 vom 22.04.2026. Kernregelungen in Kraft seit
+        01.07.2026; einzelne Sanktionsregelungen bereits seit 23.04.2026.
+        Leistung heißt "Grundsicherungsgeld"; Behörden dürfen bis Ende 2026
+        weiterhin "Bürgergeld" verwenden. Bestehende Bewilligungen laufen
+        weiter und werden bei der nächsten Entscheidung nach neuem Recht
+        fortgeführt.
+    regelbedarf_2026:
+      note: "Nullrunde 2026 (Besitzschutz); Fortschreibungs-VO im BGBl. 22.10.2025"
+      rbs1_alleinstehend: 563.00
+      rbs2_partner: 506.00
+      geltung: "2024-01-01 bis mindestens 2026-12-31"
+    einkommen_absetzbetraege_11b:
+      note: >
+        § 11b SGB II unverändert durch die Reform. Grundabsetzungsbetrag
+        100 EUR (§ 11b Abs. 2 S. 1). Staffel nach § 11b Abs. 3 S. 2
+        (Bemessung am Brutto-Erwerbseinkommen, Absetzung vom Netto):
+        20 % für den Teil > 100 bis 520 EUR; 30 % für den Teil > 520 bis
+        1000 EUR (seit 01.07.2023); 10 % für den Teil > 1000 bis 1200 EUR
+        (1500 EUR bei mind. einem minderjährigen Kind, § 11b Abs. 3 S. 3).
+      grundabsetzung: 100.00
+      staffel:
+        - { von: 100.01, bis: 520.00, prozent: 20 }
+        - { von: 520.01, bis: 1000.00, prozent: 30 }
+        - { von: 1000.01, bis: 1200.00, prozent: 10 }
+    sanktionen_neues_recht:
+      note: "Rechtslage seit 01.07.2026 (tw. seit 23.04.2026)"
+      pflichtverletzung_31a:
+        minderung_prozent_regelbedarf: 30
+        dauer_monate: 3
+        aufhebung: >
+          Minderung ist aufzuheben, sobald Pflichten erfüllt werden oder
+          ernsthafte und nachhaltige Bereitschaftserklärung erfolgt
+          (§ 31a Abs. 1 S. 2 SGB II n.F.). Alte 10/20/30-Staffelung entfallen.
+        kdu_schutz: "KdU-Zahlbeträge dürfen nicht verringert werden (§ 31a Abs. 4 S. 2)"
+        anhoerung: "persönliche Anhörung auf Verlangen / bei psych. Erkrankung (§ 31a Abs. 2)"
+      meldeversaeumnis_32:
+        erstes_versaeumnis: "NICHT sanktionsbewehrt (nur 'wiederholtes' Versäumnis)"
+        ab_zweitem_versaeumnis: "30 % des Regelbedarfs für 1 Monat (§ 32 Abs. 1 S. 1 n.F.)"
+      drei_versaeumnisse_32a: >
+        Entzug des Regelbedarfs nach drei aufeinanderfolgenden Meldeversäumnissen
+        (§ 32a n.F.); KdU und KV laufen weiter; wichtiger Grund: Darlegung genügt.
+        Anschließend Nichterreichbarkeitsfiktion (§ 7b Abs. 4) mit vollständigem
+        Anspruchsentfall möglich; 1-Euro-Bewilligung nach § 31a Abs. 4 S. 3.
+      aufschiebende_wirkung: >
+        Widerspruch gegen Minderungs-/Aufhebungs-/Entziehungsbescheide hat
+        KEINE aufschiebende Wirkung (§ 39 Nr. 1 SGB II); gegen reine
+        Erstattungsbescheide hingegen schon (§ 86a Abs. 1 SGG).
+    vermoegen_intertemporal:
+      altes_recht_bis_2026_06_30: >
+        § 12 SGB II a.F.: Karenzzeit 12 Monate mit 40.000 EUR Freibetrag für
+        die erste Person (+15.000 EUR je weitere Person); nach Karenzzeit
+        15.000 EUR pro Person. Gefördertes Altersvorsorgevermögen privilegiert.
+      neues_recht_ab_2026_07_01: >
+        Karenzzeit beim Vermögen ersatzlos gestrichen; altersgestaffelte
+        Freibeträge ab dem ersten Tag. ACHTUNG: Die exakten Altersstufen-
+        Beträge werden in Sekundärquellen uneinheitlich berichtet
+        (ca. 5.000–20.000 EUR) und sind vor produktiver Nutzung gegen den
+        BGBl.-Text / die BMAS-Ausführungsbestimmungen zu verifizieren.
+        Kein Fixture macht diese Beträge zur Ground Truth.
+    kdu:
+      karenzzeit: >
+        12-monatige KdU-Karenzzeit besteht fort (Unterkunft, nicht Heizung),
+        seit 01.07.2026 jedoch gedeckelt auf das 1,5-fache der kommunalen
+        Angemessenheitsgrenze (§ 22 Abs. 1 SGB II n.F.).
+      kostensenkungsaufforderung: >
+        Kein Verwaltungsakt, sondern Aufklärung/Warnung mit Informations-
+        funktion (st. Rspr. BSG, z.B. Urt. v. 19.02.2009 - B 4 AS 30/08 R);
+        Widerspruch dagegen unstatthaft.
+    fristen_model:
+      bekanntgabefiktion: >
+        Schriftlicher VA gilt am VIERTEN Tag nach Aufgabe zur Post als bekannt
+        gegeben (§ 37 Abs. 2 S. 1 SGB X; "drei" -> "vier" Tage durch Art. 33
+        PostModG zum 01.01.2025, weitere Folgeänderung durch SGB VI-AnpG zum
+        24.12.2025). Ausnahme: tatsächlich späterer Zugang / Zweifel.
+      widerspruchsfrist: >
+        Ein Monat nach Bekanntgabe (§ 84 Abs. 1 S. 1 SGG). Fristberechnung
+        nach § 64 SGG: Beginn am Tag nach Bekanntgabe (Abs. 1); Ende mit
+        Ablauf des Tages des Folgemonats, der dem Bekanntgabetag entspricht
+        (Abs. 2); fällt das Ende auf Samstag, Sonntag oder Feiertag, endet
+        die Frist mit Ablauf des nächsten Werktags (Abs. 3).
+      jahresfrist: >
+        Bei fehlender oder unrichtiger Rechtsbehelfsbelehrung: ein Jahr
+        (§ 66 Abs. 2 SGG).
+      design_note: >
+        Alle Fixture-Daten sind so gewählt, dass der 4. Tag nach Postaufgabe
+        auf einen Werktag fällt. Die umstrittene Frage, ob sich die
+        Bekanntgabefiktion bei Wochenende/Feiertag auf den nächsten Werktag
+        verschiebt, ist damit bewusst NICHT load-bearing (siehe
+        open_questions) — sie taucht nur als known_trap auf.
+    kalender_2026_anker:
+      - "2026-07-11 = Samstag (Referenzdatum)"
+      - "Feiertage NRW H1/2026 u.a.: 03.04 Karfreitag, 05./06.04 Ostern, 01.05, 14.05 Himmelfahrt, 25.05 Pfingstmontag, 04.06 Fronleichnam"
+
+  open_questions:
+    - id: OQ-1
+      topic: "Bekanntgabefiktion an Sa/So/Feiertag"
+      note: >
+        Ob der 4-Tages-Zeitraum des § 37 Abs. 2 SGB X bei Fristende an einem
+        Sa/So/Feiertag auf den nächsten Werktag verlängert wird, ist
+        umstritten (aktuell z.B. LSG NRW, 20.05.2026 - L 2 AS 1639/25:
+        Fiktion gilt auch an Sonn-/Feiertagen). Fixtures vermeiden die
+        Konstellation; Engine sollte beide Auslegungen kennzeichnen können.
+    - id: OQ-2
+      topic: "Dauer des Regelbedarfs-Entzugs bei Arbeitsverweigerung (§ 31a Abs. 7 n.F.)"
+      note: >
+        Sekundärquellen berichten uneinheitlich (2 vs. 3 Monate; Aufhebung
+        nach § 31b Abs. 3 bei Wegfall der Arbeitsmöglichkeit). Vor Nutzung
+        als Ground Truth gegen BGBl. 2026 I Nr. 107 verifizieren. Kein
+        Fixture macht die Dauer zur Ground Truth.
+    - id: OQ-3
+      topic: "Altersstaffel-Beträge Schonvermögen § 12 SGB II n.F."
+      note: "Siehe legal_baseline.vermoegen_intertemporal — gegen Primärquelle prüfen."
+
+  evaluation_guide:
+    issue_recall: "Anteil der expected.legal_issues[].id, die die Pipeline als Claim identifiziert"
+    citation_precision: "Anteil der Pipeline-Zitate, die in expected.citations[] (oder deren Obermenge im Fixture-Kontext) vorkommen; halluzinierte Normen zählen doppelt negativ"
+    calculation_exact_match: "Alle Beträge in expected.calculation.expected_* müssen centgenau reproduziert werden"
+    frist_exact_match: "expected.widerspruchsfrist.frist_ende (ISO-Datum) bzw. Sonderwert 'kein_verwaltungsakt'"
+    assessment_match: "expected.overall_assessment in {rechtswidrig, teilweise_rechtswidrig, ueberwiegend_rechtmaessig, kein_verwaltungsakt}"
+
+# =============================================================================
+# CASES
+# =============================================================================
+cases:
+
+  # ---------------------------------------------------------------------------
+  # GS-001 — Bewilligung mit fehlerhafter Einkommensanrechnung (§ 11b)
+  # ---------------------------------------------------------------------------
+  - id: GS-001
+    version: 1.0.0
+    title: "Bewilligungsbescheid — Erwerbstätigenfreibetrag mit veralteter 20%-Staffel berechnet"
+    category: bewilligung_einkommensanrechnung
+    difficulty: mittel
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        Kurfürstenstraße 58, 45138 Essen
+        BG-Nummer: 56102//0034917
+        Team 512 — Frau Beckmann
+
+        Herrn
+        Timo Vahrenholt
+        Steeler Straße 214
+        45138 Essen
+
+        Essen, 06.07.2026
+
+        Bewilligungsbescheid
+        Grundsicherungsgeld nach dem Zweiten Buch Sozialgesetzbuch (SGB II)
+
+        Sehr geehrter Herr Vahrenholt,
+
+        auf Ihren Weiterbewilligungsantrag vom 15.06.2026 bewillige ich Ihnen
+        für den Zeitraum vom 01.08.2026 bis 31.07.2027 Leistungen in Höhe von
+        monatlich 513,00 EUR.
+
+        Berechnung Ihres Anspruchs (monatlich):
+
+        Bedarf:
+          Regelbedarf (Regelbedarfsstufe 1)            563,00 EUR
+          Kosten der Unterkunft (Grundmiete)           395,00 EUR
+          Kalte Betriebskosten                          85,00 EUR
+          Heizkosten                                    70,00 EUR
+          Gesamtbedarf                               1.113,00 EUR
+
+        Einkommen:
+          Erwerbseinkommen (brutto)                  1.100,00 EUR
+          Erwerbseinkommen (netto)                     890,00 EUR
+          Grundabsetzungsbetrag (§ 11b Abs. 2 SGB II) -100,00 EUR
+          Freibetrag 20 % von 420,00 EUR               -84,00 EUR
+          Freibetrag 20 % von 480,00 EUR               -96,00 EUR
+          Freibetrag 10 % von 100,00 EUR               -10,00 EUR
+          Anzurechnendes Einkommen                     600,00 EUR
+
+        Anspruch: 1.113,00 EUR - 600,00 EUR = 513,00 EUR monatlich.
+
+        Die Leistungen werden monatlich im Voraus auf Ihr bekanntes Konto
+        überwiesen. Bitte teilen Sie Änderungen in Ihren Verhältnissen
+        unverzüglich mit (§ 60 SGB I).
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        Widerspruch erhoben werden. Der Widerspruch ist schriftlich oder zur
+        Niederschrift beim Jobcenter Essen, Kurfürstenstraße 58, 45138 Essen,
+        einzulegen.
+
+        Mit freundlichen Grüßen
+        Im Auftrag
+        Beckmann
+      aufgabe_zur_post: "2026-07-06"
+    expected:
+      overall_assessment: teilweise_rechtswidrig
+      summary: >
+        Bewilligung dem Grunde nach korrekt, aber der Erwerbstätigenfreibetrag
+        wurde mit der bis 30.06.2023 geltenden 20%-Staffel für den
+        Einkommensteil 520–1.000 EUR berechnet. Seit 01.07.2023 gilt für
+        diesen Teil 30 % (§ 11b Abs. 3 S. 2 Nr. 2 SGB II). Der Anspruch ist
+        um 48,00 EUR/Monat zu niedrig festgesetzt.
+      legal_issues:
+        - id: GS-001-I1
+          issue: "Freibetragsstaffel § 11b Abs. 3 S. 2 Nr. 2 falsch angewendet (20 % statt 30 % für Einkommensteil 520–1.000 EUR)"
+          assessment: rechtswidrig_zulasten
+        - id: GS-001-I2
+          issue: "Übrige Berechnung (Bedarf, Grundabsetzung, 20%- und 10%-Band) korrekt"
+          assessment: rechtmaessig
+      citations:
+        - { norm: "§ 11b Abs. 2 S. 1 SGB II", rolle: "Grundabsetzungsbetrag 100 EUR" }
+        - { norm: "§ 11b Abs. 3 S. 2 Nr. 1-3 SGB II", rolle: "Freibetragsstaffel 20/30/10 %" }
+        - { norm: "§ 20 SGB II", rolle: "Regelbedarf RBS 1" }
+        - { norm: "§ 22 Abs. 1 SGB II", rolle: "Bedarfe für Unterkunft und Heizung" }
+        - { norm: "§ 19 Abs. 3 SGB II", rolle: "Minderung des Bedarfs durch Einkommen" }
+        - { norm: "§ 84 Abs. 1 S. 1 SGG", rolle: "Widerspruchsfrist" }
+      calculation:
+        input:
+          regelbedarf: 563.00
+          kdu_gesamt: 550.00
+          gesamtbedarf: 1113.00
+          erwerbseinkommen_brutto: 1100.00
+          erwerbseinkommen_netto: 890.00
+        jobcenter_ergebnis:
+          freibetrag_gesamt: 290.00
+          anzurechnendes_einkommen: 600.00
+          bewilligt_monatlich: 513.00
+        expected_korrekt:
+          grundabsetzung: 100.00
+          fb_20_prozent_band: 84.00        # 20% von (520-100)
+          fb_30_prozent_band: 144.00       # 30% von (1000-520)
+          fb_10_prozent_band: 10.00        # 10% von (1100-1000)
+          freibetrag_gesamt: 338.00
+          anzurechnendes_einkommen: 552.00
+          anspruch_monatlich: 561.00
+          differenz_pro_monat: 48.00
+      widerspruchsfrist:
+        bescheid_datum: "2026-07-06"
+        aufgabe_zur_post: "2026-07-06"
+        bekanntgabe_fiktion: "2026-07-10"   # 4. Tag, Freitag (§ 37 Abs. 2 S. 1 SGB X)
+        frist_ende: "2026-08-10"            # Montag; § 84 Abs. 1 SGG, § 64 Abs. 2 SGG
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Staffelprozentsätze bemessen sich am BRUTTO-Erwerbseinkommen, abgesetzt wird vom NETTO — Pipeline darf Brutto/Netto nicht vertauschen."
+        - "Die 30%-Stufe für 520–1.000 EUR gilt erst seit 01.07.2023 — Modelle mit älterem Trainingsstand reproduzieren gern die 20%-Rechnung des Jobcenters und halten den Bescheid für korrekt."
+        - "Rechtsbehelfsbelehrung ist ordnungsgemäß — keine Jahresfrist; Fristende 10.08.2026 ist ein Montag, kein Rollover nötig."
+      actionable_next_steps:
+        - "Widerspruch bis 10.08.2026 einlegen; konkrete Neuberechnung mit 30%-Band beifügen."
+        - "Nachzahlung von 48,00 EUR/Monat ab 01.08.2026 geltend machen."
+
+  # ---------------------------------------------------------------------------
+  # GS-002 — Endgültige Festsetzung nach vorläufiger Bewilligung (§ 41a)
+  # ---------------------------------------------------------------------------
+  - id: GS-002
+    version: 1.0.0
+    title: "Endgültige Festsetzung mit Erstattungsforderung — Absetzbeträge vollständig vergessen"
+    category: endgueltige_festsetzung_41a
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0051233
+        Team 517 — Herr Okonkwo
+
+        Frau
+        Sabine Terhorst
+        Frohnhauser Str. 88
+        45143 Essen
+
+        Essen, 15.06.2026
+
+        Bescheid über die endgültige Festsetzung des Leistungsanspruchs
+        und Erstattung nach § 41a SGB II
+        Bewilligungszeitraum: 01.12.2025 bis 31.05.2026
+
+        Sehr geehrte Frau Terhorst,
+
+        mit Bescheid vom 24.11.2025 wurden Ihnen Leistungen für den o.g.
+        Zeitraum wegen Ihres schwankenden Erwerbseinkommens vorläufig in Höhe
+        von monatlich 400,00 EUR bewilligt (§ 41a Abs. 1 SGB II).
+
+        Nach Vorlage Ihrer Lohnabrechnungen setze ich den Leistungsanspruch
+        nunmehr endgültig fest (§ 41a Abs. 3 SGB II).
+
+        Berechnung (monatlich, Durchschnitt des Bewilligungszeitraums):
+
+        Bedarf:
+          Regelbedarf (RBS 1)                          563,00 EUR
+          Kosten der Unterkunft und Heizung            480,00 EUR
+          Gesamtbedarf                               1.043,00 EUR
+
+        Einkommen:
+          Erwerbseinkommen (brutto, Durchschnitt)    1.000,00 EUR
+          Erwerbseinkommen (netto, Durchschnitt)       820,00 EUR
+          Anzurechnendes Einkommen                     820,00 EUR
+
+        Endgültiger Anspruch: 1.043,00 EUR - 820,00 EUR = 223,00 EUR monatlich.
+
+        Da Ihnen vorläufig 400,00 EUR monatlich gezahlt wurden, ergibt sich
+        eine Überzahlung von 177,00 EUR monatlich, insgesamt
+
+            1.062,00 EUR (6 Monate x 177,00 EUR).
+
+        Diesen Betrag haben Sie gemäß § 41a Abs. 6 Satz 3 SGB II zu erstatten.
+        Bitte überweisen Sie den Betrag innerhalb eines Monats nach
+        Bestandskraft dieses Bescheides auf das unten genannte Konto.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Okonkwo
+      aufgabe_zur_post: "2026-06-15"
+    expected:
+      overall_assessment: rechtswidrig
+      summary: >
+        Bei der endgültigen Festsetzung wurde das Nettoeinkommen ohne jegliche
+        Absetzbeträge nach § 11b SGB II angerechnet. Korrekt sind 328,00 EUR
+        Freibeträge; das anzurechnende Einkommen beträgt 492,00 EUR, der
+        endgültige Anspruch 551,00 EUR/Monat. Statt einer Erstattung von
+        1.062,00 EUR ergibt sich eine NACHZAHLUNG von 906,00 EUR zugunsten
+        der Leistungsberechtigten.
+      legal_issues:
+        - id: GS-002-I1
+          issue: "Absetzbeträge nach § 11b Abs. 2 und Abs. 3 SGB II bei der endgültigen Festsetzung vollständig unberücksichtigt"
+          assessment: rechtswidrig_zulasten
+        - id: GS-002-I2
+          issue: "Vorzeichenumkehr: korrekte Festsetzung ergibt Nachzahlungsanspruch (§ 41a Abs. 6 S. 1-2 SGB II), keine Erstattung"
+          assessment: rechtswidrig_zulasten
+        - id: GS-002-I3
+          issue: "Rechtsgrundlage der Erstattung wäre § 41a Abs. 6 S. 3 SGB II (nicht § 50 SGB X) — hier im Ansatz korrekt zitiert, nur rechnerisch falsch"
+          assessment: hinweis
+      citations:
+        - { norm: "§ 41a Abs. 1, 3, 6 SGB II", rolle: "vorläufige Bewilligung, endgültige Festsetzung, Erstattung/Nachzahlung" }
+        - { norm: "§ 41a Abs. 4 SGB II", rolle: "Durchschnittseinkommen im Bewilligungszeitraum" }
+        - { norm: "§ 11b Abs. 2 S. 1 SGB II", rolle: "Grundabsetzungsbetrag 100 EUR" }
+        - { norm: "§ 11b Abs. 3 S. 2 Nr. 1-2 SGB II", rolle: "20%-/30%-Freibetragsbänder" }
+        - { norm: "§ 84 Abs. 1 S. 1 SGG", rolle: "Widerspruchsfrist" }
+        - { norm: "§ 64 Abs. 3 SGG", rolle: "Fristende an Sonntag -> nächster Werktag" }
+      calculation:
+        input:
+          gesamtbedarf: 1043.00
+          erwerbseinkommen_brutto_durchschnitt: 1000.00
+          erwerbseinkommen_netto_durchschnitt: 820.00
+          vorlaeufig_gezahlt_monatlich: 400.00
+          monate: 6
+        jobcenter_ergebnis:
+          anzurechnendes_einkommen: 820.00
+          endgueltiger_anspruch_monatlich: 223.00
+          erstattungsforderung_gesamt: 1062.00
+        expected_korrekt:
+          grundabsetzung: 100.00
+          fb_20_prozent_band: 84.00       # 20% von (520-100)
+          fb_30_prozent_band: 144.00      # 30% von (1000-520)
+          freibetrag_gesamt: 328.00
+          anzurechnendes_einkommen: 492.00
+          endgueltiger_anspruch_monatlich: 551.00
+          nachzahlung_monatlich: 151.00
+          nachzahlung_gesamt: 906.00
+          erstattungsforderung_korrekt: 0.00
+      widerspruchsfrist:
+        bescheid_datum: "2026-06-15"
+        aufgabe_zur_post: "2026-06-15"
+        bekanntgabe_fiktion: "2026-06-19"   # 4. Tag, Freitag
+        frist_ende_rechnerisch: "2026-07-19" # Sonntag
+        frist_ende: "2026-07-20"             # Montag (§ 64 Abs. 3 SGG)
+        status_am_referenzdatum: offen        # Referenz 11.07.2026 — noch 9 Tage
+      known_traps:
+        - "Fristende fällt rechnerisch auf Sonntag, 19.07.2026 — § 64 Abs. 3 SGG verschiebt auf Montag, 20.07.2026. Eine Engine ohne Werktag-Rollover meldet die Frist einen Tag zu früh."
+        - "Die Erstattung bei § 41a folgt aus § 41a Abs. 6 S. 3 SGB II, NICHT aus §§ 45/48/50 SGB X — es bedarf keiner Aufhebungsentscheidung; falsch wäre, hier eine fehlende Anhörung nach § 24 SGB X als tragenden Mangel zu behaupten."
+        - "Der zentrale Fehler ist rechnerisch, nicht dogmatisch: das System muss die komplette § 11b-Kaskade selbst nachrechnen statt die Jobcenter-Zahlen zu übernehmen."
+      actionable_next_steps:
+        - "Widerspruch bis 20.07.2026 (dringend — Referenzdatum 11.07.2026) mit vollständiger Gegenrechnung."
+        - "Nachzahlung von 906,00 EUR geltend machen; Zahlungsaufforderung zurückweisen."
+
+  # ---------------------------------------------------------------------------
+  # GS-003 — Aufhebung und Erstattung (§§ 48, 50 SGB X), Zuflussprinzip, Anhörung
+  # ---------------------------------------------------------------------------
+  - id: GS-003
+    version: 1.0.0
+    title: "Aufhebungs- und Erstattungsbescheid — Einkommen dem Erarbeitungs- statt Zuflussmonat zugeordnet, Anhörung fehlt"
+    category: aufhebung_erstattung_48_50
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0047781
+        Team 514 — Frau Jankowski
+
+        Herrn
+        Deniz Aydin
+        Altendorfer Str. 312
+        45143 Essen
+
+        Essen, 08.06.2026
+
+        Bescheid über die teilweise Aufhebung der Leistungsbewilligung
+        und Erstattung zu Unrecht erbrachter Leistungen
+
+        Sehr geehrter Herr Aydin,
+
+        mit Bescheid vom 18.11.2025 wurden Ihnen Leistungen nach dem SGB II
+        für den Zeitraum 01.12.2025 bis 31.05.2026 in Höhe von monatlich
+        1.043,00 EUR bewilligt.
+
+        Im Rahmen des automatisierten Datenabgleichs wurde bekannt, dass Sie
+        seit dem 01.02.2026 eine Beschäftigung bei der Fa. Rheinlogistik GmbH
+        ausüben. Die Lohnzahlung erfolgt nach Ihrem Arbeitsvertrag jeweils
+        nachträglich am dritten Werktag des Folgemonats. Ihr durchschnittliches
+        Einkommen beträgt 900,00 EUR brutto / 750,00 EUR netto monatlich.
+
+        Die Bewilligung wird daher für die Monate Februar, März und April 2026
+        gemäß § 48 Abs. 1 Satz 2 Nr. 3 SGB X in Verbindung mit § 40 Abs. 2
+        Nr. 3 SGB II, § 330 Abs. 3 SGB III teilweise in Höhe von monatlich
+        452,00 EUR aufgehoben.
+
+        Die entstandene Überzahlung in Höhe von
+
+            1.356,00 EUR (3 Monate x 452,00 EUR)
+
+        haben Sie gemäß § 50 Abs. 1 SGB X zu erstatten.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Jankowski
+      aufgabe_zur_post: "2026-06-08"
+    expected:
+      overall_assessment: teilweise_rechtswidrig
+      summary: >
+        Die Aufhebung für Februar 2026 ist rechtswidrig: Bei laufenden
+        Einnahmen gilt das Zuflussprinzip (§ 11 Abs. 1 SGB II); der Lohn für
+        Februar floss erst am 03.03.2026 zu. Zuflussmonate im Aufhebungs-
+        zeitraum sind März und April (Lohn für Februar und März). Die
+        Erstattung ist daher auf 904,00 EUR zu begrenzen. Zudem fehlte die
+        Anhörung nach § 24 SGB X — dieser Mangel ist jedoch im
+        Widerspruchsverfahren heilbar (§ 41 Abs. 1 Nr. 3, Abs. 2 SGB X).
+        Der monatliche Aufhebungsbetrag von 452,00 EUR ist rechnerisch
+        korrekt (Freibeträge zutreffend berücksichtigt).
+      legal_issues:
+        - id: GS-003-I1
+          issue: "Verstoß gegen das Zuflussprinzip: Einkommen dem Erarbeitungsmonat statt dem Zuflussmonat zugeordnet — Aufhebung für Februar 2026 rechtswidrig"
+          assessment: rechtswidrig_zulasten
+        - id: GS-003-I2
+          issue: "Fehlende Anhörung vor Erlass des belastenden Verwaltungsakts (§ 24 Abs. 1 SGB X)"
+          assessment: formell_rechtswidrig_heilbar
+        - id: GS-003-I3
+          issue: "Aufhebungsbetrag pro Monat (452,00 EUR) rechnerisch korrekt; gebundene Entscheidung ohne Ermessen (§ 40 Abs. 2 Nr. 3 SGB II i.V.m. § 330 Abs. 3 SGB III)"
+          assessment: rechtmaessig
+        - id: GS-003-I4
+          issue: "Für Mai 2026 (Zufluss des April-Lohns am 05.05.2026) wurde nicht aufgehoben — Risiko einer Nachforderung durch das Jobcenter; kein Fehler zulasten, aber aufklärungspflichtiger Hinweis"
+          assessment: hinweis
+      citations:
+        - { norm: "§ 11 Abs. 1 SGB II", rolle: "Zuflussprinzip bei laufenden Einnahmen" }
+        - { norm: "§ 48 Abs. 1 S. 2 Nr. 3 SGB X", rolle: "Aufhebung wegen nachträglicher Einkommenserzielung" }
+        - { norm: "§ 40 Abs. 2 Nr. 3 SGB II i.V.m. § 330 Abs. 3 SGB III", rolle: "gebundene Entscheidung, kein Ermessen" }
+        - { norm: "§ 50 Abs. 1 SGB X", rolle: "Erstattung" }
+        - { norm: "§ 24 Abs. 1 SGB X", rolle: "Anhörungspflicht" }
+        - { norm: "§ 41 Abs. 1 Nr. 3, Abs. 2 SGB X", rolle: "Heilung der fehlenden Anhörung" }
+        - { norm: "§ 39 Nr. 1 SGB II", rolle: "keine aufschiebende Wirkung des Widerspruchs gegen die Aufhebung" }
+        - { norm: "§ 86a Abs. 1 SGG", rolle: "aufschiebende Wirkung gegen den Erstattungsteil" }
+      calculation:
+        input:
+          bewilligt_monatlich: 1043.00
+          erwerbseinkommen_brutto: 900.00
+          erwerbseinkommen_netto: 750.00
+          lohnzufluss_termine: ["2026-03-03", "2026-04-03", "2026-05-05"]
+        jobcenter_ergebnis:
+          aufhebungsbetrag_monatlich: 452.00
+          aufhebungsmonate: ["2026-02", "2026-03", "2026-04"]
+          erstattungsforderung_gesamt: 1356.00
+        expected_korrekt:
+          freibetrag_gesamt: 298.00          # 100 + 84 (20% v. 420) + 114 (30% v. 380)
+          anzurechnendes_einkommen: 452.00
+          aufhebungsmonate_korrekt: ["2026-03", "2026-04"]
+          erstattung_korrekt: 904.00
+          rechtswidriger_anteil: 452.00
+      widerspruchsfrist:
+        bescheid_datum: "2026-06-08"
+        aufgabe_zur_post: "2026-06-08"
+        bekanntgabe_fiktion: "2026-06-12"    # 4. Tag, Freitag
+        frist_ende_rechnerisch: "2026-07-12"  # Sonntag
+        frist_ende: "2026-07-13"              # Montag (§ 64 Abs. 3 SGG)
+        status_am_referenzdatum: offen_dringend  # Referenz 11.07.2026 — nur noch 2 Tage!
+      known_traps:
+        - "DRINGLICHKEIT: Am Referenzdatum (11.07.2026) verbleiben 2 Tage bis Fristablauf — die Engine muss dies prominent ausweisen."
+        - "Zuflussprinzip: 'seit 01.02.2026 beschäftigt' verleitet dazu, Februar als Anrechnungsmonat zu akzeptieren; maßgeblich ist der Zufluss (03.03.2026)."
+        - "Fehlende Anhörung ist KEIN Volltreffer: heilbar nach § 41 SGB X — eine Engine, die daraus die vollständige Rechtswidrigkeit ableitet, erzeugt falsche Erfolgserwartungen."
+        - "Gespaltene Vollziehbarkeit: Aufhebung sofort vollziehbar (§ 39 Nr. 1 SGB II), der Erstattungsverwaltungsakt dagegen durch Widerspruch suspendiert (§ 86a SGG)."
+      actionable_next_steps:
+        - "SOFORT Widerspruch einlegen (Frist: Montag, 13.07.2026) — zunächst fristwahrend ohne Begründung möglich."
+        - "Begründung nachreichen: Aufhebung Februar wegen Zuflussprinzips angreifen; Reduktion der Erstattung auf 904,00 EUR."
+
+  # ---------------------------------------------------------------------------
+  # GS-004 — Rücknahme wegen anfänglicher Rechtswidrigkeit — falsche Rechtsgrundlage
+  # ---------------------------------------------------------------------------
+  - id: GS-004
+    version: 1.0.0
+    title: "Rücknahme wegen verschwiegenen Vermögens — auf § 48 statt § 45 SGB X gestützt (Austausch möglich, Erfolgsaussichten gering)"
+    category: ruecknahme_45
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0049502
+        Team 519 — Herr Vosskuhle
+
+        Frau
+        Renate Gierschner
+        Rüttenscheider Str. 145
+        45130 Essen
+
+        Essen, 22.06.2026
+
+        Bescheid über die Aufhebung der Leistungsbewilligung und Erstattung
+
+        Sehr geehrte Frau Gierschner,
+
+        mit Bescheid vom 21.11.2025 wurden Ihnen auf Ihren Antrag vom
+        05.11.2025 Leistungen nach dem SGB II für den Zeitraum 01.12.2025 bis
+        31.05.2026 in Höhe von monatlich 1.043,00 EUR bewilligt.
+
+        Durch den automatisierten Datenabgleich nach § 52 SGB II wurde am
+        04.05.2026 bekannt, dass Sie bereits zum Zeitpunkt der Antragstellung
+        über ein Wertpapierdepot bei der Comdirect mit einem Guthaben von
+        58.000,00 EUR verfügten. In Ihrem Antrag (Anlage VM) hatten Sie die
+        Frage nach Wertpapieren, Fonds und Depots verneint.
+
+        Ihr Vermögen überstieg damit von Beginn an den während der Karenzzeit
+        maßgebenden Freibetrag von 40.000,00 EUR (§ 12 Abs. 4 SGB II in der
+        bis 30.06.2026 geltenden Fassung). Hilfebedürftigkeit lag nicht vor.
+
+        Die Bewilligung wird daher gemäß § 48 Abs. 1 Satz 2 Nr. 3 SGB X wegen
+        einer wesentlichen Änderung der Verhältnisse vollständig für die Zeit
+        vom 01.12.2025 bis 31.05.2026 aufgehoben.
+
+        Die überzahlten Leistungen in Höhe von
+
+            6.258,00 EUR (6 Monate x 1.043,00 EUR)
+
+        haben Sie gemäß § 50 Abs. 1 SGB X zu erstatten.
+
+        Auf Ihr Schreiben vom 26.05.2026 im Rahmen der Anhörung wird Bezug
+        genommen; Ihre Einwände greifen nicht durch.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Vosskuhle
+      aufgabe_zur_post: "2026-06-22"
+    expected:
+      overall_assessment: ueberwiegend_rechtmaessig
+      summary: >
+        Materiell ist der Bescheid voraussichtlich haltbar: Das Depot bestand
+        bereits bei Antragstellung, überstieg den Karenzzeit-Freibetrag von
+        40.000 EUR (§ 12 Abs. 4 SGB II a.F., anwendbar für den
+        Bewilligungszeitraum bis 05/2026), wurde verschwiegen — kein
+        Vertrauensschutz (§ 45 Abs. 2 S. 3 Nr. 2 SGB X). Der Bescheid ist
+        aber auf die FALSCHE Rechtsgrundlage gestützt: Bei anfänglicher
+        Rechtswidrigkeit gilt § 45 SGB X, nicht § 48 SGB X. Nach st. Rspr.
+        des BSG kann die Rechtsgrundlage im Widerspruchs-/Klageverfahren
+        ausgetauscht werden, da die Rücknahme im SGB II gebundene
+        Entscheidung ist (§ 40 Abs. 2 Nr. 3 SGB II i.V.m. § 330 Abs. 2
+        SGB III) und sich der Verfügungssatz nicht ändert. Ehrliche
+        Erfolgsprognose: gering. Prüfwürdig bleiben Verwertbarkeit des
+        Depots, die Jahresfrist (§ 45 Abs. 4 S. 2 SGB X: Kenntnis
+        04.05.2026 — gewahrt) und die Höhe.
+      legal_issues:
+        - id: GS-004-I1
+          issue: "Falsche Rechtsgrundlage: anfängliche Rechtswidrigkeit -> § 45 SGB X statt § 48 SGB X; Austausch der Rechtsgrundlage im Widerspruchsverfahren zulässig (gebundene Entscheidung, identischer Verfügungssatz)"
+          assessment: formell_fehlerhaft_austauschbar
+        - id: GS-004-I2
+          issue: "Kein Vertrauensschutz wegen vorsätzlich/grob fahrlässig unvollständiger Angaben (§ 45 Abs. 2 S. 3 Nr. 2 SGB X); Rücknahme auch für die Vergangenheit (§ 45 Abs. 4 S. 1 SGB X)"
+          assessment: rechtmaessig
+        - id: GS-004-I3
+          issue: "Jahresfrist § 45 Abs. 4 S. 2 SGB X ab Kenntnis (04.05.2026) gewahrt"
+          assessment: rechtmaessig
+        - id: GS-004-I4
+          issue: "Anhörung nach § 24 SGB X wurde durchgeführt — kein Verfahrensmangel"
+          assessment: rechtmaessig
+        - id: GS-004-I5
+          issue: "Anwendung alten Vermögensrechts (Karenzzeit/40.000 EUR) auf den Bewilligungszeitraum bis 05/2026 zutreffend — neues Recht ab 01.07.2026 wirkt nicht zurück"
+          assessment: rechtmaessig
+      citations:
+        - { norm: "§ 45 Abs. 1, Abs. 2 S. 3 Nr. 2, Abs. 4 SGB X", rolle: "Rücknahme eines anfänglich rechtswidrigen begünstigenden VA" }
+        - { norm: "§ 48 SGB X", rolle: "vom Jobcenter fälschlich herangezogen (nur für nachträgliche Änderung)" }
+        - { norm: "§ 40 Abs. 2 Nr. 3 SGB II i.V.m. § 330 Abs. 2 SGB III", rolle: "gebundene Entscheidung — ermöglicht Austausch der Rechtsgrundlage" }
+        - { norm: "§ 50 Abs. 1 SGB X", rolle: "Erstattung" }
+        - { norm: "§ 12 Abs. 4 SGB II a.F. (bis 30.06.2026)", rolle: "Karenzzeit-Vermögensfreibetrag 40.000 EUR" }
+        - { norm: "§ 9 Abs. 1 SGB II", rolle: "Hilfebedürftigkeit" }
+        - { norm: "§ 60 Abs. 1 SGB I", rolle: "Mitwirkungs-/Angabepflichten" }
+      calculation:
+        input:
+          depot_bei_antragstellung: 58000.00
+          karenzzeit_freibetrag_af: 40000.00
+          bewilligt_monatlich: 1043.00
+          monate: 6
+        jobcenter_ergebnis:
+          erstattungsforderung_gesamt: 6258.00
+        expected_korrekt:
+          uebersteigendes_vermoegen: 18000.00
+          erstattungsforderung_bei_erfolglosem_widerspruch: 6258.00
+          rechenfehler_im_bescheid: 0.00
+      widerspruchsfrist:
+        bescheid_datum: "2026-06-22"
+        aufgabe_zur_post: "2026-06-22"
+        bekanntgabe_fiktion: "2026-06-26"    # 4. Tag, Freitag
+        frist_ende_rechnerisch: "2026-07-26"  # Sonntag
+        frist_ende: "2026-07-27"              # Montag (§ 64 Abs. 3 SGG)
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Kalibrierungs-Case gegen falsche Hoffnung: Die falsche Rechtsgrundlage (§ 48 statt § 45) fühlt sich wie ein Volltreffer an, ist aber wegen Austauschbarkeit fast nie erfolgstragend. Die Engine muss ehrlich 'geringe Erfolgsaussichten' ausgeben."
+        - "Intertemporal: Auf den Zeitraum 12/2025–05/2026 ist ALTES Vermögensrecht (Karenzzeit, 40.000 EUR) anzuwenden, obwohl der Bescheid nach der Reform geprüft wird."
+        - "Halluzinationsköder: Es gibt KEINEN Rechenfehler im Bescheid — eine Engine, die einen erfindet, fällt durch."
+      actionable_next_steps:
+        - "Widerspruch bis 27.07.2026 möglich; realistisch nur ergänzende Verteidigungslinien (tatsächliche Verwertbarkeit des Depots, Härtefall, Ratenzahlung/Erlassantrag)."
+        - "Ratenzahlungsvereinbarung bzw. Stundung der Erstattungsforderung anregen."
+
+  # ---------------------------------------------------------------------------
+  # GS-005 — Minderung wegen Meldeversäumnis — ERSTES Versäumnis, altes Recht angewandt
+  # ---------------------------------------------------------------------------
+  - id: GS-005
+    version: 1.0.0
+    title: "Minderungsbescheid nach § 32 SGB II — erstes Meldeversäumnis sanktioniert und alte 10%-Rechtsfolge angewandt"
+    category: minderung_meldeversaeumnis_32
+    difficulty: mittel
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0053110
+        Team 515 — Frau Demirci
+
+        Herrn
+        Pascal Rothert
+        Bocholder Str. 22
+        45355 Essen
+
+        Essen, 09.07.2026
+
+        Bescheid über die Feststellung einer Minderung des
+        Grundsicherungsgeldes wegen eines Meldeversäumnisses (§ 32 SGB II)
+
+        Sehr geehrter Herr Rothert,
+
+        Sie sind der Einladung zum Meldetermin am 07.07.2026, 09:30 Uhr, bei
+        Ihrer Integrationsfachkraft ohne Angabe von Gründen nicht gefolgt.
+        Über die Rechtsfolgen eines Meldeversäumnisses waren Sie mit der
+        Einladung vom 24.06.2026 schriftlich belehrt worden.
+
+        Ihr Grundsicherungsgeld wird daher gemäß § 32 SGB II für die Dauer
+        eines Monats um 10 Prozent des für Sie maßgebenden Regelbedarfs
+        gemindert.
+
+        Die Minderung beträgt 56,30 EUR und wird im Auszahlungsmonat
+        August 2026 berücksichtigt (Regelbedarf 563,00 EUR, Regelbedarfsstufe 1).
+
+        Hinweis: Ihr Widerspruch hat gemäß § 39 SGB II keine aufschiebende
+        Wirkung.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Demirci
+      aufgabe_zur_post: "2026-07-09"
+      zusatzkontext_nutzer: >
+        Herr Rothert gibt an, am 07.07.2026 wegen einer akuten Magen-Darm-
+        Erkrankung beim Hausarzt gewesen zu sein; eine AU-Bescheinigung für
+        den 07.-08.07.2026 liegt vor. Es ist sein erster versäumter Termin;
+        frühere Meldeversäumnisse gab es nicht.
+    expected:
+      overall_assessment: rechtswidrig
+      summary: >
+        Doppelt rechtswidrig nach neuem Recht: (1) Seit 01.07.2026 ist das
+        ERSTE Meldeversäumnis nicht mehr sanktionsbewehrt — § 32 Abs. 1 S. 1
+        SGB II n.F. setzt ein WIEDERHOLTES Versäumnis voraus; hier liegt
+        unstreitig das erste Versäumnis vor. (2) Die angewandte Rechtsfolge
+        (10 % für einen Monat) entstammt dem bis 30.06.2026 geltenden Recht;
+        die neue Rechtsfolge wäre 30 % — greift hier aber mangels
+        Wiederholung ohnehin nicht. (3) Zusätzlich liegt mit der ärztlich
+        attestierten Erkrankung ein wichtiger Grund vor. Die Minderung ist
+        vollständig aufzuheben.
+      legal_issues:
+        - id: GS-005-I1
+          issue: "Erstes Meldeversäumnis ist nach § 32 Abs. 1 S. 1 SGB II n.F. (seit 01.07.2026) nicht sanktionsbewehrt — Tatbestand 'wiederholt' nicht erfüllt"
+          assessment: rechtswidrig_zulasten
+        - id: GS-005-I2
+          issue: "Anwendung der Rechtsfolge alten Rechts (10 % / 1 Monat) auf einen nach dem 01.07.2026 verwirklichten Sachverhalt"
+          assessment: rechtswidrig_zulasten
+        - id: GS-005-I3
+          issue: "Wichtiger Grund (akute Erkrankung, AU-Bescheinigung) — schließt Minderung auch bei Wiederholung aus"
+          assessment: rechtswidrig_zulasten
+        - id: GS-005-I4
+          issue: "Keine aufschiebende Wirkung des Widerspruchs (§ 39 Nr. 1 SGB II) — ggf. Antrag nach § 86b Abs. 1 SGG beim Sozialgericht"
+          assessment: hinweis
+      citations:
+        - { norm: "§ 32 Abs. 1 S. 1 SGB II n.F.", rolle: "Minderung erst bei wiederholtem Meldeversäumnis, 30 % für einen Monat" }
+        - { norm: "§ 32 SGB II a.F.", rolle: "vom Jobcenter fälschlich angewandte alte Rechtsfolge (10 %)" }
+        - { norm: "§ 31a Abs. 4 S. 2 SGB II", rolle: "KdU-Zahlbeträge durch Minderung nicht reduzierbar" }
+        - { norm: "§ 39 Nr. 1 SGB II", rolle: "keine aufschiebende Wirkung" }
+        - { norm: "§ 86b Abs. 1 SGG", rolle: "einstweiliger Rechtsschutz" }
+        - { norm: "§ 84 Abs. 1 S. 1 SGG", rolle: "Widerspruchsfrist" }
+      calculation:
+        input:
+          regelbedarf: 563.00
+        jobcenter_ergebnis:
+          minderung_monatlich: 56.30
+          minderung_dauer_monate: 1
+        expected_korrekt:
+          minderung_rechtmaessig: 0.00
+          hinweis_neue_rechtsfolge_bei_wiederholung: 168.90   # 30% von 563 — nur informativ
+      widerspruchsfrist:
+        bescheid_datum: "2026-07-09"
+        aufgabe_zur_post: "2026-07-09"
+        bekanntgabe_fiktion: "2026-07-13"    # 4. Tag, Montag
+        frist_ende: "2026-08-13"              # Donnerstag
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Rechtslagen-Falle: Modelle mit Trainingsstand vor 2026 kennen die Bürgergeld-Staffel (10/20/30 %) und halten den Bescheid für rechtmäßig oder monieren nur den wichtigen Grund. Kernfehler ist der Tatbestand ('wiederholt') des neuen Rechts."
+        - "Bekanntgabe erfolgt hier am 13.07.2026 — NACH dem Referenzdatum 11.07.2026. Die Engine muss mit noch nicht bekannt gegebenen, aber vorliegenden Bescheiden umgehen können (Frist läuft noch gar nicht)."
+        - "Die 30%-Zahl (168,90 EUR) darf NICHT als 'korrekte Minderung' ausgegeben werden — mangels Wiederholung ist die rechtmäßige Minderung 0,00 EUR."
+      actionable_next_steps:
+        - "Widerspruch einlegen (Frist bis 13.08.2026); AU-Bescheinigung beifügen."
+        - "Aufhebung der Minderung und ungekürzte Auszahlung für August 2026 verlangen; bei Nichtabhilfe Eilantrag nach § 86b SGG prüfen."
+
+  # ---------------------------------------------------------------------------
+  # GS-006 — Minderung wegen Pflichtverletzung (§ 31a n.F.) — materiell möglich,
+  #           aber sofortiger Aufhebungsanspruch nach Pflichterfüllung
+  # ---------------------------------------------------------------------------
+  - id: GS-006
+    version: 1.0.0
+    title: "Minderungsbescheid 30 % / 3 Monate wegen fehlender Eigenbemühungen — neue Aufhebungsregel des § 31a Abs. 1 S. 2 übersehen"
+    category: minderung_pflichtverletzung_31a
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0050944
+        Team 516 — Herr Lindqvist
+
+        Frau
+        Jessica Kaminski
+        Katernberger Str. 107
+        45327 Essen
+
+        Essen, 06.07.2026
+
+        Bescheid über die Minderung des Grundsicherungsgeldes wegen einer
+        Pflichtverletzung (§§ 31, 31a SGB II)
+
+        Sehr geehrte Frau Kaminski,
+
+        in Ihrem Kooperationsplan vom 12.05.2026 war vereinbart, dass Sie
+        monatlich sechs Bewerbungen um sozialversicherungspflichtige
+        Beschäftigungen nachweisen. Über die Rechtsfolgen einer
+        Pflichtverletzung wurden Sie schriftlich belehrt.
+
+        Für den Monat Juni 2026 haben Sie trotz Erinnerung vom 22.06.2026
+        keine Bewerbungsnachweise vorgelegt. Einen wichtigen Grund haben Sie
+        nicht dargelegt.
+
+        Ihr Grundsicherungsgeld wird daher gemäß § 31a Abs. 1 SGB II um
+        30 Prozent des maßgebenden Regelbedarfs gemindert. Die Minderung
+        beträgt monatlich 168,90 EUR und gilt für die Dauer von drei Monaten
+        (§ 31b SGB II), somit für die Monate August bis Oktober 2026,
+        insgesamt 506,70 EUR.
+
+        Die Bedarfe für Unterkunft und Heizung werden durch die Minderung
+        nicht berührt.
+
+        Hinweis: Ihr Widerspruch hat gemäß § 39 SGB II keine aufschiebende
+        Wirkung.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Lindqvist
+      aufgabe_zur_post: "2026-07-06"
+      zusatzkontext_nutzer: >
+        Frau Kaminski hat die sechs Bewerbungen für Juni inzwischen (am
+        08.07.2026) nachgeholt und beim Jobcenter eingereicht; sie erklärt,
+        künftig fristgerecht nachzuweisen.
+    expected:
+      overall_assessment: teilweise_rechtswidrig
+      summary: >
+        Die Minderung ist dem Grunde nach nach neuem Recht möglich
+        (Pflichtverletzung nach § 31 SGB II n.F.: fehlender Nachweis
+        vereinbarter Eigenbemühungen; Rechtsfolge 30 % ohne Stufung,
+        Belehrung erfolgt, KdU korrekt verschont). ABER: Nach § 31a Abs. 1
+        S. 2 SGB II n.F. ist die Minderung AUFZUHEBEN, sobald die Pflichten
+        erfüllt werden oder eine ernsthafte, nachhaltige Bereitschafts-
+        erklärung erfolgt. Beides ist am 08.07.2026 geschehen. Die Minderung
+        darf daher für August–Oktober nicht (mehr) vollzogen werden; der
+        Fortbestand des Bescheides ab Pflichterfüllung ist rechtswidrig.
+        Zusätzlich besteht auf Verlangen ein Anspruch auf persönliche
+        Anhörung vor Feststellung (§ 31a Abs. 2 S. 1).
+      legal_issues:
+        - id: GS-006-I1
+          issue: "Minderungstatbestand (§ 31 SGB II n.F., fehlender Eigenbemühungsnachweis aus Kooperationsplan) und Rechtsfolge 30 % / 3 Monate zutreffend; Rechtsfolgenbelehrung erfolgt"
+          assessment: rechtmaessig
+        - id: GS-006-I2
+          issue: "Aufhebungsanspruch nach § 31a Abs. 1 S. 2 SGB II n.F. — Pflichten am 08.07.2026 nacherfüllt plus Bereitschaftserklärung: Minderung ist aufzuheben, bevor sie wirkt (ab 08/2026)"
+          assessment: rechtswidrig_zulasten
+        - id: GS-006-I3
+          issue: "Anspruch auf persönliche Anhörung auf Verlangen vor Feststellung der Minderung (§ 31a Abs. 2 S. 1 SGB II n.F.)"
+          assessment: hinweis
+        - id: GS-006-I4
+          issue: "KdU-Schutz beachtet (§ 31a Abs. 4 S. 2 SGB II) — kein Fehler"
+          assessment: rechtmaessig
+      citations:
+        - { norm: "§ 31 SGB II n.F.", rolle: "Pflichtverletzung: fehlender Nachweis von Eigenbemühungen" }
+        - { norm: "§ 31a Abs. 1 S. 1 SGB II n.F.", rolle: "Minderung 30 % des Regelbedarfs, keine Stufung mehr" }
+        - { norm: "§ 31a Abs. 1 S. 2 SGB II n.F.", rolle: "Aufhebung bei Pflichterfüllung / ernsthafter Bereitschaftserklärung" }
+        - { norm: "§ 31a Abs. 2 S. 1 SGB II n.F.", rolle: "persönliche Anhörung auf Verlangen" }
+        - { norm: "§ 31a Abs. 4 S. 2 SGB II", rolle: "KdU-Zahlbeträge unantastbar" }
+        - { norm: "§ 31b SGB II", rolle: "Beginn und Dauer der Minderung (3 Monate)" }
+        - { norm: "§ 39 Nr. 1 SGB II", rolle: "keine aufschiebende Wirkung" }
+      calculation:
+        input:
+          regelbedarf: 563.00
+        jobcenter_ergebnis:
+          minderung_monatlich: 168.90
+          minderung_monate: ["2026-08", "2026-09", "2026-10"]
+          minderung_gesamt: 506.70
+        expected_korrekt:
+          minderung_prozent: 30
+          minderung_monatlich_rechnerisch: 168.90
+          nach_pflichterfuellung_zu_vollziehen: 0.00
+      widerspruchsfrist:
+        bescheid_datum: "2026-07-06"
+        aufgabe_zur_post: "2026-07-06"
+        bekanntgabe_fiktion: "2026-07-10"    # 4. Tag, Freitag
+        frist_ende: "2026-08-10"              # Montag
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Neue-Norm-Falle: § 31a Abs. 1 S. 2 (Aufhebung bei Nacherfüllung) existiert erst seit der Reform — der wirksamste Hebel des Falls ist in Alt-Wissen nicht enthalten."
+        - "Der Bescheid selbst ist bei Erlass formal sauber; der Angriff läuft über die NACH Erlass eingetretene Pflichterfüllung — die Engine muss zwischen 'Bescheid bei Erlass rechtmäßig' und 'Vollzug jetzt rechtswidrig' differenzieren."
+        - "168,90 EUR und 506,70 EUR sind rechnerisch korrekt — hier darf kein Rechenfehler halluziniert werden."
+      actionable_next_steps:
+        - "Aufhebung der Minderung nach § 31a Abs. 1 S. 2 SGB II unter Verweis auf die Nacherfüllung vom 08.07.2026 beantragen."
+        - "Vorsorglich Widerspruch bis 10.08.2026 einlegen; persönliche Anhörung verlangen."
+
+  # ---------------------------------------------------------------------------
+  # GS-007 — Kostensenkungsaufforderung KdU — kein Verwaltungsakt, Karenzzeit
+  # ---------------------------------------------------------------------------
+  - id: GS-007
+    version: 1.0.0
+    title: "Kostensenkungsaufforderung — kein Verwaltungsakt; KdU-Karenzzeit läuft noch, 1,5-fach-Deckel nicht überschritten"
+    category: kdu_kostensenkung
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0055871
+        Team 513 — Frau Öztürk
+
+        Herrn
+        Marek Dombrowski
+        Gelsenkirchener Str. 51
+        45309 Essen
+
+        Essen, 29.06.2026
+
+        Aufforderung zur Senkung der Unterkunftskosten
+
+        Sehr geehrter Herr Dombrowski,
+
+        Sie beziehen seit dem 01.02.2026 Leistungen nach dem SGB II. Für Ihre
+        Wohnung entstehen monatliche Aufwendungen von 720,00 EUR
+        Bruttokaltmiete zuzüglich 95,00 EUR Heizkosten.
+
+        Nach dem schlüssigen Konzept der Stadt Essen beträgt die
+        Angemessenheitsgrenze für einen Ein-Personen-Haushalt derzeit
+        589,00 EUR Bruttokaltmiete. Ihre Unterkunftskosten sind damit
+        unangemessen hoch.
+
+        Ich fordere Sie auf, Ihre Unterkunftskosten bis zum 31.12.2026 auf
+        das angemessene Maß zu senken, z. B. durch Wohnungswechsel,
+        Untervermietung oder Verhandlung mit dem Vermieter. Bitte weisen Sie
+        Ihre Bemühungen nach.
+
+        Nach Ablauf dieser Frist können nur noch die angemessenen
+        Aufwendungen in Höhe von 589,00 EUR zuzüglich angemessener
+        Heizkosten anerkannt werden.
+
+        Mit freundlichen Grüßen
+        Im Auftrag
+        Öztürk
+      aufgabe_zur_post: "2026-06-29"
+    expected:
+      overall_assessment: kein_verwaltungsakt
+      summary: >
+        Die Kostensenkungsaufforderung ist nach st. Rspr. des BSG (z.B. Urt.
+        v. 19.02.2009 - B 4 AS 30/08 R) KEIN Verwaltungsakt, sondern ein
+        Informationsschreiben mit Aufklärungs- und Warnfunktion. Ein
+        Widerspruch ist unstatthaft; eine Widerspruchsfrist läuft nicht.
+        Materiell ist die Absenkungsankündigung zudem verfrüht: Herr
+        Dombrowski befindet sich seit 01.02.2026 in der 12-monatigen
+        KdU-Karenzzeit (bis 31.01.2027), in der die tatsächliche
+        Bruttokaltmiete anzuerkennen ist, seit 01.07.2026 gedeckelt auf das
+        1,5-fache der Angemessenheitsgrenze (883,50 EUR) — 720,00 EUR liegen
+        darunter. Eine Absenkung zum 01.01.2027 (noch innerhalb der
+        Karenzzeit) wäre rechtswidrig; die Heizkosten unterliegen nicht der
+        Karenzzeit, sondern eigener Angemessenheitsprüfung.
+      legal_issues:
+        - id: GS-007-I1
+          issue: "Keine Verwaltungsaktqualität der Kostensenkungsaufforderung — Widerspruch unstatthaft, keine Frist"
+          assessment: verfahrenshinweis_zentral
+        - id: GS-007-I2
+          issue: "KdU-Karenzzeit (01.02.2026–31.01.2027) läuft; angekündigte Absenkung ab 01.01.2027 fiele in die Karenzzeit und wäre rechtswidrig"
+          assessment: rechtswidrig_zulasten
+        - id: GS-007-I3
+          issue: "1,5-fach-Deckel während der Karenzzeit (seit 01.07.2026): 1,5 x 589,00 = 883,50 EUR > 720,00 EUR — tatsächliche Bruttokaltmiete ist weiter zu übernehmen"
+          assessment: rechtmaessig_zugunsten
+        - id: GS-007-I4
+          issue: "Heizkosten (95,00 EUR) sind von der Karenzzeit ausgenommen und separat auf Angemessenheit zu prüfen"
+          assessment: hinweis
+      citations:
+        - { norm: "§ 22 Abs. 1 SGB II n.F.", rolle: "KdU-Karenzzeit 12 Monate; Deckel 1,5-fache Angemessenheitsgrenze" }
+        - { norm: "BSG, Urt. v. 19.02.2009 - B 4 AS 30/08 R", rolle: "Kostensenkungsaufforderung: Aufklärungs- und Warnfunktion, kein VA (st. Rspr.)" }
+        - { norm: "§ 31 SGB X", rolle: "Verwaltungsakt-Begriff (Regelungswirkung fehlt)" }
+        - { norm: "§ 62 SGG / § 78 SGG", rolle: "Statthaftigkeit des Widerspruchs nur gegen VA" }
+      calculation:
+        input:
+          bruttokaltmiete: 720.00
+          heizkosten: 95.00
+          angemessenheitsgrenze: 589.00
+          leistungsbeginn: "2026-02-01"
+        expected_korrekt:
+          karenzzeit_ende: "2027-01-31"
+          deckel_1_5_fach: 883.50
+          in_karenzzeit_anzuerkennen_bruttokalt: 720.00
+          angekuendigte_kuerzung_ab_2027_01: rechtswidrig
+      widerspruchsfrist:
+        frist_ende: kein_verwaltungsakt
+        begruendung: "Kein VA — keine Widerspruchsfrist; Rechtsschutz erst gegen einen späteren Absenkungs-/Bewilligungsbescheid"
+        status_am_referenzdatum: nicht_anwendbar
+      known_traps:
+        - "Frist-Engine-Edgecase: Die korrekte Ausgabe ist 'keine Widerspruchsfrist — kein Verwaltungsakt'. Eine Engine, die reflexhaft 4 Tage + 1 Monat rechnet, fällt durch."
+        - "Trotz fehlender VA-Qualität ist das Schreiben NICHT folgenlos: Es setzt die Obliegenheit zur Kostensenkung in Gang — Untätigkeit wäre falscher Rat. Reagieren und Bemühungen dokumentieren."
+        - "Karenzzeit-Deckel (1,5x) ist neues Recht seit 01.07.2026 — Alt-Wissen kennt die unbegrenzte Karenzzeit-Anerkennung."
+        - "589,00 EUR ist ein fiktiver Fixture-Wert, keine reale Essener Angemessenheitsgrenze — die Engine soll den Wert aus dem Dokument übernehmen, nicht aus Weltwissen 'korrigieren'."
+      actionable_next_steps:
+        - "Kein Widerspruch (unstatthaft); stattdessen schriftlich antworten: auf laufende Karenzzeit bis 31.01.2027 und den 1,5-fach-Deckel hinweisen."
+        - "Kostensenkungsbemühungen ab sofort dokumentieren (Schutz für die Zeit nach der Karenzzeit)."
+        - "Gegen einen künftigen Bescheid mit abgesenkten KdU dann fristgerecht Widerspruch einlegen."
+
+  # ---------------------------------------------------------------------------
+  # GS-008 — Ablehnung wegen Vermögens — intertemporale Falle (altes Recht)
+  # ---------------------------------------------------------------------------
+  - id: GS-008
+    version: 1.0.0
+    title: "Ablehnungsbescheid wegen Vermögens — Karenzzeit-Freibetrag alten Rechts (40.000 EUR) übergangen, Riester-Vermögen mitgezählt"
+    category: ablehnung_vermoegen
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0057240
+        Team 511 — Herr Brandhoff
+
+        Frau
+        Iris Wallenstein
+        Huttropstr. 9
+        45138 Essen
+
+        Essen, 18.06.2026
+
+        Ablehnungsbescheid
+
+        Sehr geehrte Frau Wallenstein,
+
+        Ihren Antrag vom 04.05.2026 auf Leistungen zur Sicherung des
+        Lebensunterhalts nach dem SGB II lehne ich ab.
+
+        Begründung:
+        Sie verfügen ausweislich der eingereichten Unterlagen über folgendes
+        Vermögen:
+
+          Tagesgeldkonto Sparkasse Essen              24.500,00 EUR
+          Riester-Rentenversicherung (gefördert,
+          Rückkaufswert)                              12.000,00 EUR
+          Summe                                       36.500,00 EUR
+
+        Damit übersteigt Ihr Vermögen den maßgebenden Freibetrag von
+        15.000,00 EUR erheblich. Sie sind nicht hilfebedürftig im Sinne des
+        § 9 SGB II und haben keinen Leistungsanspruch. Sie sind gehalten,
+        zunächst Ihr Vermögen für den Lebensunterhalt einzusetzen.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Brandhoff
+      aufgabe_zur_post: "2026-06-18"
+      zusatzkontext_nutzer: >
+        Frau Wallenstein ist 52 Jahre alt, alleinstehend, erstmals im
+        Leistungsbezug (Antragstellung 04.05.2026 nach Auslaufen des ALG I).
+    expected:
+      overall_assessment: rechtswidrig
+      summary: >
+        Doppelfehler: (1) Für den Leistungszeitraum ab Antragstellung
+        (04.05.2026) bis 30.06.2026 gilt ALTES Recht: In der 12-monatigen
+        Karenzzeit beträgt der Vermögensfreibetrag 40.000,00 EUR (§ 12
+        Abs. 4 SGB II a.F.) — nicht 15.000,00 EUR. (2) Die geförderte
+        Riester-Rentenversicherung ist ohnehin privilegiertes Altersvorsorge-
+        vermögen (§ 12 Abs. 3 SGB II a.F.) und bleibt unberücksichtigt.
+        Verwertbares Vermögen: 24.500,00 EUR < 40.000,00 EUR — die Ablehnung
+        für Mai/Juni 2026 ist rechtswidrig. Für Zeiträume ab 01.07.2026 gilt
+        neues Recht (altersgestaffelter Freibetrag ohne Karenzzeit); der für
+        eine 52-Jährige maßgebende Betrag ist gegen den Gesetzestext zu
+        verifizieren (siehe open_questions OQ-3) — die Engine muss diese
+        Unsicherheit ausweisen statt einen Betrag zu erfinden.
+      legal_issues:
+        - id: GS-008-I1
+          issue: "Intertemporal falscher Freibetrag: Für Mai/Juni 2026 gilt der Karenzzeit-Freibetrag von 40.000 EUR (§ 12 Abs. 4 SGB II a.F.), nicht der Nach-Karenzzeit-Betrag von 15.000 EUR"
+          assessment: rechtswidrig_zulasten
+        - id: GS-008-I2
+          issue: "Gefördertes Riester-Altersvorsorgevermögen als verwertbares Vermögen angesetzt (privilegiert nach § 12 Abs. 3 SGB II a.F.)"
+          assessment: rechtswidrig_zulasten
+        - id: GS-008-I3
+          issue: "Für Bewilligungsabschnitte ab 01.07.2026 ist die neue altersgestaffelte Freibetragssystematik (§ 12 SGB II n.F.) anzuwenden; Betrag für 52-Jährige gegen Primärquelle zu prüfen — getrennte Prüfung der Zeiträume erforderlich"
+          assessment: prüfauftrag
+      citations:
+        - { norm: "§ 12 Abs. 4 SGB II a.F. (bis 30.06.2026)", rolle: "Karenzzeit-Freibetrag 40.000 EUR erste Person" }
+        - { norm: "§ 12 Abs. 3 SGB II a.F.", rolle: "Privilegierung geförderten Altersvorsorgevermögens (Riester)" }
+        - { norm: "§ 12 SGB II n.F. (ab 01.07.2026)", rolle: "altersgestaffelte Freibeträge ohne Karenzzeit — für Folgezeiträume" }
+        - { norm: "§ 9 Abs. 1 SGB II", rolle: "Hilfebedürftigkeit" }
+        - { norm: "§ 37 SGB II", rolle: "Antragserfordernis / Leistungsbeginn ab Antragsmonat" }
+        - { norm: "§ 84 Abs. 1 S. 1 SGG", rolle: "Widerspruchsfrist" }
+      calculation:
+        input:
+          tagesgeld: 24500.00
+          riester_rueckkaufswert: 12000.00
+          antragsdatum: "2026-05-04"
+          alter_antragstellerin: 52
+        jobcenter_ergebnis:
+          angesetztes_vermoegen: 36500.00
+          angewandter_freibetrag: 15000.00
+        expected_korrekt:
+          verwertbares_vermoegen: 24500.00
+          freibetrag_mai_juni_2026: 40000.00
+          hilfebeduerftigkeit_mai_juni: ja
+          freibetrag_ab_juli_2026: "verifizieren_gegen_bgbl_2026_i_107"
+      widerspruchsfrist:
+        bescheid_datum: "2026-06-18"
+        aufgabe_zur_post: "2026-06-18"
+        bekanntgabe_fiktion: "2026-06-22"    # 4. Tag, Montag
+        frist_ende: "2026-07-22"              # Mittwoch
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Intertemporale Doppellage: Ein Antrag von Mai 2026 spannt sich über den Rechtswechsel am 01.07.2026 — die Engine muss den Anspruch zeitraumbezogen nach zwei verschiedenen Rechtslagen prüfen."
+        - "Epistemik-Test: Die neuen Altersstaffel-Beträge sind in Sekundärquellen uneinheitlich — die korrekte Ausgabe ist ein gekennzeichneter Prüfauftrag, KEIN erfundener Betrag."
+        - "Riester-Privilegierung gilt nach a.F. eindeutig; ob/wie die n.F. Altersvorsorge einbezieht, ist gegen den Gesetzestext zu prüfen — auch hier keine Erfindung."
+      actionable_next_steps:
+        - "Widerspruch bis 22.07.2026: Karenzzeit-Freibetrag 40.000 EUR und Riester-Privilegierung für Mai/Juni 2026 geltend machen."
+        - "Nachzahlung ab Antragsmonat Mai 2026 fordern; für Zeiträume ab Juli 2026 Neubescheidung nach neuem Recht verlangen."
+
+  # ---------------------------------------------------------------------------
+  # GS-009 — Versagung wegen fehlender Mitwirkung (§ 66 SGB I) — Ermessensausfall
+  # ---------------------------------------------------------------------------
+  - id: GS-009
+    version: 1.0.0
+    title: "Versagungsbescheid § 66 SGB I (Kontoauszüge) — Ermessensausfall, Schwärzungsrecht verkannt, Versagung ist keine Ablehnung"
+    category: versagung_66_sgb1
+    difficulty: hoch
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0058993
+        Team 518 — Frau Nowak
+
+        Herrn
+        Ilja Petrenko
+        Steele, Kaiser-Otto-Platz 4
+        45276 Essen
+
+        Essen, 29.06.2026
+
+        Versagungsbescheid nach § 66 SGB I
+
+        Sehr geehrter Herr Petrenko,
+
+        Sie haben am 12.05.2026 die Weiterbewilligung von Leistungen nach dem
+        SGB II beantragt. Mit Schreiben vom 26.05.2026 wurden Sie unter
+        Fristsetzung bis zum 16.06.2026 aufgefordert, lückenlose Kontoauszüge
+        der letzten drei Monate für Ihr Girokonto bei der ING vorzulegen.
+        Auf die Rechtsfolgen fehlender Mitwirkung nach § 66 SGB I wurden Sie
+        in diesem Schreiben hingewiesen.
+
+        Die von Ihnen am 10.06.2026 eingereichten Kontoauszüge sind
+        unvollständig, da auf der Ausgabenseite mehrere Buchungen geschwärzt
+        wurden. Damit sind Sie Ihrer Mitwirkungspflicht nach §§ 60 ff. SGB I
+        nicht nachgekommen.
+
+        Die beantragten Leistungen werden daher ab dem 01.06.2026 wegen
+        fehlender Mitwirkung in voller Höhe versagt.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe
+        schriftlich oder zur Niederschrift Widerspruch beim Jobcenter Essen
+        eingelegt werden.
+
+        Im Auftrag
+        Nowak
+      aufgabe_zur_post: "2026-06-29"
+      zusatzkontext_nutzer: >
+        Herr Petrenko hat auf der Ausgabenseite drei Buchungen geschwärzt:
+        einen Mitgliedsbeitrag an eine Gewerkschaft und zwei Spenden an eine
+        Religionsgemeinschaft. Empfänger und Verwendungszweck wurden
+        geschwärzt, die Beträge blieben lesbar. Alle Einnahmen sind
+        vollständig sichtbar.
+    expected:
+      overall_assessment: rechtswidrig
+      summary: >
+        Die Versagung ist rechtswidrig. (1) Ermessensausfall: § 66 Abs. 1
+        SGB I ist eine Ermessensvorschrift ("kann ... versagen"); der
+        Bescheid enthält keinerlei Ermessenserwägungen — das allein trägt
+        die Aufhebung (§ 39 Abs. 1 SGB I, § 54 Abs. 2 S. 2 SGG). (2) Die
+        Mitwirkungsgrenzen des § 65 SGB I sind verkannt: Die Vorlage von
+        Kontoauszügen ist zwar grundsätzlich zumutbar, aber die Schwärzung
+        des Empfängers auf der AUSGABENSEITE ist bei besonderen Kategorien
+        personenbezogener Daten (hier: Gewerkschaftsbeitrag, religiöse
+        Spenden) zulässig (BSG, Urt. v. 19.09.2008 - B 14 AS 45/07 R);
+        Beträge blieben lesbar, Einnahmenseite vollständig — die Mitwirkung
+        war damit ordnungsgemäß erbracht, der Versagungstatbestand liegt
+        schon nicht vor. (3) Wichtig für die Beratung: Die Versagung ist
+        KEINE Sachentscheidung über den Anspruch — sie sagt nichts darüber,
+        ob ein Leistungsanspruch besteht. (4) Selbst nach bestandskräftiger
+        Versagung können Leistungen nach Nachholung der Mitwirkung
+        nachträglich erbracht werden (§ 67 SGB I, Ermessen).
+      legal_issues:
+        - id: GS-009-I1
+          issue: "Ermessensausfall: keine erkennbaren Ermessenserwägungen trotz Ermessensvorschrift § 66 Abs. 1 SGB I"
+          assessment: rechtswidrig_zulasten
+        - id: GS-009-I2
+          issue: "Versagungstatbestand nicht erfüllt: zulässige Schwärzung besonderer Datenkategorien auf der Ausgabenseite (BSG B 14 AS 45/07 R) — Mitwirkung war erbracht"
+          assessment: rechtswidrig_zulasten
+        - id: GS-009-I3
+          issue: "Formelle Voraussetzungen (schriftliche Fristsetzung mit Rechtsfolgenbelehrung, § 66 Abs. 3 SGB I) wurden eingehalten — kein Angriffspunkt"
+          assessment: rechtmaessig
+        - id: GS-009-I4
+          issue: "Versagung ist keine Ablehnung — keine Entscheidung in der Sache; nach Nachholung der Mitwirkung nachträgliche Leistungserbringung nach § 67 SGB I möglich"
+          assessment: hinweis
+      citations:
+        - { norm: "§ 66 Abs. 1, Abs. 3 SGB I", rolle: "Versagung wegen fehlender Mitwirkung — Ermessen, Fristsetzung mit Rechtsfolgenhinweis" }
+        - { norm: "§ 60 Abs. 1 SGB I", rolle: "Mitwirkungspflicht: Vorlage von Beweisurkunden (Kontoauszüge)" }
+        - { norm: "§ 65 SGB I", rolle: "Grenzen der Mitwirkung" }
+        - { norm: "BSG, Urt. v. 19.09.2008 - B 14 AS 45/07 R", rolle: "Kontoauszüge: Vorlage zumutbar, Schwärzung besonderer Daten auf der Ausgabenseite zulässig" }
+        - { norm: "§ 67 SGB I", rolle: "nachträgliche Leistungserbringung nach Nachholung der Mitwirkung" }
+        - { norm: "§ 39 Abs. 1 SGB I, § 54 Abs. 2 S. 2 SGG", rolle: "gerichtliche Kontrolle von Ermessensentscheidungen / Ermessensausfall" }
+      calculation:
+        input:
+          versagt_ab: "2026-06-01"
+          potenzieller_anspruch_monatlich: 1043.00
+        expected_korrekt:
+          rechtmaessig_versagbar: 0.00
+          hinweis: "Keine Anspruchsberechnung im Versagungsfall — Versagung ist keine Sachentscheidung"
+      widerspruchsfrist:
+        bescheid_datum: "2026-06-29"
+        aufgabe_zur_post: "2026-06-29"
+        bekanntgabe_fiktion: "2026-07-03"    # 4. Tag, Freitag
+        frist_ende: "2026-08-03"              # Montag
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Kategorienfehler-Falle: Versagung (§ 66 SGB I) und Ablehnung (Sachentscheidung) müssen strikt getrennt werden — eine Engine, die 'Anspruch abgelehnt' formuliert, verfehlt die Rechtsnatur."
+        - "Ermessensausfall ist der sicherste Aufhebungsgrund und darf nicht hinter der Schwärzungsfrage verschwinden."
+        - "Doppelstrategie: Widerspruch UND (vorsorglich) ungeschwärzte Unterlagen unter Protest bzw. Klärung anbieten — reiner Konfrontationskurs riskiert Leistungslücken."
+      actionable_next_steps:
+        - "Widerspruch bis 03.08.2026: Ermessensausfall und BSG-Rechtsprechung zur Schwärzung anführen."
+        - "Parallel Zahlung der laufenden Leistungen anmahnen; bei Existenzgefährdung Eilantrag nach § 86b Abs. 2 SGG prüfen."
+
+  # ---------------------------------------------------------------------------
+  # GS-010 — Erstattungsbescheid mit fehlerhafter Rechtsbehelfsbelehrung — Jahresfrist
+  # ---------------------------------------------------------------------------
+  - id: GS-010
+    version: 1.0.0
+    title: "Alter Aufhebungs- und Erstattungsbescheid — Rechtsbehelfsbelehrung nennt 'zwei Wochen': Jahresfrist läuft, Additionsfehler 100 EUR"
+    category: erstattung_fehlerhafte_rbb
+    difficulty: mittel
+    input_document:
+      type: text
+      text: |
+        Jobcenter Essen
+        BG-Nummer: 56102//0044120
+        Team 514 — Herr Wieland
+
+        Frau
+        Carola Fitzek
+        Rellinghauser Str. 200
+        45136 Essen
+
+        Essen, 09.02.2026
+
+        Bescheid über die teilweise Aufhebung der Leistungsbewilligung
+        und Erstattung
+
+        Sehr geehrte Frau Fitzek,
+
+        nach Auswertung des Datenabgleichs haben Sie im Zeitraum November
+        2025 bis Januar 2026 Einkommen aus einer nicht angezeigten
+        Nebentätigkeit (Minijob, Gebäudereinigung Klose GmbH) erzielt. Nach
+        Anhörung vom 12.01.2026, zu der Sie sich nicht geäußert haben, wird
+        die Bewilligung vom 20.10.2025 für die Monate November 2025 bis
+        Januar 2026 gemäß § 48 Abs. 1 Satz 2 Nr. 3 SGB X i.V.m. § 40 Abs. 2
+        Nr. 3 SGB II, § 330 Abs. 3 SGB III teilweise aufgehoben.
+
+        Das anzurechnende Einkommen beträgt nach Abzug der Freibeträge
+        monatlich 214,00 EUR.
+
+        Aufhebungs- und Erstattungsbeträge:
+          November 2025:   214,00 EUR
+          Dezember 2025:   214,00 EUR
+          Januar 2026:     214,00 EUR
+
+        Gesamtforderung gemäß § 50 Abs. 1 SGB X:  742,00 EUR
+
+        Bitte überweisen Sie den Betrag innerhalb eines Monats auf das Konto
+        der Bundesagentur für Arbeit unter Angabe Ihrer BG-Nummer.
+
+        Rechtsbehelfsbelehrung:
+        Gegen diesen Bescheid kann innerhalb von zwei Wochen nach Bekanntgabe
+        schriftlich Widerspruch beim Jobcenter Essen eingelegt werden.
+
+        Im Auftrag
+        Wieland
+      aufgabe_zur_post: "2026-02-09"
+      zusatzkontext_nutzer: >
+        Frau Fitzek legt den Bescheid erst jetzt (Juli 2026) vor. Sie hat
+        bisher keinen Widerspruch eingelegt und noch nichts gezahlt. Die
+        Nebentätigkeit und die Einkommenshöhe bestreitet sie nicht.
+      hinweis_fixture: >
+        Dieser Fall testet die Jahresfrist-Erkennung: Ein naives System
+        erklärt die Widerspruchsfrist für längst abgelaufen und verweist nur
+        auf § 44 SGB X.
+    expected:
+      overall_assessment: teilweise_rechtswidrig
+      summary: >
+        Zwei Befunde: (1) Die Rechtsbehelfsbelehrung ist unrichtig ("zwei
+        Wochen" statt eines Monats, § 84 Abs. 1 S. 1 SGG). Nach § 66 Abs. 2
+        SGG gilt daher die JAHRESFRIST: Der Widerspruch ist am Referenzdatum
+        (11.07.2026) weiterhin zulässig — bis Montag, 15.02.2027 (ein Jahr
+        ab Bekanntgabe 13.02.2026 = 13.02.2027, ein Samstag, verschoben nach
+        § 64 Abs. 3 SGG). (2) Additionsfehler: 3 x 214,00 EUR = 642,00 EUR,
+        gefordert werden 742,00 EUR — die Forderung ist um 100,00 EUR
+        überhöht. Materiell ist die Aufhebung dem Grunde nach voraussichtlich
+        rechtmäßig (unstreitiges, nicht gemeldetes Einkommen; gebundene
+        Entscheidung; Anhörung durchgeführt). Realistisches Ziel des
+        Widerspruchs: Reduktion auf 642,00 EUR plus ggf. Ratenzahlung.
+      legal_issues:
+        - id: GS-010-I1
+          issue: "Unrichtige Rechtsbehelfsbelehrung ('zwei Wochen') — Jahresfrist nach § 66 Abs. 2 SGG, Widerspruch weiterhin zulässig"
+          assessment: verfahrenshinweis_zentral
+        - id: GS-010-I2
+          issue: "Additionsfehler: Summe der Monatsbeträge 642,00 EUR, gefordert 742,00 EUR — Forderung um 100,00 EUR überhöht"
+          assessment: rechtswidrig_zulasten
+        - id: GS-010-I3
+          issue: "Aufhebung dem Grunde nach voraussichtlich rechtmäßig (§ 48 Abs. 1 S. 2 Nr. 3 SGB X, unstreitiges Einkommen, Anhörung erfolgt, gebundene Entscheidung)"
+          assessment: ueberwiegend_rechtmaessig
+        - id: GS-010-I4
+          issue: "Unabhängig vom Widerspruch bleibt der Überprüfungsantrag nach § 44 SGB X als Auffanglösung möglich"
+          assessment: hinweis
+      citations:
+        - { norm: "§ 66 Abs. 2 SGG", rolle: "Jahresfrist bei unrichtiger Rechtsbehelfsbelehrung" }
+        - { norm: "§ 84 Abs. 1 S. 1 SGG", rolle: "richtige Frist wäre ein Monat" }
+        - { norm: "§ 64 Abs. 2, Abs. 3 SGG", rolle: "Fristende 13.02.2027 (Samstag) -> Montag, 15.02.2027" }
+        - { norm: "§ 48 Abs. 1 S. 2 Nr. 3 SGB X", rolle: "Aufhebung wegen Einkommenserzielung" }
+        - { norm: "§ 50 Abs. 1 SGB X", rolle: "Erstattung" }
+        - { norm: "§ 40 Abs. 2 Nr. 3 SGB II i.V.m. § 330 Abs. 3 SGB III", rolle: "gebundene Entscheidung" }
+        - { norm: "§ 44 SGB X", rolle: "Überprüfungsantrag als Auffanglösung" }
+      calculation:
+        input:
+          monatsbetraege: [214.00, 214.00, 214.00]
+        jobcenter_ergebnis:
+          gesamtforderung: 742.00
+        expected_korrekt:
+          summe_korrekt: 642.00
+          ueberhoehung: 100.00
+      widerspruchsfrist:
+        bescheid_datum: "2026-02-09"
+        aufgabe_zur_post: "2026-02-09"
+        bekanntgabe_fiktion: "2026-02-13"        # 4. Tag, Freitag
+        regulaere_frist_haette_geendet: "2026-03-13"
+        rbb_fehlerhaft: true
+        massgebliche_frist: jahresfrist_66_2_sgg
+        frist_ende_rechnerisch: "2027-02-13"      # Samstag
+        frist_ende: "2027-02-15"                  # Montag (§ 64 Abs. 3 SGG)
+        status_am_referenzdatum: offen
+      known_traps:
+        - "Die Kernfalle: Bescheid ist fünf Monate alt — ein System ohne RBB-Prüfung meldet 'Frist abgelaufen, nur noch § 44 SGB X'. Richtig ist: Jahresfrist läuft, Widerspruch ist der stärkere Rechtsbehelf (volle Überprüfung, aufschiebende Wirkung des Erstattungsteils)."
+        - "Fristende der Jahresfrist fällt auf Samstag (13.02.2027) — Werktag-Rollover über Jahresgrenze hinweg auf Montag, 15.02.2027."
+        - "Der deterministische Summencheck (642 statt 742) muss unabhängig vom LLM greifen — klassischer Fall für die Rechenwerk-Verifikation."
+        - "Ehrlichkeits-Kalibrierung: Materiell ist wenig zu holen (Einkommen unstreitig) — realistisches Ziel ist die Korrektur um 100 EUR, nicht die Aufhebung der Forderung."
+      actionable_next_steps:
+        - "Widerspruch einlegen (zulässig bis 15.02.2027) mit Verweis auf § 66 Abs. 2 SGG; Reduktion der Forderung auf 642,00 EUR verlangen."
+        - "Ratenzahlung für den verbleibenden Betrag anbieten; keine Zahlung vor Korrektur der Summe."
+
+# =============================================================================
+# END OF goldset-v0.1.0 — 10 cases. Changes require a new version.
+# =============================================================================

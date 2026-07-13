@@ -59,7 +59,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
-
 # ---------------------------------------------------------------------------
 # Stage metadata — recommended sampling temperatures
 # ---------------------------------------------------------------------------
@@ -129,9 +128,7 @@ SOZIALRECHT_PROFILE = AreaProfile(
     ),
     formal_examples="Anhörung, Begründung, Frist, Zuständigkeit",
     material_examples="Anspruch, Sanktion, Mitwirkung, Unterkunftskosten",
-    answerable_with=(
-        "deutschem Sozialrecht, insbesondere SGB II, SGB X oder SGB XII"
-    ),
+    answerable_with=("deutschem Sozialrecht, insbesondere SGB II, SGB X oder SGB XII"),
     hierarchy_example="SGB II > § 31 > Abs. 1",
     adversary_examples="das Jobcenter, das Sozialamt oder eine andere Behörde",
 )
@@ -174,8 +171,7 @@ ERBRECHT_PROFILE = AreaProfile(
     ),
     hierarchy_example="BGB > § 1922",
     adversary_examples=(
-        "Miterben, Pflichtteilsberechtigte, das Finanzamt oder das "
-        "Nachlassgericht"
+        "Miterben, Pflichtteilsberechtigte, das Finanzamt oder das " "Nachlassgericht"
     ),
 )
 
@@ -805,21 +801,13 @@ def _merge_profiles(profiles: list[AreaProfile]) -> AreaProfile:
         key="+".join(prof.key for prof in profiles),
         display_name=" sowie ".join(prof.display_name for prof in profiles),
         statutes="; ".join(prof.statutes for prof in profiles),
-        document_examples="; oder ".join(
-            prof.document_examples for prof in profiles
-        ),
+        document_examples="; oder ".join(prof.document_examples for prof in profiles),
         issue_terms=tuple(merged_terms),
         formal_examples="; ".join(prof.formal_examples for prof in profiles),
-        material_examples="; ".join(
-            prof.material_examples for prof in profiles
-        ),
-        answerable_with=" oder ".join(
-            prof.answerable_with for prof in profiles
-        ),
+        material_examples="; ".join(prof.material_examples for prof in profiles),
+        answerable_with=" oder ".join(prof.answerable_with for prof in profiles),
         hierarchy_example=profiles[0].hierarchy_example,
-        adversary_examples="; ".join(
-            prof.adversary_examples for prof in profiles
-        ),
+        adversary_examples="; ".join(prof.adversary_examples for prof in profiles),
     )
 
 
@@ -896,6 +884,4 @@ def get_prompts(legal_areas: list[str] | None = None) -> dict[str, str]:
     if len(unique_profiles) == 1:
         return dict(_build_prompt_set(unique_profiles[0]))
 
-    return dict(
-        _cached_multi_area_set(tuple(prof.key for prof in unique_profiles))
-    )
+    return dict(_cached_multi_area_set(tuple(prof.key for prof in unique_profiles)))

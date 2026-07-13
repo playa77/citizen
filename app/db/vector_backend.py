@@ -38,6 +38,7 @@ else:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 async def cosine_distance(
     session: AsyncSession,
     /,
@@ -104,6 +105,7 @@ async def cosine_distance(
 # Backend implementations
 # ---------------------------------------------------------------------------
 
+
 async def _cosine_distance_sqlite(
     session: AsyncSession,
     *,
@@ -139,9 +141,7 @@ async def _cosine_distance_sqlite(
             else:
                 alias = col.replace(".", "_")
                 cols.append(f"{col} AS {alias}")
-    cols.append(
-        f"vec_distance_cosine({table_name}.{vector_column}, :embedding_blob) AS distance"
-    )
+    cols.append(f"vec_distance_cosine({table_name}.{vector_column}, :embedding_blob) AS distance")
 
     # Build FROM + JOINs
     from_clause = f"FROM {table_name}"
@@ -244,6 +244,7 @@ async def _cosine_distance_pgvector(
 # Utility
 # ---------------------------------------------------------------------------
 
+
 async def load_sqlite_vec_extension(connection: Any) -> None:
     """
     Load the sqlite-vec extension into a SQLite connection.
@@ -255,7 +256,6 @@ async def load_sqlite_vec_extension(connection: Any) -> None:
     """
     if not IS_SQLITE:
         return
-
 
     import sqlite_vec
 

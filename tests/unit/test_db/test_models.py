@@ -205,6 +205,7 @@ class TestCaseRun:
             "updated_at",
             "chat_history",
             "user_edits",
+            "pii_mapping",
         }
         assert _column_names(self.TABLE) == expected
 

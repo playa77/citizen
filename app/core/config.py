@@ -56,7 +56,9 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 10
-    MAX_COSINE_DISTANCE: float = 0.55  # Cosine distance = 1 - cosine similarity. 0.55 means similarity ≥ 0.45.
+    MAX_COSINE_DISTANCE: float = (
+        0.55  # Cosine distance = 1 - cosine similarity. 0.55 means similarity ≥ 0.45.
+    )
     MAX_COSINE_DISTANCE_STRICT: float = 0.85
     RETRIEVAL_MODE: str = "per_question"  # "combined" or "per_question" — per_question embeds each question separately, producing better legal-semantic queries
     RETRIEVAL_KEYWORD_FALLBACK: bool = True

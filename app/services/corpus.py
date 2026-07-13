@@ -15,7 +15,7 @@ import json
 import logging
 import re
 import struct
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -44,8 +44,8 @@ _HTTP_LIMITS = httpx.Limits(max_connections=4, max_keepalive_connections=2)
 _POLITENESS_DELAY = 1.0
 
 # Exponential backoff: initial delay, max delay, max retry count.
-_BACKOFF_INITIAL = 1.0      # seconds
-_BACKOFF_MAX = 10.0         # seconds
+_BACKOFF_INITIAL = 1.0  # seconds
+_BACKOFF_MAX = 10.0  # seconds
 _BACKOFF_MAX_RETRIES = 3
 
 # HTTP status codes considered transient (worth retrying).
@@ -117,8 +117,7 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
             "Eingliederungshilfe."
         ),
         "tooltip": (
-            "Relevant für Abgrenzung SGB II vs. SGB XII und bei "
-            "Erwerbsminderung (§ 41 SGB XII)."
+            "Relevant für Abgrenzung SGB II vs. SGB XII und bei " "Erwerbsminderung (§ 41 SGB XII)."
         ),
         "has_scraper": True,
         "checked_by_default": False,
@@ -129,12 +128,10 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "name": "SGB III",
         "full_name": "SGB III (Arbeitsförderung)",
         "description": (
-            "Arbeitsförderung — Arbeitslosengeld, Vermittlung, "
-            "Berufsberatung, Weiterbildung."
+            "Arbeitsförderung — Arbeitslosengeld, Vermittlung, " "Berufsberatung, Weiterbildung."
         ),
         "tooltip": (
-            "Nützlich für Eingliederungsleistungen nach § 16 SGB II "
-            "(Verweiskette ins SGB III)."
+            "Nützlich für Eingliederungsleistungen nach § 16 SGB II " "(Verweiskette ins SGB III)."
         ),
         "has_scraper": True,
         "checked_by_default": False,
@@ -155,8 +152,7 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "name": "BGB",
         "full_name": "BGB (Bürgerliches Gesetzbuch)",
         "description": (
-            "Bürgerliches Gesetzbuch — allgemeines Zivilrecht, "
-            "Verträge, Schuldverhältnisse."
+            "Bürgerliches Gesetzbuch — allgemeines Zivilrecht, " "Verträge, Schuldverhältnisse."
         ),
         "tooltip": "Geringe Relevanz. Nur in Ausnahmefällen (z.B. zivilrechtliche Vorfragen).",
         "has_scraper": True,
@@ -168,12 +164,10 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "name": "VwVfG",
         "full_name": "VwVfG (Verwaltungsverfahrensgesetz)",
         "description": (
-            "Bundes-Verwaltungsverfahrensgesetz — allgemeines "
-            "Verwaltungsverfahrensrecht."
+            "Bundes-Verwaltungsverfahrensgesetz — allgemeines " "Verwaltungsverfahrensrecht."
         ),
         "tooltip": (
-            "Ergänzend. Regeln für Verwaltungsakte, Widerspruchsverfahren "
-            "außerhalb SGB X."
+            "Ergänzend. Regeln für Verwaltungsakte, Widerspruchsverfahren " "außerhalb SGB X."
         ),
         "has_scraper": True,
         "checked_by_default": False,
@@ -277,8 +271,7 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "name": "BUrlG",
         "full_name": "BUrlG (Bundesurlaubsgesetz)",
         "description": (
-            "Bundesurlaubsgesetz — Mindesturlaub, Urlaubsanspruch, "
-            "Übertragung, Verfall."
+            "Bundesurlaubsgesetz — Mindesturlaub, Urlaubsanspruch, " "Übertragung, Verfall."
         ),
         "tooltip": (
             "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
@@ -293,8 +286,7 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "name": "TVG",
         "full_name": "TVG (Tarifvertragsgesetz)",
         "description": (
-            "Tarifvertragsgesetz — Abschluss, Wirkung und Beendigung "
-            "von Tarifverträgen."
+            "Tarifvertragsgesetz — Abschluss, Wirkung und Beendigung " "von Tarifverträgen."
         ),
         "tooltip": (
             "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
@@ -335,7 +327,7 @@ def save_runtime_sources(sources: list[str]) -> None:
     path = _get_corpus_sources_path()
     data: dict[str, object] = {
         "selected_sources": sources,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -356,6 +348,7 @@ async def get_effective_corpus_sources() -> list[str]:
         return valid if valid else list(settings.CORPUS_SOURCES)
     return list(settings.CORPUS_SOURCES)
 
+
 # ---------------------------------------------------------------------------
 # Source URL prefixes (gesetze-im-internet.de official XML/HTML endpoints)
 # ---------------------------------------------------------------------------
@@ -365,13 +358,13 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb2": "/sgb_2/",
     "sgbx": "/sgb_10/",  # SGB X = Zehntes Buch → sgb_10
     "sgb12": "/sgb_12/",  # SGB XII - Sozialhilfe
-    "sgb1": "/sgb_1/",    # SGB I - Allgemeiner Teil
-    "sgb3": "/sgb_3/",    # SGB III - Arbeitsförderung
-    "sgb9": "/sgb_9/",    # SGB IX - Rehabilitation und Teilhabe
-    "bgb": "/bgb/",       # BGB - Bürgerliches Gesetzbuch
-    "vwvfg": "/vwvfg/",   # VwVfG - Verwaltungsverfahrensgesetz
-    "sgg": "/sgg/",       # SGG - Sozialgerichtsgesetz
-    "erbstg": "/erbstg/", # ErbStG - Erbschaft- und Schenkungsteuergesetz
+    "sgb1": "/sgb_1/",  # SGB I - Allgemeiner Teil
+    "sgb3": "/sgb_3/",  # SGB III - Arbeitsförderung
+    "sgb9": "/sgb_9/",  # SGB IX - Rehabilitation und Teilhabe
+    "bgb": "/bgb/",  # BGB - Bürgerliches Gesetzbuch
+    "vwvfg": "/vwvfg/",  # VwVfG - Verwaltungsverfahrensgesetz
+    "sgg": "/sgg/",  # SGG - Sozialgerichtsgesetz
+    "erbstg": "/erbstg/",  # ErbStG - Erbschaft- und Schenkungsteuergesetz
     "hoefev": "/hoefeordn_/",  # Höfeordnung (slug varies by BL; fallback)
 }
 
@@ -386,9 +379,9 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
 # the matching legal_area on the chunk. Chunks that fall outside any
 # defined range (e.g. "Allgemein" headers) get legal_area=None.
 _BGB_PARA_TO_LEGAL_AREA: list[tuple[tuple[int, int], str]] = [
-    ((1922, 2385), "erbrecht"),         # §§ 1922–2385 BGB = Erbrecht
-    ((516, 534), "schenkungsrecht"),   # §§ 516–534 BGB = Schenkungsrecht
-    ((1297, 1921), "familienrecht"),   # §§ 1297–1921 BGB = Familienrecht
+    ((1922, 2385), "erbrecht"),  # §§ 1922–2385 BGB = Erbrecht
+    ((516, 534), "schenkungsrecht"),  # §§ 516–534 BGB = Schenkungsrecht
+    ((1297, 1921), "familienrecht"),  # §§ 1297–1921 BGB = Familienrecht
 ]
 
 
@@ -471,7 +464,7 @@ async def _http_get_with_backoff(
         if attempt == _BACKOFF_MAX_RETRIES:
             break
 
-        sleep_s = min(delay * (2 ** attempt), _BACKOFF_MAX)
+        sleep_s = min(delay * (2**attempt), _BACKOFF_MAX)
         logger.warning(
             "HTTP GET %s failed (attempt %d/%d): %s – retrying in %.1fs",
             url,
@@ -506,8 +499,7 @@ async def scrape_and_chunk(
     """
     if source_type not in CORPUS_SOURCE_METADATA:
         raise ValueError(
-            f"Unknown source_type={source_type!r}. "
-            f"Allowed: {list(CORPUS_SOURCE_METADATA)}"
+            f"Unknown source_type={source_type!r}. " f"Allowed: {list(CORPUS_SOURCE_METADATA)}"
         )
 
     # Dispatch weisung to dedicated PDF scraper
@@ -516,9 +508,7 @@ async def scrape_and_chunk(
 
     # All other known source types use gesetze-im-internet.de
     if source_type not in _SOURCE_TYPE_PREFIX:
-        raise ValueError(
-            f"No gesetze-im-internet.de mapping for source_type={source_type!r}."
-        )
+        raise ValueError(f"No gesetze-im-internet.de mapping for source_type={source_type!r}.")
 
     prefix = _SOURCE_TYPE_PREFIX[source_type]
     index_url = urljoin(_BASE, prefix)
@@ -621,7 +611,11 @@ async def scrape_weisungen(
 
             try:
                 pdf_chunks = await _scrape_weisung_pdf(
-                    c, pdf_url, pdf_title, i + 1, len(pdf_links),
+                    c,
+                    pdf_url,
+                    pdf_title,
+                    i + 1,
+                    len(pdf_links),
                 )
                 chunks.extend(pdf_chunks)
             except Exception as exc:
@@ -1263,7 +1257,7 @@ async def _upsert_embedding(
     if IS_SQLITE:
         from sqlalchemy.dialects.sqlite import insert as upsert_insert
     else:
-        from sqlalchemy.dialects.postgresql import insert as upsert_insert
+        from sqlalchemy.dialects.postgresql import insert as upsert_insert  # type: ignore[assignment]
 
     embedding_vec = chunk["embedding"]
     if IS_SQLITE:
@@ -1273,12 +1267,16 @@ async def _upsert_embedding(
 
     model_name = settings.EMBEDDING_MODEL
 
-    stmt = upsert_insert(ChunkEmbedding).values(
-        chunk_id=legal_chunk.id,
-        embedding=embedding_blob,
-        model_name=model_name,
-    ).on_conflict_do_update(
-        index_elements=["chunk_id", "model_name"],
-        set_={"embedding": embedding_blob},
+    stmt = (
+        upsert_insert(ChunkEmbedding)
+        .values(
+            chunk_id=legal_chunk.id,
+            embedding=embedding_blob,
+            model_name=model_name,
+        )
+        .on_conflict_do_update(
+            index_elements=["chunk_id", "model_name"],
+            set_={"embedding": embedding_blob},
+        )
     )
     await session.execute(stmt)

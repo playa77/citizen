@@ -28,7 +28,18 @@ logger = logging.getLogger(__name__)
 # Map a high-level legal_area to the corpus source_types that satisfy it.
 # This is the source of truth for "is this area loadable?".
 AREA_TO_SOURCE_TYPES: dict[str, tuple[str, ...]] = {
-    "sozialrecht": ("sgb1", "sgb2", "sgb3", "sgb9", "sgb12", "sgbx", "weisung", "bsg", "vwvfg", "sgg"),
+    "sozialrecht": (
+        "sgb1",
+        "sgb2",
+        "sgb3",
+        "sgb9",
+        "sgb12",
+        "sgbx",
+        "weisung",
+        "bsg",
+        "vwvfg",
+        "sgg",
+    ),
     "erbrecht": ("bgb", "erbstg", "hoefev"),
     "schenkungsrecht": ("bgb", "erbstg"),
     "familienrecht": ("bgb",),
@@ -74,9 +85,7 @@ async def get_area_status(
         .where(LegalSource.is_active.is_(True))
         .group_by(LegalSource.source_type)
     )
-    by_source: dict[str, int] = {
-        row.source_type: int(row.chunk_count) for row in rows.all()
-    }
+    by_source: dict[str, int] = {row.source_type: int(row.chunk_count) for row in rows.all()}
 
     result: dict[str, dict[str, Any]] = {}
     for area in legal_areas:

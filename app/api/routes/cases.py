@@ -65,9 +65,7 @@ async def list_cases_endpoint() -> list[dict[str, Any]]:
         case_ids = [c.id for c in cases]
         areas_by_case: dict[Any, list[dict[str, Any]]] = {}
         if case_ids:
-            areas_stmt = select(CaseRunArea).where(
-                CaseRunArea.case_run_id.in_(case_ids)
-            )
+            areas_stmt = select(CaseRunArea).where(CaseRunArea.case_run_id.in_(case_ids))
             areas_res = await db.execute(areas_stmt)
             for row in areas_res.scalars().all():
                 areas_by_case.setdefault(str(row.case_run_id), []).append(
@@ -151,14 +149,13 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
     areas_stmt = select(CaseRunArea).where(CaseRunArea.case_run_id == case.id)
     areas_res = await db.execute(areas_stmt)
     legal_areas = [
-        {"legal_area": a.legal_area, "is_primary": a.is_primary}
-        for a in areas_res.scalars().all()
+        {"legal_area": a.legal_area, "is_primary": a.is_primary} for a in areas_res.scalars().all()
     ]
 
     # Serialize claims with evidence bindings.
-    claims = []
+    claims: list[dict[str, Any]] = []
     for cl in case.claims or []:
-        cl_data = {
+        cl_data: dict[str, Any] = {
             "id": str(cl.id),
             "case_run_id": str(cl.case_run_id),
             "claim_text": cl.claim_text,
@@ -288,7 +285,7 @@ async def case_chat_endpoint(
 
         # Build adjudications dict from claims and section adjudications.
         adjudications: dict[str, Any] = {}
-        for cl in (case.claims or []):
+        for cl in case.claims or []:
             if cl.user_adjudication:
                 adjudications[str(cl.id)] = cl.user_adjudication
         section_adjs = user_edits.get("section_adjudications", {})
@@ -649,7 +646,9 @@ async def adjudicate_endpoint(
 
     async with async_session_factory() as db:
         if target_type == "claim":
-            stmt = select(Claim).where(Claim.id == UUID(target_id), Claim.case_run_id == case_id)
+            stmt: Any = select(Claim).where(
+                Claim.id == UUID(target_id), Claim.case_run_id == case_id
+            )
             result = await db.execute(stmt)
             claim = result.scalar_one_or_none()
             if claim is None:
@@ -676,7 +675,7 @@ async def adjudicate_endpoint(
             if case is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
 
-            edits = case.user_edits or {}
+            edits: dict[str, Any] = case.user_edits or {}
             if "section_adjudications" not in edits:
                 edits["section_adjudications"] = {}
             edits["section_adjudications"][target_id] = {
@@ -691,6 +690,12 @@ async def adjudicate_endpoint(
                 "section_key": target_id,
                 "adjudication": edits["section_adjudications"][target_id],
             }
+
+        # Unreachable: target_type validated to "claim" or "section" above.
+        raise HTTPException(  # pragma: no cover
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unexpected target_type: {target_type}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -750,9 +755,9 @@ async def export_case_endpoint(
     ]
 
     # Serialize claims with evidence bindings.
-    claims = []
+    claims: list[dict[str, Any]] = []
     for cl in case.claims or []:
-        cl_data = {
+        cl_data: dict[str, Any] = {
             "id": str(cl.id),
             "claim_text": cl.claim_text,
             "confidence_score": cl.confidence_score,
@@ -819,17 +824,18 @@ async def export_case_endpoint(
             md_lines.append("")
             md_lines.append("## Ansprüche / Claims")
             md_lines.append("")
-            for cl in claims:
-                adj = cl.get("user_adjudication") or {}
+            for claim_dict in claims:
+                adj = claim_dict.get("user_adjudication") or {}
                 adj_str = f" *(Adjudikation: {adj.get('status', 'unbewertet')})*" if adj else ""
                 md_lines.append(
-                    f"- **{cl['claim_type']}** (Konfidenz: {cl['confidence_score']:.2f}){adj_str}"
+                    f"- **{claim_dict['claim_type']}** "
+                    f"(Konfidenz: {claim_dict['confidence_score']:.2f}){adj_str}"
                 )
-                md_lines.append(f"  - {cl['claim_text']}")
-                for eb in cl.get("evidence_bindings", []):
+                md_lines.append(f"  - {claim_dict['claim_text']}")
+                for eb_dict in claim_dict.get("evidence_bindings", []):
                     md_lines.append(
-                        f"    - Beleg: „{eb['quote_excerpt']}” "
-                        f"(Stärke: {eb['binding_strength']:.2f})"
+                        f"    - Beleg: „{eb_dict['quote_excerpt']}” "
+                        f"(Stärke: {eb_dict['binding_strength']:.2f})"
                     )
                 md_lines.append("")
 
