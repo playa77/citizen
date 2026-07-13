@@ -1,297 +1,335 @@
-# Citizen — Multi-Area German Legal Reasoning Engine
+# Citizen — Bescheid-Prüfung für deutsches Sozialrecht
 
-## PROTOTYPE STATUS — NOT FOR PRODUCTIVE USE
+**🇬🇧 English version: [README-EN.md](README-EN.md)**
+
+## Rechtsinformation, keine Rechtsberatung — siehe [DISCLAIMER_DE.md](DISCLAIMER_DE.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688.svg)](https://fastapi.tiangolo.com)
 
-Citizen is a local-first, evidence-constrained legal reasoning engine for German law. It supports multiple legal areas — from social law (SGB II/X) to inheritance law (BGB, ErbStG, HöfeO), family law, tenancy law, labor law, and more. It processes scanned administrative correspondence, cross-references claims against current statutes and case law, performs deterministic calculations, and generates structured, evidence-backed legal assessments.
+Citizen ist eine lokale, evidenzgebundene Analyse-Engine für deutsche
+Rechtsbescheide — mit verifiziertem Schwerpunkt auf dem Sozialrecht
+(Bürgergeld/Grundsicherungsgeld, SGB II/X). Die Software liest eingescannte
+Behördenkorrespondenz ein und beantwortet vier Fragen: **Was steht da drin?
+Stimmt das? Bis wann muss ich reagieren? Was mache ich jetzt?** Jede Aussage
+wird an den Gesetzestext gebunden, jede Berechnung deterministisch
+nachgerechnet, jede Frist auf den Tag genau bestimmt — und die Qualität wird
+gegen ein öffentliches, versioniertes Golden Set gemessen statt behauptet.
 
-## Legal Areas
+**Warum es dieses Projekt gibt:** [STATEMENT.md](STATEMENT.md) ·
+**Kurzfassung:** [One-Pager](docs/citizen-onepager.md)
 
-| Area | Statutes |
-|---|---|
-| **Sozialrecht** (Bürgergeld / Jobcenter) | SGB I, II, III, IX, X, XII |
-| **Erbrecht** | BGB (Erbrecht), ErbStG, HöfeO |
-| **Schenkungsrecht** | BGB (Schenkung), ErbStG |
-| **Familienrecht** | BGB (Familienrecht) |
-| **Mietrecht** | BGB (Mietrecht) |
-| **Arbeitsrecht** | BGB, KSchG, BUrlG, TVG |
-| **Vertragsrecht** | BGB (Schuldrecht) |
-| **Verwaltungsrecht** | VwVfG, SGG |
-| **Strafrecht** | StGB |
-| **Andere** | Catch-all for unclassified inquiries |
+## Rechtsgebiete
 
-## Core Features
-
-* **Multi-Area Intake:** Interactive multi-turn interview (2–8 turns) to identify the relevant legal area(s) and narrow the scope before analysis. Suggests pipeline presets (e.g. "Sozialrecht Allgemein", "Erbe mit Testament", "Höfeübergabe") based on user scenario.
-* **Pipeline Presets:** Curated configuration profiles per use case — pre-tuned prompts, retrieval settings, and stage flags for each legal area combination. Auto-suggested during intake. 5 built-in presets included.
-* **Evidence-Bound Output:** Every factual assertion and legal interpretation is explicitly bound to retrieved legal sources through `pgvector` similarity search, with confidence scoring and direct quote excerpts stored in the database.
-* **9-Stage Reasoning Pipeline:** Normalization → Classification+Decomposition (combined) → Retrieval (pgvector + keyword fallback) → Construction+Verification+Generation (combined) → Adversarial Review → Calculation Check. Real-time SSE streaming with optional token-by-token output.
-* **Adversarial Legal Review:** Multi-perspective review by a "Rechtsprüfungsrat" — evaluates claims from defense, authority, and judicial perspectives to surface hidden weaknesses or counterarguments.
-* **Case Chat:** Interactive, persistent chat grounded in pipeline output. Supports targeted re-evaluation of specific claims, claim editing, user adjudication (confirm/flag/correct), and export (JSON/Markdown).
-* **Deterministic SGB II Calculation Engine:** Three-phase numerical verification — LLM extracts structured monetary values → deterministic rules engine applies § 11b SGB II tiers → LLM explains findings.
-* **Local-First OCR Pipeline:** Fully local document ingestion (PDF/JPG/PNG/TXT/HTML/EML) up to 25 MB. Deterministic fallback chain (`pdfplumber` → `PyMuPDF` → `Tesseract`) with dual-pass image preprocessing.
-* **Hierarchical Legal Corpus:** Automated scraping of 16 source types from gesetze-im-internet.de and arbeitsagentur.de (Fachliche Weisungen as PDFs). Chunked at four granularity levels (Statute → § → Absatz → Satz). Runtime-selectable via settings page.
-* **Fault-Tolerant LLM Routing:** OpenRouter client with automated fallback chain. Separate API keys for inference and embeddings. Configurable per-stage model overrides.
-* **Multi-Turn Conversational Reasoning:** Chat interface with RAG + conversation history. First message triggers the full pipeline; subsequent messages use focused retrieval.
-* **Audit Trail:** Full pipeline auditing — every case run, stage log, claim, and evidence binding persisted to PostgreSQL.
-* **Browser-Based UI:** Vanilla HTML/JS/CSS frontend with three modes — Analyze (pipeline + case chat), Chat (conversations), Settings (corpus source selection). Real-time SSE progress, dark theme, disclaimer acceptance.
-
-## Architecture
-
-| Layer | Technology |
-|---|---|
-| **Backend** | FastAPI, Uvicorn (SSE streaming) |
-| **Database** | PostgreSQL 16 + `pgvector` + `tsvector` |
-| **ORM / Migrations** | SQLAlchemy 2.0 (async), Alembic (10 migrations) |
-| **Frontend** | Vanilla HTML/JS/CSS (v0.4.0) |
-| **LLMs** | OpenRouter (deepseek/deepseek-v4-pro for inference, openai/text-embedding-3-small for embeddings) |
-| **OCR** | pdfplumber → PyMuPDF → Tesseract (German) |
-| **Tooling** | ruff (formatting & linting), mypy (strict), pytest (unit + integration) |
-
-## Database Schema (14 Tables)
-
-| # | Table | Purpose |
+| Gebiet | Gesetze | Status |
 |---|---|---|
-| 1 | `legal_source` | Root record for a legal document |
-| 2 | `legal_chunk` | Hierarchical unit of law (statute→§→absatz→satz), tagged with `legal_area` |
-| 3 | `chunk_embedding` | Dense vector (1536d, cosine) |
-| 4 | `case_run` | Single analysis session with chat history and user edits |
-| 5 | `pipeline_stage_log` | Immutable audit per pipeline stage |
-| 6 | `claim` | Atomic legal assertion with user adjudication |
-| 7 | `evidence_binding` | Claim ↔ LegalChunk link with strength & quote |
-| 8 | `cache_entry` | Key-value cache (embeddings, triage) |
-| 9 | `legal_parameter` | Versioned legal params (Regelbedarf, Freibetrag...) |
-| 10 | `conversation` | Multi-turn chat session |
-| 11 | `conversation_message` | Single message (user/assistant/system) |
-| 12 | `conversation_document` | Document attached to conversation |
-| 13 | `intake_session` | Multi-turn intake interview |
-| 14 | `case_run_area` | Many-to-many case_run ↔ legal_area |
+| **Sozialrecht** (Bürgergeld / Jobcenter) | SGB I, II, III, IX, X, XII | ✅ **unterstützt** — goldset-verifiziert |
+| **Erbrecht** | BGB (Erbrecht), ErbStG, HöfeO | ⚠️ experimentell |
+| **Schenkungsrecht** | BGB (Schenkung), ErbStG | ⚠️ experimentell |
+| **Familienrecht** | BGB (Familienrecht) | ⚠️ experimentell |
+| **Mietrecht** | BGB (Mietrecht) | ⚠️ experimentell |
+| **Arbeitsrecht** | BGB, KSchG, BUrlG, TVG | ⚠️ experimentell |
+| **Vertragsrecht** | BGB (Schuldrecht) | ⚠️ experimentell |
+| **Verwaltungsrecht** | VwVfG, SGG | ⚠️ experimentell |
+| **Strafrecht** | StGB | ⚠️ experimentell |
+| **Andere** | Auffangkategorie | ⚠️ experimentell |
 
-## 16 Supported Statute Source Types
+Experimentelle Gebiete sind funktionsfähig, aber nicht verifiziert; sie sind
+in Oberfläche und Ausgaben entsprechend gekennzeichnet.
 
-sgb1, sgb2, sgb3, sgb9, sgb12, sgbx, bgb, vwvfg, sgg, weisung, bsg, erbstg, hoefev, kschg, burlg, tvg
+## Kernfunktionen
 
-## Prerequisites
+* **Fall-Journey:** Upload → OCR-Bestätigung → Analyse → Fristen-Banner →
+  Befund-Report → Aktionsdokumente. Echtzeit-Fortschritt per SSE.
+* **Evidenzgebundene Ausgaben:** Jede Tatsachen- und Rechtsaussage wird über
+  `pgvector`-Ähnlichkeitssuche an Gesetzes-Chunks gebunden — mit
+  Konfidenzwert, wörtlichem Belegzitat und deterministischer
+  Zitat-Verifikation (String-Prüfung gegen den Quell-Chunk; nicht
+  verifizierbare Bindungen werden sichtbar als „unverifiziert" markiert).
+* **Deterministische Fristen-Engine:** Bekanntgabefiktion (§ 37 Abs. 2 SGB X,
+  4 Tage), Widerspruchsfrist (§ 84 SGG), Fristberechnung mit
+  Werktag-Rollover (§ 64 SGG), Feiertagskalender je Bundesland, Jahresfrist
+  bei fehlerhafter Rechtsbehelfsbelehrung (§ 66 Abs. 2 SGG), Erkennung von
+  Nicht-Verwaltungsakten. Vollständig LLM-frei und unit-getestet.
+* **Deterministisches Rechenwerk (SGB II):** Vollständige § 11b-Kaskade
+  (Brutto-Bemessung, Netto-Absetzung), Bedarf-/Einkommensabgleich,
+  Gegenüberstellung „Jobcenter hat gerechnet / korrekt wäre" mit
+  centgenauer Differenz. Alle gesetzlichen Beträge stammen aus einem
+  versionierten Parameterspeicher mit Geltungszeiträumen.
+* **Intertemporale Rechtsauswahl:** Automatische Auswahl alter/neuer
+  Rechtslage je Leistungszeitraum (u.a. Reform zum 01.07.2026,
+  „Grundsicherungsgeld"), inklusive zeitraumgetrennter Prüfung bei
+  Rechtswechseln innerhalb eines Antrags.
+* **Golden Set & Prüfstand:** Versioniertes Set verifizierter Prüffälle
+  (synthetische Bescheide mit erwarteten Befunden, Berechnungen und
+  Fristen) — im UI als „Prüfstand" klickbar aufbereitet, inklusive
+  Demo-Modus („Diesen Fall live analysieren") und Eval-Ergebnisansicht.
+* **Eval-Harness:** `citizen-eval` führt die echte Pipeline gegen das
+  Goldset aus und misst Befund-Erkennung, Zitatpräzision,
+  Halluzinationsrate, Rechen- und Fristgenauigkeit. Versionierte Reports,
+  Regressions-Gate in der CI.
+* **Aktionsdokumente:** Widerspruch, Überprüfungsantrag (§ 44 SGB X) und
+  Akteneinsichtsantrag (§ 25 SGB X) als Baustein-Entwürfe — jede
+  Rechtsbehauptung im Dokument ist an verifizierte, vom Nutzer bestätigte
+  Befunde gebunden; Unbelegtes erscheint als `[BITTE PRÜFEN]`-Platzhalter.
+  Unterschrieben wird vom Menschen.
+* **Pseudonymisierung & Inferenzprofile:** Direkte Identifikatoren (Namen,
+  Adressen, Kennnummern, Kontodaten …) werden vor jeder externen
+  Verarbeitung lokal durch typisierte Platzhalter ersetzt und erst in den
+  fertigen Dokumenten wieder eingesetzt. Externe Inferenz läuft
+  ausschließlich über versionierte Profile (`eu-avv` als Standard für
+  Organisationen: nur freigegebene EU-Endpunkte mit AVV; technischer
+  Egress-Guard blockiert alles andere). Das aktive Profil wird in UI und
+  Dokumenten ausgewiesen.
+* **Adversariale Rechtsprüfung:** Mehrperspektivische Gegenprüfung
+  („Rechtsprüfungsrat") aus Verteidigungs-, Behörden- und Gerichtssicht.
+* **Lokale OCR-Pipeline:** Vollständig lokale Dokumentaufnahme
+  (PDF/JPG/PNG/TXT/HTML/EML, bis 25 MB) mit deterministischer
+  Fallback-Kette (`pdfplumber` → `PyMuPDF` → `Tesseract`) und
+  verpflichtender Nutzer-Bestätigung des erkannten Textes vor der Analyse.
+* **Hierarchischer Gesetzeskorpus:** Automatisierter Abruf von 16
+  Quelltypen (gesetze-im-internet.de, arbeitsagentur.de), gechunkt auf vier
+  Ebenen (Gesetz → § → Absatz → Satz), zur Laufzeit auswählbar;
+  „Rechtsstand"-Anzeige mit Aktualitätswarnung.
+* **First-Run-Bestätigung:** Analyse erst nach ausdrücklicher, lokal
+  protokollierter Kenntnisnahme des rechtlichen Hinweises (Version +
+  Prüfsumme); API-seitig durchgesetzt.
+* **Audit-Trail:** Jeder Lauf, jede Pipeline-Stufe, jeder Befund und jede
+  Evidenzbindung wird in PostgreSQL persistiert.
+* **Browserbasierte Oberfläche:** Vanilla HTML/JS/CSS, dunkles Theme,
+  deutschsprachig; Modi: Analyse (Fall-Journey), Prüfstand, Einstellungen.
 
-### Docker Deployment (Recommended)
+## Architektur
+
+| Ebene | Technologie |
+|---|---|
+| **Backend** | FastAPI, Uvicorn (SSE-Streaming) |
+| **Datenbank** | PostgreSQL 16 + `pgvector` + `tsvector` |
+| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (10 Migrationen) |
+| **Frontend** | Vanilla HTML/JS/CSS |
+| **LLM-Anbindung** | Versionierte Inferenzprofile (`eu-avv` Standard, `extern-openrouter`, `on-prem`-Slot); Modell je Pipeline-Stufe konfigurierbar; Fallback-Kette |
+| **OCR** | pdfplumber → PyMuPDF → Tesseract (deutsch) |
+| **Tooling** | ruff (Format & Lint), mypy (strict), pytest (Unit + Integration) |
+
+## Datenbankschema (14 Tabellen)
+
+| # | Tabelle | Zweck |
+|---|---|---|
+| 1 | `legal_source` | Wurzeldatensatz eines Rechtsdokuments |
+| 2 | `legal_chunk` | Hierarchische Gesetzeseinheit (Gesetz→§→Absatz→Satz), mit `legal_area` |
+| 3 | `chunk_embedding` | Dichter Vektor (1536d, Cosinus) |
+| 4 | `case_run` | Analyse-Sitzung mit Verlauf, Nutzerkorrekturen und PII-Mapping |
+| 5 | `pipeline_stage_log` | Unveränderliches Audit je Pipeline-Stufe |
+| 6 | `claim` | Atomare Rechtsaussage mit Nutzer-Adjudikation |
+| 7 | `evidence_binding` | Verknüpfung Claim ↔ LegalChunk mit Stärke & Zitat |
+| 8 | `cache_entry` | Key-Value-Cache (Embeddings, Triage) |
+| 9 | `legal_parameter` | Versionierte Rechtsparameter (Regelbedarf, Freibeträge …) mit Geltungszeitraum und Rechtslage |
+| 10 | `conversation` | Mehrschrittige Chat-Sitzung |
+| 11 | `conversation_message` | Einzelnachricht (user/assistant/system) |
+| 12 | `conversation_document` | An Konversation angehängtes Dokument |
+| 13 | `intake_session` | Mehrschrittiges Aufnahme-Interview |
+| 14 | `case_run_area` | m:n case_run ↔ legal_area |
+
+## 16 unterstützte Gesetzes-Quelltypen
+
+sgb1, sgb2, sgb3, sgb9, sgb12, sgbx, bgb, vwvfg, sgg, weisung, bsg, erbstg,
+hoefev, kschg, burlg, tvg
+
+## Voraussetzungen
+
+### Docker-Deployment (empfohlen)
 
 * [Docker](https://docs.docker.com/engine/install/) & [Docker Compose](https://docs.docker.com/compose/install/)
-* OpenRouter API key (for LLM inference)
-* OpenRouter API key with embedding provider access (for corpus embeddings)
+* API-Zugang gemäß gewähltem Inferenzprofil (EU-Anbieter mit AVV für
+  `eu-avv`, OpenRouter-Key für `extern-openrouter`)
 
-### Local Development
+### Lokale Entwicklung
 
-| Dependency | Install (Ubuntu/Debian) |
+| Abhängigkeit | Installation (Ubuntu/Debian) |
 |---|---|
 | Python 3.11+ | `sudo apt install python3.11 python3.11-venv` |
 | Tesseract OCR 5.x | `sudo apt install tesseract-ocr libtesseract-dev tesseract-ocr-deu` |
 | PostgreSQL 16 + pgvector | `sudo apt install postgresql-16 postgresql-16-pgvector` |
-| OpenRouter API keys | Sign up at [openrouter.ai](https://openrouter.ai) |
+| API-Schlüssel | je nach Inferenzprofil (siehe `.env.example`) |
 
 ---
 
-## Quickstart: Docker Compose
+## Schnellstart: Docker Compose
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/citizen.git
+# 1. Repository klonen
+git clone https://github.com/playa77/citizen.git
 cd citizen
 
-# 2. Create your environment file
+# 2. Umgebungsdatei anlegen
 cp .env.example .env
 
-# 3. Edit .env — set at minimum:
-#    OPENROUTER_API_KEY=sk-or-v1-...        (LLM inference key)
-#    EMBEDDING_API_KEY=sk-or-v1-...          (embedding key, if separate)
-#    OPENROUTER_API_KEY works for embeddings too if not set
+# 3. .env bearbeiten — mindestens:
+#    INFERENCE_PROFILE=eu-avv                (oder extern-openrouter)
+#    + Zugangsdaten des gewählten Profils (siehe .env.example)
 
-# 4. Build and start the stack
+# 4. Stack bauen und starten
 docker compose up -d --build
 
-# 5. Wait for health check, then run migrations
+# 5. Nach Health-Check Migrationen ausführen
 docker compose exec citizen-app alembic upgrade head
 
-# 6. Load the legal corpus (scraping + embedding)
+# 6. Gesetzeskorpus laden (Abruf + Embedding)
+#    Hinweis: erfordert bestätigten Disclaimer; Version siehe
+#    GET /api/v1/meta/disclaimer/version
 curl -X POST http://localhost:8000/api/v1/corpus/update \
-  -H "X-Disclaimer-Ack: v0.1.0" \
+  -H "X-Disclaimer-Ack: v1.1.0" \
   -H "Content-Type: application/json" -d '{}'
 
-# 7. Open the app
+# 7. App öffnen — beim ersten Start wird die Bestätigung des
+#    rechtlichen Hinweises verlangt
 #    http://localhost:8000
 ```
 
-To stop:
+Stoppen:
 ```bash
 docker compose down
 ```
 
 ---
 
-## API Endpoints (30+)
+## API-Endpunkte (Auswahl)
 
-| Group | Method | Path | Description |
+| Gruppe | Methode | Pfad | Beschreibung |
 |---|---|---|---|
-| **ingest** | `POST` | `/api/v1/ingest` | Upload and OCR a document |
-| **analyze** | `POST` | `/api/v1/analyze` | Execute full 9-stage pipeline (SSE) |
-| **cases** | `GET` | `/api/v1/cases` | List all case runs |
-| **cases** | `GET` | `/api/v1/cases/{id}` | Get case run with claims and evidence |
-| **cases** | `DELETE` | `/api/v1/cases/{id}` | Delete case run |
-| **cases** | `POST` | `/api/v1/cases/{id}/chat` | Case-grounded chat (SSE) |
-| **cases** | `POST` | `/api/v1/cases/{id}/reevaluate` | Targeted claim re-evaluation (SSE) |
-| **cases** | `POST` | `/api/v1/cases/{id}/claims` | Add a claim to a case |
-| **cases** | `PATCH` | `/api/v1/cases/{id}/claims/{cid}` | Edit a claim |
-| **cases** | `POST` | `/api/v1/cases/{id}/adjudicate` | User adjudication (confirm/flag/correct) |
-| **cases** | `GET` | `/api/v1/cases/{id}/export` | Export case (JSON/Markdown) |
-| **conversations** | `GET`,`POST` | `/api/v1/conversations` | List or create conversations |
-| **conversations** | `GET`,`DELETE` | `/api/v1/conversations/{id}` | Get or delete conversation |
-| **conversations** | `POST` | `/api/v1/conversations/{id}/messages` | Send chat message (SSE) |
-| **conversations** | `POST`,`GET` | `/api/v1/conversations/{id}/documents` | Attach or list documents |
-| **conversations** | `DELETE` | `/api/v1/conversations/{id}/documents/{did}` | Remove document |
-| **corpus** | `POST` | `/api/v1/corpus/update` | Scrape + embed legal texts |
-| **corpus** | `GET` | `/api/v1/corpus/status/{job_id}` | Check update progress |
-| **corpus** | `GET` | `/api/v1/corpus/health` | Corpus health (chunks, warnings) |
-| **corpus** | `GET` | `/api/v1/corpus/available-sources` | List all source types |
-| **corpus** | `GET`,`PUT` | `/api/v1/corpus/sources` | Get/set runtime source selection |
-| **intake** | `POST` | `/api/v1/intake/start` | Start multi-turn intake interview |
-| **intake** | `GET` | `/api/v1/intake/{id}` | Get intake session state |
-| **intake** | `POST` | `/api/v1/intake/{id}/message` | Send intake response (SSE) |
-| **intake** | `POST` | `/api/v1/intake/{id}/confirm` | Confirm intake results |
-| **intake** | `POST` | `/api/v1/intake/{id}/restart` | Restart intake |
-| **presets** | `GET` | `/api/v1/presets` | List all pipeline presets |
-| **presets** | `GET` | `/api/v1/presets/{id}` | Get preset details |
-| **presets** | `POST` | `/api/v1/presets/suggest` | Suggest preset from scenario |
-| **presets** | `POST` | `/api/v1/presets/apply` | Apply preset configuration |
-| **meta** | `GET` | `/api/v1/meta/disclaimer/version` | Disclaimer version |
-| **meta** | `GET` | `/api/v1/meta/disclaimer/text` | Full disclaimer text (German) |
-| **meta** | `GET` | `/api/v1/meta/version` | API and disclaimer versions |
-| **health** | `GET` | `/health` | Liveness probe |
+| **ingest** | `POST` | `/api/v1/ingest` | Dokument hochladen und per OCR erfassen |
+| **analyze** | `POST` | `/api/v1/analyze` | Vollständige Pipeline ausführen (SSE) |
+| **cases** | `GET` | `/api/v1/cases` | Alle Fall-Läufe auflisten |
+| **cases** | `GET` | `/api/v1/cases/{id}` | Fall mit Befunden und Evidenz abrufen |
+| **cases** | `DELETE` | `/api/v1/cases/{id}` | Fall löschen |
+| **cases** | `POST` | `/api/v1/cases/{id}/chat` | Fallgebundener Chat (SSE) |
+| **cases** | `POST` | `/api/v1/cases/{id}/reevaluate` | Gezielte Neubewertung einzelner Befunde (SSE) |
+| **cases** | `POST` | `/api/v1/cases/{id}/claims` | Befund ergänzen |
+| **cases** | `PATCH` | `/api/v1/cases/{id}/claims/{cid}` | Befund bearbeiten |
+| **cases** | `POST` | `/api/v1/cases/{id}/adjudicate` | Nutzer-Adjudikation (bestätigen/markieren/korrigieren) |
+| **cases** | `GET` | `/api/v1/cases/{id}/export` | Fall exportieren (JSON/Markdown) |
+| **documents** | `POST` | `/api/v1/cases/{id}/documents` | Aktionsdokumente erzeugen (Widerspruch, § 44, § 25) |
+| **goldset** | `GET` | `/api/v1/goldset` | Goldset-Manifest und Fallliste (Prüfstand) |
+| **goldset** | `GET` | `/api/v1/goldset/{case_id}` | Vollständiger Prüffall |
+| **goldset** | `POST` | `/api/v1/goldset/{case_id}/analyze` | Prüffall live durch die Pipeline schicken (Demo-Modus) |
+| **eval** | `GET` | `/api/v1/eval/reports` | Versionierte Eval-Läufe auflisten |
+| **eval** | `GET` | `/api/v1/eval/reports/{id}` | Ergebnisse je Fall/Metrik |
+| **conversations** | `GET`,`POST` | `/api/v1/conversations` | Konversationen auflisten/anlegen |
+| **conversations** | `GET`,`DELETE` | `/api/v1/conversations/{id}` | Konversation abrufen/löschen |
+| **conversations** | `POST` | `/api/v1/conversations/{id}/messages` | Chat-Nachricht senden (SSE) |
+| **conversations** | `POST`,`GET` | `/api/v1/conversations/{id}/documents` | Dokumente anhängen/auflisten |
+| **corpus** | `POST` | `/api/v1/corpus/update` | Gesetzestexte abrufen + einbetten |
+| **corpus** | `GET` | `/api/v1/corpus/status/{job_id}` | Fortschritt der Aktualisierung |
+| **corpus** | `GET` | `/api/v1/corpus/health` | Korpus-Zustand (Chunks, Warnungen, Rechtsstand) |
+| **corpus** | `GET` | `/api/v1/corpus/available-sources` | Alle Quelltypen auflisten |
+| **corpus** | `GET`,`PUT` | `/api/v1/corpus/sources` | Laufzeit-Quellauswahl lesen/setzen |
+| **intake** | `POST` | `/api/v1/intake/start` | Aufnahme-Interview starten |
+| **intake** | `GET` | `/api/v1/intake/{id}` | Interview-Status abrufen |
+| **intake** | `POST` | `/api/v1/intake/{id}/message` | Interview-Antwort senden (SSE) |
+| **intake** | `POST` | `/api/v1/intake/{id}/confirm` | Interview-Ergebnis bestätigen |
+| **presets** | `GET` | `/api/v1/presets` | Pipeline-Presets auflisten |
+| **presets** | `POST` | `/api/v1/presets/suggest` | Preset aus Szenario vorschlagen |
+| **presets** | `POST` | `/api/v1/presets/apply` | Preset-Konfiguration anwenden |
+| **meta** | `GET` | `/api/v1/meta/disclaimer/version` | Disclaimer-Version |
+| **meta** | `GET` | `/api/v1/meta/disclaimer/text` | Vollständiger Disclaimer-Text |
+| **meta** | `GET` | `/api/v1/meta/version` | API- und Disclaimer-Versionen |
+| **health** | `GET` | `/health` | Liveness-Probe |
 
----
+Vollständige, interaktive Dokumentation nach dem Start unter `/docs`
+(Swagger) und `/redoc`.
 
-## Directory Structure
+## Verzeichnisstruktur
 
 ```
 citizen/
-├── alembic/                              # 10 migrations
-│   └── versions/
-│       ├── 001_init_schema.py
-│       ├── 002_add_cache_entry.py
-│       ├── 003_add_conversations.py
-│       ├── 004_add_legal_parameter.py
-│       ├── 005_add_case_chat_fields.py
-│       ├── 006_add_intake_and_legal_areas.py
-│       ├── 007_sqlite_baseline.py
-│       ├── 008_fix_stage_name_allowed.py
-│       ├── 009_add_regime_and_notes_to_legal_parameter.py
-│       └── 010_add_pii_mapping_to_case_run.py
+├── alembic/                              # 10 Migrationen
 ├── app/
-│   ├── api/routes/                       # 12 route modules
-│   │   ├── analyze.py                    # Pipeline analysis (SSE)
-│   │   ├── cases.py                      # Case CRUD, chat, re-eval, adjudication
-│   │   ├── conversations.py              # Multi-turn chat
-│   │   ├── corpus.py                     # Corpus management
-│   │   ├── documents.py                  # Action document generation
-│   │   ├── eval_reports.py               # Eval report browser
-│   │   ├── goldset.py                    # Goldset browser (Prüfstand)
-│   │   ├── ingest.py                     # Document ingestion & OCR
-│   │   ├── intake.py                     # Multi-turn intake interviews
-│   │   ├── meta.py                       # Metadata endpoints
-│   │   ├── ocr.py                        # OCR quality assessment
-│   │   └── presets.py                    # Pipeline presets
-│   ├── core/
-│   │   ├── config.py                     # Pydantic settings
-│   │   ├── pipeline.py                   # 9-stage SSE orchestrator
-│   │   └── router.py                     # LLM router with fallback chain
-│   ├── db/
-│   │   ├── models.py                     # 14 ORM models
-│   │   ├── session.py                    # Async session factory
-│   │   └── vector_backend.py             # pgvector ↔ sqlite-vec abstraction
-│   ├── middleware/
-│   │   ├── disclaimer.py                 # Consent enforcement
-│   │   └── rate_limit.py                 # Sliding-window rate limiter
-│   ├── services/                         # 23 service modules
-│   │   ├── audit.py, cache.py, calculation.py
-│   │   ├── case_chat.py, chat_reasoning.py, conversation.py
-│   │   ├── corpus.py, corpus_readiness.py, document_generators.py
-│   │   ├── fristen.py, inference_profiles.py, intake.py
-│   │   ├── ocr.py, ocr_quality.py, parameter_store.py
-│   │   ├── presets.py, prompts.py, pseudonymization.py
-│   │   ├── reasoning.py, regime.py, retrieval.py
-│   │   ├── rules_engine.py, verification.py
-│   ├── utils/                            # image, pdf, text, tokens
-│   └── main.py                           # App entry point
-├── static/                               # Frontend v0.4.0
-│   ├── index.html                        # 3 modes: Analyze, Chat, Settings
-│   ├── app.js                            # Vanilla JS logic
-│   └── style.css                         # Dark theme
-├── tests/                                # 33 test files (~11,700 lines)
-├── scripts/
+│   ├── api/routes/                       # 12 Routenmodule (analyze, cases,
+│   │                                     #  conversations, corpus, documents,
+│   │                                     #  eval_reports, goldset, ingest,
+│   │                                     #  intake, meta, ocr, presets)
+│   ├── core/                             # config, pipeline (SSE), router
+│   ├── db/                               # 14 ORM-Modelle, Session, Vektor-Backend
+│   ├── middleware/                       # Disclaimer-Durchsetzung, Rate-Limit
+│   ├── services/                         # 23 Servicemodule, u.a.:
+│   │                                     #  fristen, rules_engine, regime,
+│   │                                     #  parameter_store, pseudonymization,
+│   │                                     #  inference_profiles, verification,
+│   │                                     #  document_generators, retrieval
+│   └── utils/                            # image, pdf, text, tokens
+├── eval/                                 # Goldsets, Eval-Harness, Reports
+├── static/                               # Frontend (Analyse, Prüfstand, Einstellungen)
+├── tests/                                # 33 Testdateien (~11.700 Zeilen)
+├── docs/                                 # STATEMENT, One-Pager, Datenschutz-Vorlagen
 ├── docker-compose.yml
 ├── Dockerfile
 ├── pyproject.toml
 └── .env.example
 ```
 
-## Key Configuration
+## Wichtige Konfiguration
 
-| Category | Setting | Default | Description |
+| Kategorie | Einstellung | Standard | Beschreibung |
 |---|---|---|---|
-| **LLM Keys** | `OPENROUTER_API_KEY` | — | Key for LLM inference |
-| | `EMBEDDING_API_KEY` | `""` | Separate key for embeddings (falls back to `OPENROUTER_API_KEY`) |
-| **Models** | `PRIMARY_MODEL` | `deepseek/deepseek-v4-pro` | Primary reasoning model |
-| | `EMBEDDING_MODEL` | `openai/text-embedding-3-small` | Embedding model |
-| | `TRIAGE_MODEL` / `FINAL_MODEL` | — | Per-stage model overrides |
-| **Pipeline** | `COMBINE_TRIAGE_STAGES` | `True` | Merge classification + decomposition |
-| | `COMBINE_FINAL_STAGES` | `True` | Merge construction + verification + generation |
-| | `ENABLE_CALCULATION_CHECK` | `True` | Run SGB II calculation verification |
-| | `PIPELINE_TIMEOUT_SEC` | `120` | Hard pipeline timeout |
-| **Retrieval** | `RETRIEVAL_MODE` | `combined` | Embedding strategy |
-| | `TOP_K_RETRIEVAL` | `10` | Max chunks per query |
-| | `MAX_COSINE_DISTANCE` | `0.95` | Cosine threshold |
-| **Corpus** | `CORPUS_SOURCES` | `["sgb2", "sgbx"]` | Default sources (overridable at runtime) |
-| **Rate Limit** | `RATE_LIMIT_REQUESTS` | `60` | Requests per window |
-| | `RATE_LIMIT_WINDOW` | `60` | Window in seconds |
-| **OCR** | `ENABLE_OCR_LLM_SYNTHESIS` | `False` | LLM synthesis of dual-OCR results |
+| **Inferenz** | `INFERENCE_PROFILE` | `eu-avv` | Aktives Inferenzprofil (`eu-avv` / `extern-openrouter` / `on-prem`) |
+| | Profildefinitionen | `config/inference_profiles.yaml` | Endpunkte, AVV-Status, Modell je Stufe, Egress-Allowlist |
+| **Pipeline** | `ENABLE_CALCULATION_CHECK` | `True` | Deterministische SGB-II-Rechenprüfung |
+| | `PIPELINE_TIMEOUT_SEC` | `120` | Hartes Pipeline-Timeout |
+| **Retrieval** | `RETRIEVAL_MODE` | `combined` | Embedding-Strategie |
+| | `TOP_K_RETRIEVAL` | `10` | Max. Chunks je Anfrage |
+| **Korpus** | `CORPUS_SOURCES` | `["sgb2", "sgbx"]` | Standardquellen (zur Laufzeit änderbar) |
+| **Rate-Limit** | `RATE_LIMIT_REQUESTS` / `_WINDOW` | `60` / `60` | Anfragen je Zeitfenster (Sekunden) |
+| **OCR** | `ENABLE_OCR_LLM_SYNTHESIS` | `False` | LLM-Synthese der Dual-OCR-Ergebnisse |
 
-See `.env.example` for the complete list.
+Vollständige Liste in `.env.example`.
 
-## Running Tests
+## Tests ausführen
 
 ```bash
-# Unit tests (no DB needed)
+# Unit-Tests (ohne Datenbank)
 pytest tests/unit/ -v
 
-# Integration tests (requires running database)
+# Integrationstests (laufende Datenbank erforderlich)
 alembic upgrade head
 pytest tests/integration/ -v
 
-# All tests
-pytest -v
+# Eval gegen das Goldset (Beispiel)
+citizen-eval run --goldset v0.2.0 --profile eu-avv \
+  --accept-disclaimer v1.1.0 --report eval/reports/
 
-# Code quality
+# Codequalität
 ruff check app/ tests/
 ruff format --check app/ tests/
 mypy app/
 ```
 
-## Security & Privacy
+## Sicherheit & Datenschutz
 
-* **Data Locality:** All document processing runs locally. Only normalized text is sent to OpenRouter.
-* **Consent Enforcement:** Mandatory disclaimer acknowledgment via `X-Disclaimer-Ack` header.
-* **Data Minimization:** IP addresses never stored in plain text. Auto-generated `.secret_salt` on first boot.
-* **Rate Limiting:** In-memory sliding-window rate limiter enabled by default.
+* **Datenhaltung lokal:** Dokumente, Fälle, Befunde, Mappings und Audit-Trail
+  verbleiben in der lokalen Datenbank.
+* **Pseudonymisierung vor Inferenz:** Direkte Identifikatoren werden lokal
+  ersetzt, bevor Daten das System verlassen, und erst in den fertigen
+  Artefakten reinjiziert. Rechtlich tragende Angaben (Daten, Beträge, §§)
+  bleiben erhalten.
+* **EU-Inferenz unter AVV (`eu-avv`, Standard):** Übermittlung ausschließlich
+  an freigegebene EU-Endpunkte; ein technischer Egress-Guard blockiert
+  nicht freigegebene Ziele und erkannte Klartext-Identifikatoren.
+* **Protokollierte Kenntnisnahme:** Erst-Start-Bestätigung des rechtlichen
+  Hinweises mit Version und Prüfsumme; Durchsetzung auf API-Ebene
+  (`X-Disclaimer-Ack` bzw. In-App-Bestätigung).
+* **Datenminimierung:** IP-Adressen werden nie im Klartext gespeichert;
+  automatisch erzeugtes `.secret_salt` beim ersten Start; Logs enthalten
+  Platzhalter statt personenbezogener Klartextdaten.
+* **Rate-Limiting:** Sliding-Window-Limiter standardmäßig aktiv.
 
-## API Documentation
+Vorlagen für Datenschutzbeauftragte (AVV-Checkliste, Verzeichnis von
+Verarbeitungstätigkeiten) liegen unter `docs/datenschutz/`.
 
-Once running:
-* **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+## Lizenz
 
-## License
+MIT-Lizenz — siehe [LICENSE](LICENSE).
 
-MIT License — see [LICENSE](LICENSE).
-
-**Disclaimer:** This software provides automated legal reasoning. It does not constitute binding legal advice.
+**Rechtlicher Hinweis:** Diese Software liefert automatisierte
+Rechtsinformation. Sie stellt keine Rechtsberatung dar — maßgeblich ist
+[DISCLAIMER_DE.md](DISCLAIMER_DE.md) in der jeweils bestätigten Fassung.
