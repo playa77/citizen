@@ -1,4 +1,4 @@
-# Global AGENTS.md
+# Project-specific AGENTS.md
 
 **Version: 2.1.0 | 2026-07-13**
 Supersedes: unversioned global AGENTS.md (retro-designated v1.x). Incorporates dev-workflow-v1.0.0 `AGENTS-global-delta.md` (v2.0.0 | 2026-07-10) in full, the git-worktree contract (§7), and the filesystem deny list (§8).
