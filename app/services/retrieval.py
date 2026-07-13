@@ -239,7 +239,8 @@ async def retrieve_chunks_combined_filtered(
         await session.close()
         break
 
-    return [
+    # Build vector result list
+    vector_chunks: list[dict[str, Any]] = [
         {
             "chunk_id": str(row["id"]),
             "text_content": row["lc_text_content"],
@@ -254,6 +255,15 @@ async def retrieve_chunks_combined_filtered(
         }
         for row in rows
     ]
+
+    # ── WP-20 Lever 4: always-on hybrid search with RRF ────────────────
+    keyword_chunks = await retrieve_chunks_keyword(
+        combined_query,
+        top_k=settings.TOP_K_KEYWORD,
+        question_index=0,
+    )
+    vector_chunks = _rrf_fuse(vector_chunks, keyword_chunks)
+    return vector_chunks
 
 
 async def retrieve_chunks_per_area(
@@ -331,7 +341,14 @@ async def retrieve_chunks_per_area(
         await session.close()
         break
 
-    all_chunks.sort(key=lambda c: c["distance"])
+    # ── WP-20 Lever 4: always-on hybrid search with RRF ────────────────
+    keyword_query = "\n".join(questions)
+    keyword_chunks = await retrieve_chunks_keyword(
+        keyword_query,
+        top_k=settings.TOP_K_KEYWORD,
+        question_index=0,
+    )
+    all_chunks = _rrf_fuse(all_chunks, keyword_chunks)
     return all_chunks
 
 
@@ -1079,6 +1096,87 @@ async def retrieve_chunks_keyword(
         "retrieve_chunks_keyword: found %d chunks for %d keywords",
         len(results),
         len(keywords),
+    )
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Reciprocal Rank Fusion (WP-20 Lever 4)
+# ---------------------------------------------------------------------------
+
+
+def _rrf_fuse(
+    vector_chunks: list[dict[str, Any]],
+    keyword_chunks: list[dict[str, Any]],
+    k: int = 60,
+) -> list[dict[str, Any]]:
+    """Fuse vector and keyword results using Reciprocal Rank Fusion.
+
+    Each chunk appearing in either list gets an RRF score:
+    ``(1/(k+vec_rank) if in vector results) + (1/(k+kw_rank) if in keyword results)``.
+    Results sorted by RRF score descending, then mapped to ``distance = 1.0 - rrf_score``
+    for consistency with the existing sort-by-distance pattern.
+
+    Parameters
+    ----------
+    vector_chunks :
+        Results from vector similarity search, ordered by distance ascending.
+    keyword_chunks :
+        Results from keyword search, ordered by relevance.
+    k :
+        Fusion constant (default 60, standard RRF value).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Fused results with ``distance`` set to ``1.0 - rrf_score`` and
+        ``_rrf_score`` attached for debugging.
+    """
+    if not keyword_chunks:
+        return list(vector_chunks)
+    if not vector_chunks:
+        # Keyword chunks already have a fixed distance — return as-is
+        return list(keyword_chunks)
+
+    # Build rank maps (1-indexed position in each result list)
+    vec_ranks: dict[str, int] = {
+        c["chunk_id"]: i + 1 for i, c in enumerate(vector_chunks)
+    }
+    kw_ranks: dict[str, int] = {
+        c["chunk_id"]: i + 1 for i, c in enumerate(keyword_chunks)
+    }
+
+    # Compute RRF score for every unique chunk
+    scored: list[tuple[str, float]] = []
+    for cid in set(vec_ranks) | set(kw_ranks):
+        v_score = 1.0 / (k + vec_ranks[cid]) if cid in vec_ranks else 0.0
+        k_score = 1.0 / (k + kw_ranks[cid]) if cid in kw_ranks else 0.0
+        scored.append((cid, v_score + k_score))
+
+    # Sort by RRF score descending
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    # Build full chunk dicts: prefer vector chunk data, fall back to keyword
+    chunk_map: dict[str, dict[str, Any]] = {}
+    for c in vector_chunks:
+        chunk_map[c["chunk_id"]] = c
+    for c in keyword_chunks:
+        if c["chunk_id"] not in chunk_map:
+            chunk_map[c["chunk_id"]] = c
+
+    results: list[dict[str, Any]] = []
+    for cid, rrf_score in scored:
+        chunk = dict(chunk_map[cid])
+        chunk["distance"] = 1.0 - rrf_score  # map to distance for consistency
+        chunk["_rrf_score"] = rrf_score
+        results.append(chunk)
+
+    logger.debug(
+        "_rrf_fuse: fused %d vector + %d keyword = %d results (k=%d)",
+        len(vector_chunks),
+        len(keyword_chunks),
+        len(results),
+        k,
     )
     return results
 
