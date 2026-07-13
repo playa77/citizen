@@ -17,6 +17,7 @@ Given a list of legal questions, this module:
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from sqlalchemy import or_, select
@@ -29,6 +30,36 @@ from app.db.session import get_async_session
 from app.db.vector_backend import cosine_distance
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Statute name → source_type mapping (for §-reference direct lookup, WP-20)
+# ---------------------------------------------------------------------------
+
+_STATUTE_TO_SOURCE_TYPE: dict[str, list[str]] = {
+    "SGB I": ["sgb1"],
+    "SGB II": ["sgb2"],
+    "SGB III": ["sgb3"],
+    "SGB IX": ["sgb9"],
+    "SGB X": ["sgbx"],
+    "SGB XII": ["sgb12"],
+    "BGB": ["bgb"],
+    "ErbStG": ["erbstg"],
+    "HöfeV": ["hoefev"],
+    "VwVfG": ["vwvfg"],
+    "SGG": ["sgg"],
+    "KSchG": ["kschg"],
+    "BUrlG": ["burlg"],
+    "TVG": ["tvg"],
+}
+
+# Regex to extract norm references like "§ 11b SGB II" or "§§ 45/48/50 SGB X"
+_NORM_REF_RE = re.compile(
+    r"§{1,2}\s*"
+    r"(?P<para>[A-Za-z0-9]+(?:\s*/\s*[A-Za-z0-9]+)*)"
+    r"(?:\s+(?:Abs\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*|S\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*|Nr\.\s*[A-Za-z0-9]+(?:[-/]\s*[A-Za-z0-9]+)*))*"
+    r"\s+"
+    r"(?P<statute>[A-Za-z\u00C0-\u024F]+(?:\s+(?![nNaA]\.F\.)[A-Za-z\u00C0-\u024F0-9]+){0,3})"
+)
 
 
 class RetrievalError(Exception):
@@ -113,6 +144,31 @@ async def retrieve_chunks_for_areas(
     # Sort merged by distance ascending; cap at MAX_CHUNKS_FOR_FINAL.
     merged.sort(key=lambda c: c["distance"])
     merged = merged[: _s.MAX_CHUNKS_FOR_FINAL]
+
+    # ── WP-20 Lever 3: §-reference direct lookup ──────────────────────────
+    # Extract norm references from the document text and look up matching
+    # chunks by hierarchy_path. Merge with vector results (dedup by chunk_id,
+    # keeping lower distance), sort, and cap again.
+    combined_source_types: set[str] = set()
+    for area in legal_areas:
+        combined_source_types.update(AREA_TO_SOURCE_TYPES.get(area, ()))
+    if normalized_text and combined_source_types:
+        norm_chunks = await retrieve_chunks_by_norm_reference(
+            normalized_text,
+            source_types=tuple(combined_source_types),
+        )
+        if norm_chunks:
+            seen_norm: set[str] = set(c["chunk_id"] for c in merged)
+            for nc in norm_chunks:
+                nc_id = nc["chunk_id"]
+                if nc_id in seen_norm:
+                    # Keep the lower distance (vector result is probably better)
+                    continue
+                seen_norm.add(nc_id)
+                merged.append(nc)
+            merged.sort(key=lambda c: c["distance"])
+            merged = merged[: _s.MAX_CHUNKS_FOR_FINAL]
+
     return per_area_results, merged
 
 
@@ -719,6 +775,143 @@ async def _execute_query(
         }
         for row in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# §-Reference direct lookup (WP-20 Lever 3)
+# ---------------------------------------------------------------------------
+
+
+def _extract_norm_references(text: str) -> list[str]:
+    """Extract §-references from *text* and return normalised norm strings.
+
+    Uses ``_NORM_REF_RE`` to match patterns like ``§ 11b SGB II`` or
+    ``§§ 45/48/50 SGB X``, filters to known statutes, and explodes
+    multi-paragraph references (``§§ 45/48/50`` → three individual norms).
+    """
+    # Strip n.F./a.F. and parentheticals for cleaner matching
+    cleaned = re.sub(r"\s+(?:n\.F\.|a\.F\.)", "", text)
+    cleaned = re.sub(r"\s*\([^)]*\)", "", cleaned)
+
+    found: list[str] = []
+    for match in _NORM_REF_RE.finditer(cleaned):
+        raw_para = match.group("para").strip()
+        statute = match.group("statute").strip()
+
+        # Skip if statute is not in our known mapping
+        if statute not in _STATUTE_TO_SOURCE_TYPE:
+            continue
+
+        # Explode multiple paragraphs (e.g. "45/48/50")
+        for para in re.split(r"\s*/\s*", raw_para):
+            found.append(f"§ {para} {statute}")
+
+    if found:
+        logger.info(
+            "_extract_norm_references: found %d norm refs: %s",
+            len(found),
+            found,
+        )
+    return found
+
+
+async def retrieve_chunks_by_norm_reference(
+    document_text: str,
+    source_types: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    """Look up legal chunks by §-reference extracted from *document_text*.
+
+    For each extracted norm reference (e.g. ``§ 11b SGB II``), builds a
+    ``LIKE`` pattern on ``legal_chunk.hierarchy_path`` (e.g. ``%> § 11b%``)
+    and queries ``LegalChunk`` joined with ``LegalSource``, filtered by
+    *source_types* and ``is_active=True``.
+
+    Returns chunks with ``distance=0.0`` (exact-match boost) and
+    ``method="norm_reference"``. These are typically merged with vector
+    results in :func:`retrieve_chunks_for_areas`.
+    """
+    if not document_text:
+        return []
+
+    norm_refs = _extract_norm_references(document_text)
+    if not norm_refs:
+        return []
+
+    results: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    async for session in get_async_session():
+        for norm in norm_refs:
+            match = _NORM_REF_RE.match(norm)
+            if not match:
+                continue
+            para = match.group("para").strip()
+            statute = match.group("statute").strip()
+
+            # Map statute name → source_types, intersect with requested types
+            statute_src_types = _STATUTE_TO_SOURCE_TYPE.get(statute, [])
+            matching_src = [st for st in statute_src_types if st in source_types]
+            if not matching_src:
+                continue
+
+            # hierarchy_path looks like "SGB II > § 11b > Abs. 3"
+            hierarchy_pattern = f"%> § {para}%"
+
+            stmt = (
+                select(
+                    LegalChunk.id.label("chunk_id"),
+                    LegalChunk.text_content,
+                    LegalChunk.hierarchy_path,
+                    LegalChunk.unit_type,
+                    LegalChunk.effective_date,
+                    LegalChunk.legal_area,
+                    LegalSource.source_type,
+                    LegalSource.title,
+                )
+                .join(LegalSource, LegalSource.id == LegalChunk.source_id)
+                .where(
+                    LegalChunk.hierarchy_path.ilike(hierarchy_pattern),
+                    LegalSource.is_active.is_(True),
+                    LegalSource.source_type.in_(matching_src),
+                )
+                .limit(5)  # per norm reference
+            )
+
+            result = await session.execute(stmt)
+            rows = result.mappings().all()
+
+            for row in rows:
+                cid = str(row["chunk_id"])
+                if cid in seen:
+                    continue
+                seen.add(cid)
+                results.append(
+                    {
+                        "chunk_id": cid,
+                        "text_content": row["text_content"],
+                        "hierarchy_path": row["hierarchy_path"],
+                        "unit_type": row["unit_type"],
+                        "effective_date": str(row["effective_date"])
+                        if row["effective_date"]
+                        else "",
+                        "source_type": row["source_type"],
+                        "title": row["title"],
+                        "legal_area": row["legal_area"],
+                        "distance": 0.0,  # exact-match boost
+                        "method": "norm_reference",
+                        "question_index": 0,
+                    }
+                )
+
+        await session.close()
+        break
+
+    logger.info(
+        "retrieve_chunks_by_norm_reference: found %d chunks for %d norm refs",
+        len(results),
+        len(norm_refs),
+    )
+    return results
 
 
 # ---------------------------------------------------------------------------
