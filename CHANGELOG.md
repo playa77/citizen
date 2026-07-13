@@ -7,6 +7,15 @@ Newest entries first. Dates in ISO 8601.
 
 ## 2026-07-13 — Release v1.0.0
 
+### Production Deployment (2026-07-13)
+- Deployed to VPS (37.60.240.152) at https://workbench.gronowski.cc
+- PostgreSQL 16 + pgvector via Docker Compose, nginx reverse proxy, Let's Encrypt TLS
+- Fixed missing dependencies: `asyncpg>=0.29.0`, `pgvector>=0.3.0` (D-001, D-002)
+- Fixed migration DAG branch targeting: PostgreSQL targets `006`, SQLite targets `heads` (D-004)
+- Applied missing schema columns from SQLite-branch migrations 008–010: `regime`, `notes`, `pii_mapping` (D-005)
+- Fixed alembic startup deadlock: migrations now run in subprocess instead of `asyncio.to_thread` (D-006)
+- Created DEPLOYMENT.md and DECISIONS.md
+
 ### Citizen v1.0.0
 Local-first, evidence-constrained legal reasoning engine for German social law (SGB II).
 

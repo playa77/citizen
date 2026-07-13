@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -53,8 +54,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from alembic.config import Config as AlembicConfig
 
         alembic_cfg = AlembicConfig("alembic.ini")
-        # Override the DB URL with the runtime value (alembic.ini has a dead default)
-        alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+        # env.py already reads DATABASE_URL from the environment; the ini-file
+        # default is a dead sentinel. Do NOT call set_main_option here — the
+        # side-effect inside env.py causes a long-running deadlock with asyncpg
+        # when applied through the running event loop. See DECISIONS.md §D-007.
+        # alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
         # On SQLite fresh DB, stamp directly to the SQLite baseline migration
         # to skip PostgreSQL-only migrations 001-006.
@@ -70,10 +74,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 logger.info("SQLite fresh DB detected — stamped to 007_sqlite_baseline")
             sync_engine.dispose()
 
-        # Use asyncio.to_thread to escape the running event loop
-        # (alembic_command.upgrade calls asyncio.run internally via env.py)
-        await asyncio.to_thread(alembic_command.upgrade, alembic_cfg, "head")
-        logger.info("Alembic migrations applied successfully.")
+        # Run alembic upgrade in a subprocess, NOT via asyncio.to_thread.
+        #
+        # asyncio.to_thread(alembic_command.upgrade, …) deadlocks when called
+        # from inside uvicorn's lifespan handler because asyncpg + greenlet
+        # internals conflict with the running event loop across threads.
+        # A subprocess is an independent interpreter that avoids this entirely.
+        # See DECISIONS.md §D-007.
+        #
+        # Migration DAG: two branches — PostgreSQL (001→006) and SQLite baseline (007→010).
+        # "head" is ambiguous; target the correct tip for the active database dialect.
+        _migration_target = "heads" if settings.DATABASE_URL.startswith("sqlite") else "006_add_intake_and_legal_areas"
+        _proc = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "alembic", "upgrade", _migration_target,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _stdout, _stderr = await asyncio.wait_for(_proc.communicate(), timeout=60.0)
+        if _proc.returncode != 0:
+            logger.warning(
+                "Alembic upgrade returned code %d: stdout=%s stderr=%s",
+                _proc.returncode, _stdout.decode(errors="replace").strip(), _stderr.decode(errors="replace").strip(),
+            )
+        else:
+            logger.info("Alembic migrations applied successfully (target=%s).", _migration_target)
     except Exception as exc:
         logger.warning("Alembic migration skipped or failed: %s. Continuing anyway.", exc)
 
