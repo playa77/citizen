@@ -1,206 +1,159 @@
-# Citizen — Agent Context
+# Global AGENTS.md
 
-## Project
+**Version: 2.1.0 | 2026-07-13**
+Supersedes: unversioned global AGENTS.md (retro-designated v1.x). Incorporates dev-workflow-v1.0.0 `AGENTS-global-delta.md` (v2.0.0 | 2026-07-10) in full, the git-worktree contract (§7), and the filesystem deny list (§8).
 
-Local-first, evidence-constrained legal reasoning engine for German law (multi-area: SGB,
-BGB, Erbrecht, Mietrecht, Arbeitsrecht, etc.). Python 3.11+, FastAPI, SQLAlchemy async,
-PostgreSQL 16 + pgvector, vanilla HTML/JS/CSS frontend with SSE streaming.
+---
 
-**Package manager:** `uv` (see `uv.lock` — though it's excluded from OpenCode context via
-`.opencodeignore`). Dependencies are pinned in `pyproject.toml`.
+## 1. Working Guidelines
 
-**Key constraints:**
-- All LLM calls go through `app/core/router.py` (OpenRouter with fallback chain:
-  `PRIMARY_MODEL → FALLBACK_MODEL_1 → FALLBACK_MODEL_2`)
-- API endpoints in `app/api/routes/` (12 route modules, 30+ endpoints)
-- Database models in `app/db/models.py` (14 ORM models + 1 abstract base), migrations via Alembic (10 migrations)
-- Frontend in `static/` — vanilla JS, no frameworks. Three modes: Analyze, Chat, Settings.
-  All frontend files at v1.0.0.
-- Settings loaded from `.env` via `pydantic-settings`. `settings` is a lazy singleton
-  (see Gotchas below).
-- Strict mypy (`pyproject.toml` `strict = true`), ruff formatting (line-length 100, rules
-  `E,F,W,I,UP,B,C4,SIM,RUF`), pytest with `asyncio_mode = auto`
+- **Verbose documentation.** Prioritize comments that explain why, not what — the code already shows what it does. Focus on non-obvious logic, design decisions, and surprising behavior. Obvious boilerplate doesn't need paragraph explanations.
+- **Verbose logging.** All status and log messages must be detailed and include ISO 8601 timestamps. Emit sufficient context to make debugging straightforward without having to reproduce the issue.
+- **Version every script.** Include a version comment at the top (e.g., `# Version: 1.3.2 | 2026-03-14`). Never call anything "final" — software evolves.
+- **Respectful API usage.** Minimize concurrent calls. Implement sensible delays and respect rate limits. Use exponential backoff for retries.
+- **No regressions.** Never remove existing functionality or UI features without explicit instruction. Flag when changes might affect existing behavior.
+- **SSH via `sshpass`.** All SSH connections to remote VPS instances must use `sshpass`.
+- **Everything headless.** Never spawn windows, dialogs, or interactive prompts on the host system.
+- **Authentication failures.** If login to any remote host fails, stop immediately and ask the user for guidance. Do not retry or attempt alternative credentials without explicit instruction.
+- **Python package installation.** Never use `--break-system-packages` (or equivalent flags) with `pip`. Always use a virtual environment. Create one venv per project directory (e.g., `./venv/`) and reuse it across tasks within that project. If a project directory doesn't exist yet, create it first, then initialize the venv there. Do not create throwaway venvs in arbitrary locations.
+- **Changelog.** Maintain a changelog for every project. Append all relevant changes as you go. If no changelog exists, create one before making the first modification.
+- **Browser automation.** Never use the `agent-browser` skill/tool — it has serious unresolved issues. Use `playwright-cli` (or raw Playwright scripts) for all browser automation tasks instead.
 
-## Commands
+## 2. Decision Ledger
 
-```bash
-# Install (uses uv)
-uv pip install -e ".[dev]"
+- **Every non-trivial decision is logged** to the project's `DECISIONS.md` (append-only) with a reversibility tag: R1 (reversible <1h), R2 (bounded cost), R3 (one-way door: persisted formats, external contracts, security model, core framework, anything users or third parties will depend on).
+- **R1**: decide silently, log. Never ask the user.
+- **R2**: decide, log with the rejected alternative, proceed.
+- **R3**: STOP. Present branches and downstream consequences with NO recommendation, NO default, NO "most projects do X". Require a decision in the user's own words plus at least one reason. "Ok", "sure", "you decide", and bare agreement are invalid answers for R3 — re-ask once with concrete failure scenarios per branch; if delegation is insisted upon, log `DELEGATED-R3 ⚠` and proceed.
+- Work packages touching an undecided or deferred R3 are blocked.
 
-# Lint & format
-ruff check app/ tests/
-ruff format --check app/ tests/
-mypy app/
+## 3. Self-Grading Ban
 
-# Tests — conftest.py sets default DATABASE_URL and OPENROUTER_API_KEY env vars
-# so unit tests run without a live database or real API key.
-pytest tests/unit/ -v
+- Never describe your own work with unverifiable status claims. "Fully implemented and tested", "production-ready", "robust", "clean" are banned unless immediately followed by executable evidence (test names, CI runs, file:line).
+- Project `AGENTS.md` files are contracts, not status reports. Current state belongs in the changelog and CI, never in `AGENTS.md`. Edits to any `AGENTS.md` are presented as diffs for human approval, like source code.
+- Refactoring requires pre-declared metrics and a stop condition logged to the ledger before the first edit (see `refactor-loop-v2.md`). "Until satisfied/happy/confident" is not a stop condition and must be rejected even if the user writes it — ask for a metric instead.
 
-# Integration tests require a running PostgreSQL with pgvector + alembic applied:
-alembic upgrade head
-pytest tests/integration/ -v
+## 4. Approval Discipline
 
-# All tests
-pytest -v
+- `DESIGN.md` approval requires the literal phrase `APPROVED DESIGN vX.Y.Z` plus one sentence naming the invariant the human considers most at risk. Refuse approvals without the sentence.
+- Never summarize project state when the user returns to a session; point to the `DECISIONS.md` re-entry protocol (last 5 entries + open R3s) instead.
 
-# Run the app (needs DATABASE_URL + OPENROUTER_API_KEY in .env)
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+## 5. Invariant Guards
 
-## Gotchas
+- Every `[TESTABLE]` invariant in `DESIGN.md` must have a guard test installed and green before any work package is marked complete. Guard tests are never weakened, skipped, or deleted without an R3 decision.
+- Any diff touching paths named by an `[UNTESTABLE]` invariant's review trigger must be explicitly flagged to the human before commit.
 
-### `settings` singleton — don't import at module level in test files
-`app/core/config.py` exposes `settings` via `__getattr__`, which lazily creates a
-`Settings()` that reads `.env`. If you `from app.core.config import settings` at module
-level *before* env vars are set, it picks up whatever env was active at import time.
-`tests/conftest.py` sets `DATABASE_URL` and `OPENROUTER_API_KEY` as early defaults, but
-if you need to override settings in a test, use `monkeypatch.setenv` *before* importing
-anything from `app.core.config`.
+## 6. Audit Cooperation
 
-### Alembic DB URL — ini value is dead
-`alembic.ini` has a hardcoded `sqlalchemy.url`, but `alembic/env.py` overrides it with
-`os.getenv("DATABASE_URL")` at runtime. Always set `DATABASE_URL` before running alembic.
-The ini URL exists only as a fallback and does not match any real database.
+- On request, assemble an audit pack per `audit-pack.md`. Never volunteer an overall verdict; never soften the shortcuts section. When asked to select a work package for audit, use a verifiable random method (`shuf`), never judgment.
 
-### Disclaimer header required for all API calls
-All `/api/*` routes (except `/api/v1/meta/*`, `/static`, `/health`, `/docs`, `/redoc`)
-require `X-Disclaimer-Ack: v0.1.0` header. Missing header → HTTP 403. The middleware is
-`app/middleware/disclaimer.py`. OPTIONS preflight requests bypass this check.
+## 7. Git Worktrees (opt-in)
 
-### `.corpus_sources.json` — runtime state, not tracked
-User corpus source preferences are persisted to `.corpus_sources.json` in the project
-root (analogous to `.secret_salt`). Both are in `.gitignore`. Don't create or modify
-these files in code changes; they're runtime artifacts.
+Worktree mode is **off by default**. It activates only when the user explicitly requests it for a task or session (e.g., "use a worktree", "worktree mode", "run these in parallel worktrees"). Creating a worktree without such an instruction is a rule violation, not initiative. When active, the following contract applies:
 
-### Integration tests require live PostgreSQL + pgvector
-Integration tests (`tests/integration/`) need a running database with the pgvector
-extension. Run `alembic upgrade head` before them. Unit tests do not need a database.
+### Activation and placement
 
-### No CI, no pre-commit hooks
-There are no GitHub Actions workflows or pre-commit config. All quality checks must
-be run manually: `ruff check`, `ruff format --check`, `mypy app/`, `pytest`.
+- **One worktree per work package, one branch per worktree.** Never share a worktree between two agents or two concurrent tasks.
+- **Location convention:** `<repo>/.worktrees/<branch-slug>/`. Ensure `.worktrees/` is in `.gitignore` before creating the first worktree; if it isn't, add it (log as R1).
+- **Branch naming** follows the project's existing convention (`feature/…`, `fix/…`, `refactor/…`). The slug in the worktree path is the branch name with `/` replaced by `-`.
+- **The main worktree stays on the default branch** and is never used for implementation while worktree mode is active. It is the merge and review location only.
+- Log every worktree creation and removal as an R1 ledger entry (branch, base commit, purpose).
 
-### Frontend is versioned per file
-`index.html` header comment says v0.4.0. `app.js` and `style.css` say v0.3.0.
-The HTML version is the authoritative frontend version.
+### Working inside a worktree
 
-### LLM router: single shared client via `get_shared_client()`
-`app/core/router.py` exposes a single `get_shared_client()` singleton and `close_client()`.
-All service modules (`reasoning.py`, `chat_reasoning.py`, `intake.py`, `case_chat.py`,
-`calculation.py`) obtain the client through `get_shared_client()`. A single `close_client()`
-call in the FastAPI lifespan shutdown handler closes it.
+- Run **all gates inside the worktree** (build, lint, full test suite, invariant guards) before proposing a merge. A green suite in the main worktree proves nothing about the branch.
+- **Per-worktree environments:** create a fresh `./venv/` (or `node_modules/` via install) inside each worktree — never symlink environments between worktrees unless the user explicitly permits it. Copy required untracked config (`.env` and equivalents) from the main worktree explicitly; never commit it as a side effect.
+- Changelog and ledger entries are written on the worktree's branch alongside the code they describe, so they merge with it.
+- **Remember the shared object store:** branches, stashes, and refs are visible across all worktrees. Never assume isolation beyond the working directory. A branch checked out in any worktree cannot be checked out in another — do not work around this with `--force`.
 
-### PDF parsing: dual-fallback chain
-OCR is `pdfplumber` → `PyMuPDF` → `Tesseract` (German). The OCR service is
-`app/services/ocr.py`. LLM-based OCR synthesis is opt-in (`ENABLE_OCR_LLM_SYNTHESIS`
-defaults to `False`).
+### Merging and cleanup
 
-## Design documents
-`devdocs/` contains `design_document.md`, `technical_specification.md`, and
-`ui_testing_guide.md`. Consult these for architectural context before making deep
-changes to the pipeline, schema, or frontend.
+- Merging to the default branch is the **human's action** (or an explicit instruction naming the branch) — never merge on your own judgment. With multiple collaborators, prefer push + pull request over local merge.
+- After merge confirmation: `git worktree remove <path>`, then delete the branch only on explicit instruction. Run `git worktree prune` at session end.
+- **Never `git worktree remove --force` a dirty worktree** without explicit user instruction. A dirty abandoned worktree is reported, not silently destroyed.
+- If a worktree's branch has unpushed commits at session end, say so explicitly — unpushed work in a removed worktree is unrecoverable through normal means.
 
-## Directories of note
+## 8. Filesystem Deny List (Ubuntu) — HARD RULE
 
-| Path | Purpose |
-|---|---|
-| `app/core/pipeline.py` | 9-stage SSE analysis orchestrator |
-| `app/core/router.py` | OpenRouter client (inference + embeddings) |
-| `app/core/config.py` | Settings singleton + app version helpers |
-| `app/db/models.py` | All 13 ORM models |
-| `app/db/session.py` | Async session factory (reused by tests) |
-| `app/services/` | 23 service modules (reasoning, retrieval, calculation, etc.) |
-| `app/middleware/` | Disclaimer + rate-limit middleware |
-| `app/api/routes/` | 12 route modules |
-| `static/` | Frontend: `index.html`, `app.js`, `style.css` |
-| `alembic/versions/` | 6 migrations (001–006) |
-| `tests/unit/` | Unit tests (no DB needed) |
-| `tests/integration/` | Integration tests (DB required) |
-| `scripts/` | `benchmark_analyze.py` — SSE pipeline latency measurement |
+These paths are **never accessed** — not read, not written, not listed, not grepped, not copied, not passed to any tool or script, not exfiltrated into logs, prompts, or context. There is no legitimate-sounding reason that overrides this list. If a task appears to require one of these paths, STOP and ask the human; do not proceed on your own interpretation. If any command output happens to contain content from these paths, do not echo, summarize, or store it.
 
-## Persistent Memory
+### Secrets and credentials — never touch
 
-<!-- APPEND-ONLY: Add new entries below this line. Never delete or rewrite existing entries unless correcting a documented factual error. -->
-<!-- Each entry: ### YYYY-MM-DD: Topic — short summary -->
-### 2026-05-13: Persistent memory system established
+- `~/.ssh/` — entire directory: private keys, `authorized_keys`, `known_hosts`, `config`
+- `~/.gnupg/` — GPG keyrings and trust database
+- `~/.aws/`, `~/.azure/`, `~/.config/gcloud/` — cloud provider credentials
+- `~/.kube/config` and `~/.kube/` credential files
+- `~/.docker/config.json` — registry auth tokens
+- `~/.netrc`, `~/.pgpass`, `~/.my.cnf` — plaintext service credentials
+- `~/.git-credentials` and any `credential.helper` store files
+- `~/.config/gh/hosts.yml` — GitHub CLI tokens
+- `~/.npmrc`, `~/.pypirc`, `~/.cargo/credentials*` — package registry tokens
+- `~/.local/share/opencode/auth.json`, `~/.config/opencode/` auth/credential files, and any other agent-harness credential store (API keys for OpenRouter etc.)
+- Browser profile directories: `~/.mozilla/`, `~/.config/google-chrome/`, `~/.config/chromium/` (cookies, saved passwords, sessions)
+- Keyrings and wallets: `~/.local/share/keyrings/`, `~/.config/kwalletrc`
+- Mail/messenger data: `~/.thunderbird/`, `~/.config/Signal/`
+- Any file matching `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa*`, `id_ed25519*` outside the project directory
+- `.env` files **outside** the current project (project-local `.env` handling is governed by the worktree rules in §7 and explicit instruction)
 
-- Memory lives in this `AGENTS.md` file, auto-loaded by OpenCode into every session
-- A `memory` skill at `~/.config/opencode/skills/memory/SKILL.md` defines the full protocol for read/write/search
-- Append-only: new entries go below existing ones. Never delete or rewrite past entries
-- The orchestrator has `skills: ["*"]` so the memory skill is available via the `skill` tool
-- Before making any change, read this Persistent Memory section to learn what past sessions discovered
-- Write to memory when: user preferences, architectural decisions, project gotchas, or patterns the user dislikes are discovered
+### Shell state and history — never read
 
-### 2026-05-13: README comprehensively updated to match current project state
+- `~/.bash_history`, `~/.zsh_history`, `~/.python_history`, `~/.psql_history`, `~/.lesshst`
+- `~/.bashrc`, `~/.profile`, `~/.zshrc` — **read/modify only on explicit instruction** (they frequently export secrets)
 
-- Pipeline is now 9-stage (was documented as 7-stage): added Adversarial Review and Calculation Check
-- Combined stages enabled by default: classification+decomposition (WP-006), construction+verification+generation (WP-007)
-- New services: `calculation.py` (3-phase SGB II verification), `parameter_store.py` (versioned legal params), `rules_engine.py` (deterministic §11b computation)
-- New utility: `tokens.py` (prompt/token budgeting)
-- New model: `LegalParameter` (table 12 of 12 in DB schema)
-- DB now has 12 tables (was documented as 11), migration `004_add_legal_parameter` added
-- API: 18 endpoints total, including new `/corpus/health`
-- Disclaimer split: `DISCLAIMER_DE.md` + `DISCLAIMER_EN.md` (single `DISCLAIMER.md` no longer exists)
-- Devdocs: `roadmap.md` removed, `ui_testing_guide.md` added
-- Tests: ~7100 lines across 26 files (was documented as ~4300)
-- Frontend version: 0.2.0 (from index.html semantic version comment)
-- Config significantly expanded: per-stage model overrides, token budget limits, retrieval mode, keyword fallback, OCR synthesis, cache settings
-- OCR now supports TXT/HTML/EML in addition to PDF/JPG/PNG
-- Added `scripts/benchmark_analyze.py` for SSE pipeline latency measurement
-- LLM router is at `app/core/router.py` (not `app/services/openrouter_client.py` — fixed stale ref in AGENTS.md constraints)
+### System paths — never write, never modify
 
-### 2026-05-13: Runtime corpus source selection and settings page added
+- `/etc/` — all of it (passwd, shadow, sudoers, ssh/, cron.*, systemd)
+- `/boot/`, `/usr/`, `/bin/`, `/sbin/`, `/lib*/`, `/opt/` (except an explicitly named project install target)
+- `/var/` — logs, spool, databases (reading a specific log file on explicit instruction is permitted; writing never)
+- `/root/` — never access in any way
+- `/proc/*/environ`, `/proc/kcore`, `/dev/mem`, `/dev/sd*`, `/dev/nvme*` — process environments and raw devices
+- Other users' home directories: `/home/*` other than the invoking user's
 
-- New endpoints in `app/api/routes/corpus.py`: `GET /corpus/available-sources`, `GET /corpus/sources`, `PUT /corpus/sources`
-- Runtime source preferences persisted to `.corpus_sources.json` (in project root, analogous to `.secret_salt`)
-- `POST /corpus/update` now accepts optional `{"sources": [...]}` body for one-shot override
-- `_run_corpus_update` accepts `override_sources` parameter; falls back to `get_effective_corpus_sources()` which checks `.corpus_sources.json` then `settings.CORPUS_SOURCES`
-- `CORPUS_SOURCE_METADATA` dict in `app/services/corpus.py` defines all 11 source types with full_name, description, tooltip, has_scraper, checked_by_default, source URL origin
-- Weisung PDF scraper scaffold added to `app/services/corpus.py`: `scrape_weisungen()`, `_find_weisung_pdf_links()`, `_scrape_weisung_pdf()`, `_split_weisung_into_paragraphs()`. Uses pdfplumber (already a dependency). Index URL: `arbeitsagentur.de/ueber-uns/veroeffentlichungen/weisungen/weisungen-nach-rechtsnorm`
-- `scrape_and_chunk()` now dispatches by source_type: `"weisung"` → `scrape_weisungen()`; all others → gesetze-im-internet.de HTML parser
-- Frontend: new Settings mode as third mode alongside Analyze and Chat. Toggle button in header. Dedicated settings page with:
-  - Checkbox list of all 11 source types with full names, source origin badges, descriptions, and ? tooltips (title attribute)
-  - Select-all checkbox with indeterminate state
-  - "Auswahl speichern" (PUT) and "Corpus mit Auswahl neu laden" (POST with sources + progress polling) buttons
-  - Source count display, loading/error/success states
-- CSS: `.btn-secondary` style added, `.settings-*` class family for source list items, tooltips, status messages
-- Source type `"weisung"` now has metadata, display name, and scraper (previously only DB-level recognition with no scraper)
-- Source type `"bsg"` has metadata but `has_scraper: false` — shown as disabled in settings UI with "(noch nicht verfügbar)" badge
-- All 334 tests pass (324 unit + 10 integration). Old `_SOURCE_DISPLAY_NAMES` dict in routes removed in favor of `CORPUS_SOURCE_METADATA`
+### Enforcement notes
 
-### 2026-05-13: Case Chat feature implemented (replaces static results view)
+- `sudo` is never used to circumvent a denied path. Any command requiring `sudo` on a denied path is refused and reported.
+- Globs, symlinks, `find`, `tar`, backup tools, and recursive copies must be checked: a `tar -czf backup.tgz ~/` or `grep -r password ~/` sweeps denied paths and is therefore itself denied.
+- This list is a floor, not a ceiling. Anything that is obviously a credential store belongs on it even if not named here. Additions are R1 (just add and log); **removals are R3.**
 
-- New "Case Chat" interface replaces the static `#results-section` in Analyze mode with an interactive, persistent case session
-- `POST /analyze` now persists `CaseRun` + `PipelineStageLog` + `Claim` + `EvidenceBinding` on completion, includes `case_run_id` in final SSE event for auto-navigation
-- 9 new API endpoints at `/api/v1/cases`: CRUD, chat (SSE), targeted re-evaluation (SSE), claim editing, adjudication, export (JSON/Markdown)
-- DB: `CaseRun` gains `title`, `updated_at`, `chat_history` (JSONB), `user_edits` (JSONB). `Claim` gains `user_adjudication` (JSONB). Migration `005_add_case_chat_fields.py`
-- New service: `app/services/case_chat.py` — chat grounded in pipeline output, targeted re-evaluation with downstream dependency map
-- Frontend: sidebar case session list, section toolbar actions (re-run, edit, flag, confirm, copy, export), dark-theme chat, comparison overlay with diff highlighting
-- Entry points: auto-navigate after fresh analysis, or select from case session list
-- Version bumped: 0.2.0 → 0.3.0 in index.html, style.css, app.js
+## 9. Known Pitfalls
 
-### 2026-07-10: AGENTS.md restructured — operational sections added
+### Electron + AppImage: Chromium SUID Sandbox Crash
 
-- Package manager is `uv` (not pip — `uv.lock` exists but is excluded from OpenCode context)
-- Frontend version: all three files (index.html, app.js, style.css) at v1.0.0
-- No CI, no pre-commit hooks — all quality checks manual
-- Alembic `env.py` overrides `alembic.ini` DB URL with `DATABASE_URL` env var; the ini URL is dead code
-- `settings` singleton in `app/core/config.py` uses lazy `__getattr__` — dangerous to import at module level before env is configured
-- All `/api/*` routes require `X-Disclaimer-Ack` header (except `/api/v1/meta/*`, `/static`, `/health`, `/docs`, `/redoc`)
-- `.corpus_sources.json` is runtime state in project root, analogous to `.secret_salt` — not tracked in git
-- LLM router: single shared `OpenRouterClient` via `get_shared_client()`; all service modules use it
-- DB now 13 tables (added `intake_session` + `case_run_area` via migration 006)
-- 16 supported statute source types (added erbstg, hoefev, kschg, burlg, tvg)
-- DB now 14 tables (added `intake_session` + `case_run_area` via migration 006)
-- 16 supported statute source types (added erbstg, hoefev, kschg, burlg, tvg)
-- devdocs/ has 3 files: design, technical spec, UI testing guide
+**Problem:** Electron apps packaged as AppImage crash on launch with `FATAL:setuid_sandbox_host.cc` or show a blank window. Chromium's SUID sandbox helper requires `setuid` which cannot execute inside an AppImage's read-only squashfs filesystem.
 
-### 2026-07-13: Documentation refreshed to match v1.0.0
+**Fix — two pieces, wired at packaging time (never a post-build patch):**
 
-- pyproject.toml version: 1.0.0. Frontend: all three files at v1.0.0. App: 0.2.0 (main.py).
-- 12 API route modules, 23 service modules, 14 DB tables, 10 Alembic migrations.
-- 33 test files (~11,700 lines), 696 unit test functions collected (plus integration tests hidden by missing sqlite-vec dependency).
-- LLM router consolidated to single `get_shared_client()` singleton (WP-00.5).
-- New services since 2026-07-10: `document_generators`, `fristen`, `inference_profiles`, `ocr_quality`, `presets`, `pseudonymization`, `regime`. New routes: `documents`, `eval_reports`, `goldset`, `ocr`.
-- DISCLAIMER_DE.md at v1.1.0 with inference profiles section. DISCLAIMER_EN.md being brought to parity.
-- README.md AGENTS.md counts corrected to match current implementation.
+1. **Wrapper script** — `scripts/apprun.sh`, committed to the repo:
+   ```sh
+   #!/bin/sh
+   SELF="$(readlink -f "$0")"
+   HERE="$(dirname "$SELF")"
+   exec "$HERE/<executable-name>" --no-sandbox "$@"
+   ```
+
+2. **Injection point** — in `forge.config.js`, the AppImage maker must use this script as the entrypoint. The exact config key depends on the maker (`runtime`, `entrypoint`, `customEntrypoint` — check the maker's docs), e.g.:
+   ```js
+   {
+     name: '@reforged/maker-appimage',
+     config: {
+       options: {
+         runtime: path.join(__dirname, 'scripts', 'apprun.sh'),
+       },
+     },
+   }
+   ```
+
+**The `.deb` package does not need this fix** — it runs on a writable filesystem where the sandbox works normally.
+
+**Anti-patterns (do not do):**
+- Launching the AppImage with `--no-sandbox` manually as a workaround
+- Writing a separate launcher script next to the AppImage after build
+- Editing the AppRun inside the squashfs after packaging
+
+---
+
+## Changelog (this document)
+
+- **2.1.0 | 2026-07-13** — Added §8 Filesystem Deny List (Ubuntu): hard-ruled never-access paths for secrets/credentials, shell history, and system directories, with enforcement notes (no sudo circumvention, glob/recursive-sweep check, additions R1 / removals R3). Known Pitfalls renumbered to §9.
+- **2.0.0 | 2026-07-13** — Merged dev-workflow-v1.0.0 global delta (decision ledger, self-grading ban, approval discipline, invariant guards, audit cooperation) as §§2–6. Added §7 opt-in git-worktree contract. Restructured into numbered sections. All v1.x working guidelines and known pitfalls retained unchanged.
+- **1.x (unversioned)** — Working guidelines + Electron/AppImage pitfall.
