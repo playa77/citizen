@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///citizen.db"
     DATA_DIR: str = ""  # Desktop data directory — set by Electron at runtime
     OPENROUTER_API_KEY: str
-    EMBEDDING_API_KEY: str = ""  # separate OpenRouter key for embedding calls
+    EMBEDDING_API_KEY: str = ""  # separate key for embedding calls (falls back to OPENROUTER_API_KEY)
+    EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1/embeddings"
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
     FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-pro"
     FALLBACK_MODEL_2: str = "/openrouter/free"

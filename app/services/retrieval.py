@@ -233,7 +233,7 @@ async def retrieve_chunks_combined_filtered(
                 "ls.title",
             ],
             extra_conditions=[
-                "ls.is_active = 1",
+                "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
                 f"ls.source_type IN ({', '.join(repr(st) for st in source_types)})",
             ],
         )
@@ -317,7 +317,7 @@ async def retrieve_chunks_per_area(
                     "ls.title",
                 ],
                 extra_conditions=[
-                    "ls.is_active = 1",
+                    "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
                     f"ls.source_type IN ({', '.join(repr(st) for st in source_types)})",
                 ],
             )
@@ -421,7 +421,7 @@ async def retrieve_chunks(
                     "ls.title",
                 ],
                 extra_conditions=[
-                    "ls.is_active = 1",
+                    "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
                 ],
             )
 
@@ -612,7 +612,7 @@ async def retrieve_chunks_combined(
                 "ls.title",
             ],
             extra_conditions=[
-                "ls.is_active = 1",
+                "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
             ],
         )
 
@@ -777,7 +777,7 @@ async def _execute_query(
             "ls.title",
         ],
         extra_conditions=[
-            "ls.is_active = 1",
+            "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
         ],
     )
 

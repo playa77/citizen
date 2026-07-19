@@ -1552,8 +1552,17 @@
                 headers: buildHeaders({ 'Accept': 'application/json' }),
             });
             if (!response.ok) {
-                await handleApiError(response);
-                return;
+                // Do NOT call handleApiError — that can trigger showDisclaimerModal
+                // which hides the entire app. Show a Prüfstand-specific error instead.
+                let errMsg = `HTTP ${response.status}`;
+                try {
+                    const body = await response.json();
+                    errMsg = body.detail || body.message || errMsg;
+                    if (body.error === 'disclaimer_required' || body.error === 'disclaimer_version_mismatch') {
+                        errMsg = 'Bitte bestätigen Sie zuerst den Haftungsausschluss im Analyse-Tab.';
+                    }
+                } catch { /* use default */ }
+                throw new Error(errMsg);
             }
             state.goldsetCaseDetail = await response.json();
             elements.pruefstandDetailContent.innerHTML = renderCaseDetail(state.goldsetCaseDetail);
@@ -1589,8 +1598,17 @@
                 }
             );
             if (!response.ok) {
-                await handleApiError(response);
-                return;
+                // Do NOT call handleApiError — that can trigger showDisclaimerModal
+                // which hides the entire app. Show a Prüfstand-specific error instead.
+                let errMsg = `HTTP ${response.status}`;
+                try {
+                    const body = await response.json();
+                    errMsg = body.detail || body.message || errMsg;
+                    if (body.error === 'disclaimer_required' || body.error === 'disclaimer_version_mismatch') {
+                        errMsg = 'Bitte bestätigen Sie zuerst den Haftungsausschluss im Analyse-Tab.';
+                    }
+                } catch { /* use default */ }
+                throw new Error(errMsg);
             }
 
             const reader = response.body.getReader();
@@ -1630,6 +1648,35 @@
                         // Re-throw if it's our explicit error
                         if (parseErr.message && parseErr.message.includes('Pipeline')) throw parseErr;
                         console.error('SSE parse error:', parseErr);
+                    }
+                }
+            }
+
+            // Drain any remaining buffer after stream end
+            if (buffer.trim()) {
+                const trimmed = buffer.trim();
+                if (trimmed.startsWith('data: ')) {
+                    try {
+                        const event = JSON.parse(trimmed.slice(6));
+                        if (event.stage && event.status) {
+                            if (event.status === 'complete' || event.status === 'done') {
+                                updateDemoProgress(event.stage, 'complete');
+                            } else if (event.status === 'running' || event.status === 'started') {
+                                updateDemoProgress(event.stage, 'active');
+                            }
+                        }
+                        if (event.final_output) {
+                            state.pruefstandDemoResult = event.final_output;
+                        }
+                        if (event.error) {
+                            throw new Error(event.detail || event.error);
+                        }
+                    } catch (e) {
+                        if (e.message && e.message.includes('Pipeline')) {
+                            throw e;
+                        }
+                        // Silent parse failure for partial data
+                        console.warn('Failed to parse final SSE buffer:', e);
                     }
                 }
             }

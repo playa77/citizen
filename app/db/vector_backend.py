@@ -129,8 +129,8 @@ async def _cosine_distance_sqlite(
     # Serialize embedding to binary blob (sqlite-vec expects LE float32)
     blob = struct.pack(f"<{len(embedding)}f", *embedding)
 
-    # Build SELECT columns
-    cols = [f"{table_name}.{id_column} AS id"]
+    # Build SELECT columns — table is aliased as `ce` in FROM clause (see below)
+    cols = [f"ce.{id_column} AS id"]
     if extra_columns:
         for col in extra_columns:
             # Alias dotted column names so the result dict key is predictable.
@@ -141,16 +141,17 @@ async def _cosine_distance_sqlite(
             else:
                 alias = col.replace(".", "_")
                 cols.append(f"{col} AS {alias}")
-    cols.append(f"vec_distance_cosine({table_name}.{vector_column}, :embedding_blob) AS distance")
+    cols.append(f"vec_distance_cosine(ce.{vector_column}, :embedding_blob) AS distance")
 
-    # Build FROM + JOINs
-    from_clause = f"FROM {table_name}"
+    # Build FROM + JOINs — alias the embedding table as `ce` so extra_joins
+    # (which reference `ce.chunk_id` per the documented contract) resolve correctly.
+    from_clause = f"FROM {table_name} AS ce"
     if extra_joins:
         from_clause += " " + " ".join(extra_joins)
 
     # Build WHERE
     conditions = [
-        f"vec_distance_cosine({table_name}.{vector_column}, :embedding_blob) < :threshold"
+        f"vec_distance_cosine(ce.{vector_column}, :embedding_blob) < :threshold"
     ]
     if extra_conditions:
         conditions.extend(extra_conditions)
@@ -199,19 +200,20 @@ async def _cosine_distance_pgvector(
     """
     from sqlalchemy.sql import text as sa_text
 
-    # Build SELECT columns
-    cols = [f"{table_name}.{id_column} AS id"]
+    # Build SELECT columns — table is aliased as `ce` in FROM clause (see below)
+    cols = [f"ce.{id_column} AS id"]
     if extra_columns:
         cols.extend(extra_columns)
-    cols.append(f"({table_name}.{vector_column} <=> (:query_vec)::vector) AS distance")
+    cols.append(f"(ce.{vector_column} <=> (:query_vec)::vector) AS distance")
 
-    # Build FROM + JOINs
-    from_clause = f"FROM {table_name}"
+    # Build FROM + JOINs — alias the embedding table as `ce` so extra_joins
+    # (which reference `ce.chunk_id` per the documented contract) resolve correctly.
+    from_clause = f"FROM {table_name} AS ce"
     if extra_joins:
         from_clause += " " + " ".join(extra_joins)
 
     # Build WHERE
-    conditions = [f"({table_name}.{vector_column} <=> (:query_vec)::vector) < :threshold"]
+    conditions = [f"(ce.{vector_column} <=> (:query_vec)::vector) < :threshold"]
     if extra_conditions:
         conditions.extend(extra_conditions)
     where_clause = " AND ".join(conditions)

@@ -1121,6 +1121,8 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
 
         # --- WP-003: parallelise classification + decomposition -----------------
         if stage_name == "classification":
+            yield _sse_event(stage="classification", status="running", payload={})
+            yield _sse_event(stage="decomposition", status="running", payload={})
             stage_start = time.monotonic()
             try:
                 events = await asyncio.wait_for(
@@ -1154,6 +1156,9 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
 
         # --- WP-007: combined final stages (construction + verification + generation) ---
         if stage_name == "construction":
+            yield _sse_event(stage="construction", status="running", payload={})
+            yield _sse_event(stage="verification", status="running", payload={})
+            yield _sse_event(stage="generation", status="running", payload={})
             stage_start = time.monotonic()
             try:
                 events = await asyncio.wait_for(
@@ -1186,6 +1191,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
             continue
         # ------------------------------------------------------------------------
 
+        yield _sse_event(stage=stage_name, status="running", payload={})
         stage_start = time.monotonic()
         try:
             events = await asyncio.wait_for(

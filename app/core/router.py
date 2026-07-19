@@ -25,7 +25,6 @@ from app.services.pseudonymization import PiiMapping
 logger = logging.getLogger(__name__)
 
 _API_URL = "https://openrouter.ai/api/v1/chat/completions"
-_EMBEDDING_URL = "https://openrouter.ai/api/v1/embeddings"
 
 
 def _deduplicate_preserve_order(items: list[str]) -> list[str]:
@@ -422,7 +421,7 @@ class OpenRouterClient:
         raise RouterExhaustedError(f"All models exhausted: {effective_models}")
 
     async def get_embedding(self, text: str, *, model: str | None = None) -> list[float]:
-        """Generate an embedding vector for *text* via the OpenRouter embeddings endpoint.
+        """Generate an embedding vector for *text* via the configured embeddings endpoint.
 
         Args:
             text: Input text to embed.
@@ -434,23 +433,31 @@ class OpenRouterClient:
         Raises:
             EmbeddingError: On HTTP or parsing failure.
         """
-        model_name = model or settings.EMBEDDING_MODEL
+        raw_model = model or settings.EMBEDDING_MODEL
+        # OpenRouter expects the fully-qualified slug (e.g. 'openai/text-embedding-3-small').
+        # OpenAI-direct expects the bare name (e.g. 'text-embedding-3-small').
+        # We pass the model name through unchanged and let the configured EMBEDDING_BASE_URL
+        # dictate the format. Operators who switch to OpenAI-direct must set EMBEDDING_MODEL
+        # accordingly (or override via the `model` parameter).
+        model_name = raw_model
         prompt_chars = len(text)
         req_start: float = 0.0
+        embedding_url = settings.EMBEDDING_BASE_URL
         logger.info(
-            "get_embedding → sending (model=%s, input_chars=%d)",
+            "get_embedding → sending (model=%s, input_chars=%d, url=%s)",
             model_name,
             prompt_chars,
+            embedding_url,
         )
         try:
             payload: dict[str, Any] = {
                 "model": model_name,
                 "input": text,
             }
-            _egress_check(_EMBEDDING_URL, payload)
+            _egress_check(embedding_url, payload)
             req_start = time.monotonic()
             resp = await self._client.post(
-                _EMBEDDING_URL,
+                embedding_url,
                 json=payload,
                 headers=_embedding_headers(),
             )
