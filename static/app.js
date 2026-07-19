@@ -1,6 +1,6 @@
 /**
  * Citizen — Legal Reasoning Engine Frontend
- *     @version 1.0.0
+ *     @version 1.2.0
  *
  * Handles:
  * - Disclaimer acceptance modal with localStorage persistence
@@ -13,6 +13,8 @@
  * - Document upload within conversations
  * - Mode toggle between Analyze, Prüfstand, Chat, and Settings views
  * - WP-14 Prüfstand: goldset browser, eval overlay, demo mode with comparison
+ * - v1.1.0: Shared app header/footer — uniform layout across all modes.
+ *           Subtitle updates dynamically per active mode.
  */
 
 (function() {
@@ -122,6 +124,9 @@
         profileBanner: document.getElementById('profile-banner'),
         profileBannerLabel: document.getElementById('profile-banner-label'),
         footerProfile: document.getElementById('footer-profile'),
+        // Shared app shell (v1.1.0 — uniform header/footer across all modes)
+        appSubtitle: document.getElementById('app-subtitle'),
+        appFooter: document.getElementById('app-footer'),
         // Chat mode
         chatMode: document.getElementById('chat-mode'),
         chatSidebar: document.getElementById('chat-sidebar'),
@@ -192,7 +197,6 @@
         pruefstandDemoSection: document.getElementById('pruefstand-demo-section'),
         pruefstandDemoContent: document.getElementById('pruefstand-demo-content'),
         pruefstandDemoBackBtn: document.getElementById('pruefstand-demo-back-btn'),
-        footerProfilePruefstand: document.getElementById('footer-profile-pruefstand'),
     };
 
     // =========================================================================
@@ -431,16 +435,10 @@
             // Update footer
             const profileText = data.label + ' | AVV: ' + data.avv_status;
             elements.footerProfile.textContent = profileText;
-            if (elements.footerProfilePruefstand) {
-                elements.footerProfilePruefstand.textContent = profileText;
-            }
         } catch {
             elements.profileBannerLabel.textContent = '?';
             elements.profileBanner.className = 'profile-banner profile-banner--not-signed';
             elements.footerProfile.textContent = '';
-            if (elements.footerProfilePruefstand) {
-                elements.footerProfilePruefstand.textContent = '';
-            }
         }
     }
 
@@ -2630,6 +2628,29 @@
     // Mode Management
     // =========================================================================
 
+    // Subtitle text per mode — keeps the shared header in sync with the active view.
+    // German strings must match the original per-mode subtitles exactly.
+    const MODE_SUBTITLES = {
+        analyze:    'Legal Reasoning Engine — SGB II Bürgergeld (SGB X, SGG)',
+        pruefstand: 'Prüfstand — Goldset & Evaluierung',
+        chat:       'Citizen Chat — Konversation & RAG',
+        settings:   'Einstellungen',
+    };
+
+    function setModeSubtitle(mode) {
+        if (!elements.appSubtitle) return;
+        elements.appSubtitle.textContent = MODE_SUBTITLES[mode] || MODE_SUBTITLES.analyze;
+    }
+
+    function setAppFooterVisible(visible) {
+        // v1.2.0: The shared footer is now visible in ALL modes, including chat.
+        // The chat surface was restyled to the app's uniform light theme (white
+        // surfaces, teal primary, light borders), so a footer bar below the chat
+        // is visually consistent rather than clashing with a dark surface.
+        if (!elements.appFooter) return;
+        elements.appFooter.classList.toggle('hidden', !visible);
+    }
+
     function switchMode(mode) {
         if (mode === state.currentMode) return;
         state.currentMode = mode;
@@ -2640,31 +2661,35 @@
         elements.settingsMode.classList.add('hidden');
         if (elements.pruefstandMode) elements.pruefstandMode.classList.add('hidden');
 
-        // Deselect all mode buttons in all headers
+        // Deselect all mode buttons in the shared header
         document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
 
-        // Deactivate all mode buttons in all headers
-        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+        // Update the shared subtitle to reflect the active mode
+        setModeSubtitle(mode);
 
         if (mode === 'analyze') {
             elements.analyzeMode.classList.remove('hidden');
             document.querySelectorAll('.mode-btn[data-mode="analyze"]').forEach(btn => btn.classList.add('active'));
+            setAppFooterVisible(true);
             fetchRechtsstand();
         } else if (mode === 'chat') {
             elements.chatMode.classList.remove('hidden');
             document.querySelectorAll('.mode-btn[data-mode="chat"]').forEach(btn => btn.classList.add('active'));
+            setAppFooterVisible(true);
             if (state.conversations.length === 0) {
                 loadConversations();
             }
         } else if (mode === 'settings') {
             elements.settingsMode.classList.remove('hidden');
             document.querySelectorAll('.mode-btn[data-mode="settings"]').forEach(btn => btn.classList.add('active'));
+            setAppFooterVisible(true);
             if (state.availableSources.length === 0) {
                 loadSettingsSources();
             }
         } else if (mode === 'pruefstand') {
             elements.pruefstandMode.classList.remove('hidden');
             document.querySelectorAll('.mode-btn[data-mode="pruefstand"]').forEach(btn => btn.classList.add('active'));
+            setAppFooterVisible(true);
             // Lazy-load goldset on first entry; refresh eval reports each time
             if (!state.goldsetData) {
                 fetchGoldset();
@@ -4804,7 +4829,11 @@
         }
 
         // =========================================================================
-        // Mode Toggle
+        // Mode Toggle — shared header (v1.1.0)
+        //
+        // All four mode buttons live in the single shared #app > header now, so the
+        // per-header query that used to wire #settings-mode/#pruefstand-mode buttons
+        // is no longer needed (those buttons were removed from the per-mode headers).
         // =========================================================================
 
         elements.modeAnalyzeBtn.addEventListener('click', () => switchMode('analyze'));
@@ -4813,11 +4842,6 @@
         if (elements.modePruefstandBtn) {
             elements.modePruefstandBtn.addEventListener('click', () => switchMode('pruefstand'));
         }
-
-        // Also wire up mode buttons within settings-mode and pruefstand-mode headers
-        document.querySelectorAll('#settings-mode .mode-btn, #pruefstand-mode .mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => switchMode(btn.dataset.mode));
-        });
 
         // =========================================================================
         // Settings Mode Event Listeners

@@ -5,6 +5,130 @@ Newest entries first. Dates in ISO 8601.
 
 ---
 
+## 2026-07-19 — Frontend: Chat UI Restyled to Uniform Light Theme (v1.2.0)
+
+### Changes
+
+- **Chat mode (`#chat-mode`) restyled to the app's uniform light theme.** Previously
+  the chat mode used a divergent dark theme (`--chat-bg: #1a1a2e`, `--chat-surface:
+  #16213e`) with its own layout. The chat now matches Analyze/Settings/Prüfstand:
+  - **CSS variables remapped**: All `--chat-*` variables in `:root` now alias the
+    uniform `--color-*` tokens (e.g. `--chat-bg: var(--color-background)`,
+    `--chat-surface: var(--color-surface)`, `--chat-primary: var(--color-primary)`).
+    The legacy dark values are retained as a commented block for traceability. This
+    is the lowest-risk way to flip the whole chat to light theme — every existing
+    `var(--chat-*)` reference automatically becomes light-themed.
+  - **Wrapped chat content in `<main>`** with the same `max-width: 900px; margin: 0
+    auto; padding: var(--spacing-xl) var(--spacing-lg)` as the other modes. The
+    `<main>` doubles as a two-column flex shell (sidebar + chat-main) with `display:
+    flex; gap: var(--spacing-md); min-height: 0;`.
+  - **Sidebar and chat-main restyled as `.section`-style surfaces**: white background
+    (`var(--color-surface)`), light border (`var(--color-border)`), border-radius
+    (`var(--border-radius-lg)`), and box-shadow (`var(--shadow-sm)`). They now look
+    like the white card surfaces in Analyze/Settings.
+  - **`.chat-header` restyled as a slim in-panel toolbar** (the shared `app-header`
+    already provides branding + mode toggle). The `#chat-header` ID is preserved for
+    JS. The toolbar has a light surface and a bottom border separating it from the
+    messages area.
+  - **`.btn-chat-primary` aliased to the standard `.btn-primary` look** (teal
+    background, white text, hover lift + shadow). Previously it was a dark-blue
+    chat-only button.
+  - **Message bubbles restyled**: user bubble uses `var(--color-primary)` (teal) with
+    white text; assistant bubble uses `var(--color-surface)` (white) with dark text
+    and a light border; system messages use a light teal-tinted background.
+  - **Input area restyled**: `.chat-input-container` uses light gray background
+    (`var(--color-background)`) with a light border; `.chat-input` uses dark text on
+    transparent background.
+  - **Doc chips, typing indicator, pipeline progress, collapsible result sections,
+    error inline, drag highlight** — all auto-flipped to light theme via the variable
+    remap, plus targeted fixes for hardcoded `rgba()` assumptions (code block
+    backgrounds, system message borders, error borders, drag-over highlight).
+  - **Responsive rules updated**: `#chat-mode main` gets tighter padding on mobile
+    (`var(--spacing-md)`) so the chat surface gets more horizontal space.
+- **Shared footer now visible in chat mode.** `setAppFooterVisible(false)` changed
+  to `setAppFooterVisible(true)` in `switchMode()` for the chat branch (`app.js`).
+  The comment above `setAppFooterVisible()` was updated to explain why: the chat
+  surface is now light-themed, so a footer bar below it is visually consistent
+  rather than clashing with a dark surface.
+- **Case Chat (`#case-chat-section`) restyled to the same light theme.** The case
+  chat is embedded in the Analyze mode and previously used the same dark `--chat-*`
+  variables. It now matches the light theme via the variable remap, plus:
+  - **`.case-chat-layout` height fixed**: was `height: 100vh` which overflowed the
+    analyze-mode section (it took the full viewport height, ignoring the shared
+    header and footer). Now `height: 600px; min-height: 400px;` so it fits inside
+    its section with internal scrolling in the messages area. Mobile gets `500px`.
+  - **`.case-sidebar` and `.case-main` restyled as `.section`-style surfaces**
+    (white, bordered, rounded, shadowed). Their `height: 100vh` was also fixed to
+    `height: 100%` so they fill the `.case-chat-layout` container instead of the
+    viewport.
+- **Version bump**: `static/index.html` → 1.2.0, `static/style.css` → 1.2.0,
+  `static/app.js` → 1.2.0.
+
+### Verification
+
+- All chat-mode element IDs preserved (19 IDs in `#chat-mode`, 14 IDs in
+  `#case-chat-section`) — verified via grep.
+- All JS-toggled classes (`hidden`, `active`, `open`, `drag-over`, `uploading`)
+  still work — the `#chat-mode.drag-over .chat-messages` descendant selector
+  still matches with the new `<main>` wrapper.
+- No `var(--chat-*)` reference points at a dark color — all `--chat-*` variables in
+  `:root` now alias `--color-*` tokens or use light-theme literals.
+- `setAppFooterVisible(true)` is now called for all four modes (analyze, chat,
+  settings, pruefstand).
+- No backend Python code, routes, or API contracts were modified.
+
+---
+
+## 2026-07-19 — Frontend: Uniform Shared Header/Footer (v1.1.0)
+
+### Changes
+
+- **Shared app header**: Extracted the per-mode `<header>` blocks (previously duplicated
+  in `#analyze-mode`, `#settings-mode`, `#pruefstand-mode` with divergent structure and
+  styling) into a single shared `<header class="app-header">` as the first child of `#app`.
+  All four modes now render the identical dark-gradient header with the `rechtsstand`
+  indicator, `profile-banner`, and 4-button `mode-toggle` (Analysieren / Prüfstand /
+  Chat / Einstellungen). Eliminates the root cause of header divergence. (D-011)
+- **Shared app footer**: Consolidated the per-mode footers into a single
+  `<footer id="app-footer">` with `id="footer-profile"`. Version text bumped to
+  `Citizen v1.1.0`. Footer is hidden in chat mode (the chat surface has its own
+  disclaimer line; a second footer bar below the dark chat surface would be visually
+  inconsistent).
+- **Dynamic subtitle**: The shared header's `#app-subtitle` now updates via `switchMode()`
+  in `app.js` based on the active mode. German strings preserved exactly:
+  - Analyze: `Legal Reasoning Engine — SGB II Bürgergeld (SGB X, SGG)`
+  - Prüfstand: `Prüfstand — Goldset & Evaluierung`
+  - Chat: `Citizen Chat — Konversation & RAG`
+  - Settings: `Einstellungen`
+- **CSS cleanup**: Removed divergent `#pruefstand-mode` container/header/main/footer/
+  subtitle overrides that gave Prüfstand a light "paper" header. Prüfstand now inherits
+  the uniform app shell. The warm-paper design tokens and `.pruefstand-*` component
+  styles (badges, gallery, cards) are preserved — those are content styles, not layout
+  chrome. Added `#app` flex layout so the shared header/footer flank the active mode
+  container; chat-mode flex/height adjusted to work within that shell.
+- **app.js cleanup**: Removed the `footerProfilePruefstand` element ref and its
+  references in `fetchActiveProfile()`. Removed the per-header mode-button wiring
+  (`#settings-mode .mode-btn, #pruefstand-mode .mode-btn` query) since those buttons
+  no longer exist. Added `MODE_SUBTITLES`, `setModeSubtitle()`, and
+  `setAppFooterVisible()` helpers in `switchMode()`.
+- **Version bump**: `static/index.html` → 1.1.0, `static/style.css` → 1.1.0,
+  `static/app.js` → 1.1.0.
+
+### Verification
+
+Verified locally with Playwright (no backend, static file server):
+- No duplicate IDs in the DOM (excluding the pre-existing `analyze-btn` dupe from v1.0.0).
+- Shared header renders identically across all 4 modes: same dark gradient
+  (`linear-gradient(135deg, #1a5f7a 0%, #124859 100%)`), same text color, same box-shadow.
+- `rechtsstand-indicator` and `profile-banner` elements present and visible in all modes
+  (including Prüfstand, where they were previously missing).
+- All 4 mode buttons present with correct German labels; mode switching works.
+- Subtitle updates correctly per mode.
+- Footer visible in analyze/pruefstand/settings, hidden in chat mode.
+- Chat-mode layout is full-height with no page scroll (body height == viewport height).
+- Responsive: at 640px width, `.header-top` switches to `flex-direction: column`
+  and `.mode-toggle` centers.
+
 ## 2026-07-19 — Production Bugfixes
 
 ### Fixes

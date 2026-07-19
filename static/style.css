@@ -1,6 +1,6 @@
 /* ==========================================================================
    Citizen — Legal Reasoning Engine Styles
-   Semantic Version: 1.0.0
+   Semantic Version: 1.2.0
    ========================================================================== */
 
 :root {
@@ -50,7 +50,12 @@
     --transition-fast: 150ms ease;
     --transition-normal: 250ms ease;
 
-    /* Chat Dark Theme Colors */
+    /* Chat Theme Colors — remapped to light theme (v1.2.0).
+       Previously these were a separate dark palette (#1a1a2e / #16213e).
+       They now alias the uniform --color-* tokens so every var(--chat-*)
+       reference automatically renders in the app's light theme. The dark
+       values are intentionally retained above (commented) for traceability. */
+    /* Legacy dark values (do not re-enable — breaks UI uniformity):
     --chat-bg: #1a1a2e;
     --chat-surface: #16213e;
     --chat-surface-hover: #1c2a4a;
@@ -72,6 +77,28 @@
     --chat-accent: #60a5fa;
     --chat-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
     --chat-pipeline-stage-bg: rgba(30, 41, 59, 0.8);
+    */
+    --chat-bg: var(--color-background);
+    --chat-surface: var(--color-surface);
+    --chat-surface-hover: #eef2f5;
+    --chat-surface-active: #e3eef2;
+    --chat-border: var(--color-border);
+    --chat-text: var(--color-text);
+    --chat-text-muted: var(--color-text-muted);
+    --chat-text-dim: #9aa4ab;
+    --chat-primary: var(--color-primary);
+    --chat-primary-hover: var(--color-primary-dark);
+    --chat-primary-dark: var(--color-primary-dark);
+    --chat-user-bubble: var(--color-primary);
+    --chat-user-bubble-text: #ffffff;
+    --chat-assistant-bubble: var(--color-surface);
+    --chat-assistant-bubble-text: var(--color-text);
+    --chat-system-bg: rgba(26, 95, 122, 0.08);
+    --chat-error-bg: rgba(214, 48, 49, 0.08);
+    --chat-error-text: var(--color-error);
+    --chat-accent: var(--color-primary);
+    --chat-shadow: var(--shadow-md);
+    --chat-pipeline-stage-bg: var(--color-background);
 }
 
 /* ==========================================================================
@@ -178,11 +205,13 @@ body {
    Header
    ========================================================================== */
 
-#analyze-mode > header {
+#app > header,
+.app-header {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
     color: white;
     padding: var(--spacing-lg) var(--spacing-lg);
     box-shadow: var(--shadow-md);
+    flex-shrink: 0;
 }
 
 .header-top {
@@ -338,15 +367,39 @@ body {
 }
 
 /* ==========================================================================
-   Main Content (Analyze Mode)
+   Main Application Layout (#app — shared shell)
    ========================================================================== */
 
-#analyze-mode main {
+#app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Main Content (shared across Analyze / Settings / Prüfstand / Chat modes)
+   ========================================================================== */
+
+#app main,
+#analyze-mode main,
+#settings-mode main,
+#pruefstand-mode main,
+#chat-mode main {
     flex: 1;
     max-width: 900px;
     width: 100%;
     margin: 0 auto;
     padding: var(--spacing-xl) var(--spacing-lg);
+}
+
+/* Chat-mode main doubles as a two-column flex shell (sidebar + chat-main).
+   The uniform layout selector above gives it the same max-width / padding
+   as the other modes; this rule adds the row-direction flex behavior. */
+#chat-mode main {
+    display: flex;
+    gap: var(--spacing-md);
+    min-height: 0;
 }
 
 /* ==========================================================================
@@ -733,13 +786,15 @@ body {
    Footer
    ========================================================================== */
 
-#analyze-mode > footer {
+#app > footer,
+.app-footer {
     text-align: center;
     padding: var(--spacing-lg);
     color: var(--color-text-muted);
     font-size: var(--font-size-small);
     border-top: 1px solid var(--color-border);
     background: var(--color-surface);
+    flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -1049,9 +1104,12 @@ body {
 
 #chat-mode {
     display: flex;
-    height: 100vh;
-    background: var(--chat-bg);
-    color: var(--chat-text);
+    flex: 1;
+    min-height: 0;
+    /* Light theme: inherit the app's background via --color-background.
+       The dark --chat-bg is no longer used here. */
+    background: var(--color-background);
+    color: var(--color-text);
     overflow: hidden;
 }
 
@@ -1062,9 +1120,12 @@ body {
 .chat-sidebar {
     width: 280px;
     min-width: 280px;
-    height: 100vh;
-    background: var(--chat-surface);
-    border-right: 1px solid var(--chat-border);
+    height: 100%;
+    /* Section-style surface (matches .section look in Analyze/Settings) */
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1181,16 +1242,25 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    height: 100vh;
+    height: 100%;
+    /* Section-style surface (matches .section look in Analyze/Settings) */
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
 }
 
+/* Slim toolbar inside the chat-main panel (the shared app-header already
+   provides branding + mode toggle, so this is just an in-panel toolbar). */
 .chat-header {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--chat-surface);
-    border-bottom: 1px solid var(--chat-border);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
     flex-shrink: 0;
     min-height: 48px;
 }
@@ -1359,7 +1429,7 @@ body {
 .chat-message.system .message-bubble {
     background: var(--chat-system-bg);
     color: var(--chat-text-muted);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(26, 95, 122, 0.2);
     font-size: 12px;
     padding: 6px var(--spacing-md);
     text-align: center;
@@ -1425,19 +1495,21 @@ body {
 }
 
 .message-bubble code {
-    background: rgba(0,0,0,0.3);
+    background: var(--color-background);
     padding: 2px 5px;
     border-radius: 3px;
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 0.9em;
+    color: var(--color-text);
 }
 
 .message-bubble pre {
-    background: rgba(0,0,0,0.3);
+    background: var(--color-background);
     padding: var(--spacing-sm);
     border-radius: var(--border-radius-sm);
     overflow-x: auto;
     margin: var(--spacing-sm) 0;
+    color: var(--color-text);
 }
 
 /* ==========================================================================
@@ -1602,8 +1674,8 @@ body {
 }
 
 .chat-doc-chip .doc-chip-remove:hover {
-    background: rgba(220, 38, 38, 0.2);
-    color: #fca5a5;
+    background: rgba(214, 48, 49, 0.15);
+    color: var(--color-error);
 }
 
 .chat-doc-chip.uploading {
@@ -1674,7 +1746,7 @@ body {
 
 .chat-attach-btn:hover:not(:disabled) {
     color: var(--chat-primary);
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(26, 95, 122, 0.1);
 }
 
 .chat-send-btn {
@@ -1707,20 +1779,33 @@ body {
    Chat Primary Button
    ========================================================================== */
 
+/* Chat Primary Button — aliased to the standard .btn-primary look (v1.2.0).
+   Previously this was a dark-blue chat-only button; it now matches the
+   app's uniform teal primary button so the chat surface feels cohesive. */
 .btn-chat-primary {
-    background: var(--chat-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    background: var(--color-primary);
     color: white;
     border: none;
     border-radius: var(--border-radius-md);
     cursor: pointer;
     font-size: var(--font-size-small);
     font-weight: 500;
+    padding: var(--spacing-sm) var(--spacing-lg);
     transition: all var(--transition-fast);
 }
 
 .btn-chat-primary:hover:not(:disabled) {
-    background: var(--chat-primary-hover);
-    box-shadow: var(--chat-shadow);
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-chat-primary:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .btn-chat-primary:disabled {
@@ -1734,7 +1819,7 @@ body {
 
 .chat-error-inline {
     background: var(--chat-error-bg);
-    border: 1px solid rgba(220, 38, 38, 0.3);
+    border: 1px solid rgba(214, 48, 49, 0.3);
     color: var(--chat-error-text);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--border-radius-md);
@@ -1747,7 +1832,7 @@ body {
    ========================================================================== */
 
 #chat-mode.drag-over .chat-messages {
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(26, 95, 122, 0.05);
     outline: 2px dashed var(--chat-primary);
     outline-offset: -8px;
 }
@@ -1798,6 +1883,8 @@ body {
         z-index: 100;
         transform: translateX(-100%);
         box-shadow: var(--chat-shadow);
+        /* Square left corners when fixed to viewport edge */
+        border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0;
     }
 
     .chat-sidebar.open {
@@ -1822,6 +1909,13 @@ body {
 
     .chat-messages {
         padding: var(--spacing-md);
+    }
+
+    /* Tighten the chat-mode main wrapper padding on mobile so the chat
+       surface gets more horizontal space. */
+    #chat-mode main {
+        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
     }
 }
 
@@ -1867,10 +1961,16 @@ body {
 
 .case-chat-layout {
     display: flex;
-    height: 100vh;
-    background: var(--chat-bg);
-    color: var(--chat-text);
+    /* v1.2.0: was height: 100vh which overflowed the analyze-mode section.
+       Now fits inside the section with a sensible fixed height that allows
+       internal scrolling in the messages area. */
+    height: 600px;
+    min-height: 400px;
+    background: var(--color-background);
+    color: var(--color-text);
     overflow: hidden;
+    border-radius: var(--border-radius-md);
+    gap: var(--spacing-md);
 }
 
 /* ==========================================================================
@@ -1880,9 +1980,12 @@ body {
 .case-sidebar {
     width: 280px;
     min-width: 280px;
-    height: 100vh;
-    background: var(--chat-surface);
-    border-right: 1px solid var(--chat-border);
+    /* v1.2.0: was height: 100vh; now fills the case-chat-layout container. */
+    height: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1984,8 +2087,13 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    height: 100vh;
+    /* v1.2.0: was height: 100vh; now fills the case-chat-layout container. */
+    height: 100%;
     overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
 }
 
 .case-header {
@@ -2245,7 +2353,7 @@ body {
 .case-chat-message.system .message-bubble {
     background: var(--chat-system-bg);
     color: var(--chat-text-muted);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(26, 95, 122, 0.2);
     font-size: 12px;
     padding: 6px var(--spacing-md);
     text-align: center;
@@ -2635,6 +2743,8 @@ body {
         z-index: 100;
         transform: translateX(-100%);
         box-shadow: var(--chat-shadow);
+        /* Square left corners when fixed to viewport edge */
+        border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
     }
 
     .case-sidebar.open {
@@ -2665,6 +2775,11 @@ body {
 
     .case-chat-messages {
         padding: var(--spacing-md);
+    }
+
+    /* v1.2.0: shorter case-chat-layout on mobile so it fits the viewport. */
+    .case-chat-layout {
+        height: 500px;
     }
 }
 
@@ -2987,40 +3102,11 @@ body {
     --radius-pill:    999px;
 }
 
-/* --- Prüfstand mode container --- */
-#pruefstand-mode {
-    background: var(--paper);
-    min-height: 100vh;
-}
-
-#pruefstand-mode header {
-    background: var(--paper-raised);
-    border-bottom: 1px solid var(--rule);
-}
-
-#pruefstand-mode .header-brand h1 {
-    font-family: var(--font-serif);
-    color: var(--ink);
-}
-
-#pruefstand-mode .subtitle {
-    color: var(--ink-faint);
-}
-
-#pruefstand-mode main {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
-}
-
-#pruefstand-mode footer {
-    border-top: 1px solid var(--rule);
-    background: var(--paper-raised);
-    color: var(--ink-faint);
-    text-align: center;
-    padding: 1rem;
-    font-size: 0.85rem;
-}
+/* --- Prüfstand mode container ---
+   The mode-specific container, header, main, and footer overrides were removed
+   so Prüfstand inherits the uniform app shell (#app > header, #app main, #app > footer).
+   Only the warm-paper design tokens above and the .pruefstand-* component styles
+   below remain — those are content styles, not layout chrome. */
 
 /* --- Loading / error states --- */
 .pruefstand-loading {

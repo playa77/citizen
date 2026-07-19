@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen — Legal Reasoning Engine</title>
-    <!-- Semantic Version: 1.0.0 -->
+    <!-- Semantic Version: 1.2.0 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,23 +27,22 @@
     <!-- Main Application -->
     <div id="app" class="hidden">
 
-        <!-- Analyze Mode (existing functionality) -->
-        <div id="analyze-mode">
-            <header>
-                <div class="header-top">
-                    <div class="header-brand">
-                        <h1>Citizen</h1>
-                        <p class="subtitle">Legal Reasoning Engine — SGB II Bürgergeld (SGB X, SGG)</p>
+        <!-- Shared App Header (uniform across all modes) -->
+        <header class="app-header">
+            <div class="header-top">
+                <div class="header-brand">
+                    <h1>Citizen</h1>
+                    <p class="subtitle" id="app-subtitle">Legal Reasoning Engine — SGB II Bürgergeld (SGB X, SGG)</p>
+                </div>
+                <div class="header-actions">
+                    <div class="rechtsstand" id="rechtsstand-indicator" title="Rechtsstand der Parameter- und Corpusdaten">
+                        <span class="rechtsstand-label">Rechtsstand:</span>
+                        <span class="rechtsstand-value" id="rechtsstand-value">…</span>
                     </div>
-                    <div class="header-actions">
-                        <div class="rechtsstand" id="rechtsstand-indicator" title="Rechtsstand der Parameter- und Corpusdaten">
-                            <span class="rechtsstand-label">Rechtsstand:</span>
-                            <span class="rechtsstand-value" id="rechtsstand-value">…</span>
-                        </div>
-                        <div class="profile-banner" id="profile-banner" title="Aktives Inference-Profil">
-                            <span class="profile-banner-label" id="profile-banner-label">…</span>
-                        </div>
-                        <div class="mode-toggle">
+                    <div class="profile-banner" id="profile-banner" title="Aktives Inference-Profil">
+                        <span class="profile-banner-label" id="profile-banner-label">…</span>
+                    </div>
+                    <div class="mode-toggle">
                         <button class="mode-btn active" data-mode="analyze" id="mode-analyze-btn">
                             <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             Analysieren
@@ -62,8 +61,11 @@
                         </button>
                     </div>
                 </div>
-            </header>
+            </div>
+        </header>
 
+        <!-- Analyze Mode (existing functionality) -->
+        <div id="analyze-mode">
             <main>
                 <!-- Step Indicator -->
                 <section class="section step-indicator" id="step-indicator">
@@ -403,116 +405,94 @@
                 <!-- Error Display -->
                 <div id="error-display" class="error-display hidden"></div>
             </main>
-
-            <footer>
-                <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
-            </footer>
         </div>
 
-        <!-- Chat Mode (new conversational interface) -->
+        <!-- Chat Mode (conversational interface — v1.2.0: restyled to match
+             the app's uniform light-theme layout; wrapped in <main> with the
+             same max-width / padding as Analyze/Settings/Prüfstand) -->
         <div id="chat-mode" class="hidden">
-            <!-- Sidebar -->
-            <aside id="chat-sidebar" class="chat-sidebar">
-                <div class="sidebar-header">
-                    <button id="new-conversation-btn" class="btn btn-chat-primary">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Neue Unterhaltung
-                    </button>
-                </div>
-                <div class="conversation-list" id="conversation-list">
-                    <!-- Conversations populated by JS -->
-                </div>
-                <div id="conversation-empty" class="conversation-empty">
-                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <p>Noch keine Unterhaltungen</p>
-                </div>
-                <div id="conversation-error" class="conversation-error hidden">
-                    Fehler beim Laden der Unterhaltungen.
-                </div>
-            </aside>
-
-            <!-- Chat Area -->
-            <div class="chat-main" id="chat-main">
-                <!-- Chat Header -->
-                <div class="chat-header" id="chat-header">
-                    <button id="sidebar-toggle" class="sidebar-toggle" title="Seitenleiste umschalten">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                    </button>
-                    <h2 id="chat-title" class="chat-title">Citizen Chat</h2>
-                    <div class="chat-header-actions">
-                        <button id="chat-delete-btn" class="btn-icon-only hidden" title="Unterhaltung löschen">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <main>
+                <!-- Sidebar -->
+                <aside id="chat-sidebar" class="chat-sidebar">
+                    <div class="sidebar-header">
+                        <button id="new-conversation-btn" class="btn btn-chat-primary">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Neue Unterhaltung
                         </button>
                     </div>
-                </div>
+                    <div class="conversation-list" id="conversation-list">
+                        <!-- Conversations populated by JS -->
+                    </div>
+                    <div id="conversation-empty" class="conversation-empty">
+                        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <p>Noch keine Unterhaltungen</p>
+                    </div>
+                    <div id="conversation-error" class="conversation-error hidden">
+                        Fehler beim Laden der Unterhaltungen.
+                    </div>
+                </aside>
 
-                <!-- Messages Container -->
-                <div class="chat-messages" id="chat-messages">
-                    <div id="chat-empty-state" class="chat-empty-state">
-                        <div class="empty-state-content">
-                            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
-                                <line x1="8" y1="23" x2="16" y2="23"/>
-                            </svg>
-                            <h3>Starten Sie eine neue Unterhaltung</h3>
-                            <p>oder wählen Sie eine bestehende aus</p>
+                <!-- Chat Area -->
+                <div class="chat-main" id="chat-main">
+                    <!-- In-panel slim toolbar (the shared app-header already
+                         provides branding + mode toggle). ID preserved for JS. -->
+                    <div class="chat-header" id="chat-header">
+                        <button id="sidebar-toggle" class="sidebar-toggle" title="Seitenleiste umschalten">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                        </button>
+                        <h2 id="chat-title" class="chat-title">Citizen Chat</h2>
+                        <div class="chat-header-actions">
+                            <button id="chat-delete-btn" class="btn-icon-only hidden" title="Unterhaltung löschen">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <!-- Document Chips -->
-                <div id="chat-doc-chips" class="chat-doc-chips hidden"></div>
-
-                <!-- Input Area -->
-                <div class="chat-input-area" id="chat-input-area">
-                    <div class="chat-input-container">
-                        <button id="chat-attach-btn" class="btn-icon-only chat-attach-btn" title="Dokument anhängen">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                        </button>
-                        <input type="file" id="chat-file-input" accept=".pdf,.jpg,.jpeg,.png,.txt,.html,.htm,.eml" hidden multiple>
-                        <textarea
-                            id="chat-input"
-                            class="chat-input"
-                            placeholder="Nachricht eingeben..."
-                            rows="1"
-                            disabled
-                        ></textarea>
-                        <button id="chat-send-btn" class="btn-icon-only chat-send-btn" disabled title="Senden">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                        </button>
+                    <!-- Messages Container -->
+                    <div class="chat-messages" id="chat-messages">
+                        <div id="chat-empty-state" class="chat-empty-state">
+                            <div class="empty-state-content">
+                                <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                    <line x1="12" y1="19" x2="12" y2="23"/>
+                                    <line x1="8" y1="23" x2="16" y2="23"/>
+                                </svg>
+                                <h3>Starten Sie eine neue Unterhaltung</h3>
+                                <p>oder wählen Sie eine bestehende aus</p>
+                            </div>
+                        </div>
                     </div>
-                    <p class="chat-disclaimer">Citizen kann Fehler machen. Rechtliche Auskünfte ohne Gewähr.</p>
+
+                    <!-- Document Chips -->
+                    <div id="chat-doc-chips" class="chat-doc-chips hidden"></div>
+
+                    <!-- Input Area -->
+                    <div class="chat-input-area" id="chat-input-area">
+                        <div class="chat-input-container">
+                            <button id="chat-attach-btn" class="btn-icon-only chat-attach-btn" title="Dokument anhängen">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            </button>
+                            <input type="file" id="chat-file-input" accept=".pdf,.jpg,.jpeg,.png,.txt,.html,.htm,.eml" hidden multiple>
+                            <textarea
+                                id="chat-input"
+                                class="chat-input"
+                                placeholder="Nachricht eingeben..."
+                                rows="1"
+                                disabled
+                            ></textarea>
+                            <button id="chat-send-btn" class="btn-icon-only chat-send-btn" disabled title="Senden">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                        <p class="chat-disclaimer">Citizen kann Fehler machen. Rechtliche Auskünfte ohne Gewähr.</p>
+                    </div>
                 </div>
-            </div>
+            </main>
         </div>
 
         <!-- Settings Mode -->
         <div id="settings-mode" class="hidden">
-            <header>
-                <div class="header-top">
-                    <div class="header-brand">
-                        <h1>Citizen</h1>
-                        <p class="subtitle">Einstellungen</p>
-                    </div>
-                    <div class="mode-toggle">
-                        <button class="mode-btn" data-mode="analyze" id="settings-mode-analyze-btn">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                            Analysieren
-                        </button>
-                        <button class="mode-btn" data-mode="chat">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            Chat
-                        </button>
-                        <button class="mode-btn active" data-mode="settings">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                            Einstellungen
-                        </button>
-                    </div>
-                </div>
-            </header>
-
             <main>
                 <section class="section">
                     <h2>Corpus-Quellen verwalten</h2>
@@ -565,42 +545,10 @@
                     </div>
                 </section>
             </main>
-
-            <footer>
-                <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
-                <p class="footer-profile" id="footer-profile"></p>
-            </footer>
         </div>
 
         <!-- Prüfstand Mode (WP-14) -->
         <div id="pruefstand-mode" class="hidden">
-            <header>
-                <div class="header-top">
-                    <div class="header-brand">
-                        <h1>Citizen</h1>
-                        <p class="subtitle">Prüfstand — Goldset & Evaluierung</p>
-                    </div>
-                    <div class="mode-toggle">
-                        <button class="mode-btn" data-mode="analyze">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                            Analysieren
-                        </button>
-                        <button class="mode-btn active" data-mode="pruefstand">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-4 6a4 4 0 0 0 3.5 6h7A4 4 0 0 0 19 14l-4-6V2"/><line x1="9" y1="2" x2="15" y2="2"/></svg>
-                            Prüfstand
-                        </button>
-                        <button class="mode-btn" data-mode="chat">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            Chat
-                        </button>
-                        <button class="mode-btn" data-mode="settings">
-                            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                            Einstellungen
-                        </button>
-                    </div>
-                </div>
-            </header>
-
             <main>
                 <!-- Prüfstand Header Area -->
                 <section class="section pruefstand-header" id="pruefstand-header-section">
@@ -640,12 +588,14 @@
                     </div>
                 </section>
             </main>
-
-            <footer>
-                <p>Citizen v1.0.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
-                <p class="footer-profile" id="footer-profile-pruefstand"></p>
-            </footer>
         </div>
+
+        <!-- Shared App Footer (uniform across all modes; v1.2.0: now visible
+             in chat mode too, since the chat surface uses the light theme) -->
+        <footer class="app-footer" id="app-footer">
+            <p>Citizen v1.1.0 — Automatisierte Rechtsanalyse ohne Gewähr</p>
+            <p class="footer-profile" id="footer-profile"></p>
+        </footer>
 
     </div>
 
