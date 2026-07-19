@@ -1623,29 +1623,37 @@
 
                 for (const line of lines) {
                     if (!line.startsWith('data: ')) continue;
+                    // Parse JSON separately from event handling: a malformed line
+                    // must NOT swallow a real pipeline error event. Previously the
+                    // `throw new Error(event.detail)` lived inside the same try as
+                    // JSON.parse, and the catch only re-threw messages containing
+                    // 'Pipeline' — so any real backend error (e.g. "Stage
+                    // 'retrieval' failed: ...") was silently logged and the user
+                    // saw "keine Ausgabe erhalten" instead of the actual cause.
+                    let event;
                     try {
-                        const event = JSON.parse(line.slice(6));
-                        // Handle stage progress
-                        if (event.stage && event.stage !== 'stream_output' && event.stage !== 'corpus_health') {
-                            if (event.status === 'complete' || event.status === 'done') {
-                                completedStages.add(event.stage);
-                                updateDemoProgress(event.stage, 'complete');
-                            } else if (event.status === 'running' || event.status === 'started') {
-                                updateDemoProgress(event.stage, 'active');
-                            }
-                        }
-                        // Handle final output (from the goldset route's final event)
-                        if (event.final_output) {
-                            state.pruefstandDemoResult = event.final_output;
-                        }
-                        // Handle error
-                        if (event.error) {
-                            throw new Error(event.detail || 'Pipeline fehlgeschlagen');
-                        }
+                        event = JSON.parse(line.slice(6));
                     } catch (parseErr) {
-                        // Re-throw if it's our explicit error
-                        if (parseErr.message && parseErr.message.includes('Pipeline')) throw parseErr;
-                        console.error('SSE parse error:', parseErr);
+                        console.error('SSE JSON parse error:', parseErr, 'line:', line);
+                        continue;
+                    }
+                    // Handle stage progress
+                    if (event.stage && event.stage !== 'stream_output' && event.stage !== 'corpus_health') {
+                        if (event.status === 'complete' || event.status === 'done') {
+                            completedStages.add(event.stage);
+                            updateDemoProgress(event.stage, 'complete');
+                        } else if (event.status === 'running' || event.status === 'started') {
+                            updateDemoProgress(event.stage, 'active');
+                        }
+                    }
+                    // Handle final output (from the goldset route's final event)
+                    if (event.final_output) {
+                        state.pruefstandDemoResult = event.final_output;
+                    }
+                    // Handle error — propagate immediately so the user sees the
+                    // real failure reason (transparent workflow, not a blackbox).
+                    if (event.error) {
+                        throw new Error(event.detail || event.error || 'Pipeline fehlgeschlagen');
                     }
                 }
             }
@@ -1654,8 +1662,15 @@
             if (buffer.trim()) {
                 const trimmed = buffer.trim();
                 if (trimmed.startsWith('data: ')) {
+                    // Same separation as the main loop: parse first, then handle.
+                    let event;
                     try {
-                        const event = JSON.parse(trimmed.slice(6));
+                        event = JSON.parse(trimmed.slice(6));
+                    } catch (parseErr) {
+                        console.error('SSE JSON parse error (drain):', parseErr, 'line:', trimmed);
+                        event = null;
+                    }
+                    if (event) {
                         if (event.stage && event.status) {
                             if (event.status === 'complete' || event.status === 'done') {
                                 updateDemoProgress(event.stage, 'complete');
@@ -1667,14 +1682,8 @@
                             state.pruefstandDemoResult = event.final_output;
                         }
                         if (event.error) {
-                            throw new Error(event.detail || event.error);
+                            throw new Error(event.detail || event.error || 'Pipeline fehlgeschlagen');
                         }
-                    } catch (e) {
-                        if (e.message && e.message.includes('Pipeline')) {
-                            throw e;
-                        }
-                        // Silent parse failure for partial data
-                        console.warn('Failed to parse final SSE buffer:', e);
                     }
                 }
             }

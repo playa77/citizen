@@ -150,9 +150,7 @@ async def _cosine_distance_sqlite(
         from_clause += " " + " ".join(extra_joins)
 
     # Build WHERE
-    conditions = [
-        f"vec_distance_cosine(ce.{vector_column}, :embedding_blob) < :threshold"
-    ]
+    conditions = [f"vec_distance_cosine(ce.{vector_column}, :embedding_blob) < :threshold"]
     if extra_conditions:
         conditions.extend(extra_conditions)
     where_clause = " AND ".join(conditions)
@@ -203,7 +201,18 @@ async def _cosine_distance_pgvector(
     # Build SELECT columns — table is aliased as `ce` in FROM clause (see below)
     cols = [f"ce.{id_column} AS id"]
     if extra_columns:
-        cols.extend(extra_columns)
+        for col in extra_columns:
+            # Alias dotted column names so the result dict key is predictable.
+            # Mirrors the SQLite backend: "lc.text_content" → "lc_text_content".
+            # Without this aliasing, pgvector returns "text_content" as the row
+            # dict key, but retrieval.py expects "lc_text_content" → KeyError on
+            # PostgreSQL (while SQLite tests pass). This is the root cause of the
+            # Prüfstand "keine Ausgabe erhalten" failure in production.
+            if " AS " in col.upper():
+                cols.append(col)
+            else:
+                alias = col.replace(".", "_")
+                cols.append(f"{col} AS {alias}")
     cols.append(f"(ce.{vector_column} <=> (:query_vec)::vector) AS distance")
 
     # Build FROM + JOINs — alias the embedding table as `ce` so extra_joins
