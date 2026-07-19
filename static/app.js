@@ -1489,8 +1489,17 @@
                 headers: buildHeaders({ 'Accept': 'application/json' }),
             });
             if (!response.ok) {
-                await handleApiError(response);
-                return;
+                // Do NOT call handleApiError — that can trigger showDisclaimerModal
+                // which hides the entire app. Show a Prüfstand-specific error instead.
+                let errMsg = `HTTP ${response.status}`;
+                try {
+                    const body = await response.json();
+                    errMsg = body.detail || body.message || errMsg;
+                    if (body.error === 'disclaimer_required' || body.error === 'disclaimer_version_mismatch') {
+                        errMsg = 'Bitte bestätigen Sie zuerst den Haftungsausschluss im Analyse-Tab.';
+                    }
+                } catch { /* use default */ }
+                throw new Error(errMsg);
             }
             state.goldsetData = await response.json();
             renderPruefstandHeader(state.goldsetData);
@@ -2583,6 +2592,9 @@
         elements.chatMode.classList.add('hidden');
         elements.settingsMode.classList.add('hidden');
         if (elements.pruefstandMode) elements.pruefstandMode.classList.add('hidden');
+
+        // Deselect all mode buttons in all headers
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
 
         // Deactivate all mode buttons in all headers
         document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));

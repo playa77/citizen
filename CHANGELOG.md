@@ -5,6 +5,15 @@ Newest entries first. Dates in ISO 8601.
 
 ---
 
+## 2026-07-19 — Production Bugfixes
+
+### Fixes
+
+- **Embedding API 404**: `.env.example` had `EMBEDDING_MODEL=text-embedding-3-small` (missing `openai/` prefix). OpenRouter requires the full provider-prefixed model name. Fixed to `openai/text-embedding-3-small`. (D-008)
+- **Prüfstand tab UI crash**: `fetchGoldset()` called `handleApiError()` on non-OK responses, which triggered `showDisclaimerModal()` → hid the entire `#app` container. Fixed by handling errors gracefully within the Prüfstand view without cascading to the disclaimer modal. (D-009)
+- **Goldset SSE timeout**: The nginx config only had 180s `proxy_read_timeout` for `/api/v1/analyze`. The Prüfstand demo endpoint (`/api/v1/goldset/{case_id}/analyze`) fell through to the generic `/` location with default 60s timeout, cutting off SSE streams before the deepseek-r1 pipeline (5+ LLM calls) could complete. Added a dedicated `/api/v1/goldset` nginx location with 300s timeout and `proxy_buffering off`. Updated DEPLOYMENT.md. (D-010)
+- **No progress indicator**: Demo progress stages showed static icons (○/◉/✓) with no animation to indicate active work. Added CSS `@keyframes demo-pulse` animation on the active stage icon for a visible pulsing indicator.
+
 ## 2026-07-13 — Release v1.0.0
 
 ### Production Deployment (2026-07-13)

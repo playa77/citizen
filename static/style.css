@@ -3975,6 +3975,15 @@ body {
     font-weight: 600;
 }
 
+.demo-progress-stage.active .demo-progress-stage-icon {
+    animation: demo-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes demo-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.15); }
+}
+
 .demo-progress-stage.complete {
     color: var(--sem-green-ink);
 }

@@ -102,7 +102,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # SSE streaming for /api/v1/analyze
+    # SSE streaming for /api/v1/analyze (main analysis)
     location /api/v1/analyze {
         proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
@@ -110,8 +110,20 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
-        proxy_read_timeout 180s;
-        proxy_send_timeout 180s;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    # SSE streaming for /api/v1/goldset (Prüfstand demo analysis)
+    location /api/v1/goldset {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 }
 ```
