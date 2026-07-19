@@ -74,10 +74,24 @@ class Settings(BaseSettings):
     EMBEDDING_BATCH_CONCURRENCY: int = (
         4  # Max simultaneous batch embedding requests
     )
-    PIPELINE_TIMEOUT_SEC: int = 120
-    TRIAGE_TIMEOUT_SEC: float = 20.0
-    FINAL_TIMEOUT_SEC: float = 75.0
-    EMBEDDING_TIMEOUT_SEC: float = 15.0
+    # --- Timeout budget -------------------------------------------------------
+    # The chain must satisfy: sum(per-call) < PIPELINE_TIMEOUT < nginx timeout.
+    #
+    # Realistic LLM call durations (deepseek-v4-pro on complex legal analysis):
+    #   - triage/classification+decomposition: ~20-40s
+    #   - grounded_answer (construction+verification+generation): ~60-120s
+    #   - adversarial_review: ~60-120s
+    #   - calculation_check: ~30-60s
+    #
+    # Budget: 45 + 150 + 150 + 90 = 435s worst case < 480s pipeline < 540s nginx.
+    # The per-call timeouts are HARD limits enforced via asyncio.wait_for in
+    # router.py (httpx's read timeout does NOT fire on streaming responses
+    # because each chunk resets the timer — see D-017).
+    PIPELINE_TIMEOUT_SEC: int = 480  # 8 min overall pipeline budget (was 120 — ludicrous)
+    TRIAGE_TIMEOUT_SEC: float = 45.0  # was 20.0 — too short for complex triage
+    FINAL_TIMEOUT_SEC: float = 150.0  # was 75 — too short for grounded_answer + adversarial_review
+    EMBEDDING_TIMEOUT_SEC: float = 30.0  # was 15.0
+    CALCULATION_TIMEOUT_SEC: float = 90.0  # was 45.0
     TRIAGE_MODEL: str | None = None
     FINAL_MODEL: str | None = None
     COMBINE_TRIAGE_STAGES: bool = True
@@ -90,7 +104,6 @@ class Settings(BaseSettings):
     # Calculation check (WP-014) — specialised model for numeric verification
     ENABLE_CALCULATION_CHECK: bool = True
     CALCULATION_MODEL: str | None = None  # None = use PRIMARY_MODEL
-    CALCULATION_TIMEOUT_SEC: float = 45.0
     # Rate limiting — 0 = disabled (desktop app, no rate limiting needed)
     RATE_LIMIT_REQUESTS: int = 0
     RATE_LIMIT_WINDOW: int = 60

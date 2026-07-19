@@ -242,12 +242,24 @@ class OpenRouterClient:
                         sum(len(m.get("content", "")) for m in messages),
                     )
                     req_start = time.monotonic()
-                    resp = await self._client.post(
-                        _API_URL,
-                        json=payload,
-                        headers=_headers(),
-                        timeout=timeout_config,
-                    )
+                    # Wrap in asyncio.wait_for to enforce a HARD wall-clock timeout.
+                    # httpx's read timeout does NOT fire on streaming/chunked
+                    # responses because each chunk resets the timer (D-017).
+                    try:
+                        resp = await asyncio.wait_for(
+                            self._client.post(
+                                _API_URL,
+                                json=payload,
+                                headers=_headers(),
+                                timeout=timeout_config,
+                            ),
+                            timeout=timeout,
+                        )
+                    except TimeoutError:
+                        raise httpx.TimeoutException(
+                            f"chat_completion exceeded {timeout}s wall-clock timeout",
+                            request=None,
+                        ) from None
                     req_elapsed = time.monotonic() - req_start
                     resp.raise_for_status()
                     body = resp.json()
@@ -366,6 +378,21 @@ class OpenRouterClient:
                         resp.raise_for_status()
                         token_count = 0
                         async for line in resp.aiter_lines():
+                            # Hard wall-clock timeout check — httpx's read timeout
+                            # does NOT fire on streaming responses because each
+                            # chunk resets the timer (D-017).
+                            if timeout is not None and (time.monotonic() - req_start) > timeout:
+                                logger.warning(
+                                    "chat_completion_stream exceeded %.1fs wall-clock "
+                                    "timeout after %d tokens, aborting",
+                                    timeout,
+                                    token_count,
+                                )
+                                raise httpx.TimeoutException(
+                                    f"chat_completion_stream exceeded {timeout}s "
+                                    f"wall-clock timeout",
+                                    request=resp.request,
+                                )
                             line = line.strip()
                             if not line:
                                 continue

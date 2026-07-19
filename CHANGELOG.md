@@ -1,3 +1,121 @@
+## 2026-07-19 — Timeout Stack Overhaul: Hard Wall-Clock Enforcement + Realistic Budgets (v0.4.4)
+
+### Problem
+
+After the v0.4.3 fix, the Prüfstand pipeline reached the generation stage but
+then failed with `Pipeline execution exceeded 120s timeout`. Two root causes:
+
+1. **Pipeline budget was mathematically impossible to satisfy.** The pipeline
+   timeout (120s) was smaller than the sum of per-call LLM timeouts:
+   triage(20s) + grounded_answer(75s) + adversarial_review(75s) +
+   calculation(45s) = 215s. The pipeline was designed to fail.
+
+2. **Per-call httpx timeouts never fired on streaming responses.** OpenRouter
+   streams tokens via chunked transfer encoding — headers arrive in ~1s, body
+   streams slowly. httpx's read timeout resets with each chunk received, so
+   the 75s per-call timeout never triggered. The only effective timeout was
+   the pipeline-level `asyncio.wait_for(120s)`.
+
+### Changes
+
+- **`app/core/router.py`**: Wrapped `chat_completion`'s HTTP call in
+  `asyncio.wait_for(timeout)` to enforce a HARD wall-clock timeout regardless
+  of httpx streaming behavior. Added elapsed-time check inside
+  `chat_completion_stream`'s token loop that raises `httpx.TimeoutException`
+  when wall-clock time exceeds the timeout. (D-017)
+
+- **`app/core/config.py`**: Increased timeout values to realistic levels:
+  - `PIPELINE_TIMEOUT_SEC`: 120 → 480 (8 min)
+  - `TRIAGE_TIMEOUT_SEC`: 20 → 45
+  - `FINAL_TIMEOUT_SEC`: 75 → 150
+  - `EMBEDDING_TIMEOUT_SEC`: 15 → 30
+  - `CALCULATION_TIMEOUT_SEC`: 45 → 90
+  - Removed duplicate `CALCULATION_TIMEOUT_SEC` definition (was at both line 93
+    and line 107).
+
+- **nginx** (`/etc/nginx/sites-enabled/workbench.gronowski.cc`): Increased
+  `proxy_read_timeout` and `proxy_send_timeout` from 300s → 540s for both
+  `/api/v1/analyze` and `/api/v1/goldset` locations.
+
+- **Production `.env`**: Updated `PIPELINE_TIMEOUT_SEC=480`,
+  `TRIAGE_TIMEOUT_SEC=45`, `FINAL_TIMEOUT_SEC=150`, `EMBEDDING_TIMEOUT_SEC=30`.
+
+### Verification
+
+- `tests/unit/test_router.py` + `test_vector_backend_aliasing.py`: 31 passed
+- `ruff check` + `mypy` clean on changed files (only pre-existing E501 warnings)
+- Production GS-001 pipeline completed end-to-end: normalization →
+  classification → decomposition → retrieval (6 chunks, 1.9s) → construction
+  (81.6s grounded_answer) → verification → generation → adversarial_review
+  (15.6s) → calculation_check (117s). Total ~215s, well under 480s budget.
+  All 8 `final_output` sections populated.
+
+### Timeout Chain (after fix)
+
+```
+nginx (540s) > pipeline (480s) > sum of per-call (45+150+150+90 = 435s)
+```
+
+---
+
+## 2026-07-19 — Prüfstand Pipeline Failure: pgvector Aliasing + SSE Error Swallowing (v0.4.3)
+
+### Problem
+
+The Prüfstand goldset demo analysis never produced output for any golden case.
+Every run showed `Pipeline abgeschlossen, aber keine Ausgabe erhalten.` instead
+of results. Two bugs combined to cause this:
+
+1. **pgvector column aliasing mismatch (primary):** The SQLite backend in
+   `app/db/vector_backend.py` aliases dotted `extra_columns` (e.g.
+   `"lc.text_content"` → `"lc.text_content AS lc_text_content"`), so the row
+   dict key is `lc_text_content`. The pgvector backend did NOT alias — it just
+   did `cols.extend(extra_columns)`, producing row dict key `text_content`
+   (no `lc_` prefix). But `app/services/retrieval.py` accesses
+   `row["lc_text_content"]` in all retrieval functions. On PostgreSQL
+   (production): `KeyError: 'lc_text_content'` at retrieval stage. On SQLite
+   (tests): works fine. This is why tests passed but production failed — a
+   classic dialect-specific bug.
+
+2. **Prüfstand SSE error swallowing (secondary — the "blackbox"):** The
+   Prüfstand demo's SSE handler in `static/app.js` threw
+   `new Error(event.detail)` inside the same `try` block as `JSON.parse`, and
+   the `catch` only re-threw errors whose message contained the literal string
+   `'Pipeline'`. Since real backend errors (e.g.
+   `"Stage 'retrieval' failed: 'lc_text_content'"`) don't contain 'Pipeline',
+   they were silently logged to console and the user saw the generic
+   "keine Ausgabe erhalten" message instead of the actual failure reason.
+
+### Changes
+
+- **`app/db/vector_backend.py`** — `_cosine_distance_pgvector()` now aliases
+  dotted `extra_columns` the same way the SQLite backend does: columns without
+  ` AS ` get ` AS {col.replace(".", "_")}` appended; columns with ` AS ` pass
+  through unchanged. This ensures both backends produce identical row-dict key
+  structure.
+- **`static/app.js`** — Restructured the Prüfstand demo SSE handler
+  (`startDemoAnalysis`) to separate JSON parsing from event handling. `JSON.parse`
+  errors are caught and logged without swallowing subsequent events. Pipeline
+  error events (`event.error`) now propagate immediately via `throw new
+  Error(event.detail || event.error || 'Pipeline fehlgeschlagen')` outside the
+  parse try/catch. Same fix applied to the drain-buffer section. The main
+  analyze endpoint already handled this correctly.
+- **`tests/unit/test_vector_backend_aliasing.py`** — New regression test file
+  (6 tests) verifying: (a) pgvector aliases dotted columns, (b) multiple
+  columns aliased, (c) pre-aliased columns pass through, (d) no extra columns
+  case, (e) SQLite reference aliasing, (f) cross-dialect consistency — both
+  backends produce the same aliased SQL for the same input.
+
+### Verification
+
+- 6 new regression tests pass (`pytest tests/unit/test_vector_backend_aliasing.py`)
+- Full unit suite: 800 passed, 6 new tests pass, 10 pre-existing failures
+  unrelated to this fix (text_hash column, disclaimer version, stale mock
+  signature — all fail identically on unmodified code)
+- `ruff check` + `ruff format --check` + `mypy` all clean on changed files
+
+---
+
 ## 2026-07-19 — Corpus Update: Fix btree index size limit with text_hash (v0.4.2)
 
 ### Problem
