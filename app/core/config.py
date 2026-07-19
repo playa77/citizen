@@ -66,7 +66,13 @@ class Settings(BaseSettings):
     TOP_K_KEYWORD: int = 5
     CORPUS_SOURCES: list[str] = ["sgb2", "sgbx"]
     CORPUS_INGESTION_TIMEOUT_SEC: int = (
-        900  # 15 min timeout for full corpus scrape+embed+upsert (WP-014)
+        1800  # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased for large corpora)
+    )
+    EMBEDDING_BATCH_SIZE: int = (
+        64  # Number of texts per batch embedding request (OpenRouter batch API; OpenAI limit is 2048)
+    )
+    EMBEDDING_BATCH_CONCURRENCY: int = (
+        4  # Max simultaneous batch embedding requests
     )
     PIPELINE_TIMEOUT_SEC: int = 120
     TRIAGE_TIMEOUT_SEC: float = 20.0

@@ -5,6 +5,87 @@ Newest entries first. Dates in ISO 8601.
 
 ---
 
+## 2026-07-19 — Corpus Update: pgvector Upsert Fix (v0.4.1)
+
+### Problem
+
+After the batch embedding fix (v0.4.0), embeddings generated successfully but
+the DB upsert stage failed with `DatatypeMismatchError: column "embedding" is
+of type vector but expression is of type bytea`. Root cause: the
+`ChunkEmbedding.embedding` ORM column is mapped as `LargeBinary` (BYTEA) for
+dialect portability, but the actual PostgreSQL column is pgvector `Vector`
+type. The ORM `insert()` sent data as `$3::BYTEA`, which PostgreSQL rejected.
+This was a pre-existing bug masked by the 900s timeout — the embedding stage
+never completed before, so the upsert stage was never reached.
+
+### Changes
+
+- **`app/services/corpus.py`** — Rewrote `_upsert_embedding()` PostgreSQL path
+  to use raw SQL with explicit `(:vec)::vector` cast, matching the proven
+  pattern in `vector_backend.py`. Serializes the embedding as a pgvector
+  literal string `"[0.1, 0.2, ...]"` and casts with `::vector`. SQLite path
+  unchanged (ORM insert with `struct.pack` blob). Added verbose debug logging
+  to both paths. Added INFO log at start of `upsert_chunks` showing backend
+  and total. Added try/except per chunk with detailed error logging
+  (source_type, hierarchy_path, text_content_len).
+
+### Verification
+
+- All 27 corpus/router unit tests pass.
+- VPS deployment: 939 chunks (sgb2 + sgbx) scraped → embedded in ~2s →
+  upserted to pgvector in ~5s. Clean logs, no errors.
+
+---
+
+## 2026-07-19 — Corpus Update: Batch Embedding API + Granular Progress (v0.4.0)
+
+### Problem
+
+Corpus updates with ~8582 text blocks timed out after 900s. Root cause:
+`get_embeddings_batch()` sent N individual HTTP requests at concurrency=2
+(8582/2 × ~0.3s ≈ 1287s > 900s). The frontend showed only a static
+"8582 Textblöcke werden verarbeitet" with an indeterminate progress bar —
+no per-chunk progress during embedding or upsert stages.
+
+### Changes
+
+- **`app/core/router.py`** — Rewrote `get_embeddings_batch()` to use the
+  OpenRouter batch embedding API (`input: [str, ...]` in a single request).
+  Added private `_embed_batch_api()` helper that sends a batch and parses
+  the `data` array (sorted by `index` field). New parameters:
+  `batch_size` (default `settings.EMBEDDING_BATCH_SIZE` = 64),
+  `concurrency` (default `settings.EMBEDDING_BATCH_CONCURRENCY` = 4),
+  `progress_cb` (async callback `(done, total) -> None` invoked after each
+  batch). With batch_size=64, 8582 chunks → 134 batch requests instead of
+  8582 individual requests (~64x reduction in HTTP round-trips).
+- **`app/core/config.py`** — Added `EMBEDDING_BATCH_SIZE: int = 64` and
+  `EMBEDDING_BATCH_CONCURRENCY: int = 4`. Increased
+  `CORPUS_INGESTION_TIMEOUT_SEC` from 900 (15 min) to 1800 (30 min) as a
+  safety net.
+- **`app/services/corpus.py`** — `generate_embeddings()` and
+  `upsert_chunks()` now accept an optional `progress_cb` parameter.
+  `upsert_chunks` calls the callback every 25 chunks.
+- **`app/api/routes/corpus.py`** — `_run_corpus_update()` passes async
+  callbacks that update `_job_store[job_id]` with `chunks_embedded` and
+  `chunks_upserted` counters during the respective stages.
+- **`static/app.js`** — `updateCorpusProgress()` and
+  `updateSettingsProgress()` now show `done / total (pct%)` during
+  embedding and upsert stages, with a determinate progress bar (width
+  set to percentage) instead of the indeterminate animation.
+- **Tests** — Updated `test_router.py` batch test to return a proper
+  batch response (3 embeddings with `index` fields). Added
+  `test_progress_callback_invoked` test. Updated `test_corpus_endpoint.py`
+  and `test_corpus.py` mock signatures to accept new kwargs.
+
+### Impact
+
+- 8582 chunks: ~134 batch requests at concurrency=4 → ~17s (was ~1287s).
+- Progress updates: ~134 (embedding) + ~343 (upsert) = ~477 updates
+  (was 3 total — ~159x more granular).
+- Zero regressions: all 795 pre-existing-passing unit tests still pass.
+
+---
+
 ## 2026-07-19 — Frontend: Chat UI Restyled to Uniform Light Theme (v1.2.0)
 
 ### Changes

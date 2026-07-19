@@ -2557,19 +2557,27 @@
             elements.corpusSubstage.textContent = label;
         }
 
-        if (job.substage === 'scraping' && job.chunks_scraped > 0) {
-            elements.corpusChunksCount.textContent =
-                `${job.chunks_scraped} Textblöcke bisher abgerufen`;
-        } else if (job.substage === 'embedding' && job.chunks_scraped > 0) {
-            elements.corpusChunksCount.textContent =
-                `${job.chunks_scraped} Textblöcke werden verarbeitet`;
-        } else if (job.substage === 'upserting' && job.chunks_scraped > 0) {
-            elements.corpusChunksCount.textContent =
-                `${job.chunks_scraped} Textblöcke in DB`;
-        }
+        const total = job.chunks_scraped || 0;
 
-        if (job.status === 'running') {
-            elements.corpusProgressFill.classList.add('indeterminate');
+        if (job.substage === 'scraping' && total > 0) {
+            elements.corpusChunksCount.textContent =
+                `${total} Textblöcke bisher abgerufen`;
+            elements.corpusProgressFill.classList.remove('indeterminate');
+            elements.corpusProgressFill.style.width = '5%';
+        } else if (job.substage === 'embedding') {
+            const done = job.chunks_embedded || 0;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            elements.corpusChunksCount.textContent =
+                `${done} / ${total} Textblöcke verarbeitet (${pct}%)`;
+            elements.corpusProgressFill.classList.remove('indeterminate');
+            elements.corpusProgressFill.style.width = pct + '%';
+        } else if (job.substage === 'upserting') {
+            const done = job.chunks_upserted || 0;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            elements.corpusChunksCount.textContent =
+                `${done} / ${total} Textblöcke in DB gespeichert (${pct}%)`;
+            elements.corpusProgressFill.classList.remove('indeterminate');
+            elements.corpusProgressFill.style.width = pct + '%';
         }
     }
 
@@ -2950,19 +2958,27 @@
             elements.settingsSubstage.textContent = label;
         }
 
-        if (job.substage === 'scraping' && job.chunks_scraped > 0) {
-            elements.settingsChunksCount.textContent =
-                `${job.chunks_scraped} Textblöcke bisher abgerufen`;
-        } else if (job.substage === 'embedding' && job.chunks_scraped > 0) {
-            elements.settingsChunksCount.textContent =
-                `${job.chunks_scraped} Textblöcke werden verarbeitet`;
-        } else if (job.substage === 'upserting' && job.chunks_scraped > 0) {
-            elements.settingsChunksCount.textContent =
-                `${job.chunks_scraped} Textblöcke in DB`;
-        }
+        const total = job.chunks_scraped || 0;
 
-        if (job.status === 'running') {
-            elements.settingsProgressFill.classList.add('indeterminate');
+        if (job.substage === 'scraping' && total > 0) {
+            elements.settingsChunksCount.textContent =
+                `${total} Textblöcke bisher abgerufen`;
+            elements.settingsProgressFill.classList.remove('indeterminate');
+            elements.settingsProgressFill.style.width = '5%';
+        } else if (job.substage === 'embedding') {
+            const done = job.chunks_embedded || 0;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            elements.settingsChunksCount.textContent =
+                `${done} / ${total} Textblöcke verarbeitet (${pct}%)`;
+            elements.settingsProgressFill.classList.remove('indeterminate');
+            elements.settingsProgressFill.style.width = pct + '%';
+        } else if (job.substage === 'upserting') {
+            const done = job.chunks_upserted || 0;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            elements.settingsChunksCount.textContent =
+                `${done} / ${total} Textblöcke in DB gespeichert (${pct}%)`;
+            elements.settingsProgressFill.classList.remove('indeterminate');
+            elements.settingsProgressFill.style.width = pct + '%';
         }
     }
 

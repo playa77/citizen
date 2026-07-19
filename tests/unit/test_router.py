@@ -430,11 +430,23 @@ class TestGetEmbeddingsBatch:
     async def test_returns_same_order(
         self, client: OpenRouterClient, mock_httpx_client: AsyncMock
     ) -> None:
-        """Multiple texts should yield embeddings in the same order."""
+        """Multiple texts should yield embeddings in the same order.
+
+        With the batch API, all texts are sent in a single request and the
+        response ``data`` array contains one embedding per input (sorted by
+        ``index``).
+        """
+        batch_response = {
+            "data": [
+                {"embedding": [0.1] * 1536, "index": 0},
+                {"embedding": [0.2] * 1536, "index": 1},
+                {"embedding": [0.3] * 1536, "index": 2},
+            ]
+        }
         mock_httpx_client.post.return_value = httpx.Response(
             status_code=200,
             request=httpx.Request("POST", "https://example.com"),
-            content=json.dumps(_embedding_response(1536)).encode(),
+            content=json.dumps(batch_response).encode(),
         )
 
         results = await client.get_embeddings_batch(["a", "b", "c"])
@@ -446,6 +458,33 @@ class TestGetEmbeddingsBatch:
     ) -> None:
         results = await client.get_embeddings_batch([])
         assert results == []
+
+    async def test_progress_callback_invoked(
+        self, client: OpenRouterClient, mock_httpx_client: AsyncMock
+    ) -> None:
+        """The progress callback must be called with (done, total) after each batch."""
+        batch_response = {
+            "data": [
+                {"embedding": [0.1] * 1536, "index": 0},
+                {"embedding": [0.2] * 1536, "index": 1},
+            ]
+        }
+        mock_httpx_client.post.return_value = httpx.Response(
+            status_code=200,
+            request=httpx.Request("POST", "https://example.com"),
+            content=json.dumps(batch_response).encode(),
+        )
+
+        progress_calls: list[tuple[int, int]] = []
+
+        async def capture_progress(done: int, total: int) -> None:
+            progress_calls.append((done, total))
+
+        results = await client.get_embeddings_batch(["a", "b"], progress_cb=capture_progress)
+
+        assert len(results) == 2
+        assert len(progress_calls) == 1
+        assert progress_calls[0] == (2, 2)
 
 
 # ===========================================================================

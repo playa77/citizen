@@ -87,7 +87,7 @@ async def test_run_corpus_update_success(monkeypatch, caplog):
         patch("app.api.routes.corpus.generate_embeddings", new_callable=AsyncMock) as mock_embed,
     ):
         mock_scrape.side_effect = _capture_and_return
-        mock_embed.side_effect = lambda chunks: chunks  # passthrough — embeddings already present
+        mock_embed.side_effect = lambda chunks, **kwargs: chunks  # passthrough — embeddings already present
         await _run_corpus_update(job_id, override_sources=["sgb2", "sgbx", "weisung", "bsg"])
 
     # ── Verify scraper called for each source type in order ──────────

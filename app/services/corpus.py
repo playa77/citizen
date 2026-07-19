@@ -18,6 +18,7 @@ import struct
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+from collections.abc import Awaitable, Callable
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -1106,6 +1107,7 @@ async def generate_embeddings(
     chunks: list[dict[str, Any]],
     *,
     client: OpenRouterClient | None = None,
+    progress_cb: Callable[[int, int], Awaitable[None]] | None = None,
 ) -> list[dict[str, Any]]:
     """Generate embeddings for each chunk and attach them to the chunk dict.
 
@@ -1117,6 +1119,9 @@ async def generate_embeddings(
             contain ``text_content`` and ``chunk_id``).
         client: Optional pre-instantiated ``OpenRouterClient``.  A new
             client is created if none is provided.
+        progress_cb: Optional async callback ``(done, total) -> None``
+            invoked after each embedding batch completes, enabling
+            fine-grained progress reporting.
 
     Returns:
         The same list, now enriched with ``embedding`` keys.
@@ -1126,7 +1131,7 @@ async def generate_embeddings(
 
     async with client or OpenRouterClient() as router:
         texts = [c["text_content"] for c in chunks]
-        embeddings = await router.get_embeddings_batch(texts)
+        embeddings = await router.get_embeddings_batch(texts, progress_cb=progress_cb)
 
     for chunk, embedding in zip(chunks, embeddings, strict=True):
         chunk["embedding"] = embedding
@@ -1138,6 +1143,8 @@ async def generate_embeddings(
 async def upsert_chunks(
     session: AsyncSession,
     chunks: list[dict[str, Any]],
+    *,
+    progress_cb: Callable[[int, int], Awaitable[None]] | None = None,
 ) -> None:
     """Persist legal chunks and their embeddings, de-duplicating on ``version_hash``.
 
@@ -1146,7 +1153,7 @@ async def upsert_chunks(
        ``source_type + version_hash``.
     2. Creates a :class:`LegalChunk` under that source, keyed on
        ``hierarchy_path + text_content`` (ON CONFLICT skip).
-    3. Upserts a :class:`ChunkEmbedding` row with ``ON CONFLICT DO UPDATE``
+    3. Upserts a :class:`ChunkEmbedding`` row with ``ON CONFLICT DO UPDATE``
        to refresh the embedding vector when the model or text changes.
 
     Args:
@@ -1155,14 +1162,39 @@ async def upsert_chunks(
             (must contain ``embedding``, ``source_type``, ``title``,
             ``hierarchy_path``, ``text_content``, ``effective_date``,
             ``source_url``, ``version_hash``, ``unit_type``).
+        progress_cb: Optional async callback ``(done, total) -> None``
+            invoked every 25 chunks to report upsert progress.
     """
-    for chunk in chunks:
-        source = await _get_or_create_source(session, chunk)
-        lc = await _get_or_create_legal_chunk(session, source, chunk)
-        await _upsert_embedding(session, lc, chunk)
+    total = len(chunks)
+    backend = "sqlite-vec" if IS_SQLITE else "pgvector"
+    logger.info(
+        "upsert_chunks started: total=%d, backend=%s, model=%s",
+        total,
+        backend,
+        settings.EMBEDDING_MODEL,
+    )
+    for i, chunk in enumerate(chunks, 1):
+        try:
+            source = await _get_or_create_source(session, chunk)
+            lc = await _get_or_create_legal_chunk(session, source, chunk)
+            await _upsert_embedding(session, lc, chunk)
+        except Exception as exc:
+            logger.error(
+                "upsert_chunks FAILED at chunk %d/%d: source_type=%s, hierarchy_path=%s, "
+                "text_content_len=%d, error=%s",
+                i,
+                total,
+                chunk.get("source_type", "?"),
+                chunk.get("hierarchy_path", "?"),
+                len(chunk.get("text_content", "")),
+                exc,
+            )
+            raise
+        if progress_cb and (i % 25 == 0 or i == total):
+            await progress_cb(i, total)
 
     await session.commit()
-    logger.info("Upserted %d chunks with embeddings", len(chunks))
+    logger.info("Upserted %d chunks with embeddings (backend=%s)", total, backend)
 
 
 # ---------------------------------------------------------------------------
@@ -1246,37 +1278,73 @@ async def _upsert_embedding(
     """Insert or update a ChunkEmbedding row for the given legal chunk.
 
     Uses ``ON CONFLICT DO UPDATE`` on ``chunk_id + model_name``
-    to atomically upsert the embedding vector.  The import is dialect-
-    dependent: pgvector (PostgreSQL) uses a PostgreSQL-specific insert,
-    while SQLite uses the sqlite dialect.
+    to atomically upsert the embedding vector.  The implementation is
+    dialect-dependent:
 
-    On SQLite the embedding ``list[float]`` is serialised to a
-    little-endian float32 ``blob`` via ``struct.pack`` so it matches
-    the ``LargeBinary`` / BLOB column.
+    - **SQLite**: serialises the ``list[float]`` to a little-endian float32
+      ``blob`` via ``struct.pack`` and uses the ORM ``insert()`` with
+      ``LargeBinary`` / BLOB column.
+    - **PostgreSQL + pgvector**: uses **raw SQL** with an explicit
+      ``::vector`` cast.  The ORM model declares the ``embedding`` column as
+      ``LargeBinary`` (BYTEA) for dialect portability, but the actual DB
+      column is pgvector ``Vector`` type.  Using the ORM ``insert()`` sends
+      the data as ``$3::BYTEA``, which PostgreSQL rejects with
+      ``DatatypeMismatchError``.  Raw SQL with ``::vector`` cast avoids this,
+      matching the pattern in ``vector_backend.py``.
     """
+    embedding_vec = chunk["embedding"]
+    model_name = settings.EMBEDDING_MODEL
+    chunk_id_str = str(legal_chunk.id)
+
     if IS_SQLITE:
         from sqlalchemy.dialects.sqlite import insert as upsert_insert
-    else:
-        from sqlalchemy.dialects.postgresql import insert as upsert_insert  # type: ignore[assignment]
 
-    embedding_vec = chunk["embedding"]
-    if IS_SQLITE:
         embedding_blob = struct.pack(f"<{len(embedding_vec)}f", *embedding_vec)
+        stmt = (
+            upsert_insert(ChunkEmbedding)
+            .values(
+                chunk_id=legal_chunk.id,
+                embedding=embedding_blob,
+                model_name=model_name,
+            )
+            .on_conflict_do_update(
+                index_elements=["chunk_id", "model_name"],
+                set_={"embedding": embedding_blob},
+            )
+        )
+        await session.execute(stmt)
+        logger.debug(
+            "upsert_embedding (sqlite): chunk_id=%s, model=%s, dim=%d",
+            chunk_id_str,
+            model_name,
+            len(embedding_vec),
+        )
     else:
-        embedding_blob = embedding_vec  # pgvector handles list natively
+        # PostgreSQL + pgvector: raw SQL with ::vector cast.
+        # Serialize embedding as pgvector literal: '[0.1, 0.2, ...]'
+        vec_literal = "[" + ", ".join(str(x) for x in embedding_vec) + "]"
+        new_id = str(uuid4())
 
-    model_name = settings.EMBEDDING_MODEL
+        from sqlalchemy.sql import text as sa_text
 
-    stmt = (
-        upsert_insert(ChunkEmbedding)
-        .values(
-            chunk_id=legal_chunk.id,
-            embedding=embedding_blob,
-            model_name=model_name,
+        stmt = sa_text(
+            "INSERT INTO chunk_embedding (id, chunk_id, embedding, model_name) "
+            "VALUES ((:id)::uuid, (:chunk_id)::uuid, (:vec)::vector, :model_name) "
+            "ON CONFLICT (chunk_id, model_name) DO UPDATE SET embedding = (:vec)::vector"
         )
-        .on_conflict_do_update(
-            index_elements=["chunk_id", "model_name"],
-            set_={"embedding": embedding_blob},
+        await session.execute(
+            stmt,
+            {
+                "id": new_id,
+                "chunk_id": chunk_id_str,
+                "vec": vec_literal,
+                "model_name": model_name,
+            },
         )
-    )
-    await session.execute(stmt)
+        logger.debug(
+            "upsert_embedding (pgvector): chunk_id=%s, model=%s, dim=%d, vec_literal_len=%d",
+            chunk_id_str,
+            model_name,
+            len(embedding_vec),
+            len(vec_literal),
+        )

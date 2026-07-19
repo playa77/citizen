@@ -13,7 +13,7 @@ import json
 import logging
 import time
 import unicodedata
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from typing import Any
 from urllib.parse import urlparse
 
@@ -524,19 +524,151 @@ class OpenRouterClient:
             )
             raise EmbeddingError(f"Malformed embedding response: {exc}") from exc
 
+    async def _embed_batch_api(
+        self,
+        texts: list[str],
+        *,
+        model: str | None = None,
+    ) -> list[list[float]]:
+        """Send a batch of texts to the embedding API in a single HTTP request.
+
+        Uses the OpenRouter batch input support (``input: [str, ...]``) to
+        generate embeddings for multiple texts in one round-trip.  The
+        response ``data`` array is sorted by the ``index`` field to guarantee
+        output order matches input order.
+
+        Args:
+            texts: List of input strings (1 ≤ len ≤ EMBEDDING_BATCH_SIZE).
+            model: Override the default embedding model.
+
+        Returns:
+            A list of embedding vectors, one per input text, in input order.
+
+        Raises:
+            EmbeddingError: On HTTP failure, malformed response, or dimension mismatch.
+        """
+        model_name = model or settings.EMBEDDING_MODEL
+        embedding_url = settings.EMBEDDING_BASE_URL
+        req_start: float = 0.0
+        logger.info(
+            "embed_batch_api → sending (model=%s, batch_size=%d, url=%s)",
+            model_name,
+            len(texts),
+            embedding_url,
+        )
+        try:
+            payload: dict[str, Any] = {
+                "model": model_name,
+                "input": texts,
+            }
+            _egress_check(embedding_url, payload)
+            req_start = time.monotonic()
+            resp = await self._client.post(
+                embedding_url,
+                json=payload,
+                headers=_embedding_headers(),
+            )
+            req_elapsed = time.monotonic() - req_start
+            resp.raise_for_status()
+            body = resp.json()
+
+            # ── Detect OpenRouter-level error responses ─────────────────
+            if "error" in body and "data" not in body:
+                err_detail = body["error"]
+                err_msg = (
+                    err_detail.get("message", str(err_detail))
+                    if isinstance(err_detail, dict)
+                    else str(err_detail)
+                )
+                logger.error(
+                    "embed_batch_api FAILED (model=%s, elapsed=%.2fs, reason=api_error): %s | body=%s",
+                    model_name,
+                    req_elapsed,
+                    err_msg,
+                    str(body)[:500],
+                )
+                raise EmbeddingError(f"Embedding API returned error: {err_msg}") from None
+
+            # Sort by index field to guarantee input order
+            data = sorted(body["data"], key=lambda d: d.get("index", 0))
+            embeddings: list[list[float]] = []
+            for item in data:
+                emb = item["embedding"]
+                if len(emb) != settings.VECTOR_DIM:
+                    raise EmbeddingError(
+                        f"Expected embedding dimension {settings.VECTOR_DIM}, "
+                        f"got {len(emb)} from model {model_name!r}"
+                    )
+                embeddings.append(emb)
+
+            if len(embeddings) != len(texts):
+                raise EmbeddingError(
+                    f"Batch embedding count mismatch: sent {len(texts)} texts, "
+                    f"received {len(embeddings)} embeddings"
+                )
+
+            logger.info(
+                "embed_batch_api OK (model=%s, elapsed=%.2fs, batch_size=%d, dim=%d)",
+                model_name,
+                req_elapsed,
+                len(texts),
+                settings.VECTOR_DIM,
+            )
+            return embeddings
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
+            fail_elapsed = time.monotonic() - req_start
+            fail_reason = type(exc).__name__
+            if isinstance(exc, httpx.HTTPStatusError):
+                fail_reason = f"HTTP {exc.response.status_code}"
+            logger.error(
+                "embed_batch_api FAILED (model=%s, elapsed=%.2fs, reason=%s): %s",
+                model_name,
+                fail_elapsed,
+                fail_reason,
+                exc,
+            )
+            raise EmbeddingError(f"Embedding API error: {exc}") from exc
+        except (KeyError, IndexError) as exc:
+            fail_elapsed = time.monotonic() - req_start
+            try:
+                response_preview = str(body)[:500]
+            except Exception:
+                response_preview = "<unavailable>"
+            logger.error(
+                "embed_batch_api FAILED (model=%s, elapsed=%.2fs, reason=malformed_response): %s | body=%s",
+                model_name,
+                fail_elapsed,
+                exc,
+                response_preview,
+            )
+            raise EmbeddingError(f"Malformed embedding response: {exc}") from exc
+
     async def get_embeddings_batch(
         self,
         texts: Sequence[str],
         *,
         model: str | None = None,
-        concurrency: int = 2,
+        concurrency: int | None = None,
+        batch_size: int | None = None,
+        progress_cb: Callable[[int, int], Awaitable[None]] | None = None,
     ) -> list[list[float]]:
-        """Generate embeddings for multiple texts with bounded concurrency.
+        """Generate embeddings for multiple texts using the batch API.
+
+        Texts are split into batches of ``batch_size`` and each batch is sent
+        as a single HTTP request with ``input: [str, ...]``.  Batches run
+        concurrently up to ``concurrency`` simultaneous requests.  After each
+        batch completes, ``progress_cb(done, total)`` is called (when provided)
+        so callers can report fine-grained progress.
 
         Args:
             texts: Sequence of input strings.
             model: Override the default embedding model.
-            concurrency: Maximum number of simultaneous requests (default 8).
+            concurrency: Maximum simultaneous batch requests (default:
+                ``settings.EMBEDDING_BATCH_CONCURRENCY``).
+            batch_size: Number of texts per batch request (default:
+                ``settings.EMBEDDING_BATCH_SIZE``).
+            progress_cb: Optional async callback ``(done, total) -> None``
+                invoked after each batch completes.
 
         Returns:
             A list of embedding vectors (same order as *texts*).
@@ -544,15 +676,35 @@ class OpenRouterClient:
         if not texts:
             return []
 
-        semaphore = asyncio.Semaphore(concurrency)
+        total = len(texts)
+        eff_batch_size = batch_size if batch_size is not None else settings.EMBEDDING_BATCH_SIZE
+        eff_concurrency = (
+            concurrency if concurrency is not None else settings.EMBEDDING_BATCH_CONCURRENCY
+        )
 
-        async def embed_one(text: str) -> list[float]:
+        # Split into batches, tracking the start index of each
+        batches: list[tuple[int, list[str]]] = []
+        for start in range(0, total, eff_batch_size):
+            batch = list(texts[start : start + eff_batch_size])
+            batches.append((start, batch))
+
+        # Pre-allocate result slots
+        results: list[list[float] | None] = [None] * total
+        done_count = 0
+        semaphore = asyncio.Semaphore(eff_concurrency)
+
+        async def embed_batch(start_idx: int, batch: list[str]) -> None:
+            nonlocal done_count
             async with semaphore:
-                return await self.get_embedding(text, model=model)
+                batch_embs = await self._embed_batch_api(batch, model=model)
+                for i, emb in enumerate(batch_embs):
+                    results[start_idx + i] = emb
+                done_count += len(batch)
+                if progress_cb:
+                    await progress_cb(done_count, total)
 
-        tasks = [embed_one(t) for t in texts]
-        results = await asyncio.gather(*tasks)
-        return list(results)
+        await asyncio.gather(*(embed_batch(start, batch) for start, batch in batches))
+        return results  # type: ignore[return-value]
 
     async def close(self) -> None:
         """Close the underlying httpx client if owned."""

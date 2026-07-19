@@ -102,8 +102,14 @@ class TestGenerateEmbeddings:
             texts: list[str],
             *,
             model: str | None = None,
+            concurrency: int | None = None,
+            batch_size: int | None = None,
+            progress_cb: Any = None,
         ) -> list[list[float]]:
-            return [_fake_embedding() for _ in texts]
+            result = [_fake_embedding() for _ in texts]
+            if progress_cb:
+                await progress_cb(len(texts), len(texts))
+            return result
 
         mock_client = AsyncMock(spec=OpenRouterClient)
         mock_client.get_embeddings_batch = AsyncMock(side_effect=fake_get_embeddings_batch)
@@ -127,8 +133,14 @@ class TestGenerateEmbeddings:
             texts: list[str],
             *,
             model: str | None = None,
+            concurrency: int | None = None,
+            batch_size: int | None = None,
+            progress_cb: Any = None,
         ) -> list[list[float]]:
-            return [_fake_embedding() for _ in texts]
+            result = [_fake_embedding() for _ in texts]
+            if progress_cb:
+                await progress_cb(len(texts), len(texts))
+            return result
 
         mock_client = AsyncMock(spec=OpenRouterClient)
         mock_client.get_embeddings_batch = AsyncMock(side_effect=fake_get_embeddings_batch)

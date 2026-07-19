@@ -123,16 +123,25 @@ async def _run_corpus_update(job_id: str, override_sources: list[str] | None = N
 
         logger.info("Corpus job %s: scraped %d chunks total", job_id, len(chunks))
 
-        # Stage 2 — generate embeddings
-        _job_store[job_id].update(substage="embedding")
-        chunks = await generate_embeddings(chunks)
+        # Stage 2 — generate embeddings (with fine-grained progress)
+        _job_store[job_id].update(substage="embedding", chunks_embedded=0)
+        total_chunks = len(chunks)
+
+        async def _embed_progress(done: int, total: int) -> None:
+            _job_store[job_id]["chunks_embedded"] = done
+
+        chunks = await generate_embeddings(chunks, progress_cb=_embed_progress)
         logger.info("Corpus job %s: generated embeddings for %d chunks", job_id, len(chunks))
 
-        # Stage 3 — upsert to DB
-        _job_store[job_id].update(substage="upserting")
+        # Stage 3 — upsert to DB (with fine-grained progress)
+        _job_store[job_id].update(substage="upserting", chunks_upserted=0)
+
+        async def _upsert_progress(done: int, total: int) -> None:
+            _job_store[job_id]["chunks_upserted"] = done
+
         session_factory = get_session_factory()
         async with session_factory() as session:
-            await upsert_chunks(session, chunks)
+            await upsert_chunks(session, chunks, progress_cb=_upsert_progress)
             await session.commit()
 
         _job_store[job_id].update(
