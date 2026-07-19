@@ -101,3 +101,10 @@ entirely. Migration still completes in ~1 second.
 **Status:** Create migration 011 that depends on 006 and applies the cumulative
 schema changes from 008+009+010 (CHECK constraint, regime/notes, pii_mapping).
 This provides a clean PostgreSQL upgrade path for future fresh deployments.
+
+---
+
+### D-015 R2 — 2026-07-19
+**Decision:** Replace the unique constraint on `(source_id, hierarchy_path, text_content)` with one on `(source_id, hierarchy_path, text_hash)` where `text_hash = md5(text_content)`.
+**Rejected alternative:** SHA-256 would require the `pgcrypto` extension on PostgreSQL. MD5 is sufficient for deduplication (collision probability negligible) and is built into PostgreSQL via the `md5()` function.
+**Rationale:** PostgreSQL's btree index row size is limited to ~2704 bytes (v4 btree). When `text_content` is large (8643+ chars for BGB § 309), the index row exceeds this limit and raises `ProgramLimitExceededError` during corpus ingestion. MD5 produces a 32-character hex hash, well within btree limits, and is sufficient for deduplication (the unique constraint is only used for idempotency, not security). Two independent migrations created: `011_pg` (PG branch, `down_revision=006`) and `011_sqlite` (SQLite branch, `down_revision=010`).

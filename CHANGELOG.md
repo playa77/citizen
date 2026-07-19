@@ -1,3 +1,37 @@
+## 2026-07-19 — Corpus Update: Fix btree index size limit with text_hash (v0.4.2)
+
+### Problem
+
+Corpus ingestion on PostgreSQL failed with `ProgramLimitExceededError: index
+row size 2728 exceeds maximum 2704 for btree` on large legal chunks (e.g., BGB
+§ 309 with 8643+ chars). The unique constraint on
+`(source_id, hierarchy_path, text_content)` created a btree index entry larger
+than PostgreSQL's v4 btree maximum row size of ~2704 bytes.
+
+### Changes
+
+- **`app/db/models.py`** — Added `text_hash: Mapped[str]` column (String(64)) to
+  `LegalChunk`. Changed `UniqueConstraint` from
+  `(source_id, hierarchy_path, text_content)` to
+  `(source_id, hierarchy_path, text_hash)`.
+- **`app/services/corpus.py`** — `_get_or_create_legal_chunk()` now computes
+  `text_hash = hashlib.md5(text_content.encode("utf-8")).hexdigest()` and queries
+  on `text_hash` instead of `text_content`. The hash is passed to the
+  `LegalChunk` constructor.
+- **`app/main.py`** — Updated PostgreSQL migration target from
+  `006_add_intake_and_legal_areas` to `011_pg_legal_chunk_text_hash`.
+- **Migrations:**
+  - `alembic/versions/011_pg_legal_chunk_text_hash.py` — PostgreSQL migration
+    using built-in `md5()` function for backfill.
+  - `alembic/versions/011_sqlite_legal_chunk_text_hash.py` — SQLite migration
+    using `hashlib.md5()` and `batch_alter_table` for constraint changes.
+
+### Verification
+
+All lint/format checks pass.
+
+---
+
 # Changelog
 
 All notable changes to the Citizen project are documented in this file.

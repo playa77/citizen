@@ -82,11 +82,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # A subprocess is an independent interpreter that avoids this entirely.
         # See DECISIONS.md §D-007.
         #
-        # Migration DAG: two branches — PostgreSQL (001→006) and SQLite baseline (007→010).
+        # Migration DAG: two branches — PostgreSQL (001→006→011_pg) and SQLite baseline (007→010→011_sqlite).
         # "head" is ambiguous; target the correct tip for the active database dialect.
-        _migration_target = "heads" if settings.DATABASE_URL.startswith("sqlite") else "006_add_intake_and_legal_areas"
+        _migration_target = (
+            "heads"
+            if settings.DATABASE_URL.startswith("sqlite")
+            else "011_pg_legal_chunk_text_hash"
+        )
         _proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "alembic", "upgrade", _migration_target,
+            sys.executable,
+            "-m",
+            "alembic",
+            "upgrade",
+            _migration_target,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -94,7 +102,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if _proc.returncode != 0:
             logger.warning(
                 "Alembic upgrade returned code %d: stdout=%s stderr=%s",
-                _proc.returncode, _stdout.decode(errors="replace").strip(), _stderr.decode(errors="replace").strip(),
+                _proc.returncode,
+                _stdout.decode(errors="replace").strip(),
+                _stderr.decode(errors="replace").strip(),
             )
         else:
             logger.info("Alembic migrations applied successfully (target=%s).", _migration_target)

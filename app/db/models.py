@@ -172,6 +172,7 @@ class LegalChunk(Base):
     unit_type: Mapped[str] = mapped_column(String(20), nullable=False)
     hierarchy_path: Mapped[str] = mapped_column(Text, nullable=False)
     text_content: Mapped[str] = mapped_column(Text, nullable=False)
+    text_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     effective_date: Mapped[date] = mapped_column(Date, nullable=False)
     legal_area: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
@@ -196,8 +197,8 @@ class LegalChunk(Base):
         UniqueConstraint(
             "source_id",
             "hierarchy_path",
-            "text_content",
-            name="uq_legal_chunk_source_hierarchy_text",
+            "text_hash",
+            name="uq_legal_chunk_source_hierarchy_hash",
         ),
     )
 

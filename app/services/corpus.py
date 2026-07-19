@@ -15,10 +15,10 @@ import json
 import logging
 import re
 import struct
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
-from collections.abc import Awaitable, Callable
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -1241,11 +1241,12 @@ async def _get_or_create_legal_chunk(
     """Return an existing LegalChunk or create a new one."""
     hierarchy_path = chunk["hierarchy_path"]
     text_content = chunk["text_content"]
+    text_hash = hashlib.md5(text_content.encode("utf-8")).hexdigest()
 
     stmt = select(LegalChunk).where(
         LegalChunk.source_id == source.id,
         LegalChunk.hierarchy_path == hierarchy_path,
-        LegalChunk.text_content == text_content,
+        LegalChunk.text_hash == text_hash,
     )
     result = await session.execute(stmt)
     lc = result.scalar_one_or_none()
@@ -1256,6 +1257,7 @@ async def _get_or_create_legal_chunk(
             unit_type=chunk.get("unit_type", "satz"),
             hierarchy_path=hierarchy_path,
             text_content=text_content,
+            text_hash=text_hash,
             effective_date=date.fromisoformat(chunk["effective_date"]),
             legal_area=chunk.get("legal_area"),
         )
