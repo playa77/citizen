@@ -627,6 +627,7 @@ async def _stage_retrieval(state: PipelineState) -> None:
     """
     from app.services.retrieval import (
         retrieve_chunks,
+        retrieve_chunks_by_norm_reference,
         retrieve_chunks_combined,
         retrieve_chunks_for_areas,
     )
@@ -653,6 +654,26 @@ async def _stage_retrieval(state: PipelineState) -> None:
         )
     else:
         state.retrieved_chunks = await retrieve_chunks(state.questions)
+
+    # ── §-reference direct lookup for single-area path ─────────────────
+    # Extract norm references from the document text and merge with vector
+    # results (dedup by chunk_id, keeping vector result on collision).
+    if state.normalized_text:
+        norm_chunks = await retrieve_chunks_by_norm_reference(
+            state.normalized_text,
+            source_types=("sgb2", "sgbx", "sgg", "sgb3", "sgb12"),
+        )
+        if norm_chunks:
+            seen: set[str] = {c["chunk_id"] for c in state.retrieved_chunks}
+            for nc in norm_chunks:
+                if nc["chunk_id"] in seen:
+                    continue
+                seen.add(nc["chunk_id"])
+                state.retrieved_chunks.append(nc)
+            state.retrieved_chunks.sort(key=lambda c: c["distance"])
+            state.retrieved_chunks = state.retrieved_chunks[
+                : cfg._get_settings().MAX_CHUNKS_FOR_FINAL
+            ]
 
     logger.info("Retrieval complete (%d chunks)", len(state.retrieved_chunks))
 

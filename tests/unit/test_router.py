@@ -174,10 +174,12 @@ class TestFallbackChain:
         result = await client.chat_completion(_MESSAGES)
 
         assert result == "fallback answer"
-        # Deduplicated chain: [primary, fallback_2] -> 2 unique models.
-        # Primary fails after 1 attempt (MAX_RETRIES=1), fallback_2 succeeds.
+        # Chain: [primary, fallback_1, fallback_2] -> 3 unique models.
+        # Primary fails after 3 retries, fallback_1 fails after 3 retries.
+        # fallback_2 succeeds on 1st attempt. Total: 3+3+1 = 7.
         unique_models = len(client.models)
-        assert mock_httpx_client.post.call_count == unique_models
+        assert unique_models == 3
+        assert mock_httpx_client.post.call_count == 7
 
 
 # ===========================================================================

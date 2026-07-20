@@ -1,3 +1,77 @@
+## 2026-07-20 — Critical Retrieval & Model Fallback Fixes (v0.4.5)
+
+### Problem
+
+Prüfstand goldset cases GS-002 through GS-005 exposed two critical failure
+patterns that fundamentally broke the pipeline:
+
+**Problem A — Model Exhaustion.** GS-002, GS-004 failed with `Combined triage
+failed: All models exhausted: ['deepseek/deepseek-v4-pro']`. GS-003 after corpus
+enlargement failed identically at the grounded answer stage. Root cause: every
+LLM call in `reasoning.py` passed `model=triage_model` to `chat_completion()`,
+which in `router.py` creates a single-model chain with no fallback. With
+`MAX_RETRIES=1`, any transient error (timeout, 429, 503) killed the pipeline.
+The fallback models were ineffective — `FALLBACK_MODEL_1` was identical to
+`PRIMARY_MODEL` (deduplicated away) and `FALLBACK_MODEL_2` was `/openrouter/free`
+(an invalid model ID). Effective chain for every call: `[deepseek-v4-pro]` with
+exactly one attempt.
+
+**Problem B — Retrieval Failure.** GS-003 and GS-005 completed but the LLM
+reported "die einschlägigen Vorschriften... sind in den bereitgestellten Chunks
+nicht enthalten" — even after ALL 16 source types were ingested into the corpus.
+This was a critical trust-killer for the project. Two bugs in
+`_extract_norm_references()` were the root cause:
+
+1. **Parenthetical stripping destroyed § references.** The line
+   `re.sub(r'\s*\([^)]*\)', '', cleaned)` removed parentheticals from the text
+   before running the §-reference regex. This destroyed legal citations inside
+   parentheses like `(§ 32 SGB II)` — an extremely common pattern in German
+   legal documents.
+
+2. **Greedy regex captured trailing words as statute name.** The statute regex
+   used `{0,3}` for extra word groups, causing greedy capture like `"SGB II für
+   die"` instead of `"SGB II"`. When checked against `_STATUTE_TO_SOURCE_TYPE`,
+   the garbage statute name didn't match any entry → reference silently dropped.
+   Combined with Bug 1, GS-005's §-references (including all critical norms
+   like § 32 SGB II, § 39 SGB II) were effectively invisible to the retrieval
+   engine.
+
+### Changes
+
+- **`app/services/retrieval.py`**: Removed parenthetical-stripping line (Bug 1).
+  Changed `{0,3}` → `{0,1}` in the statute regex to prevent greedy capture of
+  trailing prose (Bug 2). Both `_NORM_REF_RE` and `_extract_norm_references()`
+  were affected.
+
+- **`app/core/pipeline.py`**: Added §-reference direct lookup
+  (`retrieve_chunks_by_norm_reference`) to the single-area retrieval path (both
+  combined and per_question modes). Previously §-lookup only ran in the
+  multi-area path — single-area analysis (empty `legal_areas`) could never find
+  §-referenced chunks.
+
+- **`app/core/config.py`**: Changed `FALLBACK_MODEL_1` from
+  `deepseek/deepseek-v4-pro` (same as PRIMARY) to `deepseek/deepseek-chat`.
+  Changed `FALLBACK_MODEL_2` from `/openrouter/free` (invalid) to
+  `anthropic/claude-3.5-sonnet`. Increased `MAX_RETRIES` 1→3.
+  `MAX_COSINE_DISTANCE` 0.55→0.65 (similarity ≥ 0.35). `TRIAGE_TIMEOUT_SEC`
+  45→60. `FINAL_TIMEOUT_SEC` 150→180. `MAX_CHUNKS_FOR_FINAL` 6→12.
+
+- **`app/services/reasoning.py`**: Changed 6 LLM call sites (triage ×2,
+  grounded_answer ×2, grounded_answer_stream ×2) from `model=` (single-model
+  chain, no fallback) to `models=` (full client fallback chain when
+  TRIAGE_MODEL/FINAL_MODEL is None). Increased `max_retries` from 1 to 3 on all
+  6 call sites.
+
+### Verification
+
+- §-reference extraction test: previously found 0 correct refs from GS-005 text
+  (all dropped by parenthetical stripping or greedy regex). After fix: correctly
+  extracts all 3 refs including the parenthetical `§ 32 SGB II`.
+- Health endpoint returns `{"status":"ok","version":"v1.0.0"}` on VPS.
+- 797 unit tests pass. 13 pre-existing failures (middleware needs DB, config
+  timeout assertion had stale 120s value) — 2 test files updated to match new
+  defaults.
+
 ## 2026-07-19 — Timeout Stack Overhaul: Hard Wall-Clock Enforcement + Realistic Budgets (v0.4.4)
 
 ### Problem

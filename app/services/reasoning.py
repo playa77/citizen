@@ -389,12 +389,18 @@ async def triage_document(
         input_tokens,
     )
 
+    # Use full client fallback chain when TRIAGE_MODEL not explicitly set
+    if s.TRIAGE_MODEL:
+        triage_models = [s.TRIAGE_MODEL] + [m for m in client.models if m != s.TRIAGE_MODEL]
+    else:
+        triage_models = None
+
     raw = await client.chat_completion(
         messages,
         temperature=0.1,
-        model=triage_model,
+        models=triage_models,
         timeout=triage_timeout,
-        max_retries=1,
+        max_retries=3,
     )
     try:
         result = _parse_json_response(raw, context="triage (classification + decomposition)")
@@ -407,9 +413,9 @@ async def triage_document(
         raw2 = await client.chat_completion(
             messages_minimal,
             temperature=0.0,
-            model=triage_model,
+            models=triage_models,
             timeout=triage_timeout,
-            max_retries=1,
+            max_retries=3,
         )
         result = _parse_json_response(raw2, context="triage (retry)")
 
@@ -531,6 +537,12 @@ async def adversarial_review(
     )
     client = get_shared_client()
 
+    # Build model chain: use FINAL_MODEL first if set, then full fallback chain
+    if s.FINAL_MODEL:
+        final_models = [s.FINAL_MODEL] + [m for m in client.models if m != s.FINAL_MODEL]
+    else:
+        final_models = None
+
     # Build chunk context (cap to manageable size, using top N by retrieval score).
     chunk_lines: list[str] = []
     total_chunk_chars = 0
@@ -588,9 +600,9 @@ async def adversarial_review(
     raw = await client.chat_completion(
         messages,
         temperature=0.1,
-        model=final_model,
+        models=final_models,
         timeout=final_timeout,
-        max_retries=1,
+        max_retries=3,
     )
     try:
         result = _parse_json_response(raw, context="grounded answer (claims + sections)")
@@ -605,9 +617,9 @@ async def adversarial_review(
         raw2 = await client.chat_completion(
             messages_minimal,
             temperature=0.0,
-            model=final_model,
+            models=final_models,
             timeout=final_timeout,
-            max_retries=1,
+            max_retries=3,
         )
         result = _parse_json_response(raw2, context="grounded answer (retry)")
 
@@ -721,6 +733,12 @@ async def generate_grounded_answer_stream(
     )
     client = get_shared_client()
 
+    # Build model chain: use FINAL_MODEL first if set, then full fallback chain
+    if s.FINAL_MODEL:
+        final_models = [s.FINAL_MODEL] + [m for m in client.models if m != s.FINAL_MODEL]
+    else:
+        final_models = None
+
     # Build chunk context (same logic as generate_grounded_answer).
     chunk_lines: list[str] = []
     total_chunk_chars = 0
@@ -765,9 +783,9 @@ async def generate_grounded_answer_stream(
         async for token in client.chat_completion_stream(
             messages,
             temperature=0.1,
-            model=final_model,
+            models=final_models,
             timeout=final_timeout,
-            max_retries=1,
+            max_retries=3,
         ):
             raw_parts.append(token)
             yield {"type": "token", "content": token}
@@ -779,9 +797,9 @@ async def generate_grounded_answer_stream(
         raw = await client.chat_completion(
             messages,
             temperature=0.1,
-            model=final_model,
+            models=final_models,
             timeout=final_timeout,
-            max_retries=1,
+            max_retries=3,
         )
         raw_parts = [raw]
         # Yield the full response as a single token so the caller sees output.

@@ -58,7 +58,7 @@ _NORM_REF_RE = re.compile(
     r"(?P<para>[A-Za-z0-9]+(?:\s*/\s*[A-Za-z0-9]+)*)"
     r"(?:\s+(?:Abs\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*|S\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*|Nr\.\s*[A-Za-z0-9]+(?:[-/]\s*[A-Za-z0-9]+)*))*"
     r"\s+"
-    r"(?P<statute>[A-Za-z\u00C0-\u024F]+(?:\s+(?![nNaA]\.F\.)[A-Za-z\u00C0-\u024F0-9]+){0,3})"
+    r"(?P<statute>[A-Za-z\u00C0-\u024F]+(?:\s+(?![nNaA]\.F\.)[A-Za-z\u00C0-\u024F0-9]+){0,1})"
 )
 
 
@@ -808,9 +808,9 @@ def _extract_norm_references(text: str) -> list[str]:
     ``§§ 45/48/50 SGB X``, filters to known statutes, and explodes
     multi-paragraph references (``§§ 45/48/50`` → three individual norms).
     """
-    # Strip n.F./a.F. and parentheticals for cleaner matching
+    # Strip n.F./a.F. for cleaner matching (but NOT parentheticals,
+    # which can contain § references like (§ 32 SGB II))
     cleaned = re.sub(r"\s+(?:n\.F\.|a\.F\.)", "", text)
-    cleaned = re.sub(r"\s*\([^)]*\)", "", cleaned)
 
     found: list[str] = []
     for match in _NORM_REF_RE.finditer(cleaned):

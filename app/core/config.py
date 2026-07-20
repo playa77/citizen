@@ -35,9 +35,9 @@ class Settings(BaseSettings):
     EMBEDDING_API_KEY: str = ""  # separate key for embedding calls (falls back to OPENROUTER_API_KEY)
     EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1/embeddings"
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
-    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-pro"
-    FALLBACK_MODEL_2: str = "/openrouter/free"
-    MAX_RETRIES: int = 1
+    FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
+    FALLBACK_MODEL_2: str = "deepseek/deepseek-v4-flash"
+    MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 25.0
     MAX_FILE_SIZE_MB: int = 25
     DB_POOL_SIZE: int = 10  # PostgreSQL only — ignored for SQLite
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     VECTOR_DIM: int = 1536
     TOP_K_RETRIEVAL: int = 10
     MAX_COSINE_DISTANCE: float = (
-        0.55  # Cosine distance = 1 - cosine similarity. 0.55 means similarity ≥ 0.45.
+        0.65  # Cosine distance = 1 - cosine similarity. 0.65 means similarity ≥ 0.35.
     )
     MAX_COSINE_DISTANCE_STRICT: float = 0.85
     RETRIEVAL_MODE: str = "per_question"  # "combined" or "per_question" — per_question embeds each question separately, producing better legal-semantic queries
@@ -88,8 +88,8 @@ class Settings(BaseSettings):
     # router.py (httpx's read timeout does NOT fire on streaming responses
     # because each chunk resets the timer — see D-017).
     PIPELINE_TIMEOUT_SEC: int = 480  # 8 min overall pipeline budget (was 120 — ludicrous)
-    TRIAGE_TIMEOUT_SEC: float = 45.0  # was 20.0 — too short for complex triage
-    FINAL_TIMEOUT_SEC: float = 150.0  # was 75 — too short for grounded_answer + adversarial_review
+    TRIAGE_TIMEOUT_SEC: float = 60.0  # was 20.0 — too short for complex triage
+    FINAL_TIMEOUT_SEC: float = 180.0  # was 75 — too short for grounded_answer + adversarial_review
     EMBEDDING_TIMEOUT_SEC: float = 30.0  # was 15.0
     CALCULATION_TIMEOUT_SEC: float = 90.0  # was 45.0
     TRIAGE_MODEL: str | None = None
@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     MAX_TRIAGE_INPUT_CHARS: int = 8000
     MAX_FINAL_INPUT_CHARS: int = 5000
     MAX_CHUNK_CONTEXT_CHARS: int = 7000
-    MAX_CHUNKS_FOR_FINAL: int = 6
+    MAX_CHUNKS_FOR_FINAL: int = 12
     # Calculation check (WP-014) — specialised model for numeric verification
     ENABLE_CALCULATION_CHECK: bool = True
     CALCULATION_MODEL: str | None = None  # None = use PRIMARY_MODEL
