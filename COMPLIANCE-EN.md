@@ -1,8 +1,8 @@
 # Compliance — Legal Status and AI Act Classification of Citizen
 
-**Version:** 1.0.0 · **Date:** 2026-08-07
+**Version:** 1.1.0 · **Date:** 2026-08-07
 **Canonical version:** German · **Mirror:** [COMPLIANCE.md](COMPLIANCE.md) (canonical)
-**Status:** Binding project classification (WP-60, Roadmap v2.0.0).
+**Status:** Binding project classification (WP-60/WP-61, Roadmap v2.0.0).
 
 > **Not legal advice.** This document is an engineering-planning basis, not
 > legal advice. It records the classification adopted by the project. The open
@@ -117,14 +117,56 @@ therefore changes nothing about the fact that the Art. 50 obligations apply in
 `dev`/`self` mode Art. 50 does not apply because there is **no provision to
 third parties** — not because of the licence.
 
-### 4.4 Not High-Risk (Annex III(5)(a))
+### 4.4 Self-Assessment: Not High-Risk (Annex III(5)(a))
 
-The Annex III(5)(a) high-risk trigger concerns AI systems used by authorities
-to **evaluate the benefit eligibility** of persons. By its declared intended
-purpose (D-020), Citizen is a **claimant-side** self-help and advisor-assistance
-tool — it is not intended for authority-side evaluation. The full
-self-assessment is documented in WP-61 and guarded against copy drift by a
-purpose-drift lint.
+**Result.** Citizen is **not a high-risk AI system** within the meaning of
+Annex III(5)(a) AI Act — given the declared intended purpose (D-020) and the
+safeguards against purpose drift documented in this section.
+
+**Scope of the trigger.** Annex III(5)(a) covers AI systems used by public
+authorities, or on their behalf, to **evaluate the benefit eligibility** of
+natural persons for social benefits and services. The defining element is
+authority-side use to decide eligibility.
+
+**Declared intended purpose (D-020).** Citizen's intended purpose is
+**claimant-side self-help and advisor assistance**: the system helps the data
+subject or their advisors understand, review and respond to a Bescheid. It is
+expressly **not** intended to be used by an authority, or on an authority's
+behalf, to evaluate benefit eligibility.
+
+**Why the trigger is not met.**
+
+1. **No authority-side purpose:** Neither the product nor its documentation
+   or UI copy describes Citizen as an authority-side tool. The intended
+   purpose is anchored in the README, STATEMENT, this document and the legal
+   notice.
+2. **Not a decision system:** Citizen produces legal information and building
+   blocks requiring human adjudication (D-021); it does not decide benefit
+   eligibility and is not provided for that purpose.
+3. **Provision model:** Even in `provider` mode the software is made
+   available to claimants and advice centers — not to authorities for
+   eligibility evaluation.
+4. **Classification by intended purpose:** The AI Act classifies by intended
+   purpose. As long as the intended purpose remains claimant-side, the
+   Annex III(5)(a) trigger is not met.
+
+**Drift safeguards.** For this assessment to hold:
+
+- **D-020** fixes the claimant-side intended purpose and prohibits
+  authority-side descriptions in documentation, pitches and UI copy.
+- **`scripts/check_purpose_drift.py`** (WP-61) scans `README*.md`,
+  `STATEMENT.md`, `COMPLIANCE*.md` and `docs/pitch*` for authority-side
+  phrasing (configurable deny-phrase list) and fails CI on any match. The
+  lint is the technical enforcement of the intended purpose against drift.
+- **Change management:** Changes to the intended purpose, target group or
+  provision model require a version change of this document (section 7) and
+  a re-review of this self-assessment.
+
+**Condition.** This assessment is conditional: it holds only for the declared
+intended purpose. If Citizen is ever described as an authority-side tool or
+provided to authorities for eligibility evaluation, the classification must be
+re-assessed — the obligations for high-risk AI systems (Chapter III AI Act)
+would apply.
 
 ## 5. Deadlines and Triggering Events
 
@@ -170,9 +212,9 @@ The project position (D-021):
 
 ## 7. Validity and Change Management
 
-- This document is part of Roadmap v2.0.0 (WP-60) and anchored in the decision
-  ledger via decisions D-019 and D-022 (and, in their work packages, D-020 and
-  D-021).
+- This document is part of Roadmap v2.0.0 (WP-60/WP-61) and anchored in the
+  decision ledger via decisions D-019, D-020 and D-022 (and, in its work
+  package, D-021).
 - Changes to the intended purpose, deployment form or target group require a
   review and a version change of this document (semantic versioning).
 - Open legal questions that cannot be closed technically are collected in
@@ -185,3 +227,4 @@ The project position (D-021):
 - `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` — legal notice for users
 - `README.md` — section „Rechtlicher Status"
 - `AI-USAGE.md` — disclosure of AI authorship of the source code (WP-63)
+- `scripts/check_purpose_drift.py` — purpose-drift lint (WP-61)

@@ -1,3 +1,45 @@
+## 2026-08-07 — WP-61: Annex III high-risk self-assessment (Roadmap v2.0.0)
+
+### Änderungen
+
+- **`COMPLIANCE.md`** — Abschnitt 4.4 zur vollständigen
+  Annex-III-Nr.-5-Bst.-a-Selbstbewertung ausgebaut (Erfassungsbereich,
+  deklarierte Zweckbestimmung D-020, vier Gründe gegen den Tatbestand,
+  Drift-Schutz, Bedingtheit). Version 1.0.0 → 1.1.0.
+- **`COMPLIANCE-EN.md`** — englischer Spiegel der Selbstbewertung.
+  Version 1.0.0 → 1.1.0.
+- **`DECISIONS.md`** — D-020 (R1) aus Roadmap v2.0.0 §1 protokolliert.
+- **`scripts/check_purpose_drift.py`** (neu) — Dokumentations-Lint gegen
+  Zweckbestimmungs-Abdrift. Scannt `README*.md`, `STATEMENT.md`,
+  `COMPLIANCE*.md` und `docs/pitch*` auf behördenseitige Formulierungen
+  (konfigurierbare Deny-Phrase-Liste, case-insensitive) und meldet jeden
+  Treffer mit Datei, Zeile und Spalte. Exit-Codes: 0 = sauber, 1 = Zweckdrift,
+  2 = Fehler.
+- **`.github/workflows/ci.yml`** — neuer CI-Schritt „Purpose-drift check
+  (WP-61)": Die CI schlägt fehl, wenn ein gescanntes Dokument Citizen als
+  behördenseitiges Werkzeug beschreibt.
+- **`tests/unit/test_purpose_drift.py`** (neu) — Unit-Tests für den Lint
+  (sauberes Repo, Treffer mit Datei/Zeile, englische Deny-Phrasen, fehlende
+  Datei, `--extra-deny`, case-insensitive, ungültige Deny-Phrase-Datei).
+
+### Selbstbewertung (Kurzfassung)
+
+- Anhang III Nr. 5 Bst. a KI-VO erfasst die behördenseitige Bewertung der
+  Anspruchsberechtigung von Personen zu Sozialleistungen. Citizen ist nach
+  seiner Zweckbestimmung (D-020) antragstellerseitige Selbsthilfe und
+  Beratungsassistenz — kein Werkzeug von Behörden zur Leistungsbewertung.
+  Ergebnis: **keine Hochrisiko-Einstufung** bei deklarierter
+  Zweckbestimmung. Die Bewertung ist konditional und wird durch den
+  Purpose-Drift-Lint in der CI technisch gegen Abdrift gesichert.
+
+### Hinweis
+
+- R1 (Dokumentation + Lint-Skript + CI-Schritt; kein Laufzeit- oder
+  API-Verhalten geändert). Der `DEPLOYMENT_MODE`-Schalter wird weiterhin in
+  WP-66 implementiert.
+
+---
+
 ## 2026-08-07 — WP-60: Compliance baseline document and classification (Roadmap v2.0.0)
 
 ### Änderungen

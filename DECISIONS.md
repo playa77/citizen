@@ -161,3 +161,9 @@ Also carries the § 2 Abs. 2 UrhG note that AI-generated code without personal
 intellectual creation is not copyright-protected, which is relevant to anyone
 forking or commercializing the repo.
 Recorded in WP-60; the file itself is created in WP-63.
+
+### D-020 R1 — 2026-08-07
+**Decision:** Fix the system's stated intended purpose (Zweckbestimmung, Art. 3(12)) as **claimant-side self-help and advisor assistance** and prohibit any documentation, pitch, or UI copy that describes Citizen as a tool used *by or on behalf of* an authority to evaluate benefit eligibility.
+**Rejected:** Leaving the purpose statement implicit. The Annex III(5)(a) high-risk trigger is authority-side eligibility evaluation; the classification turns on the declared purpose, so an undeclared purpose is an unmanaged risk.
+**Rationale:** Keeping the declared purpose claimant-side is what keeps the system out of the high-risk regime (Kapitel III). This is a cheap, decisive guardrail, but only if it is written down and enforced against copy drift.
+Recorded in WP-61; enforcement is the purpose-drift lint (`scripts/check_purpose_drift.py`).

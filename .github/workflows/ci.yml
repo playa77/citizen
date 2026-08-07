@@ -1,6 +1,7 @@
 # Version: 1.0.0 | 2026-07-12
 # Citizen CI pipeline — lint, type-check, and test
 # Per-case monotonic eval gating added in WP-11
+# Purpose-drift check added in WP-61
 
 name: CI
 
@@ -54,6 +55,9 @@ jobs:
 
       - name: Type check (mypy)
         run: mypy app/
+
+      - name: Purpose-drift check (WP-61)
+        run: python scripts/check_purpose_drift.py
 
       - name: Unit tests
         env:

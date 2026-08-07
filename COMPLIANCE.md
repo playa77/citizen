@@ -1,8 +1,8 @@
 # Compliance — Rechtsstatus und KI-VO-Klassifizierung von Citizen
 
-**Version:** 1.0.0 · **Stand:** 2026-08-07
+**Version:** 1.1.0 · **Stand:** 2026-08-07
 **Kanonische Fassung:** Deutsch · **Englischer Spiegel:** [COMPLIANCE-EN.md](COMPLIANCE-EN.md)
-**Status:** Verbindliche Projekt-Klassifizierung (WP-60, Roadmap v2.0.0).
+**Status:** Verbindliche Projekt-Klassifizierung (WP-60/WP-61, Roadmap v2.0.0).
 
 > **Kein Rechtsrat.** Dieses Dokument ist eine Engineering-Planungsgrundlage,
 > keine Rechtsberatung. Es dokumentiert die vom Projekt getragene Einordnung.
@@ -122,16 +122,63 @@ bleibt anwendbar. Die Lizenz ändert deshalb nichts daran, dass im Modus
 maschinenlesbare Kennzeichnung). Im Modus `dev`/`self` greift Art. 50 nicht,
 weil **kein Bereitstellen an Dritte** vorliegt — nicht wegen der Lizenz.
 
-### 4.4 Keine Hochrisiko-Einstufung (Annex III Nr. 5 Bst. a)
+### 4.4 Selbstbewertung: Keine Hochrisiko-Einstufung (Anhang III Nr. 5 Bst. a)
 
-Der Hochrisiko-Tatbestand des Anhangs III Nr. 5 Bst. a betrifft KI-Systeme,
-die von Behörden zur **Bewertung der Anspruchsberechtigung** von Personen zu
-Sozialleistungen eingesetzt werden. Citizen ist nach seiner
-Zweckbestimmung (D-020) ein **antragstellerseitiges** Selbsthilfe- und
-Beratungsassistenz-Werkzeug — es ist nicht zur behördenseitigen
-Bewertung bestimmt. Die vollständige Selbstbewertung wird in WP-61
-dokumentiert und durch einen Purpose-Drift-Lint gegen Formulierungs-Abdrift
-gesichert.
+**Ergebnis.** Citizen ist **kein Hochrisiko-KI-System** im Sinne des Anhangs III
+Nr. 5 Bst. a KI-VO — bei der hier deklarierten Zweckbestimmung (D-020) und
+unter den in diesem Abschnitt dokumentierten Schutzvorkehrungen gegen
+Zweckbestimmungs-Abdrift.
+
+**Erfassungsbereich des Tatbestands.** Anhang III Nr. 5 Bst. a erfasst
+KI-Systeme, die von Behörden oder in deren Auftrag zur **Bewertung der
+Anspruchsberechtigung** von natürlichen Personen zu Sozialleistungen und
+Sozialdiensten eingesetzt werden. Tatbestandsmerkmal ist die behördenseitige
+Verwendung zur Leistungsentscheidung.
+
+**Deklarierte Zweckbestimmung (D-020).** Die Zweckbestimmung von Citizen ist
+**antragstellerseitige Selbsthilfe und Beratungsassistenz**: das System
+unterstützt die betroffene Person selbst oder deren Beratende dabei, einen
+Bescheid zu verstehen, zu prüfen und zu reagieren. Es ist ausdrücklich **nicht**
+dazu bestimmt, von einer Behörde oder in deren Auftrag zur Bewertung der
+Anspruchsberechtigung eingesetzt zu werden.
+
+**Warum der Tatbestand nicht erfüllt ist.**
+
+1. **Keine behördenseitige Bestimmung:** Weder das Produkt noch seine
+   Dokumentation oder UI-Kopien beschreiben Citizen als behördenseitiges
+   Werkzeug. Die Zweckbestimmung ist in README, STATEMENT, diesem Dokument und
+   dem Rechtshinweis verankert.
+2. **Kein Entscheidungssystem:** Citizen erzeugt Rechtsinformation und
+   Bausteine, die der menschlichen Adjudikation bedürfen (D-021); es trifft
+   keine Entscheidung über Anspruchsberechtigung und wird nicht dazu
+   bereitgestellt, eine solche zu treffen.
+3. **Bereitstellungsform:** Selbst im Modus `provider` wird die Software
+   Betroffenen und Beratungsstellen bereitgestellt — nicht Behörden zur
+   Leistungsbewertung.
+4. **Klassifizierung nach Zweckbestimmung:** Die KI-VO stellt für die
+   Hochrisiko-Einordnung auf die Zweckbestimmung ab. Solange diese
+   antragstellerseitig bleibt, greift der Tatbestand des Anhangs III Nr. 5
+   Bst. a nicht.
+
+**Drift-Schutz (Guardrails).** Damit diese Bewertung trägt:
+
+- **D-020** verpflichtet auf die antragstellerseitige Zweckbestimmung und
+  verbietet behördenseitige Beschreibungen in Dokumentation, Pitch und
+  UI-Kopien.
+- **`scripts/check_purpose_drift.py`** (WP-61) scannt `README*.md`,
+  `STATEMENT.md`, `COMPLIANCE*.md` und `docs/pitch*` auf behördenseitige
+  Formulierungen (konfigurierbare Deny-Phrase-Liste) und lässt die CI bei
+  Treffern fehlschlagen. Der Lint ist die technische Durchsetzung der
+  Zweckbestimmung gegen Abdrift.
+- **Änderungsmanagement:** Veränderungen an Zweckbestimmung, Zielgruppe oder
+  Bereitstellungsform erfordern eine Fassungsänderung dieses Dokuments
+  (Abschnitt 7) und eine erneute Prüfung dieser Selbstbewertung.
+
+**Bedingung.** Diese Bewertung ist konditional: Sie gilt nur für die hier
+deklarierte Zweckbestimmung. Wird Citizen künftig als behördenseitiges Werkzeug
+beschrieben oder Behörden zur Leistungsbewertung bereitgestellt, ist die
+Einstufung neu zu prüfen — die Pflichten für Hochrisiko-KI-Systeme (Kapitel III
+KI-VO) würden ausgelöst.
 
 ## 5. Fristen und Auslöse-Ereignisse
 
@@ -180,8 +227,8 @@ Angelegenheit** (§ 2 RDG). Die Projektposition (D-021):
 
 ## 7. Gültigkeit und Änderungsdienst
 
-- Dieses Dokument ist Teil der Roadmap v2.0.0 (WP-60) und mit den
-  Entscheidungen D-019 und D-022 (sowie, in ihren Work Packages, D-020 und
+- Dieses Dokument ist Teil der Roadmap v2.0.0 (WP-60/WP-61) und mit den
+  Entscheidungen D-019, D-020 und D-022 (sowie, in seinem Work Package,
   D-021) im Entscheidungs-Ledger verankert.
 - Änderungen an Zweckbestimmung, Bereitstellungsform oder Zielgruppe
   erfordern eine Überprüfung und Fassungsänderung dieses Dokuments
@@ -196,3 +243,4 @@ Angelegenheit** (§ 2 RDG). Die Projektposition (D-021):
 - `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` — rechtlicher Hinweis für Nutzer
 - `README.md` — Abschnitt „Rechtlicher Status"
 - `AI-USAGE.md` — Offenlegung der KI-Autorschaft des Quellcodes (WP-63)
+- `scripts/check_purpose_drift.py` — Purpose-Drift-Lint (WP-61)
