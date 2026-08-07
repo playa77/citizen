@@ -5,16 +5,19 @@ Provides a single endpoint:
     normalized UTF-8 text as JSON.
 
 The endpoint enforces the ``MAX_FILE_SIZE_MB`` limit and validates MIME type.
+On a synthetic-data-only dev instance (WP-62) it also rejects documents that
+are not explicitly tagged as synthetic/goldset.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 
+from app.services.dev_guard import check_synthetic_data_request
 from app.services.ocr import OCRFailedError, process_document
 
 logger = logging.getLogger(__name__)
@@ -23,11 +26,13 @@ router = APIRouter()
 
 
 @router.post("/ingest", status_code=status.HTTP_200_OK)
-async def ingest(file: UploadFile = File(...)) -> dict[str, str]:  # noqa: B008
+async def ingest(request: Request, file: UploadFile = File(...)) -> dict[str, str]:  # noqa: B008
     """Extract and normalize text from an uploaded document.
 
     Parameters
     ----------
+    request : Request
+        Incoming request (used for the dev-instance synthetic-data guard).
     file : UploadFile
         The uploaded file (PDF, JPG, PNG, TXT, HTML, EML). Must obey the configured
         ``MAX_FILE_SIZE_MB`` limit and have a recognized MIME type.
@@ -42,9 +47,15 @@ async def ingest(file: UploadFile = File(...)) -> dict[str, str]:  # noqa: B008
     HTTPException(400)
         If the file is too large, MIME type is unsupported, or OCR yields
         no text.
+    HTTPException(403)
+        On a synthetic-data-only dev instance, if the upload is not tagged
+        ``X-Document-Tag: synthetic`` or ``X-Document-Tag: goldset``.
     HTTPException(415)
         If the file MIME type is not supported.
     """
+    # WP-62: Reject real documents on the dev instance (Art. 2(8) posture).
+    check_synthetic_data_request(request)
+
     logger.info(
         "Ingest request received: filename=%s, content_type=%s", file.filename, file.content_type
     )

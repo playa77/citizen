@@ -4,6 +4,7 @@ import secrets
 import tomllib
 from importlib import metadata as _importlib_metadata
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -120,6 +121,15 @@ class Settings(BaseSettings):
     OCR_QUALITY_WARN_SCORE: float = 0.8  # warn below this
     INFERENCE_PROFILE: str = "eu-avv"  # WP-31 — active inference profile name
     AVV_OVERRIDE: bool = False  # WP-31 — allow non-signed profiles without signed AVV
+    # --- Deployment posture (WP-62 / WP-66, D-019) ----------------------------
+    # dev: author-only testing with synthetic data only (Art. 2(8) AI Act)
+    # self: author-only use on the author's own real Bescheide (personal use)
+    # provider: any third party can obtain an analysis (author becomes provider)
+    DEPLOYMENT_MODE: Literal["dev", "self", "provider"] = "dev"
+    # Dev-instance hardening (WP-62): in dev mode the instance refuses to start
+    # unless this flag is explicitly true, and document uploads without a
+    # synthetic/goldset tag are rejected.
+    CITIZEN_SYNTHETIC_DATA_ONLY: bool = False
     # WP-14 — Prüfstand: goldset YAML path and eval results directory.
     # Goldset version change is a config change, not a code change (acceptance criterion).
     GOLDSET_PATH: str = "eval/goldsets/goldset-v0.1.0.yaml"

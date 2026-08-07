@@ -167,3 +167,24 @@ Recorded in WP-60; the file itself is created in WP-63.
 **Rejected:** Leaving the purpose statement implicit. The Annex III(5)(a) high-risk trigger is authority-side eligibility evaluation; the classification turns on the declared purpose, so an undeclared purpose is an unmanaged risk.
 **Rationale:** Keeping the declared purpose claimant-side is what keeps the system out of the high-risk regime (Kapitel III). This is a cheap, decisive guardrail, but only if it is written down and enforced against copy drift.
 Recorded in WP-61; enforcement is the purpose-drift lint (`scripts/check_purpose_drift.py`).
+
+---
+
+### D-023 R2 — 2026-08-07
+**Decision:** Land the `DEPLOYMENT_MODE` setting (D-019) and the new
+`CITIZEN_SYNTHETIC_DATA_ONLY` flag in `app/core/config.py` as part of WP-62
+(the roadmap allows the setting to land here when WP-66 has not yet run).
+Default `DEPLOYMENT_MODE=dev`, default `CITIZEN_SYNTHETIC_DATA_ONLY=false`.
+A startup assertion in `app/main.py` refuses to run in `dev` mode unless the
+flag is explicitly `true`; document uploads on the dev instance additionally
+require `X-Document-Tag: synthetic|goldset`.
+**Rejected:** (a) Defaulting `CITIZEN_SYNTHETIC_DATA_ONLY=true` — would let a
+dev instance process synthetic-tagged data without an explicit operator
+decision, silently defeating the auditable-posture goal of D-019. (b) Putting
+the dev-only guard behind an implicit inference (e.g., "running on a VPS")
+— exactly the fragility D-019 rejects.
+**Rationale:** WP-62's exit criteria require that the dev instance cannot
+ingest real data and carries a documented no-real-use posture. An explicit
+flag plus startup assertion makes the posture auditable and prevents silent
+drift. Tests updated in `tests/conftest.py` to set the flag so the existing
+suite keeps running against the dev posture.

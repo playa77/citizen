@@ -6,9 +6,10 @@ Provides:
     GET /api/v1/meta/version — API version info
     GET /api/v1/meta/legal-timestamp — parameter & corpus freshness dates
     GET /api/v1/meta/active-profile — active inference profile info (WP-31)
+    GET /api/v1/meta/deployment-mode — active deployment posture (WP-62/WP-66)
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 
@@ -126,4 +127,26 @@ async def get_active_profile_info() -> dict[str, str]:
         "label": profile.label,
         "avv_status": profile.avv_status,
         "pseudonymization": profile.pseudonymization,
+    }
+
+
+@router.get("/meta/deployment-mode")
+async def get_deployment_mode() -> dict[str, Any]:
+    """Return the active deployment posture (WP-62/WP-66, D-019).
+
+    Exposes the raw ``DEPLOYMENT_MODE`` value, the dev synthetic-data-only
+    flag, and the persistent dev-instance banner text for UI display.
+    """
+    s = _get_settings()
+    is_dev = s.DEPLOYMENT_MODE == "dev"
+    return {
+        "mode": s.DEPLOYMENT_MODE,
+        "synthetic_data_only": bool(s.CITIZEN_SYNTHETIC_DATA_ONLY),
+        "dev": is_dev,
+        "dev_banner": (
+            "ENTWICKLUNGSINSTANZ — Testbetrieb mit synthetischen Daten. "
+            "Keine Nutzung für reale Fälle. Ausgaben sind nicht belastbar."
+        )
+        if is_dev
+        else None,
     }

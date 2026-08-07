@@ -8,6 +8,9 @@ Endpoints:
     POST   /api/v1/conversations/{id}/messages      Send message (SSE response)
     POST   /api/v1/conversations/{id}/documents     Attach document
     DELETE /api/v1/conversations/{id}/documents/{did} Remove document
+
+On a synthetic-data-only dev instance (WP-62) document uploads are rejected
+unless tagged ``X-Document-Tag: synthetic`` / ``goldset``.
 """
 
 from __future__ import annotations
@@ -20,7 +23,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.db.session import async_session_factory
@@ -40,6 +43,7 @@ from app.services.conversation import (
     list_conversations,
     remove_document,
 )
+from app.services.dev_guard import check_synthetic_data_request
 from app.services.ocr import process_document
 from app.utils.text import normalize_text
 
@@ -77,10 +81,15 @@ async def _persist_audit_safely(audit_record: AuditRecord) -> None:
 
 @router.post("/conversations")
 async def create_conversation_endpoint(
+    request: Request,
     title: str | None = Form(None),
     file: UploadFile | None = File(None),
 ) -> dict[str, Any]:
     """Create a new conversation, optionally with an initial document."""
+    # WP-62: Dev-instance synthetic-data guard for document uploads.
+    if file is not None:
+        check_synthetic_data_request(request)
+
     async with async_session_factory() as db:
         conv = await create_conversation(db, title=title)
 
@@ -286,10 +295,14 @@ async def send_message_endpoint(
 
 @router.post("/conversations/{conversation_id}/documents")
 async def add_document_endpoint(
+    request: Request,
     conversation_id: UUID,
     file: UploadFile = File(...),
 ) -> dict[str, Any]:
     """Upload and attach a document to a conversation."""
+    # WP-62: Dev-instance synthetic-data guard for document uploads.
+    check_synthetic_data_request(request)
+
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No file provided")
 

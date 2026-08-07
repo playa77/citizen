@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import (
@@ -27,7 +27,9 @@ from app.api.routes import (
     presets,
 )
 from app.core.config import get_app_version, get_app_version_tag, settings
+from app.middleware.dev_headers import DevNoIndexMiddleware
 from app.middleware.disclaimer import DisclaimerMiddleware
+from app.services.dev_guard import DevGuardError, check_dev_synthetic_data_startup
 
 
 @asynccontextmanager
@@ -40,6 +42,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     logger = logging.getLogger(__name__)
     logger.info("Citizen %s starting up — LOG_LEVEL=%s", get_app_version_tag(), settings.LOG_LEVEL)
+
+    # WP-62: Dev-instance synthetic-data-only assertion (Art. 2(8) posture).
+    # A dev instance must not start without an explicit synthetic-data-only flag.
+    try:
+        check_dev_synthetic_data_startup()
+    except DevGuardError as exc:
+        logger.critical(
+            "Refusing to start: DEPLOYMENT_MODE=dev without CITIZEN_SYNTHETIC_DATA_ONLY=true — %s",
+            exc,
+        )
+        raise
 
     # SQLite: initialise WAL mode, busy timeout, and foreign keys (no-op for PostgreSQL).
     from app.db.session import IS_SQLITE, _init_sqlite, async_session_factory
@@ -170,6 +183,7 @@ app = FastAPI(
 )
 
 app.add_middleware(DisclaimerMiddleware)
+app.add_middleware(DevNoIndexMiddleware)
 
 # Serve static frontend (will be populated in WP-014).
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -193,6 +207,20 @@ app.include_router(eval_reports.router, prefix="/api/v1", tags=["eval_reports"])
 async def health() -> dict[str, str]:
     """Liveness probe — docker-compose healthcheck and DevOps monitoring."""
     return {"status": "ok", "version": get_app_version_tag()}
+
+
+@app.get("/robots.txt")
+async def robots_txt() -> Response:
+    """Robots exclusion (WP-62) — dev instances must not be indexed."""
+    if getattr(settings, "DEPLOYMENT_MODE", "dev") == "dev":
+        return Response(
+            content="User-agent: *\nDisallow: /\n",
+            media_type="text/plain",
+        )
+    return Response(
+        content="User-agent: *\nAllow: /\n",
+        media_type="text/plain",
+    )
 
 
 @app.get("/")

@@ -1,3 +1,62 @@
+## 2026-08-07 — WP-62: Dev-instance Art. 2(8) hardening (Roadmap v2.0.0)
+
+### Änderungen
+
+- **`app/core/config.py`** — neue Einstellungen `DEPLOYMENT_MODE`
+  (`dev`/`self`/`provider`, Standard `dev`, per `Literal` validiert) und
+  `CITIZEN_SYNTHETIC_DATA_ONLY` (Standard `false`). Damit liegt der
+  `DEPLOYMENT_MODE`-Schalter aus D-019 bereits in WP-62 vor (die Roadmap
+  erlaubt das, da WP-66 noch nicht umgesetzt ist).
+- **`app/services/dev_guard.py`** (neu) — Startup-Assertion: verweigert den
+  Start bei `DEPLOYMENT_MODE=dev` ohne `CITIZEN_SYNTHETIC_DATA_ONLY=true`
+  (`DevGuardError`). Ingest-Guard: bei aktiver dev-Posture werden
+  Dokument-Uploads ohne `X-Document-Tag: synthetic`/`goldset` mit HTTP 403
+  abgelehnt (`synthetic_data_only`).
+- **`app/main.py`** — ruft die Startup-Assertion im Lifespan auf (Start wird
+  verweigert, wenn die dev-Posture nicht explizit gesetzt ist); neue
+  Middleware `DevNoIndexMiddleware`; neue Route `/robots.txt` (im Modus `dev`
+  `Disallow: /`).
+- **`app/middleware/dev_headers.py`** (neu) — setzt `X-Robots-Tag: noindex,
+  nofollow` auf allen Antworten im Modus `dev`.
+- **`app/api/routes/meta.py`** — neuer Endpoint `GET /api/v1/meta/deployment-mode`
+  (Modus, `synthetic_data_only`, Banner-Text) für UI und Auditoren.
+- **`app/api/routes/ingest.py`** und **`app/api/routes/conversations.py`** —
+  Ingest-Guard an allen Dokument-Upload-Pfaden (`/api/v1/ingest`,
+  `POST /api/v1/conversations` mit Datei, `POST /api/v1/conversations/{id}/documents`).
+- **`static/index.html`** — dauerhafter, nicht schließbarer Entwicklungs-Banner
+  `ENTWICKLUNGSINSTANZ — Testbetrieb mit synthetischen Daten. Keine Nutzung für
+  reale Fälle. Ausgaben sind nicht belastbar.` im Modus `dev` (Version 1.3.0).
+- **`devdocs/DEV-INSTANCE.md`** (neu) — Betriebsdokumentation der dev-Instanz:
+  Zweck, Zugriffskontrolle (primär WireGuard/Tailscale; Fallback mTLS oder
+  Basic Auth + IP-Allowlist), synthetische-Daten-Posture, Noindex, Banner,
+  ausdrückliches Keine-reale-Nutzung-Statement.
+- **`.env.example`** — neue Einstellungen `DEPLOYMENT_MODE` und
+  `CITIZEN_SYNTHETIC_DATA_ONLY` dokumentiert.
+- **`tests/conftest.py`** — setzt `DEPLOYMENT_MODE=dev` und
+  `CITIZEN_SYNTHETIC_DATA_ONLY=true`, damit die bestehende Suite gegen die
+  dev-Posture läuft.
+- **`tests/unit/test_dev_guard.py`** (neu) — Unit-Tests für Startup-Assertion,
+  Ingest-Guard, Konfig-Defaults und Route-Level-Enforcement.
+- **`DECISIONS.md`** — D-023 (R2) protokolliert: `DEPLOYMENT_MODE` wird in
+  WP-62 vorgezogen; Standard `dev` + `CITIZEN_SYNTHETIC_DATA_ONLY=false`
+  erzwingt eine explizite Operator-Entscheidung.
+
+### Exit-Kriterien (WP-62)
+
+- Die dev-Instanz ist nicht öffentlich nutzbar (Runbook in DEV-INSTANCE.md).
+- Sie kann keine echten Daten aufnehmen (Startup-Assertion + Ingest-Guard).
+- Sie ist nicht indexierbar (`X-Robots-Tag` + `robots.txt`).
+- Sie trägt eine dokumentierte No-Real-Use-Posture (Banner + DEV-INSTANCE.md).
+
+### Hinweis
+
+- R2: Setzt einen Startup-Guard und einen Ingest-Guard; bestehende
+  API-Verträge bleiben erhalten (neue Header-Auflage nur auf dev-Instanzen
+  mit aktiver Synthetik-Posture). Bis WP-66 gilt der Schalter bereits
+  technisch; die WP-66-Erweiterungen (UI-Header-Anzeige, Log-Zeile) folgen.
+
+---
+
 ## 2026-08-07 — WP-61: Annex III high-risk self-assessment (Roadmap v2.0.0)
 
 ### Änderungen

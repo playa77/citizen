@@ -4,11 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen — Legal Reasoning Engine</title>
-    <!-- Semantic Version: 1.2.0 -->
+    <!-- Semantic Version: 1.3.0 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* WP-62 — persistent dev-instance banner (non-dismissible) */
+        .dev-banner {
+            position: relative;
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            background: #b3261e;
+            color: #ffffff;
+            font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            text-align: center;
+            border-bottom: 2px solid #8c1d18;
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
     <!-- Disclaimer Modal -->
@@ -26,6 +44,9 @@
 
     <!-- Main Application -->
     <div id="app" class="hidden">
+
+        <!-- WP-62 — persistent, non-dismissible development banner (dev mode only) -->
+        <div id="dev-banner" class="dev-banner hidden" role="alert"></div>
 
         <!-- Shared App Header (uniform across all modes) -->
         <header class="app-header">
@@ -600,5 +621,24 @@
     </div>
 
     <script src="/static/app.js"></script>
+    <script>
+        // WP-62 — persistent dev-instance banner (no close button, non-dismissible).
+        // The meta endpoint is excluded from disclaimer enforcement so the mode
+        // can be resolved even before first-run acknowledgment.
+        (function () {
+            fetch("/api/v1/meta/deployment-mode")
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (data && data.dev) {
+                        var banner = document.getElementById("dev-banner");
+                        if (banner) {
+                            banner.textContent = data.dev_banner || "ENTWICKLUNGSINSTANZ — Testbetrieb mit synthetischen Daten. Keine Nutzung für reale Fälle. Ausgaben sind nicht belastbar.";
+                            banner.classList.remove("hidden");
+                        }
+                    }
+                })
+                .catch(function () { /* meta endpoint unavailable — leave banner hidden */ });
+        })();
+    </script>
 </body>
 </html>
