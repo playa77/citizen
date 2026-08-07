@@ -1,3 +1,39 @@
+## 2026-08-07 — WP-60: Compliance baseline document and classification (Roadmap v2.0.0)
+
+### Änderungen
+
+- **`COMPLIANCE.md`** (neu, Deutsch, kanonisch) — alleinige Quelle für die
+  rechtliche Klassifizierung von Citizen unter der KI-VO (VO (EU) 2024/1689):
+  Anbieter/Einsetzer-Bestimmung über den Schalter `DEPLOYMENT_MODE`
+  (dev/self/provider, D-019), Entwicklungsphasen-Posture (Art. 2(8)),
+  FOSS-Freistellung mit Art.-50-Ausnahme (Art. 2(12)), Pflichten-Matrix je
+  Modus, Frist 2026-12-02 für Art. 50(2), Kurzverortung DSGVO (Art. 35/28)
+  und RDG (§ 2/§ 6/§ 8).
+- **`COMPLIANCE-EN.md`** (neu) — englischer Spiegel der kanonischen Datei.
+- **`DECISIONS.md`** — D-019 (R2) und D-022 (R1) aus Roadmap v2.0.0 §1
+  protokolliert.
+- **`README.md`** — Abschnitt „Rechtlicher Status" mit Verweis auf
+  `COMPLIANCE.md`.
+
+### Klassifizierung (Kurzfassung)
+
+- `dev` (Autor, Testbetrieb, nur synthetische Daten): Entwicklungsphase nach
+  Art. 2(8) KI-VO — keine Pflichten ausgelöst.
+- `self` (Autor, eigene reale Bescheide): persönliche, nicht-berufliche
+  Nutzung — keine Pflichten ausgelöst.
+- `provider` (Dritte können Analysen erhalten): Autor wird Anbieter
+  (Art. 3(3)); Art. 50(1)/(2) aktiv (WP-64/WP-65; Kennzeichnungsfrist
+  2026-12-02), DSGVO-DPIA/AVV (WP-68) und RDG-Invariante (WP-67) sind
+  Voraussetzung, Go/No-Go-Gate (WP-69) steht davor.
+
+### Hinweis
+
+- Reine Dokumentation (R1). Der `DEPLOYMENT_MODE`-Schalter wird in WP-66
+  implementiert; bis dahin gilt für die laufende Instanz die Einordnung
+  `dev`. Keine Code-Änderungen in diesem Work Package.
+
+---
+
 ## 2026-07-20 — Critical Retrieval & Model Fallback Fixes (v0.4.5)
 
 ### Problem
@@ -771,8 +807,8 @@ Local-first, evidence-constrained legal reasoning engine for German social law (
   release. Covers four work packages: WP-02 (Scope Cut / Experimental Badge), WP-14
   (Prüfstand View), WP-41 (Result Report & Case Journey Redesign), WP-42 (OCR
   Confirmation Gate). Defines a 13-component shared library, color token system, the
-  FristTimeline showpiece, DeadlineBanner 5-state hero, traffic-light ClaimList,
-  CalcDiffTable, OCR confidence gate, accessibility and responsive strategy.
+  FristTimeline showpiece, DeadlineBanner 5-state hero, ClaimList, CalcDiffTable,
+  OCR confidence gate, accessibility and responsive strategy.
 
 ### Decisions locked (design review)
 - **D-1: Bekanntgabefiktion = +4 days** (strict goldset conformity). The goldset is the

@@ -129,3 +129,35 @@ This provides a clean PostgreSQL upgrade path for future fresh deployments.
 **Rejected alternative:** (a) Fixing only the model exhaustion without the retrieval regex — would let pipeline complete but still produce useless "norms not in chunks" output. (b) Fixing only the regex without the model fallback — pipeline would still die on transient errors. (c) Adding more fallback models without changing `model=` to `models=` in reasoning.py — the single-model override would bypass any fallback chain.
 
 **Rationale:** The model exhaustion was the product of three independent design flaws conspiring: (1) `model=` creates single-model chain bypassing fallbacks, (2) `MAX_RETRIES=1` with no retry headroom, (3) `FALLBACK_MODEL_1` == PRIMARY deduplicated to nothing and `FALLBACK_MODEL_2` was invalid. The retrieval bug was a textbook regex error — the parenthetical stripping intended to clean citation noise was instead destroying §-references, and the greedy `{0,3}` compounded it. Fixing both was mandatory; either alone leaves the pipeline either dead or blind. R2 because the model chain and retrieval regex are internal and the public API is unchanged.
+
+### D-019 R2 — 2026-08-07
+**Decision:** Introduce a single authoritative `DEPLOYMENT_MODE` setting with
+three values — `dev`, `self`, `provider` — as the technical embodiment of the
+provider/deployer classification. `dev` (author, testing, synthetic data
+only) and `self` (author using it on the author's own real Bescheide) rest on
+the Art. 2(8) development exemption and the personal-use framing respectively;
+`provider` (deployed so that any third party can obtain an analysis) makes the
+author a provider under Art. 3(3) and switches on all Art. 50 obligations.
+**Rejected:** (a) Inferring provider status implicitly from whether auth is
+configured — too fragile, and couples a legal determination to an operational
+accident. (b) Treating every deployment as `provider` unconditionally — would
+impose provider obligations on the author's own machine, which the personal-use
+and development exemptions do not require.
+**Rationale:** The obligation set is discontinuous at one event; a single
+explicit switch makes that event auditable and prevents silent drift into
+provider status. Every compliance feature in P7 keys off this one setting.
+Recorded in WP-60; the setting itself is implemented in WP-66.
+
+### D-022 R1 — 2026-08-07
+**Decision:** Add `AI-USAGE.md` to the repository root documenting that the
+codebase is predominantly AI-generated, and add a one-line notice to the
+README. This is voluntary content-authorship transparency, distinct from and
+additional to the Art. 50 runtime obligations.
+**Rejected:** Folding it into `DISCLAIMER_DE.md`. The disclaimer governs the
+*legal character of the software's output*; authorship of the *source* is a
+separate concern and belongs in its own file.
+**Rationale:** Cheap, honest, and forecloses a later "undisclosed" objection.
+Also carries the § 2 Abs. 2 UrhG note that AI-generated code without personal
+intellectual creation is not copyright-protected, which is relevant to anyone
+forking or commercializing the repo.
+Recorded in WP-60; the file itself is created in WP-63.

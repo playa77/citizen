@@ -20,6 +20,24 @@ gegen ein öffentliches, versioniertes Golden Set gemessen statt behauptet.
 **Warum es dieses Projekt gibt:** [STATEMENT.md](STATEMENT.md) ·
 **Kurzfassung:** [One-Pager](docs/citizen-onepager.md)
 
+## Rechtlicher Status
+
+Die rechtliche Einordnung von Citizen unter der KI-Verordnung (VO (EU)
+2024/1689) ist in [COMPLIANCE.md](COMPLIANCE.md) dokumentiert (kanonisch,
+deutsch; englischer Spiegel: [COMPLIANCE-EN.md](COMPLIANCE-EN.md)). Kurzfassung:
+
+* **`dev`** — nur Entwicklungs-/Testbetrieb mit synthetischen Daten:
+  Entwicklungsphasen-Freistellung (Art. 2(8) KI-VO), keine Pflichten ausgelöst.
+* **`self`** — nur eigene, persönliche Nutzung: kein Bereitstellen an Dritte,
+  keine Pflichten ausgelöst.
+* **`provider`** — Dritte können Analysen erhalten: der Autor wird **Anbieter**
+  (Art. 3(3) KI-VO); die Transparenzpflichten nach Art. 50
+  (KI-Interaktionshinweis, maschinenlesbare Kennzeichnung) sowie die
+  DSGVO- und RDG-Auflagen werden aktiv (siehe COMPLIANCE.md).
+
+Der jeweils aktive Modus wird über die Einstellung `DEPLOYMENT_MODE` bestimmt
+(Entscheidung **D-019** im [Entscheidungs-Ledger](DECISIONS.md)).
+
 ## Rechtsgebiete
 
 | Gebiet | Gesetze | Status |
