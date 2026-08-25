@@ -1,3 +1,25 @@
+## 2026-08-25 — Stale-document cleanup (D-031)
+
+### Removed
+
+- `LETSFIXSTUPIDDBDESIGN.md` — resolved DB-design outline (implemented as
+  D-024/D-025/D-026); historical rationale preserved in DECISIONS.md history.
+- `docs/design_document.md`, `docs/design_v1.0.0.md`,
+  `docs/technical_specification.md`, `docs/GAP-REPORT.md`,
+  `docs/ARCHITECTURE-ACTUAL.md`, `docs/wp-1.6-pruefstand-v1.0.0.md` —
+  v1.0.0-era planning artifacts describing the removed web UI / Electron /
+  SQLite state; all were banner-marked superseded and referenced only by each
+  other.
+- `docs/goldset-v0.1.0.yaml` — byte-identical orphan duplicate of
+  `eval/goldsets/goldset-v0.1.0.yaml`; every code/config reference already
+  points at `eval/goldsets/`.
+
+### Changed
+
+- README directory tree updated (docs/ now holds only
+  `roadmap-v2.0.0.md`, kept because DISCLAIMER_DE/EN and
+  devdocs/DEV-INSTANCE.md reference it live).
+
 ## 2026-08-25 — API-only refactor + PostgreSQL-only database (v2.0.0)
 
 Decisions: D-024 (R3, Postgres-only), D-025 (R2, remove web UI + Electron),

@@ -338,3 +338,28 @@ LETSFIXSTUPIDDBDESIGN.md marked RESOLVED via D-024..D-026; .gitignore gains
 refactor. Guarded invariants: purpose-drift lint green over the new
 disclaimer pair; `test_api_documentation.py` parity green (doc untouched);
 README route table matches `app.openapi()` routes.
+
+### D-031 R1 — 2026-08-25
+**Decision:** Remove orphaned/stale documentation: `LETSFIXSTUPIDDBDESIGN.md`
+(resolved outline for the already-implemented DB overhaul), six v1.0.0-era
+planning artifacts in `docs/` (design_document, design_v1.0.0,
+technical_specification, GAP-REPORT, ARCHITECTURE-ACTUAL,
+wp-1.6-pruefstand — all banner-marked superseded, describing the removed
+web UI/Electron/SQLite state, and referenced only by each other), and
+`docs/goldset-v0.1.0.yaml` (byte-identical duplicate of
+`eval/goldsets/goldset-v0.1.0.yaml`; all code/config references point to
+`eval/goldsets/`). `docs/roadmap-v2.0.0.md` is kept: it has live inbound
+references from `DISCLAIMER_DE.md`, `DISCLAIMER_EN.md`, and
+`devdocs/DEV-INSTANCE.md`; removing it would require editing versioned
+compliance documents, which is out of scope for a cleanup sweep.
+Append-only ledgers (DECISIONS.md, CHANGELOG.md) keep their historical
+mentions of the removed files.
+**Rejected:** Keeping the docs as banner-marked historical artifacts
+(the D-030 posture) — owner instructed removal; git history preserves them.
+Also rejected: deleting `roadmap-v2.0.0.md` with its referencing lines —
+that rewrites compliance copy (v2.0.0 disclaimer pair) without a content
+decision.
+**Rationale:** Every deleted file was either fully implemented/resolved or
+describes a repository state that no longer exists; their "current truth"
+pointers already name surviving documents (AGENTS.md,
+API_DOCUMENTATION.md). Reversible via git at zero cost (R1).

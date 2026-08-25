@@ -283,9 +283,8 @@ citizen/
 │   └── utils/                            # image, pdf, text, tokens
 ├── eval/                                 # Goldsets, Eval-Harness, Reports
 ├── tests/                                # 37 Testdateien (~12.600 Zeilen)
-├── docs/                                 # Historische Planungsartefakte: Design-Dokument,
-│                                         #  technische Spezifikation (v1.0.0-Ära),
-│                                         #  Roadmap v2.0.0, Gap-Report, Architektur
+├── docs/                                 # Roadmap v2.0.0 (WP-Nummerierung, von
+│                                         #  DISCLAIMER_*.md referenziert)
 ├── devdocs/                              # Betriebsdokumentation (Dev-Instanz)
 ├── scripts/                              # Wartungs-Skripte (Purpose-Drift-Lint,
 │                                         #  Parameter-Seeding, Benchmark)
