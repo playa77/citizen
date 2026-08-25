@@ -23,13 +23,19 @@ from fastapi.testclient import TestClient
 from starlette.background import BackgroundTask
 
 from app.main import app
-from app.core.config import get_app_version_tag
+from app.core.config import get_app_version_tag, settings
 
 # -------------------------------------------------------------------
 # Helper — disclaimer header that all tests need to bypass middleware
 # -------------------------------------------------------------------
 
-DISCLAIMER_HEADERS = {"X-Disclaimer-Ack": get_app_version_tag()}
+# The middleware validates against DISCLAIMER_VERSION — a version in its own
+# right, distinct from the app/package version. Dev posture (WP-62) also
+# requires a synthetic-data tag on document uploads.
+DISCLAIMER_HEADERS = {
+    "X-Disclaimer-Ack": settings.DISCLAIMER_VERSION,
+    "X-Document-Tag": "synthetic",
+}
 
 
 # -------------------------------------------------------------------

@@ -9,7 +9,7 @@ and input text to guarantee correctness across model changes and input
 variations.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-08-25 — PostgreSQL-only upsert (D-024).
 
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as upsert_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import CacheEntry
-from app.db.session import IS_SQLITE
 
 logger = logging.getLogger(__name__)
 
@@ -128,12 +128,7 @@ async def set_json_cache(
     if ttl_sec is not None:
         expires_at = _now_utc() + _seconds_to_timedelta(ttl_sec)
 
-    # Upsert: insert or update — dialect-dependent import
-    if IS_SQLITE:
-        from sqlalchemy.dialects.sqlite import insert as upsert_insert
-    else:
-        from sqlalchemy.dialects.postgresql import insert as upsert_insert  # type: ignore[assignment]
-
+    # Upsert: insert or update (PostgreSQL ON CONFLICT).
     stmt = (
         upsert_insert(CacheEntry)
         .values(

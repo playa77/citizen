@@ -1,16 +1,14 @@
-# Semantic Version: 0.2.0 | 2026-07-10 — Desktop app support
-# (SQLite + Alembic auto-migration + sqlite-vec)
+# Semantic Version: 0.3.0 | 2026-08-25 — API-only service (D-024/D-025):
+# static frontend, root HTML route and desktop launcher removed.
 
 import asyncio
 import logging
 import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, Response
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 
 from app.api.routes import (
     analyze,
@@ -54,38 +52,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         raise
 
-    # SQLite: initialise WAL mode, busy timeout, and foreign keys (no-op for PostgreSQL).
-    from app.db.session import IS_SQLITE, _init_sqlite, async_session_factory
+    # PostgreSQL engine — no dialect-specific initialisation required (D-024).
+    from app.db.session import async_session_factory
 
-    if IS_SQLITE:
-        await _init_sqlite()
-        logger.info("SQLite engine initialised — WAL mode enabled")
-
-    # Run Alembic migrations automatically on startup (desktop convenience)
+    # Run Alembic migrations automatically on startup.
     try:
-        from alembic import command as alembic_command
-        from alembic.config import Config as AlembicConfig
-
-        alembic_cfg = AlembicConfig("alembic.ini")
-        # env.py already reads DATABASE_URL from the environment; the ini-file
-        # default is a dead sentinel. Do NOT call set_main_option here — the
+        # env.py reads DATABASE_URL from the environment; the ini-file default
+        # is a dead sentinel. Do NOT call set_main_option here — the
         # side-effect inside env.py causes a long-running deadlock with asyncpg
         # when applied through the running event loop. See DECISIONS.md §D-007.
-        # alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
-
-        # On SQLite fresh DB, stamp directly to the SQLite baseline migration
-        # to skip PostgreSQL-only migrations 001-006.
-        if settings.DATABASE_URL.startswith("sqlite"):
-            from sqlalchemy import create_engine
-            from sqlalchemy import inspect as sa_inspect
-
-            sync_url = settings.DATABASE_URL.replace("+aiosqlite", "")
-            sync_engine = create_engine(sync_url)
-            inspector = sa_inspect(sync_engine)
-            if not inspector.has_table("alembic_version"):
-                await asyncio.to_thread(alembic_command.stamp, alembic_cfg, "007_sqlite_baseline")
-                logger.info("SQLite fresh DB detected — stamped to 007_sqlite_baseline")
-            sync_engine.dispose()
 
         # Run alembic upgrade in a subprocess, NOT via asyncio.to_thread.
         #
@@ -95,19 +70,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # A subprocess is an independent interpreter that avoids this entirely.
         # See DECISIONS.md §D-007.
         #
-        # Migration DAG: two branches — PostgreSQL (001→006→011_pg) and SQLite baseline (007→010→011_sqlite).
-        # "head" is ambiguous; target the correct tip for the active database dialect.
-        _migration_target = (
-            "heads"
-            if settings.DATABASE_URL.startswith("sqlite")
-            else "011_pg_legal_chunk_text_hash"
-        )
+        # Single migration DAG since D-024: "head" is unambiguous.
         _proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
             "alembic",
             "upgrade",
-            _migration_target,
+            "head",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -120,7 +89,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 _stderr.decode(errors="replace").strip(),
             )
         else:
-            logger.info("Alembic migrations applied successfully (target=%s).", _migration_target)
+            logger.info("Alembic migrations applied successfully (target=head).")
     except Exception as exc:
         logger.warning("Alembic migration skipped or failed: %s. Continuing anyway.", exc)
 
@@ -185,8 +154,9 @@ app = FastAPI(
 app.add_middleware(DisclaimerMiddleware)
 app.add_middleware(DevNoIndexMiddleware)
 
-# Serve static frontend (will be populated in WP-014).
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# API-only service (D-025): no static frontend, no HTML routes. The sole
+# external interface is the versioned REST API under /api/v1, self-described
+# via /docs, /redoc and /openapi.json.
 
 # Register API routers
 app.include_router(ingest.router, prefix="/api/v1", tags=["ingest"])
@@ -221,29 +191,3 @@ async def robots_txt() -> Response:
         content="User-agent: *\nAllow: /\n",
         media_type="text/plain",
     )
-
-
-@app.get("/")
-async def root() -> FileResponse:
-    """Serve the main frontend page."""
-    return FileResponse(Path("static") / "index.html")
-
-
-if __name__ == "__main__":
-    import argparse
-    import os
-
-    import uvicorn
-
-    parser = argparse.ArgumentParser(description="Citizen Desktop Backend")
-    parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
-    parser.add_argument("--data-dir", type=str, default=".", help="Data directory for DB and files")
-    args = parser.parse_args()
-
-    # Override DATABASE_URL if --data-dir is provided
-    if args.data_dir != ".":
-        data_dir = Path(args.data_dir)
-        data_dir.mkdir(parents=True, exist_ok=True)
-        os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{data_dir / 'citizen.db'}"
-
-    uvicorn.run(app, host="127.0.0.1", port=args.port, workers=1)

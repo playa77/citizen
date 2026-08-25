@@ -188,3 +188,108 @@ ingest real data and carries a documented no-real-use posture. An explicit
 flag plus startup assertion makes the posture auditable and prevents silent
 drift. Tests updated in `tests/conftest.py` to set the flag so the existing
 suite keeps running against the dev posture.
+
+### D-024 R3 — 2026-08-25
+**Decision:** Resolve the dual-database reality by standardizing on
+PostgreSQL 16 + pgvector for server, CI, and ALL tests (unit included).
+Delete the SQLite code path entirely: `IS_SQLITE` branches, sqlite-vec,
+the SQLite alembic chain (007→010, 011_sqlite), and the raw-SQL `::vector`
+workarounds. The ORM `ChunkEmbedding.embedding` column becomes pgvector's
+`Vector(1536)`.
+**Rejected:** Keeping both backends with cross-dialect parity tests. After
+the Electron client is removed from this repository (D-025), SQLite has zero
+remaining deployment consumers — parity testing would preserve permanent
+double-maintenance of every SQL fragment and both migration DAGs for no user.
+**Rationale:** Human decision, given verbatim: "Postgres-only everywhere".
+Stated consequences accepted: developers need Docker (or a reachable PG) to
+run any test; existing SQLite `citizen.db` files become unsupported with no
+data-migration path. This is the direction already outlined in
+`LETSFIXSTUPIDDBDESIGN.md`; with Electron gone, its "isolate SQLite for
+desktop" clause is moot. Unit tests now execute the exact production SQL,
+closing the blind spot that produced D-014/D-016.
+
+### D-025 R2 — 2026-08-25
+**Decision:** Refactor Citizen into an API-only service. Remove all web UI
+(`static/`, HTML-serving routes, static mount) and all GUI client code
+(`electron/` tree incl. PyInstaller spec, `scripts/apprun.sh`). The only
+external interface is the existing REST API under `/api/v1`. Task instructed
+by the repository owner ("a GUI client will no longer live in this
+repository").
+**Rejected:** Keeping a thin web shell or moving the frontend to a separate
+repository — neither was requested; a separate repo is a future decision.
+**Rationale:** Owner-instructed. `/health`, `/robots.txt` (WP-62 compliance),
+and FastAPI's self-description endpoints (`/docs`, `/redoc`, `/openapi.json`)
+are retained: they are machine-facing or compliance surfaces, not end-user
+web UI. Full contract to be documented in `API_DOCUMENTATION.md`.
+
+### D-026 R2 — 2026-08-25
+**Decision:** Unit tests obtain PostgreSQL via a session-scoped
+testcontainers fixture (`pgvector/pgvector:pg16`). A pre-set `DATABASE_URL`
+overrides the container (CI points at its service container directly).
+**Rejected:** Requiring an explicit externally-running PostgreSQL with no
+fallback — breaks `pytest tests/unit/` ergonomics for anyone without a local
+PG; testcontainers keeps one-command test runs at the cost of Docker being
+required (accepted in D-024).
+**Rationale:** Keeps the AGENTS.md promise of a single test command while
+making unit tests run production SQL per D-024.
+
+---
+
+## Invariants — api-only-refactor task (derived 2026-08-25)
+
+**Guarded** (guard test installed + green before completion):
+- **G1 Route surface:** every pre-refactor `/api/*` route + `/health` +
+  `/robots.txt` survives unchanged in method and path; zero HTML/static
+  routes remain. Guard: route-surface test asserting the explicit expected
+  list equals `app.openapi()` routes.
+- **G2 Single migration DAG:** fresh PostgreSQL reaches head via singular
+  `alembic upgrade head`; exactly one head revision exists.
+  Guard: extended `tests/unit/alembic/`.
+- **G3 Vector round-trip on production SQL:** embed → upsert →
+  `cosine_distance()` with aliased extra columns succeeds against real
+  PostgreSQL (entrenches D-014/D-016 fixes as the only path).
+  Guard: integration retrieval test.
+- **G4 Doc-route parity:** every endpoint documented in
+  `API_DOCUMENTATION.md` corresponds 1:1 to `app.openapi()` routes.
+  Guard: parity test parsing the doc's path table.
+- **G5 Toolchain:** full pytest (unit+integration), ruff check/format, mypy
+  strict, purpose-drift lint all green.
+
+**Triggered** (review-flagged paths, diff checked):
+- **T1** Root URL `/` changes from serving HTML to 404 JSON — intentional,
+  owner-approved breaking change (D-025).
+- **T2** Existing SQLite desktop databases become unsupported, no migration
+  path — accepted consequence of D-024.
+- **T3** `python -m app.main --data-dir` desktop launcher removed with the
+  desktop block in `main.py`.
+
+### D-027 R2 — 2026-08-25
+**Decision:** Migration `012_pg_collapse_sqlite_branch` re-admits
+`'disclaimer_ack'` to the `pipeline_stage_log.stage_name` CHECK constraint,
+alongside the nine pipeline stages carried over from former migration 008.
+**Rejected:** (a) Removing the `disclaimer_ack` insert from
+`app/services/audit.py` instead — changes documented WP-015 audit semantics
+("7 stages + 1 disclaimer_ack") and is a business-behavior change out of
+scope for this refactor. (b) Leaving the constraint at nine values — every
+audit-trail insert violates it on PostgreSQL, so no CaseRun/stage logs are
+ever persisted (surfaced by `test_full_pipeline_execution`: FK/Check
+violations, case_count 0).
+**Rationale:** The writer (`services/audit.py`) defines the data contract;
+former migration 008 narrowed the constraint without updating the writer.
+Aligning the constraint is the minimal data-model fix. Idempotent DDL keeps
+it safe on production databases already carrying manual-DDL state (D-005).
+
+### D-028 R2 — 2026-08-25
+**Decision:** Test-harness repairs applied where tests had rotted behind
+production evolution (no business logic touched): disclaimer ack headers use
+`DISCLAIMER_VERSION` rather than the package version; uploads send
+`X-Document-Tag: synthetic`; pipeline stubs match current call signatures;
+stage-sequence assertions follow `_STAGES`; integration suite gains an
+event-loop/pool isolation fixture (`tests/integration/conftest.py`);
+corpus seeding uses asyncpg against `DATABASE_URL`.
+**Rejected:** Leaving the suite red and reporting it as pre-existing debt —
+the task gates delivery on a passing suite, and every repair was confined to
+test code.
+**Rationale:** The suite had drifted into 39 latent failures (13 unit, 26
+integration) invisible because prior local environments ran stale package
+installs. Post-repair: 878 passed / 0 failed against real PostgreSQL.

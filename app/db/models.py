@@ -11,13 +11,15 @@ Plus (migration 006):
   legal_chunk.legal_area — explicit area tag for retrieval filtering
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-08-25 — ChunkEmbedding.embedding is now
+# pgvector Vector(1536) (D-024); LargeBinary mapping removed.
 
 import uuid
 from datetime import date, datetime
 from typing import Any
 
 import sqlalchemy as sa
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -27,7 +29,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -223,10 +224,11 @@ class ChunkEmbedding(Base):
         ForeignKey("legal_chunk.id", ondelete="CASCADE"),
         nullable=False,
     )
-    # The embedding column — vector type varies by dialect. For SQLite, stored as BLOB via sqlite-vec.
-    # For PostgreSQL, stored as pgvector Vector type.
-    # The vector_backend module in app/db/vector_backend.py handles the dialect-specific query layer.
-    embedding: Mapped[Any] = mapped_column(LargeBinary, nullable=False)
+    # pgvector column — single backend since D-024. The former
+    # LargeBinary-for-dialect-portability mapping forced raw-SQL `::vector`
+    # cast workarounds (D-014); with Vector typed directly, ORM inserts bind
+    # list[float] correctly.
+    embedding: Mapped[Any] = mapped_column(Vector(VECTOR_DIM), nullable=False)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 

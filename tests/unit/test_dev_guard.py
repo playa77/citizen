@@ -15,7 +15,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.config import get_app_version_tag
+from app.core.config import get_app_version_tag, settings
 from app.main import app
 from app.services import dev_guard
 
@@ -183,7 +183,7 @@ class TestIngestEndpointGuard:
         response = client.post(
             "/api/v1/ingest",
             files={"file": ("real.pdf", b"%PDF-1.4", "application/pdf")},
-            headers={"X-Disclaimer-Ack": get_app_version_tag()},
+            headers={"X-Disclaimer-Ack": settings.DISCLAIMER_VERSION},
         )
         assert response.status_code == 403
         data = response.json()
@@ -200,7 +200,7 @@ class TestIngestEndpointGuard:
             "/api/v1/ingest",
             files={"file": ("synthetic.pdf", b"%PDF-1.4", "application/pdf")},
             headers={
-                "X-Disclaimer-Ack": get_app_version_tag(),
+                "X-Disclaimer-Ack": settings.DISCLAIMER_VERSION,
                 "X-Document-Tag": "synthetic",
             },
         )

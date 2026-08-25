@@ -14,7 +14,6 @@ import hashlib
 import json
 import logging
 import re
-import struct
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -25,12 +24,12 @@ from uuid import uuid4
 import httpx
 from bs4 import BeautifulSoup, Tag
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as upsert_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.router import OpenRouterClient
 from app.db.models import ChunkEmbedding, LegalChunk, LegalSource
-from app.db.session import IS_SQLITE
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -1166,7 +1165,7 @@ async def upsert_chunks(
             invoked every 25 chunks to report upsert progress.
     """
     total = len(chunks)
-    backend = "sqlite-vec" if IS_SQLITE else "pgvector"
+    backend = "pgvector"
     logger.info(
         "upsert_chunks started: total=%d, backend=%s, model=%s",
         total,
@@ -1280,73 +1279,31 @@ async def _upsert_embedding(
     """Insert or update a ChunkEmbedding row for the given legal chunk.
 
     Uses ``ON CONFLICT DO UPDATE`` on ``chunk_id + model_name``
-    to atomically upsert the embedding vector.  The implementation is
-    dialect-dependent:
-
-    - **SQLite**: serialises the ``list[float]`` to a little-endian float32
-      ``blob`` via ``struct.pack`` and uses the ORM ``insert()`` with
-      ``LargeBinary`` / BLOB column.
-    - **PostgreSQL + pgvector**: uses **raw SQL** with an explicit
-      ``::vector`` cast.  The ORM model declares the ``embedding`` column as
-      ``LargeBinary`` (BYTEA) for dialect portability, but the actual DB
-      column is pgvector ``Vector`` type.  Using the ORM ``insert()`` sends
-      the data as ``$3::BYTEA``, which PostgreSQL rejects with
-      ``DatatypeMismatchError``.  Raw SQL with ``::vector`` cast avoids this,
-      matching the pattern in ``vector_backend.py``.
+    to atomically upsert the embedding vector. Since D-024 the ORM column is
+    pgvector's ``Vector`` type, so the plain dialect insert binds
+    ``list[float]`` directly — the former LargeBinary/raw-SQL `::vector`
+    cast workaround (D-014) is gone.
     """
     embedding_vec = chunk["embedding"]
     model_name = settings.EMBEDDING_MODEL
     chunk_id_str = str(legal_chunk.id)
 
-    if IS_SQLITE:
-        from sqlalchemy.dialects.sqlite import insert as upsert_insert
-
-        embedding_blob = struct.pack(f"<{len(embedding_vec)}f", *embedding_vec)
-        stmt = (
-            upsert_insert(ChunkEmbedding)
-            .values(
-                chunk_id=legal_chunk.id,
-                embedding=embedding_blob,
-                model_name=model_name,
-            )
-            .on_conflict_do_update(
-                index_elements=["chunk_id", "model_name"],
-                set_={"embedding": embedding_blob},
-            )
+    stmt = (
+        upsert_insert(ChunkEmbedding)
+        .values(
+            chunk_id=legal_chunk.id,
+            embedding=embedding_vec,
+            model_name=model_name,
         )
-        await session.execute(stmt)
-        logger.debug(
-            "upsert_embedding (sqlite): chunk_id=%s, model=%s, dim=%d",
-            chunk_id_str,
-            model_name,
-            len(embedding_vec),
+        .on_conflict_do_update(
+            index_elements=["chunk_id", "model_name"],
+            set_={"embedding": embedding_vec},
         )
-    else:
-        # PostgreSQL + pgvector: raw SQL with ::vector cast.
-        # Serialize embedding as pgvector literal: '[0.1, 0.2, ...]'
-        vec_literal = "[" + ", ".join(str(x) for x in embedding_vec) + "]"
-        new_id = str(uuid4())
-
-        from sqlalchemy.sql import text as sa_text
-
-        stmt = sa_text(
-            "INSERT INTO chunk_embedding (id, chunk_id, embedding, model_name) "
-            "VALUES ((:id)::uuid, (:chunk_id)::uuid, (:vec)::vector, :model_name) "
-            "ON CONFLICT (chunk_id, model_name) DO UPDATE SET embedding = (:vec)::vector"
-        )
-        await session.execute(
-            stmt,
-            {
-                "id": new_id,
-                "chunk_id": chunk_id_str,
-                "vec": vec_literal,
-                "model_name": model_name,
-            },
-        )
-        logger.debug(
-            "upsert_embedding (pgvector): chunk_id=%s, model=%s, dim=%d, vec_literal_len=%d",
-            chunk_id_str,
-            model_name,
-            len(embedding_vec),
-            len(vec_literal),
-        )
+    )
+    await session.execute(stmt)
+    logger.debug(
+        "upsert_embedding (pgvector): chunk_id=%s, model=%s, dim=%d",
+        chunk_id_str,
+        model_name,
+        len(embedding_vec),
+    )

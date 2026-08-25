@@ -18,8 +18,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-import pytest
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -125,16 +123,7 @@ class TestInitialMigration:
         ast.parse(source)
 
     def test_revision_id(self) -> None:
-        """001 is a root migration — down_revision must be None.
-
-        Skip if pgvector is not installed (desktop migration may have removed it).
-        """
-        import importlib
-        try:
-            importlib.import_module("pgvector")
-        except ImportError:
-            pytest.skip("pgvector not available — desktop SQLite migration active")
-
+        """001 is a root migration — down_revision must be None."""
         mod = _load_module_from_path(
             "_001_init_schema",
             PROJECT_ROOT / "alembic" / "versions" / "001_init_schema.py",
@@ -176,3 +165,74 @@ class TestInitialMigration:
         source = (PROJECT_ROOT / "alembic" / "versions" / "001_init_schema.py").read_text()
         assert "CREATE EXTENSION" in source
         assert "vector" in source
+
+
+# ---------------------------------------------------------------------------
+# 5. Single linear migration DAG (D-024) — no DB required
+# ---------------------------------------------------------------------------
+
+
+class TestSingleMigrationDag:
+    """Guard G2: exactly one head, one root, fully connected linear chain."""
+
+    def _load_all_migrations(self) -> list[object]:
+        versions = sorted((PROJECT_ROOT / "alembic" / "versions").glob("*.py"))
+        assert versions, "No migration files found"
+        return [
+            _load_module_from_path(f"_mig_{f.stem}", f)
+            for f in versions
+            if f.stem != "__init__"
+        ]
+
+    def test_exactly_one_root(self) -> None:
+        mods = self._load_all_migrations()
+        roots = [m for m in mods if getattr(m, "down_revision", "x") is None]
+        assert len(roots) == 1, f"Expected exactly one root migration, got {len(roots)}"
+
+    def test_exactly_one_head(self) -> None:
+        mods = self._load_all_migrations()
+        revisions = {m.revision for m in mods}
+        heads = [
+            m
+            for m in mods
+            if not any(m.revision == other.down_revision for other in mods)
+        ]
+        assert len(heads) == 1, (
+            f"Expected exactly one head revision, got {len(heads)}: "
+            f"{[h.revision for h in heads]}; all revisions: {revisions}"
+        )
+
+    def test_chain_fully_connected(self) -> None:
+        """Every down_revision must reference an existing revision (or be None)."""
+        mods = self._load_all_migrations()
+        revisions = {m.revision for m in mods}
+        for m in mods:
+            down = m.down_revision
+            if down is None:
+                continue
+            assert down in revisions, f"{m.revision} points to missing revision {down}"
+
+    def test_no_sqlite_branch_files(self) -> None:
+        """The former SQLite chain must stay deleted (G2 regression guard)."""
+        versions_dir = PROJECT_ROOT / "alembic" / "versions"
+        for stale in [
+            "007_sqlite_baseline.py",
+            "008_fix_stage_name_allowed.py",
+            "009_add_regime_and_notes_to_legal_parameter.py",
+            "010_add_pii_mapping_to_case_run.py",
+            "011_sqlite_legal_chunk_text_hash.py",
+        ]:
+            assert not (versions_dir / stale).exists(), f"Stale SQLite-branch file: {stale}"
+
+    def test_collapse_migration_carries_former_sqlite_schema(self) -> None:
+        """012 must contain the schema content of deleted 008/009/010."""
+        source = (
+            PROJECT_ROOT / "alembic" / "versions" / "012_pg_collapse_sqlite_branch.py"
+        ).read_text()
+        for fragment in [
+            "ck_pipeline_stage_log_stage_name",
+            "regime",
+            "notes",
+            "pii_mapping",
+        ]:
+            assert fragment in source, f"Collapse migration missing: {fragment}"

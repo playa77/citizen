@@ -122,6 +122,7 @@ class TestLegalChunk:
             "unit_type",
             "hierarchy_path",
             "text_content",
+            "text_hash",  # migration 011 (D-015): md5-based dedup key
             "effective_date",
             "legal_area",
             "created_at",
@@ -174,10 +175,14 @@ class TestChunkEmbedding:
         assert any(fk.column.table.name == "legal_chunk" and fk.ondelete == "CASCADE" for fk in fks)
 
     def test_embedding_column_type(self) -> None:
-        """embedding column is LargeBinary (BLOB) for dialect-agnostic vector storage."""
-        from sqlalchemy import LargeBinary
+        """embedding column is pgvector Vector(1536) — single backend (D-024)."""
+        from pgvector.sqlalchemy import Vector
+
+        from app.db.models import VECTOR_DIM
+
         col = models.ChunkEmbedding.__table__.c.embedding
-        assert isinstance(col.type, LargeBinary)
+        assert isinstance(col.type, Vector)
+        assert col.type.dim == VECTOR_DIM
 
 
 # ---------------------------------------------------------------------------

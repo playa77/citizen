@@ -112,6 +112,7 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
         normalized_text: str,
         issues: list[str],
         questions: list[str],
+        claims: list[dict[str, Any]],
         chunks: list[dict[str, Any]],
         *,
         system_prompt: str | None = None,
@@ -208,6 +209,15 @@ def mock_reasoning(monkeypatch: pytest.MonkeyPatch) -> None:
     mod.generate_grounded_answer = generate_grounded_answer  # type: ignore[attr-defined]
     mod.generate_grounded_answer_stream = generate_grounded_answer_stream  # type: ignore[attr-defined]
     mod.adversarial_review = adversarial_review  # type: ignore[attr-defined]
+    # app.services.calculation imports these private names from reasoning;
+    # the stub module must expose them or the calculation_check stage fails.
+    mod._STRICT_SUFFIX = ""  # type: ignore[attr-defined]
+
+    class JSONParseError(ValueError):
+        pass
+
+    mod.JSONParseError = JSONParseError  # type: ignore[attr-defined]
+    mod._parse_json_response = staticmethod(lambda *a: (_ for _ in ()).throw(JSONParseError("stub")))  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.reasoning", mod)
 
 
@@ -218,9 +228,12 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
     async def retrieve_chunks(questions: list[str]) -> list[dict[str, Any]]:
         return [
             {
-                "id": "chunk-1",
-                "text": "§ 31 Abs. 1 SGB II: …",
+                "chunk_id": "chunk-1",
+                "text_content": "§ 31 Abs. 1 SGB II: …",
                 "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "source_type": "sgb2",
+                "title": "SGB II",
+                "distance": 0.15,
             }
         ]
 
@@ -233,9 +246,12 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> list[dict[str, Any]]:
         return [
             {
-                "id": "chunk-1",
-                "text": "§ 31 Abs. 1 SGB II: …",
+                "chunk_id": "chunk-1",
+                "text_content": "§ 31 Abs. 1 SGB II: …",
                 "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "source_type": "sgb2",
+                "title": "SGB II",
+                "distance": 0.15,
             }
         ]
 
@@ -249,13 +265,33 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
         chunks = [
             {
-                "id": "chunk-1",
-                "text": "§ 31 Abs. 1 SGB II: …",
+                "chunk_id": "chunk-1",
+                "text_content": "§ 31 Abs. 1 SGB II: …",
                 "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "source_type": "sgb2",
+                "title": "SGB II",
+                "distance": 0.15,
             }
         ]
         per_area: dict[str, list[dict[str, Any]]] = {a: list(chunks) for a in legal_areas}
         return per_area, list(chunks)
+
+    async def retrieve_chunks_by_norm_reference(
+        normalized_text: str,
+        *,
+        source_types: tuple[str, ...] = (),
+        client=None,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "chunk_id": "chunk-1",
+                "text_content": "§ 31 Abs. 1 SGB II: …",
+                "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "source_type": "sgb2",
+                "title": "SGB II",
+                "distance": 0.15,
+            }
+        ]
 
     import sys
     import types
@@ -264,6 +300,7 @@ def mock_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
     mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
     mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
     mod.retrieve_chunks_for_areas = retrieve_chunks_for_areas  # type: ignore[attr-defined]
+    mod.retrieve_chunks_by_norm_reference = retrieve_chunks_by_norm_reference  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", mod)
 
 
@@ -452,28 +489,25 @@ class TestPipelineSequence:
         async for event in run_pipeline(state):
             events.append(event)
 
-        stage_names = [json.loads(e[len("data: ") :].strip())["stage"] for e in events]
-        # Filter out non-pipeline events (e.g. corpus_health).
-        stage_names = [s for s in stage_names if s in (
-            "normalization", "classification", "decomposition", "retrieval",
-            "construction", "verification", "adversarial_review", "generation",
-        )]
-        expected = [
-            "normalization",
-            "classification",
-            "decomposition",
-            "retrieval",
-            "construction",
-            "verification",
-            "generation",
-            "adversarial_review",
-        ]
-        assert stage_names == expected
+        parsed = [json.loads(e[len("data: ") :].strip()) for e in events]
+        # Canonical contract: every _STAGES entry completes, in order.
+        from app.core.pipeline import _STAGES
 
-        # All stages report "complete" (filter out non-stage events like corpus_health).
-        statuses = [json.loads(e[len("data: ") :].strip())["status"] for e in events
-                    if json.loads(e[len("data: ") :].strip()).get("stage") != "corpus_health"]
-        assert all(s == "complete" for s in statuses)
+        completed = [
+            p["stage"] for p in parsed
+            if p.get("status") == "complete" and p.get("stage") in _STAGES
+        ]
+        assert completed == list(_STAGES)
+
+        # Stage events carry running/complete (stream stages also emit
+        # progress); nothing may report an error status.
+        statuses = [
+            parsed_e["status"]
+            for parsed_e in parsed
+            if parsed_e.get("stage") and parsed_e["stage"] in _STAGES
+        ]
+        assert all(s in ("running", "complete") for s in statuses)
+        assert "error" not in statuses
 
     @pytest.mark.asyncio
     async def test_pipeline_mutates_state(self, mock_reasoning: None, mock_retrieval: None, mock_verification: None) -> None:

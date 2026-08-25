@@ -29,6 +29,7 @@ from app.core.router import (
     EmbeddingError,
     OpenRouterClient,
     RouterExhaustedError,
+    _deduplicate_preserve_order,
 )
 
 # ---------------------------------------------------------------------------
@@ -142,12 +143,20 @@ class TestFallbackChain:
         client: OpenRouterClient,
         mock_httpx_client: AsyncMock,
         caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """When the primary model returns 429, the client falls through to
-        FALLBACK_MODEL_2. Since PRIMARY_MODEL and FALLBACK_MODEL_1 are the
-        same, the deduplicated chain skips the duplicate and falls through
-        directly to FALLBACK_MODEL_2."""
+        """When earlier models in the chain return 429, the client falls
+        through to the last fallback model."""
         from app.core.config import settings
+
+        # The test's premise needs three DISTINCT models (the production
+        # defaults may deduplicate the chain); pin them explicitly.
+        monkeypatch.setattr(settings, "PRIMARY_MODEL", "model-primary")
+        monkeypatch.setattr(settings, "FALLBACK_MODEL_1", "model-fb1")
+        monkeypatch.setattr(settings, "FALLBACK_MODEL_2", "model-fb2")
+        client.models = _deduplicate_preserve_order(
+            [settings.PRIMARY_MODEL, settings.FALLBACK_MODEL_1, settings.FALLBACK_MODEL_2]
+        )
 
         _call_count = {"n": 0}
 
@@ -155,7 +164,6 @@ class TestFallbackChain:
             _call_count["n"] += 1
             model_used = kwargs["json"]["model"]
 
-            # Primary and fallback_1 are the same → deduplicated to one entry.
             if model_used in (settings.PRIMARY_MODEL, settings.FALLBACK_MODEL_1):
                 return httpx.Response(
                     status_code=429,
