@@ -293,3 +293,48 @@ test code.
 **Rationale:** The suite had drifted into 39 latent failures (13 unit, 26
 integration) invisible because prior local environments ran stale package
 installs. Post-repair: 878 passed / 0 failed against real PostgreSQL.
+
+### D-029 R2 — 2026-08-25
+**Decision:** Consolidate all disclaimer/notice/statement documents into two
+files: `DISCLAIMER_DE.md` and `DISCLAIMER_EN.md` (v2.0.0), each containing
+three parts — A project statement (former `STATEMENT.md`), B legal notice and
+disclaimer (former `DISCLAIMER_*.md` v1.1.0), C AI Act classification (former
+`COMPLIANCE.md` / `COMPLIANCE-EN.md` v1.1.0). The three source files are
+deleted. Content aligned to the current implementation while merging:
+B.12 acknowledgment mechanics now describe the actual logging (version via
+`X-Disclaimer-Ack`, audit row per analysis run — no document checksum, which
+no code computes); active-profile display via `GET /meta/active-profile`;
+`DEPLOYMENT_MODE` described as implemented incl. startup/ingest guards;
+UI references removed (D-025); nonexistent `AI-USAGE.md` marked planned.
+**Rejected:** Keeping three separate documents and only cross-linking — the
+task explicitly required one complete document per language; three files with
+overlapping scope had already produced divergent claims about what the app
+logs.
+**Rationale:** Owner-instructed consolidation ("condense/merge all
+disclaimer/notice/statement documents into DISCLAIMER_EN.md and
+DISCLAIMER_DE.md"). Accepted consequences: README/devdocs inbound links
+updated; the purpose-drift lint's default glob targets `STATEMENT.md` and
+`COMPLIANCE*.md` no longer match anything (script prints warnings, still
+exits 0 — behavior unchanged by design this sweep); `DISCLAIMER_*.md` is not
+in the lint's default target list, so merged compliance copy is currently
+outside its automatic scan — flagged as a coverage gap for a future code
+change.
+
+### D-030 R1 — 2026-08-25
+**Decision:** Documentation-reconciliation sweep against the executable
+sources; no production code changed. Updates: README (API-only wording,
+rate-limiter-not-mounted, tsvector→ILIKE keyword fallback, real documents
+routes, current defaults PIPELINE_TIMEOUT_SEC=480 / RETRIEVAL_MODE=
+per_question / 8 migrations / 37 test files, disclaimer links, no-checksum
+acknowledgment, corpus source hosts); `.env.example` rewritten to mirror
+`app/core/config.py` 1:1 (removes phantom `CORS_ORIGINS`, corrects all
+defaults); DEPLOYMENT.md (drop nonexistent `SECRET_KEY`, nginx SSE timeouts
+300s→540s per D-017); devdocs/DEV-INSTANCE.md (banner via API field,
+references to deleted COMPLIANCE.md and never-created PROVIDER-GO-NOGO.md
+fixed); historical status banners on docs/ planning artifacts;
+LETSFIXSTUPIDDBDESIGN.md marked RESOLVED via D-024..D-026; .gitignore gains
+`.corpus_sources.json` and `docker-compose.override.yml`, trailing-space fix.
+**Rationale:** Code is authoritative; docs had drifted behind the v2.0.0
+refactor. Guarded invariants: purpose-drift lint green over the new
+disclaimer pair; `test_api_documentation.py` parity green (doc untouched);
+README route table matches `app.openapi()` routes.

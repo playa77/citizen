@@ -1,5 +1,9 @@
 # WP-1.6 — Prüfstand-View: Golden Set & Eval-Ergebnisse in der GUI
 
+<!-- STATUS 2026-08-25: HISTORICAL work-package spec targeting the removed
+     web UI (D-025, api-only refactor). The underlying goldset/eval data is
+     exposed via /api/v1/goldset and /api/v1/eval/reports instead. -->
+
 | Feld | Wert |
 |---|---|
 | Version | 1.0.0 |

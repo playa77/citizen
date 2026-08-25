@@ -1,4 +1,12 @@
 # DOCUMENT 2: TECHNICAL SPECIFICATION
+
+<!-- STATUS 2026-08-25: HISTORICAL v1.0.0 planning artifact. It describes the
+     original 7-stage/single-route/static-frontend design and predates the
+     9-stage pipeline, the multi-area API, PostgreSQL-only storage (D-024),
+     and the api-only refactor (D-025). Several settings below (CORS_ORIGINS,
+     old timeout defaults) no longer exist in that form. Current truth:
+     app/core/config.py, AGENTS.md, API_DOCUMENTATION.md, DECISIONS.md. -->
+
 **System:** Citizen (v1.0)
 **Target Execution Agent:** Zero-Context Coding Agent
 **Compliance:** Strictly aligned with Document 1. All details traceable or explicitly marked.

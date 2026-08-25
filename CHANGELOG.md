@@ -92,7 +92,72 @@ D-026 (R2, testcontainers). Invariants G1–G5 / T1–T3 logged in DECISIONS.md.
 
 ---
 
-## 2026-08-25 — Docs-Reconciliation: README.md und .gitignore gegen ausführbare Quellen
+## 2026-08-25 — Docs reconciliation + disclaimer consolidation (v2.0.0 docs)
+
+Decisions: D-029 (R2, disclaimer merge), D-030 (R1, docs sweep). No
+production code changed.
+
+### Disclaimer consolidation (D-029)
+
+- `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` rewritten as v2.0.0 consolidated
+  documents — Part A project statement, Part B legal notice/disclaimer,
+  Part C AI Act classification.
+- Deleted `STATEMENT.md`, `COMPLIANCE.md`, `COMPLIANCE-EN.md` (content merged).
+- Content aligned with implementation: acknowledgment logging described as it
+  actually works (`X-Disclaimer-Ack` version + audit row per run; no checksum
+  exists), active profile via `GET /meta/active-profile`, `DEPLOYMENT_MODE`
+  switch documented as implemented, UI references removed (D-025),
+  never-created `AI-USAGE.md` marked planned.
+
+### Documentation drift fixes (D-030) — code treated as authoritative
+
+- **README.md** — API-only wording throughout (no browser UI); documents
+  routes corrected (`GET /documents/generator-options/{id}`,
+  `POST /documents/generate`; the listed `POST /cases/{id}/documents` does
+  not exist); architecture table: no tsvector (ILIKE keyword fallback),
+  8 migrations; config table: `PIPELINE_TIMEOUT_SEC=480`,
+  `RETRIEVAL_MODE=per_question`, rate limiter not mounted (`RATE_LIMIT_
+  REQUESTS=0`); directory tree: 37 test files (~12.6k lines); security
+  section: no IP processing, no-checksum acknowledgment, rate limiting off;
+  corpus source hosts incl. bsg.bund.de; links point at the merged
+  disclaimers.
+- **`.env.example`** — rewritten to mirror `app/core/config.py` (all settings,
+  current defaults). Removed phantom `CORS_ORIGINS` (field deleted from
+  Settings in WP-00.5); corrected `PIPELINE_TIMEOUT_SEC`, stage timeouts,
+  `TOP_K_RETRIEVAL`, `MAX_COSINE_DISTANCE`, `MAX_CHUNKS_FOR_FINAL`,
+  fallback models; added missing `INFERENCE_PROFILE`, `DEPLOYMENT_MODE`,
+  retrieval/corpus/cache/OCR-quality knobs.
+- **DEPLOYMENT.md** — dropped nonexistent `SECRET_KEY` env var; nginx SSE
+  proxy timeouts 300s → 540s per D-017 timeout chain; health example shows
+  v2.0.0.
+- **devdocs/DEV-INSTANCE.md** — dev banner described as the
+  `GET /api/v1/meta/deployment-mode` payload field (no UI left to render it);
+  references to deleted `COMPLIANCE.md` and never-created
+  `devdocs/PROVIDER-GO-NOGO.md` fixed.
+- **docs/** — historical status banners added to `technical_specification.md`,
+  `design_document.md`, `design_v1.0.0.md`, `GAP-REPORT.md`,
+  `wp-1.6-pruefstand-v1.0.0.md` (v1.0.0-era planning artifacts superseded by
+  D-024/D-025); ARCHITECTURE-ACTUAL.md already carried one.
+- **LETSFIXSTUPIDDBDESIGN.md** — marked RESOLVED via D-024/D-025/D-026 with a
+  pointer to current truth.
+- **AGENTS.md** — `.env.example` now documented as mirroring config.py;
+  purpose-drift scan set description updated post-merge (lint code
+  untouched; `DISCLAIMER_*.md` outside its default targets = logged gap).
+- **.gitignore** — added runtime state `.corpus_sources.json` (written by
+  `services/corpus.py`) and `docker-compose.override.yml` (carries DB
+  credentials per DEPLOYMENT.md); removed trailing space after
+  `.secret_salt`.
+
+### Known discrepancies reported, NOT changed (code behavior frozen)
+
+- `app/api/routes/meta.py` `_DISCLAIMER_TEXT` (served by
+  `/api/v1/meta/disclaimer/text`) claims "uploaded documents are not stored"
+  and "IPs are logged anonymously" — both false (uploads persist in
+  PostgreSQL; IPs are never touched). Fixing requires a code change.
+- Purpose-drift lint default targets include files that no longer exist;
+  adding `DISCLAIMER*.md` would change lint behavior and was out of scope.
+
+---
 
 ## 2026-08-07 — WP-62: Dev-instance Art. 2(8) hardening (Roadmap v2.0.0)
 

@@ -1,6 +1,6 @@
 # ==========================================
 # Citizen - .gitignore
-# Version: 1.1.0 | 2026-08-25
+# Version: 1.2.0 | 2026-08-25
 # ==========================================
 
 # Python / Bytecode
@@ -23,7 +23,10 @@ env/
 .env.development
 .env.production
 *.pem
-.secret_salt 
+.secret_salt
+
+# Local production override (carries DB credentials, see DEPLOYMENT.md)
+docker-compose.override.yml
 
 # Logs
 # (As specified in Document 2: Project Structure)
@@ -105,6 +108,9 @@ wheels/
 uploads/
 tmp/
 temp/
+
+# Runtime state written by the corpus service (source selection)
+.corpus_sources.json
 
 # misc stuff
 ideas/

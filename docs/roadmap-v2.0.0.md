@@ -1,6 +1,11 @@
 # Citizen — Roadmap v2.0.0: Legal Posture, Compliance & Provider Readiness
 
 <!-- Version: 2.0.0 | 2026-08-07 -->
+<!-- STATUS 2026-08-25: planning document, kept as written. Note that the
+     deliverables `COMPLIANCE.md`, `COMPLIANCE-EN.md` and `STATEMENT.md`
+     referenced below were later consolidated into DISCLAIMER_DE.md /
+     DISCLAIMER_EN.md (v2.0.0) — read those file names as "the disclaimer
+     documents". -->
 <!-- Supersedes: citizen-roadmap-v1.0.0 (P0–P5, WP-00…WP-54) for all NEW work. -->
 <!-- Roadmap v1.0.0 remains the record for hardening work already completed. -->
 <!-- Canonical version source: pyproject.toml (per D-9). Baseline: v0.4.5. -->

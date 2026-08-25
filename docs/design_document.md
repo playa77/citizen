@@ -1,4 +1,10 @@
 # DOCUMENT 1: DESIGN DOCUMENT
+
+<!-- STATUS 2026-08-25: HISTORICAL v1.0.0 planning artifact (original design
+     brief). The shipped system deviates: 9-stage pipeline, multi-area API,
+     PostgreSQL-only storage (D-024), api-only service without web UI
+     (D-025). Current truth: AGENTS.md, API_DOCUMENTATION.md, DECISIONS.md. -->
+
 **System:** Citizen (v1.0)
 **License:** MIT
 **Target Platform:** Ubuntu (Primary), Windows/macOS (Secondary)

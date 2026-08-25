@@ -15,13 +15,15 @@ wird an den Gesetzestext gebunden, jede Berechnung deterministisch
 nachgerechnet, jede Frist auf den Tag genau bestimmt — und die Qualität wird
 gegen ein öffentliches, versioniertes Golden Set gemessen statt behauptet.
 
-**Warum es dieses Projekt gibt:** [STATEMENT.md](STATEMENT.md)
+**Warum es dieses Projekt gibt:** [DISCLAIMER_DE.md](DISCLAIMER_DE.md),
+Teil A („Projektstatement")
 
 ## Rechtlicher Status
 
 Die rechtliche Einordnung von Citizen unter der KI-Verordnung (VO (EU)
-2024/1689) ist in [COMPLIANCE.md](COMPLIANCE.md) dokumentiert (kanonisch,
-deutsch; englischer Spiegel: [COMPLIANCE-EN.md](COMPLIANCE-EN.md)). Kurzfassung:
+2024/1689) ist in [DISCLAIMER_DE.md](DISCLAIMER_DE.md), Teil C, dokumentiert
+(kanonisch, deutsch; englischer Spiegel: [DISCLAIMER_EN.md](DISCLAIMER_EN.md),
+Part C). Kurzfassung:
 
 * **`dev`** — nur Entwicklungs-/Testbetrieb mit synthetischen Daten:
   Entwicklungsphasen-Freistellung (Art. 2(8) KI-VO), keine Pflichten ausgelöst.
@@ -30,10 +32,11 @@ deutsch; englischer Spiegel: [COMPLIANCE-EN.md](COMPLIANCE-EN.md)). Kurzfassung:
 * **`provider`** — Dritte können Analysen erhalten: der Autor wird **Anbieter**
   (Art. 3(3) KI-VO); die Transparenzpflichten nach Art. 50
   (KI-Interaktionshinweis, maschinenlesbare Kennzeichnung) sowie die
-  DSGVO- und RDG-Auflagen werden aktiv (siehe COMPLIANCE.md).
+  DSGVO- und RDG-Auflagen werden aktiv (siehe DISCLAIMER_DE.md, Teil C).
 
 Der jeweils aktive Modus wird über die Einstellung `DEPLOYMENT_MODE` bestimmt
-(Entscheidung **D-019** im [Entscheidungs-Ledger](DECISIONS.md)).
+(Entscheidung **D-019** im [Entscheidungs-Ledger](DECISIONS.md)); im Modus
+`dev` verweigert die Instanz ohne `CITIZEN_SYNTHETIC_DATA_ONLY=true` den Start.
 
 ## Rechtsgebiete
 
@@ -51,7 +54,7 @@ Der jeweils aktive Modus wird über die Einstellung `DEPLOYMENT_MODE` bestimmt
 | **Andere** | Auffangkategorie | ⚠️ experimentell |
 
 Experimentelle Gebiete sind funktionsfähig, aber nicht verifiziert; sie sind
-in Oberfläche und Ausgaben entsprechend gekennzeichnet.
+in den API-Ausgaben entsprechend gekennzeichnet.
 
 ## Kernfunktionen
 
@@ -78,8 +81,9 @@ in Oberfläche und Ausgaben entsprechend gekennzeichnet.
   Rechtswechseln innerhalb eines Antrags.
 * **Golden Set & Prüfstand:** Versioniertes Set verifizierter Prüffälle
   (synthetische Bescheide mit erwarteten Befunden, Berechnungen und
-  Fristen) — im UI als „Prüfstand" klickbar aufbereitet, inklusive
-  Demo-Modus („Diesen Fall live analysieren") und Eval-Ergebnisansicht.
+  Fristen) — über die Goldset-API abrufbar (`/api/v1/goldset/...`), inklusive
+  Demo-Modus (Prüffall live durch die Pipeline schicken) und
+  Eval-Ergebnis-Endpunkten.
 * **Eval-Harness:** `python -m eval.runner` führt die echte Pipeline gegen das
   Goldset aus und misst Befund-Erkennung, Zitatpräzision,
   Halluzinationsrate, Rechen- und Fristgenauigkeit. Versionierte Reports;
@@ -95,8 +99,8 @@ in Oberfläche und Ausgaben entsprechend gekennzeichnet.
   fertigen Dokumenten wieder eingesetzt. Externe Inferenz läuft
   ausschließlich über versionierte Profile (`eu-avv` als Standard für
   Organisationen: nur freigegebene EU-Endpunkte mit AVV; technischer
-  Egress-Guard blockiert alles andere). Das aktive Profil wird in UI und
-  Dokumenten ausgewiesen.
+  Egress-Guard blockiert alles andere). Das aktive Profil wird über die
+  Meta-API ausgewiesen und in Dokumenten angegeben.
 * **Adversariale Rechtsprüfung:** Mehrperspektivische Gegenprüfung
   („Rechtsprüfungsrat") aus Verteidigungs-, Behörden- und Gerichtssicht.
 * **Lokale OCR-Pipeline:** Vollständig lokale Dokumentaufnahme
@@ -104,24 +108,25 @@ in Oberfläche und Ausgaben entsprechend gekennzeichnet.
   Fallback-Kette (`pdfplumber` → `PyMuPDF` → `Tesseract`) und
   verpflichtender Nutzer-Bestätigung des erkannten Textes vor der Analyse.
 * **Hierarchischer Gesetzeskorpus:** Automatisierter Abruf von 16
-  Quelltypen (gesetze-im-internet.de, arbeitsagentur.de), gechunkt auf vier
-  Ebenen (Gesetz → § → Absatz → Satz), zur Laufzeit auswählbar;
-  „Rechtsstand"-Anzeige mit Aktualitätswarnung.
-* **First-Run-Bestätigung:** Analyse erst nach ausdrücklicher, lokal
-  protokollierter Kenntnisnahme des rechtlichen Hinweises (Version +
-  Prüfsumme); API-seitig durchgesetzt.
+  Quelltypen (gesetze-im-internet.de, arbeitsagentur.de, bsg.bund.de),
+  gechunkt auf vier Ebenen (Gesetz → § → Absatz → Satz), zur Laufzeit
+  auswählbar; „Rechtsstand"-Anzeige mit Aktualitätswarnung.
+* **First-Run-Bestätigung:** Analyse erst nach ausdrücklicher Kenntnisnahme
+  des rechtlichen Hinweises (Header `X-Disclaimer-Ack` mit der aktuellen
+  Fassungsnummer); API-seitig durchgesetzt.
 * **Audit-Trail:** Jeder Lauf, jede Pipeline-Stufe, jeder Befund und jede
   Evidenzbindung wird in PostgreSQL persistiert.
-* **Browserbasierte Oberfläche:** Vanilla HTML/JS/CSS, dunkles Theme,
-  deutschsprachig; Modi: Analyse (Fall-Journey), Prüfstand, Einstellungen.
+* **API-only:** Kein Web-UI, kein GUI-Client in diesem Repository — die
+  versionierte REST-API unter `/api/v1` ist die einzige externe Schnittstelle
+  (D-025), dokumentiert in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 
 ## Architektur
 
 | Ebene | Technologie |
 |---|---|
 | **Backend** | FastAPI, Uvicorn (SSE-Streaming) |
-| **Datenbank** | PostgreSQL 16 + `pgvector` + `tsvector` |
-| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (13 Migrationen, eine lineare DAG — PostgreSQL-only, D-024) |
+| **Datenbank** | PostgreSQL 16 + `pgvector` (Vektorsuche, ILIKE-Keyword-Fallback) |
+| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (8 Migrationen, eine lineare DAG — PostgreSQL-only, D-024) |
 | **LLM-Anbindung** | Versionierte Inferenzprofile (`eu-avv` Standard, `extern-openrouter`, `on-prem`-Slot); Modell je Pipeline-Stufe konfigurierbar; Fallback-Kette |
 | **OCR** | pdfplumber → PyMuPDF → Tesseract (deutsch) |
 | **Tooling** | ruff (Format & Lint), mypy (strict), pytest (Unit + Integration) |
@@ -196,9 +201,9 @@ curl -X POST http://localhost:8000/api/v1/corpus/update \
   -H "X-Disclaimer-Ack: v0.1.0" \
   -H "Content-Type: application/json" -d '{}'
 
-# 7. App öffnen — beim ersten Start wird die Bestätigung des
-#    rechtlichen Hinweises verlangt
-#    http://localhost:8000
+# 7. API nutzen — geschützte Endpunkte verlangen den Header
+#    X-Disclaimer-Ack mit der aktuellen Fassungsnummer
+#    Interaktive Doku: http://localhost:8000/docs
 ```
 
 Stoppen:
@@ -223,7 +228,8 @@ docker compose down
 | **cases** | `PATCH` | `/api/v1/cases/{id}/claims/{cid}` | Befund bearbeiten |
 | **cases** | `POST` | `/api/v1/cases/{id}/adjudicate` | Nutzer-Adjudikation (bestätigen/markieren/korrigieren) |
 | **cases** | `GET` | `/api/v1/cases/{id}/export` | Fall exportieren (JSON/Markdown) |
-| **documents** | `POST` | `/api/v1/cases/{id}/documents` | Aktionsdokumente erzeugen (Widerspruch, § 44, § 25) |
+| **documents** | `GET` | `/api/v1/documents/generator-options/{case_run_id}` | Verfügbare Aktionsdokumente + Fristdaten je Fall |
+| **documents** | `POST` | `/api/v1/documents/generate` | Aktionsdokument erzeugen (Widerspruch, § 44, § 25) |
 | **goldset** | `GET` | `/api/v1/goldset` | Goldset-Manifest und Fallliste (Prüfstand) |
 | **goldset** | `GET` | `/api/v1/goldset/{case_id}` | Vollständiger Prüffall |
 | **goldset** | `POST` | `/api/v1/goldset/{case_id}/analyze` | Prüffall live durch die Pipeline schicken (Demo-Modus) |
@@ -260,7 +266,7 @@ Vollständige, interaktive Dokumentation nach dem Start unter `/docs`
 
 ```
 citizen/
-├── alembic/                              # 13 Migrationen (eine lineare PG-DAG)
+├── alembic/                              # 8 Migrationen (eine lineare PG-DAG)
 ├── app/
 │   ├── api/routes/                       # 12 Routenmodule (analyze, cases,
 │   │                                     #  conversations, corpus, documents,
@@ -268,7 +274,7 @@ citizen/
 │   │                                     #  intake, meta, ocr, presets)
 │   ├── core/                             # config, pipeline (SSE), router
 │   ├── db/                               # 14 ORM-Modelle, Session, Vektor-Backend
-│   ├── middleware/                       # Disclaimer-Durchsetzung, Rate-Limit
+│   ├── middleware/                       # Disclaimer-Durchsetzung, Noindex-Header
 │   ├── services/                         # 24 Servicemodule, u.a.:
 │   │                                     #  fristen, rules_engine, regime,
 │   │                                     #  parameter_store, pseudonymization,
@@ -276,12 +282,14 @@ citizen/
 │   │                                     #  document_generators, retrieval
 │   └── utils/                            # image, pdf, text, tokens
 ├── eval/                                 # Goldsets, Eval-Harness, Reports
-├── tests/                                # 36 Testdateien (~12.300 Zeilen)
-├── docs/                                 # Design-Dokument, technische Spezifikation,
+├── tests/                                # 37 Testdateien (~12.600 Zeilen)
+├── docs/                                 # Historische Planungsartefakte: Design-Dokument,
+│                                         #  technische Spezifikation (v1.0.0-Ära),
 │                                         #  Roadmap v2.0.0, Gap-Report, Architektur
 ├── devdocs/                              # Betriebsdokumentation (Dev-Instanz)
 ├── scripts/                              # Wartungs-Skripte (Purpose-Drift-Lint,
 │                                         #  Parameter-Seeding, Benchmark)
+├── API_DOCUMENTATION.md                  # Vollständiger API-Vertrag (D-025)
 ├── docker-compose.yml
 ├── Dockerfile
 ├── pyproject.toml
@@ -294,12 +302,14 @@ citizen/
 |---|---|---|---|
 | **Inferenz** | `INFERENCE_PROFILE` | `eu-avv` | Aktives Inferenzprofil (`eu-avv` / `extern-openrouter` / `on-prem`) |
 | | Profildefinitionen | `config/inference_profiles.yaml` | Endpunkte, AVV-Status, Modell je Stufe, Egress-Allowlist |
+| **Betriebsmodus** | `DEPLOYMENT_MODE` | `dev` | Posture (`dev`/`self`/`provider`, D-019); `dev` verlangt zusätzlich `CITIZEN_SYNTHETIC_DATA_ONLY=true` |
 | **Pipeline** | `ENABLE_CALCULATION_CHECK` | `True` | Deterministische SGB-II-Rechenprüfung |
-| | `PIPELINE_TIMEOUT_SEC` | `120` | Hartes Pipeline-Timeout |
-| **Retrieval** | `RETRIEVAL_MODE` | `combined` | Embedding-Strategie |
+| | `PIPELINE_TIMEOUT_SEC` | `480` | Hartes Pipeline-Timeout (Timeout-Kette D-017) |
+| **Retrieval** | `RETRIEVAL_MODE` | `per_question` | Embedding-Strategie (`per_question` / `combined`) |
 | | `TOP_K_RETRIEVAL` | `10` | Max. Chunks je Anfrage |
 | **Korpus** | `CORPUS_SOURCES` | `["sgb2", "sgbx"]` | Standardquellen (zur Laufzeit änderbar) |
-| **Rate-Limit** | `RATE_LIMIT_REQUESTS` / `_WINDOW` | `60` / `60` | Anfragen je Zeitfenster (Sekunden) |
+| | `GOLDSET_PATH` | `eval/goldsets/goldset-v0.1.0.yaml` | Goldset der Prüfstand-API |
+| **Rate-Limit** | `RATE_LIMIT_REQUESTS` / `_WINDOW` | `0` / `60` | In-Memory-Limiter existiert, ist aber nicht eingebunden (`0` = deaktiviert) |
 | **OCR** | `ENABLE_OCR_LLM_SYNTHESIS` | `False` | LLM-Synthese der Dual-OCR-Ergebnisse |
 
 Vollständige Liste in `.env.example`.
@@ -337,13 +347,17 @@ mypy app/
 * **EU-Inferenz unter AVV (`eu-avv`, Standard):** Übermittlung ausschließlich
   an freigegebene EU-Endpunkte; ein technischer Egress-Guard blockiert
   nicht freigegebene Ziele und erkannte Klartext-Identifikatoren.
-* **Protokollierte Kenntnisnahme:** Erst-Start-Bestätigung des rechtlichen
-  Hinweises mit Version und Prüfsumme; Durchsetzung auf API-Ebene
-  (`X-Disclaimer-Ack` bzw. In-App-Bestätigung).
-* **Datenminimierung:** IP-Adressen werden nie im Klartext gespeichert;
+* **Protokollierte Kenntnisnahme:** Geschützte Endpunkte verlangen den
+  Header `X-Disclaimer-Ack` mit der aktuellen Fassungsnummer des rechtlichen
+  Hinweises; die bestätigte Fassung wird je Analyse-Lauf im lokalen
+  Audit-Protokoll festgehalten.
+* **Datenminimierung:** IP-Adressen werden weder verarbeitet noch gespeichert;
   automatisch erzeugtes `.secret_salt` beim ersten Start; Logs enthalten
   Platzhalter statt personenbezogener Klartextdaten.
-* **Rate-Limiting:** Sliding-Window-Limiter standardmäßig aktiv.
+* **Kein Rate-Limiting aktiv:** Der in `app/middleware/rate_limit.py`
+  vorhandene Sliding-Window-Limiter ist standardmäßig nicht eingebunden
+  (`RATE_LIMIT_REQUESTS=0`); Deployments hinter nginx können dort eigene
+  Limits setzen.
 
 ## Lizenz
 

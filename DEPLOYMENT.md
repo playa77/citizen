@@ -1,6 +1,6 @@
 # Citizen Deployment Guide
 
-**Version: 1.0.0 | 2026-07-13**
+**Version: 1.1.0 | 2026-08-25**
 
 Production deployment of the Citizen legal reasoning engine on VPS.
 
@@ -27,7 +27,7 @@ Production deployment of the Citizen legal reasoning engine on VPS.
 Internet → Cloudflare (HTTPS) → VPS nginx :443
                                   ├─ /health → proxy_pass http://127.0.0.1:8001
                                   ├─ /api/*  → proxy_pass http://127.0.0.1:8001
-                                  ├─ /api/v1/analyze → SSE (no buffering, 300s timeout)
+                                  ├─ /api/v1/analyze → SSE (no buffering, 540s timeout)
                                   └─ /static/* → entfallen (API-only, D-025)
 
 Docker Compose:
@@ -58,7 +58,6 @@ Copy `.env.example` and fill in all values. Critical variables:
 ```bash
 DATABASE_URL=postgresql+asyncpg://citizen_user:<PASSWORD>@db:5432/citizen_db
 OPENROUTER_API_KEY=sk-or-v1-...
-SECRET_KEY=<random 64-char string>
 ```
 
 ### 3. Create docker-compose.override.yml
@@ -103,6 +102,9 @@ server {
     }
 
     # SSE streaming for /api/v1/analyze (main analysis)
+    # 540s per D-017: nginx proxy timeout must exceed the pipeline budget
+    # (PIPELINE_TIMEOUT_SEC = 480s), which must exceed the sum of per-call
+    # stage timeouts.
     location /api/v1/analyze {
         proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
@@ -110,8 +112,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
+        proxy_read_timeout 540s;
+        proxy_send_timeout 540s;
     }
 
     # SSE streaming for /api/v1/goldset (Prüfstand demo analysis)
@@ -122,8 +124,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
+        proxy_read_timeout 540s;
+        proxy_send_timeout 540s;
     }
 }
 ```
@@ -156,7 +158,7 @@ docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --buil
 ```bash
 # Health check
 curl https://workbench.gronowski.cc/health
-# → {"status":"ok","version":"v1.0.0"}
+# → {"status":"ok","version":"v2.0.0"}
 
 # Verify DB tables
 docker exec citizen-db-1 psql -U citizen_user -d citizen_db -c "\dt"

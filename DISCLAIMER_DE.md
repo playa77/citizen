@@ -1,18 +1,21 @@
-# Rechtlicher Hinweis und Haftungsausschluss
+# Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 1.1.0
-
-**Stand:** 2026-07-12
-
-**Ersetzt:** Fassung vom 2026-05-09 (rückwirkend als Version 1.0.0 geführt)
+**Version:** 2.0.0 · **Stand:** 2026-08-25
 
 **Autor:** www.github.com/playa77
 
 **Repository:** https://github.com/playa77/citizen
 
-Dieses Dokument enthält rechtliche Hinweise und Haftungsausschlüsse. Es ersetzt
-oder ändert die anwendbaren Open-Source-Lizenzbedingungen nicht, sofern dies
-nicht ausdrücklich angegeben ist.
+Dieses Dokument fasst den rechtlichen Hinweis und Haftungsausschluss, das
+Projektstatement sowie die Compliance-/KI-VO-Klassifizierung des Projekts in
+einer einzigen deutschsprachigen Fassung zusammen (englische Fassung:
+[DISCLAIMER_EN.md](DISCLAIMER_EN.md)). Es ersetzt die früheren eigenständigen
+Dokumente `DISCLAIMER_DE.md` (v1.1.0), `STATEMENT.md` (v1.0.0) und
+`COMPLIANCE.md` (v1.1.0).
+
+Es enthält rechtliche Hinweise und Haftungsausschlüsse. Es ersetzt oder ändert
+die anwendbaren Open-Source-Lizenzbedingungen nicht, sofern dies nicht
+ausdrücklich angegeben ist.
 
 Diese Software wird unter der MIT-Lizenz und **unentgeltlich** bereitgestellt.
 Durch die Bereitstellung, den Abruf oder die Nutzung entsteht kein Entgelt-,
@@ -27,7 +30,113 @@ Vorschriften.
 
 ---
 
-## 1. Charakter der Software
+## Teil A — Warum es dieses Projekt gibt
+
+### Was ist
+
+Citizen ist heute ein Prototyp: eine Analyse-Pipeline, die deutsche
+Sozialrechts-Bescheide einliest, jede Aussage an den Gesetzestext bindet,
+Berechnungen deterministisch nachrechnet und Fristen auf den Tag genau
+bestimmt. Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
+an dem jede Änderung gemessen wird. Es gibt bekannte Grenzen, und sie stehen
+im Repo statt unter dem Teppich. Das ist der ehrliche Ist-Zustand:
+funktionierend, ungeschliffen, messbar — und noch kein Produkt.
+
+### Was sein soll
+
+Ein Mensch hält einen Bescheid in der Hand, von dem seine Existenz abhängt,
+und bekommt innerhalb von Minuten vier Antworten: **Was steht da drin? Stimmt
+das? Bis wann muss ich reagieren? Was mache ich jetzt?** — nachvollziehbar
+belegt, auf den Cent nachgerechnet, auf den Tag terminiert, in verständlicher
+Sprache. Kostenlos. Quelloffen. Ohne dass seine Daten Europa verlassen.
+Und dasselbe Werkzeug liegt in jeder Sozialberatungsstelle und macht aus einer
+Dreiviertelstunde Erstprüfung zehn Minuten mit Paragraphenbeleg.
+
+### Warum
+
+Im Jahr 2025 wurden über eine halbe Million Widersprüche gegen
+Jobcenter-Bescheide eingelegt. Rund jeder dritte war erfolgreich. In mehr als
+42.000 Fällen hatte die Behörde das Gesetz nachweislich falsch angewandt.
+Diese Quote ist seit Jahren stabil — sie ist kein Ausrutscher, sie ist ein
+Systemzustand. Und sie trifft asymmetrisch: auf der einen Seite eine
+Verwaltung, die millionenfach maschinell Bescheide erzeugt; auf der anderen
+ein einzelner Mensch mit einer Monatsfrist, ohne Anwalt, oft ohne die Sprache
+des Bescheids zu sprechen — im wörtlichen wie im übertragenen Sinn.
+
+Ein Rechtsstaat ist ein Versprechen: dass Rechte nicht davon abhängen, wer man
+ist und was man sich leisten kann. Dieses Versprechen ist nur so viel wert wie
+seine Durchsetzbarkeit. Ein Recht, das man nicht kennt, eine Frist, die man
+verpasst, eine Berechnung, die man nicht prüfen kann — das ist auf dem Papier
+ein Recht und in der Wirklichkeit keines.
+
+Dazu kommt heute ein zweiter Grund, der über das Sozialrecht hinausweist. Wir
+stehen am Anfang eines Übergangs, in dem maschinelle Intelligenz zur
+Grundinfrastruktur wird — und Übergänge haben eine tückische Eigenschaft:
+**Sie frieren die Machtverteilung ein, die im Moment des Übergangs besteht.**
+Verwaltungen werden ihre Seite automatisieren; das ist sicher. Wenn die
+Bürgerseite nicht dieselbe Klasse von Werkzeugen bekommt, wird die bestehende
+Asymmetrie nicht nur konserviert, sondern auf höherem Niveau festgeschrieben.
+Citizen ist mein Beitrag zur Gegenthese: dieselbe Fähigkeit, dieselbe
+Gründlichkeit, dieselbe Unermüdlichkeit — in der Hand der schwächsten Partei.
+Es ist eine kleine, konkrete Antwort auf die große Frage, wem die Maschinen
+dienen sollen: allen. Sonst niemandem.
+
+Und ein dritter, nüchterner Grund, aus der Perspektive komplexer Systeme: Eine
+Fehlerquote, die über Jahre stabil bei einem Drittel liegt, bedeutet, dass die
+Rückkopplungsschleife des Systems beschädigt ist. Jeder fehlerhafte Bescheid,
+dem niemand widerspricht, ist ein Fehlersignal, das nie ankommt. Werkzeuge,
+die Widersprüche präziser, belegter und häufiger machen, sind deshalb kein
+Angriff auf die Verwaltung — sie sind die Reparatur ihres Korrektivs. Eine
+Verwaltung, deren Fehler zuverlässig gefunden werden, wird besser. Davon
+profitieren am Ende beide Seiten des Schreibtischs.
+
+### Grundsätze
+
+**Nachrechenbarkeit statt Vertrauen.** Was deterministisch geht — Fristen,
+Beträge, Zitate — wird deterministisch gerechnet und verifiziert. Das
+Sprachmodell ist Werkzeug, nicht Autorität.
+
+**Ehrlichkeit über Grenzen.** Wenn ein Bescheid rechtmäßig ist, sagt Citizen
+das. Falsche Hoffnung ist keine Hilfe, sie ist eine zweite Kränkung. Unsichere
+Rechtsfragen werden als unsicher gekennzeichnet, nicht weggeglättet.
+
+**Die Daten bleiben beim Menschen.** Pseudonymisierung vor jeder Verarbeitung,
+Inferenz ausschließlich in Europa unter Auftragsverarbeitung, lokale
+Datenhaltung. Behauptet wird nur, was technisch erzwungen ist.
+
+**Der Mensch entscheidet.** Citizen informiert, belegt, rechnet nach und
+liefert Bausteine. Bewertet, entschieden und unterschrieben wird von Menschen —
+vom Betroffenen selbst oder von Beratenden, die beraten dürfen.
+
+**Offenheit als Prüfbarkeit.** MIT-Lizenz, öffentliches Golden Set,
+versionierte Korrektur eigener Fehler. Ein Werkzeug, das Behördenfehler findet,
+muss sich selbst dieselbe Prüfbarkeit gefallen lassen.
+
+### Was das nicht ist
+
+Keine Rechtsberatung — Rechtsinformation und Selbsthilfe. Kein Startup — es
+gibt nichts an Menschen in Existenznot zu verdienen, und es wird hier auch
+nicht versucht. Keine Kampfansage an Jobcenter-Mitarbeitende — die meisten
+arbeiten unter Bedingungen, die Fehler erzeugen; dieses Werkzeug richtet sich
+gegen Fehler, nicht gegen Menschen.
+
+### Einladung
+
+Wer juristisch prüfen, Fälle validieren, Code beitragen oder das Werkzeug in
+einer Beratungsstelle erproben will: Issues und Pull Requests sind offen. Die
+beste Form der Kritik an diesem Projekt ist ein Golden-Set-Fall, den es falsch
+beantwortet.
+
+*Zahlen: Widerspruchs- und Klagestatistik der Bundesagentur für Arbeit 2025
+(147.213 von 476.728 entschiedenen Widersprüchen revidiert; 42.303 Fälle
+fehlerhafter Rechtsanwendung; Jobcenter Essen: 53,7 % Fehlerquote bei
+erledigten Widersprüchen, Mai 2026).*
+
+---
+
+## Teil B — Rechtlicher Hinweis und Haftungsausschluss
+
+### B.1 Charakter der Software
 
 Dieses Repository enthält persönliche, maßgeschneiderte Software, die in erster
 Linie für den eigenen Gebrauch, zur Dokumentation, zu Experimentierzwecken und
@@ -46,7 +155,7 @@ keine professionelle Dienstleistung, keine Rechtsdienstleistung, keine
 Empfehlung, keine Garantie und keine Zusicherung dar, dass die Software für
 einen bestimmten Zweck geeignet ist.
 
-## 2. Keine Rechtsberatung
+### B.2 Keine Rechtsberatung
 
 Diese Software ist ein technisches Werkzeug ausschließlich zu Informations-,
 Bildungs-, Experimentier- und persönlichen Referenzzwecken.
@@ -80,7 +189,7 @@ rechtlich relevante Handlungen vornehmen oder unterlassen.
 Holen Sie stets qualifizierten Rechtsrat ein, bevor Sie Handlungen mit
 rechtlichen Folgen vornehmen oder unterlassen.
 
-## 3. KI-generierte Inhalte und Genauigkeit
+### B.3 KI-generierte Inhalte und Genauigkeit
 
 Ausgaben können durch künstliche Intelligenz, große Sprachmodelle,
 automatisierte Abrufsysteme, Ranking-Systeme, Zitiersysteme oder sonstige
@@ -104,13 +213,14 @@ Verordnungen, Verwaltungsvorschriften, Gerichtsentscheidungen, amtlichen
 Veröffentlichungen, Fristen, Verfahrensanforderungen und professionellem
 Rechtsrat.
 
-## 4. Datenverarbeitung, Datenschutz und Inferenzprofile
+### B.4 Datenverarbeitung, Datenschutz und Inferenzprofile
 
 Die Datenhaltung der Software erfolgt lokal. Soweit die Software externe
 Dienste zur Verarbeitung nutzt (insbesondere Sprachmodell- und
 Embedding-Dienste), geschieht dies ausschließlich über konfigurierbare,
-versionierte **Inferenzprofile**. Das jeweils aktive Profil wird in der
-Anwendung angezeigt und in erzeugten Dokumenten ausgewiesen.
+versionierte **Inferenzprofile**. Das jeweils aktive Profil kann über den
+API-Endpunkt `GET /api/v1/meta/active-profile` abgefragt werden und wird in
+erzeugten Dokumenten ausgewiesen.
 
 Die Software sieht insbesondere folgende Profile vor:
 
@@ -145,7 +255,7 @@ die Software betreibt.
 
 Wer die Software als betroffene Person auf **eigene** Dokumente und Daten
 anwendet, entscheidet hierüber eigenverantwortlich und informiert unter dem
-jeweils aktiven Profil. Wer mit der Software Daten **Dritter** verarbeitet
+jeweilig aktiven Profil. Wer mit der Software Daten **Dritter** verarbeitet
 (insbesondere Beratungsstellen und sonstige Organisationen), ist selbst
 Verantwortlicher im Sinne der DSGVO und allein dafür verantwortlich, sämtliche
 Pflichten nach anwendbarem Datenschutzrecht, Geheimhaltungsrecht (insbesondere
@@ -166,7 +276,7 @@ Dieser Haftungsausschluss ist keine Datenschutzerklärung.
 Sie sind allein verantwortlich für alle Daten, die Sie unter Verwendung der
 Software eingeben, verarbeiten, übermitteln, speichern oder offenlegen.
 
-## 5. Keine Gewährleistung
+### B.5 Keine Gewährleistung
 
 Soweit gesetzlich zulässig, wird diese Software "wie besehen" und "wie
 verfügbar" bereitgestellt, ohne Gewährleistung irgendeiner Art, weder
@@ -192,7 +302,7 @@ Gewährleistungen ausgeschlossen, insbesondere hinsichtlich Marktgängigkeit,
 Eignung für einen bestimmten Zweck, Rechtsmängelfreiheit, Nichtverletzung von
 Rechten Dritter und Freiheit von Sachmängeln.
 
-## 6. Haftungsbeschränkung
+### B.6 Haftungsbeschränkung
 
 Die Software wird unentgeltlich bereitgestellt. Soweit gesetzlich zulässig,
 richtet sich die Haftung daher zusätzlich nach den für unentgeltliche
@@ -243,7 +353,7 @@ Soweit der Nutzer Verbraucher im Sinne von § 13 BGB ist, gelten die
 vorstehenden Beschränkungen nur insoweit, als sie nicht gegen zwingende
 verbraucherschützende Vorschriften verstoßen.
 
-## 7. Nutzerverantwortung und Nutzung auf eigenes Risiko
+### B.7 Nutzerverantwortung und Nutzung auf eigenes Risiko
 
 Sie sind allein dafür verantwortlich zu prüfen, ob die Software und ihre
 Ausgaben für Ihren beabsichtigten Zweck geeignet sind.
@@ -259,11 +369,11 @@ Handlungen oder Unterlassungen, die auf Ausgaben dieser Software beruhen.
 
 Sie sind selbst dafür verantwortlich, angemessene Vorsichtsmaßnahmen zu
 treffen, insbesondere unabhängige rechtliche Prüfung, professionelle Beratung,
-Code-Review, Sicherheitsprüfung, Tests, Backups, Quellenprüfung, Fristenprüfung,
-Prüfung verfahrensrechtlicher Anforderungen sowie die Einhaltung anwendbarer
-Gesetze und Vorschriften.
+Code-Review, Sicherheitsprüfung, Tests, Backups, Quellenprüfung,
+Fristenprüfung, Prüfung verfahrensrechtlicher Anforderungen sowie die
+Einhaltung anwendbarer Gesetze und Vorschriften.
 
-## 8. Keine Support- oder Wartungspflicht
+### B.8 Keine Support- oder Wartungspflicht
 
 Der Autor ist nicht verpflichtet, Support, Wartung, Aktualisierungen,
 Fehlerbehebungen, Sicherheitskorrekturen, Dokumentation, Antworten auf Issues,
@@ -273,7 +383,7 @@ Durch die Veröffentlichung dieses Repositorys entsteht kein Dienstleistungs-,
 Beratungs-, Treuhand-, Arbeits-, Gesellschafts-, Berufs- oder sonstiges
 besonderes Rechtsverhältnis zwischen dem Autor und einem Nutzer.
 
-## 9. Drittkomponenten und Drittanbieter-Dienste
+### B.9 Drittkomponenten und Drittanbieter-Dienste
 
 Dieses Repository kann Drittsoftware, Bibliotheken, Modelle, APIs, Dienste,
 Werkzeuge, Daten oder Dokumentation enthalten, referenzieren, aufrufen oder von
@@ -287,7 +397,7 @@ Der Autor ist für Drittkomponenten und Drittanbieter-Dienste nicht
 verantwortlich und übernimmt diesbezüglich keine Gewährleistung oder
 Zusicherung.
 
-## 10. Anwendbares Recht und Gerichtsstand
+### B.10 Anwendbares Recht und Gerichtsstand
 
 Soweit gesetzlich zulässig, unterliegt dieser Haftungsausschluss dem Recht der
 Bundesrepublik Deutschland unter Ausschluss des Übereinkommens der Vereinten
@@ -304,7 +414,7 @@ des öffentlichen Rechts oder öffentlich-rechtliche Sondervermögen sind, der
 Gerichtsstand am Wohnsitz oder Sitz des Autors in Deutschland. Zwingende
 gesetzliche Gerichtsstände bleiben unberührt.
 
-## 11. Salvatorische Klausel
+### B.11 Salvatorische Klausel
 
 Sollte eine Bestimmung dieses Haftungsausschlusses ganz oder teilweise
 unwirksam, rechtswidrig oder undurchsetzbar sein oder werden, bleibt die
@@ -316,40 +426,295 @@ gesetzlich zulässig, so auszulegen, zu beschränken oder zu ersetzen, dass der
 mit ihr verfolgte Zweck in wirksamer und durchsetzbarer Weise möglichst weit
 gehend erreicht wird.
 
-## 12. Kenntnisnahme
+### B.12 Kenntnisnahme
 
 Durch den Zugriff auf die Software, ihre Installation, Ausführung, Interaktion
 mit ihr oder sonstige Nutzung bestätigen Sie, dass Sie diesen
 Haftungsausschluss gelesen und verstanden haben und die Software auf eigene
 Gefahr nutzen.
 
-Die Anwendung verlangt beim ersten Start sowie nach maßgeblichen Änderungen
-dieses Dokuments eine ausdrückliche Bestätigung der Kenntnisnahme und
-protokolliert lokal die bestätigte Fassung (Versionsnummer und Prüfsumme des
-Dokuments, Zeitpunkt, Anwendungsversion). Maßgeblich ist jeweils die in der
-Anwendung angezeigte und bestätigte Fassung dieses Dokuments. Von der Software
-erzeugte Dokumente und Berichte weisen die zugrunde liegende Fassung im
-Fußbereich aus.
+Die Software ist als API implementiert. Analysen und andere geschützte
+Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
+Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
+`X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`);
+bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
+bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
+Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
+jeweils die bestätigte Fassung. Von der Software erzeugte Dokumente und
+Berichte weisen die zugrunde liegenden Versionen im Fußbereich aus.
 
 Wenn Sie mit diesem Haftungsausschluss nicht einverstanden sind, nutzen Sie
 die Software nicht.
 
 ---
 
+## Teil C — Compliance: Rechtsstatus und KI-VO-Klassifizierung
+
+> **Kein Rechtsrat.** Dieser Teil ist eine Engineering-Planungsgrundlage,
+> keine Rechtsberatung. Er dokumentiert die vom Projekt getragene Einordnung.
+> Die offenen Rechtsfragen aus Roadmap v2.0.0 §8 sind durch externe Beratung
+> zu schließen, nicht durch dieses Dokument.
+
+### C.1 Zweck und Geltungsbereich
+
+Dieser Teil ist die **einzige maßgebliche Quelle** für die rechtliche
+Klassifizierung von Citizen unter der KI-Verordnung (KI-VO, VO (EU) 2024/1689).
+Für jede laufende Instanz beantwortet er:
+
+1. Ist der Betreiber **Anbieter**, **Einsetzer** oder keines von beiden?
+2. Greift die **Entwicklungsphasen-Freistellung** (Art. 2(8)) oder die
+   persönliche Nutzung?
+3. Welche Pflichten sind in dem jeweiligen Modus **aktiv** — und welche
+   ausdrücklich **nicht**?
+
+Gegenstand sind die Software Citizen und ihre erzeugten Ausgaben
+(Analyse-Berichte, Aktionsdokument-Entwürfe, Chat-Antworten). Nicht behandelt
+werden die Offenlegung der KI-Autorschaft des Quellcodes (WP-63, geplant) —
+der rechtliche Hinweis an Nutzer ist Teil B desselben Dokuments.
+
+### C.2 Schnellantwort: Pflichten je Modus
+
+Die Einordnung hängt an **einem einzigen Schalter**: `DEPLOYMENT_MODE`
+(Entscheidung **D-019**, siehe `DECISIONS.md`). Drei Werte:
+
+| Modus | Bedeutung | Rechtslage |
+|---|---|---|
+| `dev` | Nur der Autor, nur Testbetrieb, **nur synthetische Daten** | Entwicklungsphase, Art. 2(8) KI-VO — Pflichten nicht ausgelöst |
+| `self` | Nur der Autor, an **eigenen realen Bescheiden** | Persönliche, nicht-berufliche Nutzung — Pflichten nicht ausgelöst |
+| `provider` | Bereitgestellt, sodass **beliebige Dritte** eine Analyse erhalten können | Autor wird **Anbieter** (Art. 3(3)) — Art.-50-Pflichten aktiv |
+
+Legende: **A** = aktiv (zu erfüllen) · **–** = nicht ausgelöst · **D** =
+dokumentarisch (immer relevant, aber keine Handlungspflicht)
+
+| Pflicht | Rechtsgrundlage | `dev` | `self` | `provider` | Umsetzung |
+|---|---|---|---|---|---|
+| Anbieter/Einsetzer-Bestimmung | Art. 3(3)/(4) KI-VO | – | – | A | dieser Teil (WP-60), D-019 |
+| Entwicklungsphasen-Posture einhalten | Art. 2(8) KI-VO | A | – | – | WP-62 (Zugriffskontrolle, Synthetik-Guard, DEV-INSTANCE.md) |
+| FOSS-Note: MIT befreit **nicht** von Art. 50 | Art. 2(12) KI-VO | D | D | D | dieser Teil (WP-60) |
+| Zweckbestimmung: antragstellerseitig, nicht behördenseitig | Annex III Nr. 5 Bst. a KI-VO | A | A | A | WP-61 (Self-Assessment, Purpose-Drift-Lint), D-020 |
+| KI-Interaktionshinweis an jede natürliche Person | Art. 50(1) KI-VO | – | – | **A** | WP-64 |
+| Maschinenlesbare Kennzeichnung aller KI-Ausgaben | Art. 50(2) KI-VO | – | – | **A** (Frist: **2026-12-02**, falls bis dahin `provider`) | WP-65 |
+| Offenlegung bei veröffentlichtem Text (öffentliches Interesse) | Art. 50(4) KI-VO | – | – | – (nicht ausgelöst: Aktionsdokumente sind individuelle Korrespondenz, keine Veröffentlichung) | WP-65 (Begründung im Marker-Spez) |
+| RDG-Einzelfallgrenze (strukturell, per Pipeline erzwungen) | § 2/§ 6/§ 8 RDG | – | – | A | WP-67, D-021 |
+| DSGVO: DPIA (Art. 35) + AVV-Kette (Art. 28) | DSGVO | – (nur synthetische Daten) | – (eigene Daten) | **A** (vor dem ersten echten Fall) | WP-68 |
+| Provider-Go/No-Go-Gate | — (aggregiert) | – | – | A (vor erstem Drittanbieter-Einsatz) | WP-69 |
+
+**Schnellantwort in einem Satz:** Eine Instanz im Modus `dev` oder `self` hat
+keine Pflichten aus der KI-VO und keine DSGVO-/RDG-Auslöser; eine Instanz im
+Modus `provider` hat die in der Matrix mit **A** markierten Pflichten aktiv,
+bevor der erste echte Drittfall verarbeitet werden darf — insbesondere
+Art. 50(1), Art. 50(2), die RDG-Invariante, DPIA/AVV und das Go/No-Go-Gate.
+
+### C.3 Der Schalter: DEPLOYMENT_MODE
+
+`DEPLOYMENT_MODE` ist die technische Verkörperung der
+Anbieter/Einsetzer-Einordnung. Drei Werte, ein klarer Schwellenwert:
+
+* **`dev`** — der Autor entwickelt und testet; es werden ausschließlich
+  synthetische Daten (Goldset, Testdaten) verarbeitet. Die Instanz ist für
+  niemanden bereitgestellt. Trägt die Entwicklungsphasen-Freistellung des
+  Art. 2(8).
+* **`self`** — der Autor nutzt die Software auf eigenen realen Bescheiden.
+  Das ist persönliche, nicht-berufliche Nutzung; es wird keinem Dritten etwas
+  bereitgestellt.
+* **`provider`** — die Software ist so bereitgestellt, dass beliebige Dritte
+  (z. B. Nutzer einer Sozialberatungsstelle) eine Analyse erhalten können.
+  Ab diesem Ereignis ist der Autor **Anbieter** im Sinne des Art. 3(3).
+
+Der Schalter ist bewusst **explizit** und wird nicht aus Betriebsdetails
+(z. B. ob Authentifizierung konfiguriert ist) abgeleitet (D-019): Der
+Pflichtenübergang ist ein einziges, prüfbares Ereignis, kein schleichender
+Zustand.
+
+**Technischer Umsetzungsstand:** Der Schalter ist implementiert —
+`DEPLOYMENT_MODE` in `app/core/config.py` (Standard `dev`, per `Literal`
+validiert). Im Modus `dev` verweigert die Instanz den Start ohne explizit
+gesetztes `CITIZEN_SYNTHETIC_DATA_ONLY=true` (`app/services/dev_guard.py`)
+und lehnt Dokument-Uploads ohne `X-Document-Tag: synthetic|goldset` mit
+HTTP 403 ab. Die Härtung der erreichbaren Instanz ist in
+`devdocs/DEV-INSTANCE.md` dokumentiert.
+
+### C.4 Klassifizierung im Einzelnen
+
+#### C.4.1 Anbieter und Einsetzer (Art. 3(3)/(4))
+
+- **Anbieter** (Art. 3(3)): wer ein KI-System entwickelt oder entwickeln
+  lässt und es unter eigenem Namen **in Verkehr bringt oder in Betrieb
+  nimmt**.
+- **Einsetzer** (Art. 3(4), engl. deployer): wer das System — außer in
+  persönlicher, nicht-beruflicher Tätigkeit — **beruflich einsetzt**.
+
+In `dev`/`self` ist der Autor keines von beiden: Er bringt nichts in Verkehr
+und nimmt es für Dritte nicht in Betrieb. In `provider` ist der Autor
+Anbieter. Eine einsetzende Sozialberatungsstelle ist **Einsetzer** im Sinne
+des Art. 3(4) und — datenschutzrechtlich — **Verantwortliche** im Sinne des
+Art. 4 Nr. 7 DSGVO.
+
+#### C.4.2 Entwicklungsphase (Art. 2(8))
+
+Die KI-VO gilt nicht für KI-Systeme, die ausschließlich zum Zweck der
+wissenschaftlichen Forschung und Entwicklung entwickelt und in Betrieb
+genommen werden. Der Modus `dev` liegt in dieser Phase: erreichbar zum
+Testen, bereitgestellt für niemanden. Damit diese Einordnung trägt, muss die
+dev-Instanz drei Bedingungen erfüllen (Runbook in `devdocs/DEV-INSTANCE.md`):
+(1) Zugriff nur durch den Autor (VPN/mTLS oder Basic-Auth + IP-Allowlist),
+(2) ausschließlich synthetische Daten (Startup-Assertion + Ingest-Guard),
+(3) keine Indexierung (`robots.txt`, `X-Robots-Tag: noindex`) und ein
+dauerhaft über `GET /api/v1/meta/deployment-mode` abrufbarer
+Entwicklungs-Banner, den Clients ausweisen müssen.
+
+#### C.4.3 FOSS-Freistellung (Art. 2(12)) — und die Ausnahme für Art. 50
+
+Citizen steht unter der MIT-Lizenz. Für KI-Systeme, die unter freien und
+Open-Source-Lizenzen veröffentlicht werden, gilt der größte Teil der KI-VO
+nicht — **Art. 50 (Transparenzpflichten) ist ausdrücklich ausgenommen** und
+bleibt anwendbar. Die Lizenz ändert deshalb nichts daran, dass im Modus
+`provider` die Art.-50-Pflichten gelten (KI-Interaktionshinweis,
+maschinenlesbare Kennzeichnung). Im Modus `dev`/`self` greift Art. 50 nicht,
+weil **kein Bereitstellen an Dritte** vorliegt — nicht wegen der Lizenz.
+
+#### C.4.4 Selbstbewertung: Keine Hochrisiko-Einstufung (Anhang III Nr. 5 Bst. a)
+
+**Ergebnis.** Citizen ist **kein Hochrisiko-KI-System** im Sinne des Anhangs
+III Nr. 5 Bst. a KI-VO — bei der hier deklarierten Zweckbestimmung (D-020)
+und unter den in diesem Abschnitt dokumentierten Schutzvorkehrungen gegen
+Zweckbestimmungs-Abdrift.
+
+**Erfassungsbereich des Tatbestands.** Anhang III Nr. 5 Bst. a erfasst
+KI-Systeme, die von Behörden oder in deren Auftrag zur **Bewertung der
+Anspruchsberechtigung** von natürlichen Personen zu Sozialleistungen und
+Sozialdiensten eingesetzt werden. Tatbestandsmerkmal ist die behördenseitige
+Verwendung zur Leistungsentscheidung.
+
+**Deklarierte Zweckbestimmung (D-020).** Die Zweckbestimmung von Citizen ist
+**antragstellerseitige Selbsthilfe und Beratungsassistenz**: das System
+unterstützt die betroffene Person selbst oder deren Beratende dabei, einen
+Bescheid zu verstehen, zu prüfen und zu reagieren. Es ist ausdrücklich
+**nicht** dazu bestimmt, von einer Behörde oder in deren Auftrag zur
+Bewertung der Anspruchsberechtigung eingesetzt zu werden.
+
+**Warum der Tatbestand nicht erfüllt ist.**
+
+1. **Keine behördenseitige Bestimmung:** Weder das Produkt noch seine
+   Dokumentation beschreibt Citizen als behördenseitiges Werkzeug. Die
+   Zweckbestimmung ist in README, Teil A dieses Dokuments und dem
+   Rechtshinweis verankert.
+2. **Kein Entscheidungssystem:** Citizen erzeugt Rechtsinformation und
+   Bausteine, die der menschlichen Adjudikation bedürfen (D-021); es trifft
+   keine Entscheidung über Anspruchsberechtigung und wird nicht dazu
+   bereitgestellt, eine solche zu treffen.
+3. **Bereitstellungsform:** Selbst im Modus `provider` wird die Software
+   Betroffenen und Beratungsstellen bereitgestellt — nicht Behörden zur
+   Leistungsbewertung.
+4. **Klassifizierung nach Zweckbestimmung:** Die KI-VO stellt für die
+   Hochrisiko-Einordnung auf die Zweckbestimmung ab. Solange diese
+   antragstellerseitig bleibt, greift der Tatbestand des Anhangs III Nr. 5
+   Bst. a nicht.
+
+**Drift-Schutz (Guardrails).** Damit diese Bewertung trägt:
+
+- **D-020** verpflichtet auf die antragstellerseitige Zweckbestimmung und
+  verbietet behördenseitige Beschreibungen in der Dokumentation.
+- **`scripts/check_purpose_drift.py`** (WP-61) scannt die nutzernahen
+  Markdown-Dokumente des Projekts auf behördenseitige Formulierungen
+  (konfigurierbare Deny-Phrase-Liste) und lässt die CI bei Treffern
+  fehlschlagen. Der Lint ist die technische Durchsetzung der Zweckbestimmung
+  gegen Abdrift.
+- **Änderungsmanagement:** Veränderungen an Zweckbestimmung, Zielgruppe oder
+  Bereitstellungsform erfordern eine Fassungsänderung dieses Dokuments
+  (Abschnitt C.7) und eine erneute Prüfung dieser Selbstbewertung.
+
+**Bedingung.** Diese Bewertung ist konditional: Sie gilt nur für die hier
+deklarierte Zweckbestimmung. Wird Citizen künftig als behördenseitiges Werkzeug
+beschrieben oder Behörden zur Leistungsbewertung bereitgestellt, ist die
+Einstufung neu zu prüfen — die Pflichten für Hochrisiko-KI-Systeme (Kapitel
+III KI-VO) würden ausgelöst.
+
+### C.5 Fristen und Auslöse-Ereignisse
+
+| Ereignis / Frist | Wirkung |
+|---|---|
+| **Bereitstellung für Dritte** (`DEPLOYMENT_MODE=provider`) | Schaltet die Art.-50-Pflichten sowie die DSGVO- und RDG-Auflagen an (siehe Abschnitt C.2) |
+| **2026-12-02** (Ende der Übergangsfrist für Art. 50(2)) | **Nur bindend, wenn** bis dahin `provider` gilt: Die maschinenlesbare Kennzeichnung muss bis dahin umgesetzt sein (WP-65). Andernfalls gilt sie als Tor für die spätere Bereitstellung. |
+| **Erster echter Drittfall** | Verarbeitung erst nach: Purpose-Guard grün (WP-61), Hinweis live (WP-64), Kennzeichnung live (WP-65), RDG-Invariante getestet (WP-67), DPIA + AVV-Kette vorhanden (WP-68), Go/No-Go-Gate signiert (WP-69). |
+
+### C.6 Benachbarte Rechtsregime
+
+#### C.6.1 DSGVO
+
+Die DSGVO ist für den Betrieb das am stärksten unterschätzte Regime.
+Bescheide von Leistungsberechtigten enthalten regelmäßig **besondere
+Kategorien** personenbezogener Daten (Art. 9 DSGVO: Gesundheit, Behinderung);
+die Betroffenen sind verletzliche Personen. Daraus folgt:
+
+- **`provider`:** Eine **Datenschutz-Folgenabschätzung (DPIA, Art. 35)** ist
+  sehr wahrscheinlich verpflichtend; eine **AVV-Kette** (Art. 28) muss vor
+  dem ersten echten Fall stehen: Autor als Auftragsverarbeiter → EU-Inferenz
+  als Unterauftragsverarbeiter (Profil `eu-avv`) → Beratungsstelle als
+  Verantwortliche. Umsetzung: WP-68.
+- **`self`:** Der Autor verarbeitet eigene Daten; keine DPIA/AVV-Pflicht. Die
+  vorhandenen Schutzmechanismen (Pseudonymisierung, Egress-Guard) bleiben
+  aktiv (Defense-in-Depth).
+- **`dev`:** Nur synthetische Daten; keine Verarbeitung personenbezogener
+  Daten. Der Synthetik-Guard (WP-62) verhindert, dass echte Daten in die
+  dev-Instanz gelangen.
+
+#### C.6.2 RDG
+
+Ein System, das den konkreten Bescheid einer einzelnen Person prüft, bewegt
+sich nahe der Grenze zur **Rechtsdienstleistung in konkreter fremder
+Angelegenheit** (§ 2 RDG). Die Projektposition (D-021):
+
+- Jede Ausgabe ist **Rechtsinformation plus Bausteine**, die der menschlichen
+  Adjudikation bedürfen; keine Ausgabe präsentiert sich als abgeschlossene
+  rechtliche Bewertung des Einzelfalls.
+- Unadjudizierte Rechtsbehauptungen erscheinen in Aktionsdokumenten als
+  `[BITTE PRÜFEN]`-Platzhalter — technisch erzwungen, nicht nur deklariert
+  (WP-67).
+- Für den Einsatz in Beratungsstellen wird der Rahmen des § 6/§ 8 RDG
+  (unentgeltliche Rechtsdienstleistung / anerkannte Beratungsstellen)
+  dokumentiert (WP-67).
+
+### C.7 Gültigkeit und Änderungsdienst
+
+- Dieser Teil ist Teil der Roadmap v2.0.0 (WP-60/WP-61) und mit den
+  Entscheidungen D-019, D-020 und D-022 (sowie, in seinem Work Package,
+  D-021) im Entscheidungs-Ledger verankert.
+- Änderungen an Zweckbestimmung, Bereitstellungsform oder Zielgruppe
+  erfordern eine Überprüfung und Fassungsänderung dieses Dokuments
+  (semantische Versionierung).
+- Offene Rechtsfragen, die sich technisch nicht schließen lassen, sind in
+  Roadmap v2.0.0 §8 gesammelt.
+
+#### Referenzen
+
+- `docs/roadmap-v2.0.0.md` — Phasen P6–P8, Pflichten-Matrix (§5)
+- `DECISIONS.md` — D-019, D-020, D-021, D-022
+- `README.md` — Abschnitt „Rechtlicher Status"
+- `devdocs/DEV-INSTANCE.md` — Dev-Instanz-Betriebsführung (Art. 2(8))
+- `scripts/check_purpose_drift.py` — Purpose-Drift-Lint (WP-61)
+
+---
+
 ## Änderungshistorie
 
-- **1.1.0 (2026-07-12):** Versionierung und Änderungshistorie eingeführt.
-  Präambel: Unentgeltlichkeit der Bereitstellung ausdrücklich klargestellt.
-  § 2: RDG-Klarstellung ergänzt (keine Tätigkeit in konkreten fremden
-  Angelegenheiten, schematische Arbeitsweise, Selbsthilfe-Charakter, Einsatz
-  in der Beratung Dritter nur durch hierzu Befugte). § 4: vollständig neu
-  gefasst — Beschreibung der versionierten Inferenzprofile (eu-avv /
-  extern-openrouter / on-prem), der technisch erzwungenen Pseudonymisierung
-  und ihrer Grenzen; Verantwortlichkeitsabgrenzung zwischen
-  Selbsthilfe-Nutzung eigener Daten und Verarbeitung von Daten Dritter
-  (DSGVO-Verantwortlicher, Sozialgeheimnis). § 6: Hinweis auf die für
-  unentgeltliche Überlassungen geltenden Haftungsmaßstäbe ergänzt. § 12:
-  App-seitige Erst-Bestätigung mit protokollierter Dokumentversion ergänzt.
-  §§ 3, 5, 7–11 unverändert.
-- **1.0.0 (2026-05-09):** Ursprüngliche Fassung (seinerzeit unversioniert
-  veröffentlicht).
+- **2.0.0 (2026-08-25):** Zusammenführung der bisher eigenständigen Dokumente
+  `DISCLAIMER_DE.md` (v1.1.0), `STATEMENT.md` (v1.0.0) und `COMPLIANCE.md`
+  (v1.1.0) in eine einzige Fassung (Teil A Statement, Teil B Rechtlicher
+  Hinweis, Teil C Compliance). Inhaltliche Anpassungen an die aktuelle
+  Implementierung (API-only-Refaktor D-025): Kenntnisnahme-Mechanik in B.12
+  an die tatsächliche Protokollierung angepasst (Fassungsnummer per
+  `X-Disclaimer-Ack`, Audit-Protokoll je Lauf; keine Prüfsumme);
+  Inferenzprofil-Anzeige über `GET /meta/active-profile`; technischer
+  Umsetzungsstand des `DEPLOYMENT_MODE`-Schalters (implementiert inkl.
+  Startup-/Ingest-Guards) nachgetragen; UI-Bezüge entfernt; Verweis auf
+  `AI-USAGE.md` (WP-63) als geplant gekennzeichnet.
+- **1.1.0 (2026-07-12/13):** Rechtlicher Hinweis: Versionierung und
+  Änderungshistorie eingeführt; Unentgeltlichkeit klargestellt; RDG-Klarstellung
+  (§ 2); Inferenzprofile/Pseudonymisierung neu gefasst (§ 4);
+  Haftungsmaßstäbe für unentgeltliche Überlassung (§ 6); App-seitige
+  Erst-Bestätigung (§ 12). Compliance: kanonische Klassifizierung (WP-60/WP-61)
+  mit Pflichten-Matrix, Self-Assessment Anhang III und Drift-Schutz erstmals
+  veröffentlicht.
+- **1.0.0 (2026-05-09 / Juli 2026):** Ursprüngliche Fassungen des Rechtshinweises
+  (seinerzeit unversioniert) und des Projektstatements.

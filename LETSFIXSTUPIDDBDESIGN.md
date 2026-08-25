@@ -1,6 +1,15 @@
 # LET'S FIX THE STUPID DB DESIGN
 
-**Status:** Outline only — not in scope for the current session.
+> **RESOLVED (2026-08-25):** This outline was implemented as decisions
+> D-024/D-025/D-026 — PostgreSQL 16 + pgvector is the single backend for
+> server, CI, and all tests; the SQLite code path and migrations 007–010/
+> 011_sqlite are deleted (`012_pg_collapse_sqlite_branch` carries their schema
+> content); the Electron tree was removed entirely, so no isolated desktop
+> SQLite target remains. The text below is preserved as the historical design
+> rationale. Current truth: `AGENTS.md`, `API_DOCUMENTATION.md`,
+> `DECISIONS.md` §D-024.
+
+**Status:** Implemented via D-024/D-025/D-026 (was: outline only).
 **Created:** 2026-07-19
 **Trigger:** The Prüfstand pgvector aliasing bug (D-016) slipped through because
 unit tests run on SQLite while production runs on PostgreSQL. The two backends

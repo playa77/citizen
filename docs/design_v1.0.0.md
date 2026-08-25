@@ -1,7 +1,9 @@
 # Citizen v1.0.0 — UI/UX Design Specification
 
 <!-- Version: 1.0.0 | 2026-07-12 -->
-<!-- Status: Approved design direction — implementation reference -->
+<!-- Status: HISTORICAL — approved v1.0.0 UI/UX design direction. The web UI
+     described here was removed from this repository by D-025 (api-only
+     refactor); the document remains as design rationale. -->
 <!-- Scope: WP-02 (Scope Cut), WP-14 (Prüfstand), WP-41 (Result Report), WP-42 (OCR Gate) -->
 
 ## 0. Design Thesis

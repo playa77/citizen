@@ -1,11 +1,12 @@
 # Dev-Instanz — Betriebsdokumentation (Art. 2(8) KI-VO)
 
-**Version:** 1.0.0 · **Stand:** 2026-08-07
+**Version:** 1.1.0 · **Stand:** 2026-08-25
 **Zugehöriges Work Package:** WP-62 (Roadmap v2.0.0)
 **Rechtsgrundlage:** Art. 2(8) VO (EU) 2024/1689 (Entwicklungsphasen-Freistellung)
 
 > **Kein Rechtsrat.** Dieses Dokument ist eine Engineering-Planungsgrundlage,
-> keine Rechtsberatung. Maßgeblich für die Klassifizierung ist `COMPLIANCE.md`.
+> keine Rechtsberatung. Maßgeblich für die Klassifizierung ist
+> `DISCLAIMER_DE.md`, Teil C.
 
 ---
 
@@ -80,21 +81,21 @@ Verarbeitung eigener realer Bescheide dient ein lokaler Betrieb im Modus
 
 ## 5. Entwicklungs-Banner
 
-Die Oberfläche zeigt im Modus `dev` einen dauerhaften, nicht schließbaren
-Banner:
+Der Dienst liefert im Modus `dev` einen dauerhaften Banner-Text über
+`GET /api/v1/meta/deployment-mode` (Feld `dev_banner`):
 
 > **ENTWICKLUNGSINSTANZ — Testbetrieb mit synthetischen Daten. Keine Nutzung
 > für reale Fälle. Ausgaben sind nicht belastbar.**
 
-Der Banner wird über `GET /api/v1/meta/deployment-mode` gespeist und ist
-unabhängig von der Disclaimer-Bestätigung sichtbar.
+Clients, die die API für Dritte zugänglich aufbereiten, müssen diesen Banner
+unabhängig von der Disclaimer-Bestätigung dauerhaft ausweisen.
 
 ## 6. Zugriff
 
 | Rolle | Zugriff |
 |---|---|
 | Autor | Vollzugriff über VPN (primär) bzw. mTLS / Basic-Auth + IP (Fallback) |
-| Dritte (inkl. Beratungsstellen, Behörden) | Kein Zugriff — weder über das Netzwerk noch über die UI |
+| Dritte (inkl. Beratungsstellen, Behörden) | Kein Zugriff — weder über das Netzwerk noch über die API |
 
 ## 7. Keine reale Nutzung
 
@@ -102,18 +103,18 @@ unabhängig von der Disclaimer-Bestätigung sichtbar.
 - Ausgaben sind ausschließlich für Entwicklungs- und Testzwecke bestimmt.
 - Es werden keine personenbezogenen Daten Dritter verarbeitet.
 - Für einen späteren Einsatz für Dritte ist der Modus `provider`
-  (WP-64…WP-69) mit Go/No-Go-Gate (`devdocs/PROVIDER-GO-NOGO.md`, WP-69)
+  (WP-64…WP-69) mit Go/No-Go-Gate (WP-69; Gate-Dokument noch zu erstellen)
   erforderlich — diese Instanz wird dafür nicht verwendet.
 
 ## 8. Änderungsdienst
 
 Änderungen an Zugriffskontrolle, Datenposture oder Zweckbestimmung erfordern
 eine Fassungsänderung dieses Dokuments (semantische Versionierung) und eine
-erneute Prüfung der Klassifizierung (siehe `COMPLIANCE.md` Abschnitt 7).
+erneute Prüfung der Klassifizierung (siehe `DISCLAIMER_DE.md`, Teil C.7).
 
 ## Referenzen
 
-- `COMPLIANCE.md` — Klassifizierung und Pflichten-Matrix
+- `DISCLAIMER_DE.md` (Teil C) — Klassifizierung und Pflichten-Matrix
 - `docs/roadmap-v2.0.0.md` — WP-62
 - `app/services/dev_guard.py` — Startup- und Ingest-Guards
 - `app/middleware/dev_headers.py` — Noindex-Header

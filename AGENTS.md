@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for coding agents. Authoritative sources: `DECISIONS.md` (append-only decision ledger, R1/R2/R3 tags), `CHANGELOG.md`, `.env.example` (may lag `app/core/config.py` — trust config.py).
+Guidance for coding agents. Authoritative sources: `DECISIONS.md` (append-only decision ledger, R1/R2/R3 tags), `CHANGELOG.md`, `app/core/config.py` (`.env.example` mirrors it as of 2026-08-25; config.py stays authoritative).
 
 ## What this is
 
@@ -31,7 +31,8 @@ One backend everywhere — server, Docker, CI, and all tests: PostgreSQL 16 + pg
 ## Compliance posture (enforced, not decorative)
 
 - `DEPLOYMENT_MODE` = `dev|self|provider` (default `dev`). In `dev`, startup refuses to run unless `CITIZEN_SYNTHETIC_DATA_ONLY=true` (`app/services/dev_guard.py`), and document uploads require header `X-Document-Tag: synthetic|goldset` → otherwise 403.
-- Purpose-drift lint scans `README*.md`, `STATEMENT.md`, `COMPLIANCE*.md`, `docs/pitch*` and fails CI on authority-side phrasings ("Behörden ... prüfen/bewerten Leistungen"). Declared purpose is claimant-side self-help only (D-020) — keep all copy consistent with that.
+- Purpose-drift lint (`scripts/check_purpose_drift.py`) scans its configured glob targets — currently `README*.md`, `STATEMENT.md`, `COMPLIANCE*.md`, `docs/pitch*`; the latter two no longer exist since the disclaimer merge (see below), so the effective scan set is README*.md + docs/pitch*. It fails CI on authority-side phrasings ("Behörden ... prüfen/bewerten Leistungen"). Declared purpose is claimant-side self-help only (D-020) — keep all copy consistent with that.
+- Legal/compliance copy lives in the merged `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` (v2.0.0: statement + legal notice + AI Act classification in one document per language). The former `STATEMENT.md`, `COMPLIANCE.md`, `COMPLIANCE-EN.md` are gone — do not re-create them; link to the disclaimer sections instead. Note: `DISCLAIMER_*.md` is NOT in the lint's default target list (coverage gap logged in DECISIONS.md).
 - Corpus/mutating endpoints require `X-Disclaimer-Ack` matching `DISCLAIMER_VERSION` (`app/middleware/disclaimer.py`).
 
 ## Conventions
