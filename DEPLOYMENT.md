@@ -27,8 +27,8 @@ Production deployment of the Citizen legal reasoning engine on VPS.
 Internet → Cloudflare (HTTPS) → VPS nginx :443
                                   ├─ /health → proxy_pass http://127.0.0.1:8001
                                   ├─ /api/*  → proxy_pass http://127.0.0.1:8001
-                                  ├─ /api/v1/analyze → SSE (no buffering, 180s timeout)
-                                  └─ /static/* → proxy_pass http://127.0.0.1:8001
+                                  ├─ /api/v1/analyze → SSE (no buffering, 300s timeout)
+                                  └─ /static/* → entfallen (API-only, D-025)
 
 Docker Compose:
   ┌─ citizen-db-1 (pgvector/pgvector:pg16)
@@ -222,19 +222,19 @@ sudo certbot renew --dry-run
 ### D-003: Docker port conflict (8000)
 Resolved by mapping container port 8000 to host port 8001 in the override file, and updating nginx proxy_pass.
 
-### D-004: Migration DAG with multiple heads
-The alembic migration tree has two branches from `<base>`:
-- PostgreSQL: 001 → 002 → 003 → 004 → 005 → 006
-- SQLite: 007 → 008 → 009 → 010
-
-`alembic upgrade head` (singular) fails with "Multiple head revisions are present."
-Fixed in `app/main.py` — the auto-migration targets `006_add_intake_and_legal_areas`
-for PostgreSQL and `heads` for SQLite.
+### D-004 / D-024: Migration DAG — resolved as single linear chain
+Historically the tree had two branches (PG 001→006 and SQLite 007→010), which made
+`alembic upgrade head` fail with "Multiple head revisions are present."
+Since D-024 (2026-08-25) the SQLite branch is deleted; a new migration `012_pg_collapse_sqlite_branch`
+folds its schema content (CHECK constraint update, regime/notes, pii_mapping) into the
+single linear PG chain: **001 → … → 006 → 011_pg → 012**. `alembic upgrade head` is unambiguous.
 
 ### D-005: Missing schema columns (regime, notes, pii_mapping)
 Migrations 008–010 (on the SQLite branch) add columns to `legal_parameter` and
 `case_run` that the PostgreSQL branch (001→006) does not include. Applied manually
-via `ALTER TABLE` DDL on the production database. A proper migration 011 is pending.
+via `ALTER TABLE` DDL on the production database. Superseded by idempotent migration
+`012_pg_collapse_sqlite_branch`, which applies the same changes safely on any fresh or
+already-patched database.
 
 ### D-006: alembic upgrade deadlock during startup
 `alembic_command.upgrade()` called via `asyncio.to_thread()` from inside uvicorn's

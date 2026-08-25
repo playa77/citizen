@@ -121,8 +121,7 @@ in Oberfläche und Ausgaben entsprechend gekennzeichnet.
 |---|---|
 | **Backend** | FastAPI, Uvicorn (SSE-Streaming) |
 | **Datenbank** | PostgreSQL 16 + `pgvector` + `tsvector` |
-| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (12 Migrationen, zwei DAGs: PostgreSQL / SQLite) |
-| **Frontend** | Vanilla HTML/JS/CSS |
+| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (13 Migrationen, eine lineare DAG — PostgreSQL-only, D-024) |
 | **LLM-Anbindung** | Versionierte Inferenzprofile (`eu-avv` Standard, `extern-openrouter`, `on-prem`-Slot); Modell je Pipeline-Stufe konfigurierbar; Fallback-Kette |
 | **OCR** | pdfplumber → PyMuPDF → Tesseract (deutsch) |
 | **Tooling** | ruff (Format & Lint), mypy (strict), pytest (Unit + Integration) |
@@ -261,7 +260,7 @@ Vollständige, interaktive Dokumentation nach dem Start unter `/docs`
 
 ```
 citizen/
-├── alembic/                              # 12 Migrationen (zwei DAGs: PG / SQLite)
+├── alembic/                              # 13 Migrationen (eine lineare PG-DAG)
 ├── app/
 │   ├── api/routes/                       # 12 Routenmodule (analyze, cases,
 │   │                                     #  conversations, corpus, documents,
@@ -277,12 +276,10 @@ citizen/
 │   │                                     #  document_generators, retrieval
 │   └── utils/                            # image, pdf, text, tokens
 ├── eval/                                 # Goldsets, Eval-Harness, Reports
-├── static/                               # Frontend (Analyse, Prüfstand, Einstellungen)
 ├── tests/                                # 36 Testdateien (~12.300 Zeilen)
 ├── docs/                                 # Design-Dokument, technische Spezifikation,
 │                                         #  Roadmap v2.0.0, Gap-Report, Architektur
 ├── devdocs/                              # Betriebsdokumentation (Dev-Instanz)
-├── electron/                             # Desktop-Variante (SQLite + sqlite-vec)
 ├── scripts/                              # Wartungs-Skripte (Purpose-Drift-Lint,
 │                                         #  Parameter-Seeding, Benchmark)
 ├── docker-compose.yml

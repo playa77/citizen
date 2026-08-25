@@ -94,7 +94,7 @@ class TestSettingsValidation:
 
         errors = str(exc_info.value)
         assert "OPENROUTER_API_KEY" in errors
-        # DATABASE_URL now has a default value (SQLite), so it's no longer required.
+        # DATABASE_URL now has a PG default, so it's no longer required.
 
     def test_valid_env_creates_settings(self, tmp_path, _isolate_salt_file, monkeypatch):
         from app.core.config import Settings

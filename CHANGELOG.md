@@ -1,4 +1,66 @@
-## 2026-08-25 — Docs-Reconciliation: README.md und .gitignore gegen ausführbare Quellen
+## 2026-08-25 — API-only refactor + PostgreSQL-only database (v2.0.0)
+
+Decisions: D-024 (R3, Postgres-only), D-025 (R2, remove web UI + Electron),
+D-026 (R2, testcontainers). Invariants G1–G5 / T1–T3 logged in DECISIONS.md.
+
+### Removed
+
+- `static/` (index.html, app.js, style.css) and all HTML-serving routes:
+  StaticFiles mount, `GET /` FileResponse, desktop `__main__` block
+  (`app/main.py`). `/health`, `/robots.txt`, `/docs`, `/redoc`,
+  `/openapi.json` retained.
+- `electron/` tree entirely (main/preload TS, package.json, PyInstaller spec)
+  and `scripts/apprun.sh`.
+- SQLite backend everywhere: `_cosine_distance_sqlite()`,
+  `load_sqlite_vec_extension()`, `IS_SQLITE` branches (`session.py`,
+  `vector_backend.py`, `cache.py`, `corpus.py`, `main.py`), WAL/PRAGMA init,
+  sqlite auto-stamp in `alembic/env.py`.
+- Alembic migrations 007–010 and 011_sqlite (SQLite branch).
+- Dependencies: `aiosqlite`, `sqlite-vec`, `jinja2` (unused anywhere).
+  Added dev dep `testcontainers[postgres]`.
+- `Settings.DATA_DIR` (dead Electron config).
+- `docs/ui_testing_guide.md`.
+
+### Changed
+
+- `ChunkEmbedding.embedding` is now `pgvector.sqlalchemy.Vector(1536)` —
+  the LargeBinary/raw-SQL `::vector` cast workaround (D-014) is gone;
+  `_upsert_embedding()` uses a plain dialect insert.
+- New migration `012_pg_collapse_sqlite_branch`: idempotently carries the
+  schema content of deleted SQLite-only migrations 008–010 AND re-admits
+  `disclaimer_ack` into the `pipeline_stage_log` CHECK constraint — that
+  value was dropped by former migration 008 while `services/audit.py` still
+  writes such rows, silently breaking every audit-trail insert on
+  PostgreSQL. Single linear DAG: `001 → … → 006 → 011_pg → 012`.
+- Startup migration targeting simplified to plain `alembic upgrade head`
+  (subprocess mechanism retained per D-006); default `DATABASE_URL` is now a
+  PostgreSQL URL.
+- Tests run against real PostgreSQL: session-scoped pgvector testcontainer
+  when no `DATABASE_URL` is set (D-026); integration suite gained an
+  event-loop/pool isolation fixture.
+- Test harness repaired where it had rotted behind production changes
+  (no business logic changed): disclaimer ack now uses `DISCLAIMER_VERSION`
+  instead of the package version; uploads send `X-Document-Tag`;
+  pipeline stubs match current call signatures (`system_prompt`,
+  `retrieve_chunks_by_norm_reference`, `retrieve_chunks_for_areas`,
+  calculation stub); stage-sequence assertions follow `_STAGES`; corpus
+  seeding uses asyncpg against `DATABASE_URL` instead of a hardcoded psql
+  call; model tests know about `text_hash`.
+- CI: unit job runs against the pgvector service container (no SQLite path).
+- Docs: README architecture table/directory tree, DEPLOYMENT.md nginx +
+  migration sections, AGENTS.md rewritten to API-only/PG-only reality,
+  ARCHITECTURE-ACTUAL.md status banner.
+
+### Added
+
+- `API_DOCUMENTATION.md` — exhaustive client-facing API contract
+  (base URLs, versioning, auth/gates, error catalog, SSE contracts,
+  per-endpoint examples). Guarded by
+  `tests/unit/test_api_documentation.py` (doc ↔ OpenAPI parity).
+
+---
+
+
 
 ### Änderungen
 
@@ -29,6 +91,8 @@
   (`python scripts/check_purpose_drift.py` → Exit 0).
 
 ---
+
+## 2026-08-25 — Docs-Reconciliation: README.md und .gitignore gegen ausführbare Quellen
 
 ## 2026-08-07 — WP-62: Dev-instance Art. 2(8) hardening (Roadmap v2.0.0)
 

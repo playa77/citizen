@@ -3,7 +3,8 @@
 Uses asyncpg and runs migrations via asyncio.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-08-25 — PostgreSQL-only (D-024):
+# SQLite auto-stamp branch removed; single linear migration DAG.
 
 from __future__ import annotations
 
@@ -35,20 +36,6 @@ if config.config_file_name:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
-
-# On SQLite fresh DB, stamp directly to the SQLite baseline migration
-# to skip PostgreSQL-only migrations 001-006 when running offline.
-if DB_URL.startswith("sqlite"):
-    from sqlalchemy import create_engine, inspect as sa_inspect
-
-    sync_url = DB_URL.replace("+aiosqlite", "")
-    sync_engine = create_engine(sync_url)
-    inspector = sa_inspect(sync_engine)
-    if not inspector.has_table("alembic_version"):
-        from alembic import command as alembic_command
-
-        alembic_command.stamp(config, "007_sqlite_baseline")
-    sync_engine.dispose()
 
 
 def run_migrations_offline() -> None:

@@ -4,28 +4,29 @@ Guidance for coding agents. Authoritative sources: `DECISIONS.md` (append-only d
 
 ## What this is
 
-Local-first FastAPI service analyzing German social-law benefit notices (SGB II/X): evidence-bound LLM pipeline + deterministic engines (deadlines `services/fristen.py`, benefit math `services/rules_engine.py`) + Postgres audit storage. Vanilla-JS frontend in `static/` (3 files). Electron variant runs on SQLite.
+API-only FastAPI service analyzing German social-law benefit notices (SGB II/X): evidence-bound LLM pipeline + deterministic engines (deadlines `services/fristen.py`, benefit math `services/rules_engine.py`) + Postgres audit storage. The REST API under `/api/v1` is the only external interface; contract documented in `API_DOCUMENTATION.md` (D-025). No web UI, no GUI client in this repo.
 
 ## Commands
 
 ```bash
-uv pip install -e ".[dev]"                          # setup; Python 3.11+
-pytest tests/unit/                                  # no DB required
-alembic upgrade head && pytest tests/integration/   # needs Postgres 16 + pgvector via DATABASE_URL
+uv pip install -e ".[dev]"                          # setup; Python 3.11+, Docker required for tests
+pytest tests/unit/                                  # auto-starts a pgvector testcontainer unless DATABASE_URL is set
+alembic upgrade head && pytest tests/integration/   # DATABASE_URL to Postgres 16 + pgvector (conftest provides a container otherwise)
 ruff check app/ && ruff format --check app/ && mypy app/   # CI order; CI checks only app/, mypy strict
 python scripts/check_purpose_drift.py               # doc lint, fails CI on hits
 python -m spacy download de_core_news_lg            # one-time PII model
 ```
 
+- Tests are PostgreSQL-only (D-024): unit tests run production SQL via testcontainers; a pre-set `DATABASE_URL` overrides the container. SQLite URLs are rejected.
+- `API_DOCUMENTATION.md` is guarded: `tests/unit/test_api_documentation.py` fails when routes drift from the doc.
+
 - Single test: `pytest tests/unit/test_fristen.py::<name>`. pytest `asyncio_mode = "auto"` — async tests need no marker.
 - Eval harness: `python -m eval.runner eval/goldsets/goldset-v0.2.0.yaml [--case GS-xxx] [--baseline <report>]` — runs the real pipeline against live DB + LLM API; exit 1 if regression gate fails. The README's `citizen-eval` command does not exist as such.
 - Docker stack: `docker compose up -d --build`, then migrations inside the container (`docker compose exec citizen-app alembic upgrade head`).
 
-## Dual-database reality (biggest trap)
+## Database: PostgreSQL-only (resolved D-024)
 
-- Production/Docker: PostgreSQL 16 + pgvector. Unit tests and Electron: SQLite (+ sqlite-vec). `IS_SQLITE` in `app/db/session.py` picks the code path at import time from `DATABASE_URL`.
-- Vector-query changes must be mirrored in BOTH backends of `app/db/vector_backend.py` (`_cosine_distance_sqlite` / `_cosine_distance_pgvector`), including column aliasing (`"lc.x" AS lc_x`). Unit tests never exercise the pgvector path — pgvector-only regressions (D-014, D-016) surfaced only in deployment. Run integration tests for any vector-backend change.
-- Alembic has TWO migration DAGs: PG chain `001→006→011_pg`, SQLite chain `007_sqlite_baseline→010→011_sqlite`. Every schema change needs a migration pair, one per branch. `alembic/env.py` auto-stamps the SQLite baseline when the URL is sqlite.
+One backend everywhere — server, Docker, CI, and all tests: PostgreSQL 16 + pgvector. The former SQLite/sqlite-vec dual path (`IS_SQLITE` branches, dual migration DAGs, raw-SQL `::vector` workarounds) was removed with its last consumer (the Electron client). Single linear migration DAG: `001 → … → 006 → 011_pg → 012`; `012_pg_collapse_sqlite_branch` carries the schema content of the deleted SQLite-only migrations 008–010 and is idempotent. New migrations extend this single chain; keep the ORM column types authoritative (`ChunkEmbedding.embedding` is `pgvector.sqlalchemy.Vector`).
 
 ## Compliance posture (enforced, not decorative)
 

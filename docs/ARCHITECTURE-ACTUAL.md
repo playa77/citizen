@@ -1,3 +1,9 @@
+<!-- STATUS 2026-08-25: This inventory reflects the state BEFORE the
+     api-only refactor (D-024/D-025). Since then: static/ and electron/
+     removed, SQLite backend and migrations 007–010/011_sqlite deleted,
+     single PG migration DAG ending in 012_pg_collapse_sqlite_branch.
+     Current truth: AGENTS.md and API_DOCUMENTATION.md. -->
+
 # Citizen — Architecture (Actual)
 
 <!-- Version: 1.0.0 | 2026-07-12 -->

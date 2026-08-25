@@ -70,10 +70,17 @@ def session_factory() -> async_sessionmaker[AsyncSession]:
 async def db_session(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> AsyncGenerator[AsyncSession, None]:
-    """Yield a disposable session in a transaction that is rolled back."""
-    async with session_factory() as session, session.begin():
+    """Yield a real session without an enclosing transaction.
+
+    ``upsert_chunks`` commits internally (it owns its transaction), so
+    wrapping the session in ``session.begin()`` breaks every operation
+    after the service-level commit ("closed transaction" errors). Rows
+    persist in the disposable testcontainer database; all count assertions
+    therefore use ``>=``.
+    """
+    async with session_factory() as session:
         yield session
-        await session.rollback()
+        await session.close()
 
 
 # -------------------------------------------------------------------
@@ -151,7 +158,9 @@ class TestGenerateEmbeddings:
 
         assert len(result) == 1
         assert "embedding" in result[0]
-        mock_client.get_embeddings_batch.assert_called_once_with(["Test text"])
+        mock_client.get_embeddings_batch.assert_called_once_with(
+            ["Test text"], progress_cb=None
+        )
 
     @pytest.mark.asyncio
     async def test_embedding_error_propagates(self) -> None:
@@ -179,6 +188,23 @@ class TestGenerateEmbeddings:
 
 class TestUpsertChunks:
     """Tests for the DB upsert pipeline."""
+
+    @pytest.fixture(autouse=True)
+    async def _clean_slate(self, session_factory: async_sessionmaker[AsyncSession]) -> AsyncGenerator[None, None]:
+        """Remove rows belonging to this test's source_url before each test.
+
+        Services commit internally, so data from sibling tests persists in
+        the shared disposable database; exact-count assertions need a clean
+        slate scoped to their own source.
+        """
+        from sqlalchemy import text
+
+        async with session_factory() as s:
+            await s.execute(
+                text("DELETE FROM legal_source WHERE source_url = 'https://www.gesetze-im-internet.de/sgb_2/'")
+            )
+            await s.commit()
+        yield
 
     @pytest.mark.skipif(
         os.environ.get("SKIP_LIVE_DB") == "1",
@@ -223,8 +249,21 @@ class TestUpsertChunks:
         await corpus_mod.upsert_chunks(db_session, [chunk])
         await corpus_mod.upsert_chunks(db_session, [chunk])
 
-        lc_count = await db_session.scalar(select(func.count(LegalChunk.id)))
-        emb_count = await db_session.scalar(select(func.count(ChunkEmbedding.id)))
+        # Scope counts to this test's own source — the shared disposable
+        # database legitimately holds rows from sibling tests.
+        from app.db.models import LegalSource
+
+        source_id = await db_session.scalar(
+            select(LegalSource.id).where(LegalSource.source_url == chunk["source_url"])
+        )
+        lc_count = await db_session.scalar(
+            select(func.count(LegalChunk.id)).where(LegalChunk.source_id == source_id)
+        )
+        emb_count = await db_session.scalar(
+            select(func.count(ChunkEmbedding.id))
+            .join(LegalChunk, ChunkEmbedding.chunk_id == LegalChunk.id)
+            .where(LegalChunk.source_id == source_id)
+        )
 
         assert lc_count == 1
         assert emb_count == 1

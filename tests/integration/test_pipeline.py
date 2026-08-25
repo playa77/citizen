@@ -15,7 +15,7 @@ Tests cover:
 from __future__ import annotations
 
 import json
-import subprocess
+import asyncio
 import sys
 import time
 from collections.abc import AsyncGenerator
@@ -26,7 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import get_app_version_tag
+from app.core.config import settings
 from app.main import app
 
 # -------------------------------------------------------------------
@@ -71,35 +71,44 @@ SAMPLE_LEGAL_TEXT = (
     "Jobcenter Musterstadt"
 )
 
-DISCLAIMER_HEADER = {"X-Disclaimer-Ack": get_app_version_tag()}
+# The middleware validates against DISCLAIMER_VERSION — a version in its own
+# right, distinct from the app/package version.
+DISCLAIMER_HEADER = {"X-Disclaimer-Ack": settings.DISCLAIMER_VERSION}
 
 # -------------------------------------------------------------------
 # Helpers
 # -------------------------------------------------------------------
 
 
+def _connect_params() -> dict:
+    """Derive asyncpg connect args from DATABASE_URL (single source of truth)."""
+    from urllib.parse import urlsplit
+
+    from app.core.config import settings
+
+    parts = urlsplit(settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://"))
+    return {
+        "user": parts.username,
+        "password": parts.password,
+        "host": parts.hostname,
+        "port": parts.port or 5432,
+        "database": parts.path.lstrip("/"),
+    }
+
+
 def _count_rows(table: str) -> int:
-    """Query row count via psql subprocess (avoids async loop issues)."""
-    result = subprocess.run(
-        [
-            "psql",
-            "-U",
-            "testuser",
-            "-d",
-            "testdb",
-            "-h",
-            "127.0.0.1",
-            "-t",
-            "-A",
-            "-c",
-            f"SELECT count(*) FROM {table}",
-        ],
-        env={**__import__("os").environ, "PGPASSWORD": "testpassword"},
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    return int(result.stdout.strip())
+    """Query row count via a short-lived connection on its own event loop."""
+
+    async def _query() -> int:
+        import asyncpg
+
+        conn = await asyncpg.connect(**_connect_params())
+        try:
+            return await conn.fetchval(f"SELECT count(*) FROM {table}")
+        finally:
+            await conn.close()
+
+    return int(asyncio.run(_query()))
 
 
 def _consume_sse(response) -> list[dict]:
@@ -124,17 +133,19 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- reasoning stub -------------------------------------------------
     reasoning_mod = types.ModuleType("app.services.reasoning")
 
-    async def classify_issues(text: str) -> list[str]:
+    async def classify_issues(text: str, **kwargs: object) -> list[str]:
         return ["SGB II § 31 — Kürzung der Leistung"]
 
-    async def decompose_questions(text: str) -> list[str]:
+    async def decompose_questions(text: str, **kwargs: object) -> list[str]:
         return [
             "War die Kürzung nach § 31 SGB II rechtmäßig?",
             "Welche Meldepflichten wurden verletzt?",
             "Kann die Kürzung angefochten werden?",
         ]
 
-    async def triage_document(normalized_text: str) -> dict[str, list[str]]:
+    # The pipeline passes optional keyword arguments (e.g. system_prompt);
+    # stubs accept **kwargs so the harness stays decoupled from call-site drift.
+    async def triage_document(normalized_text: str, **kwargs: object) -> dict[str, list[str]]:
         return {
             "issues": ["SGB II § 31 — Kürzung der Leistung"],
             "questions": [
@@ -147,6 +158,7 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     async def construct_claims(
         chunks: list[dict],
         questions: list[str],
+        **kwargs: object,
     ) -> list[dict]:
         return [
             {
@@ -166,6 +178,7 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     async def verify_claims(
         claims: list[dict],
         chunks: list[dict],
+        **kwargs: object,
     ) -> list[dict]:
         return [
             {
@@ -180,6 +193,7 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
 
     async def generate_output(
         verified_claims: list[dict],
+        **kwargs: object,
     ) -> dict[str, str]:
         return {
             "sachverhalt": "Antragsteller erhielt Kürzungsbescheid nach § 31 SGB II.",
@@ -194,7 +208,9 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
         normalized_text: str,
         issues: list[str],
         questions: list[str],
+        claims: list[dict],
         chunks: list[dict],
+        **kwargs: object,
     ) -> dict:
         return {
             "claims": [
@@ -242,6 +258,7 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
         questions: list[str],
         claims: list[dict],
         chunks: list[dict],
+        **kwargs: object,
     ) -> dict:
         return {
             "reviews": [
@@ -282,8 +299,27 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
         )
         yield {"type": "done", "result": result}
 
+    calculation_mod = types.ModuleType("app.services.calculation")
+
+    async def check_calculations(*args: object, **kwargs: object) -> dict:
+        return {
+            "overall_assessment": {"total_discrepancies": 0},
+            "calculations": [],
+        }
+
+    calculation_mod.check_calculations = check_calculations  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "app.services.calculation", calculation_mod)
+
     reasoning_mod.adversarial_review = adversarial_review  # type: ignore[attr-defined]
     reasoning_mod.generate_grounded_answer_stream = generate_grounded_answer_stream  # type: ignore[attr-defined]
+    # app.services.calculation imports these private names from reasoning;
+    # the stub module must expose them or the calculation_check stage fails.
+    reasoning_mod._STRICT_SUFFIX = ""  # type: ignore[attr-defined]
+
+    class JSONParseError(ValueError):
+        pass
+
+    reasoning_mod.JSONParseError = JSONParseError  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.reasoning", reasoning_mod)
 
     # --- retrieval stub --------------------------------------------------
@@ -297,9 +333,9 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> list[dict]:
         return [
             {
-                "chunk_id": str(uuid4()),
+                "chunk_id": _SEEDED_CHUNK.get("chunk_id") or str(uuid4()),
                 "text_content": "§ 31 Abs. 1 SGB II: Leistungsberechtigte, die ...",
-                "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "hierarchy_path": _TEST_CHUNK_HIERARCHY,
                 "source_type": "sgb2",
                 "title": "SGB II",
                 "distance": 0.15,
@@ -315,17 +351,57 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> list[dict]:
         return [
             {
-                "chunk_id": str(uuid4()),
+                "chunk_id": _SEEDED_CHUNK.get("chunk_id") or str(uuid4()),
                 "text_content": "§ 31 Abs. 1 SGB II: Leistungsberechtigte, die ...",
-                "hierarchy_path": "SGB II > § 31 > Abs. 1",
+                "hierarchy_path": _TEST_CHUNK_HIERARCHY,
                 "source_type": "sgb2",
                 "title": "SGB II",
                 "distance": 0.15,
             },
         ]
 
+    async def retrieve_chunks_by_norm_reference(
+        normalized_text: str,
+        *,
+        source_types: tuple[str, ...] = (),
+        client=None,
+        session_factory=None,
+    ) -> list[dict]:
+        return [
+            {
+                "chunk_id": _SEEDED_CHUNK.get("chunk_id") or str(uuid4()),
+                "text_content": "§ 31 Abs. 1 SGB II: Leistungsberechtigte, die ...",
+                "hierarchy_path": _TEST_CHUNK_HIERARCHY,
+                "source_type": "sgb2",
+                "title": "SGB II",
+                "distance": 0.15,
+            },
+        ]
+
+    async def retrieve_chunks_for_areas(
+        areas: list[str],
+        issues: list[str],
+        questions: list[str],
+        normalized_text: str,
+        *,
+        client=None,
+        session_factory=None,
+    ) -> tuple[dict[str, list[dict]], list[dict]]:
+        chunk = {
+            "chunk_id": _SEEDED_CHUNK.get("chunk_id") or str(uuid4()),
+            "text_content": "§ 31 Abs. 1 SGB II: Leistungsberechtigte, die ...",
+            "hierarchy_path": _TEST_CHUNK_HIERARCHY,
+            "source_type": "sgb2",
+            "title": "SGB II",
+            "legal_area": "sozialrecht",
+            "distance": 0.15,
+        }
+        return {area: [dict(chunk)] for area in areas}, [chunk]
+
     retrieval_mod.retrieve_chunks = retrieve_chunks  # type: ignore[attr-defined]
     retrieval_mod.retrieve_chunks_combined = retrieve_chunks_combined  # type: ignore[attr-defined]
+    retrieval_mod.retrieve_chunks_by_norm_reference = retrieve_chunks_by_norm_reference  # type: ignore[attr-defined]
+    retrieval_mod.retrieve_chunks_for_areas = retrieve_chunks_for_areas  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "app.services.retrieval", retrieval_mod)
 
     # --- verification stub (WP-007) -------------------------------------
@@ -356,13 +432,17 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
 _TEST_CHUNK_HIERARCHY = "SGB II > § 31 > Abs. 1"
 
 
+_SEEDED_CHUNK: dict = {}
+
+
 def _seed_test_chunk() -> None:
     """Insert a LegalSource + LegalChunk into the DB so evidence bindings
-    can resolve via hierarchy_path.
-
-    Uses psql to avoid async event-loop conflicts.
+    can resolve via hierarchy_path. Stores the seeded chunk id in
+    _SEEDED_CHUNK so retrieval stubs can reference a REAL database row —
+    analyze.py's inline audit writer inserts evidence_binding.chunk_id
+    values taken verbatim from verification payloads, and a random UUID
+    would violate evidence_binding_chunk_id_fkey.
     """
-    env = {**__import__("os").environ, "PGPASSWORD": "testpassword"}
     sql = (
         "INSERT INTO legal_source "
         "(id, source_type, title, jurisdiction, effective_date, "
@@ -375,10 +455,10 @@ def _seed_test_chunk() -> None:
         ");\n"
         "INSERT INTO legal_chunk "
         "(id, source_id, unit_type, hierarchy_path, "
-        " text_content, effective_date) "
+        " text_content, text_hash, effective_date) "
         "SELECT gen_random_uuid(), ls.id, 'absatz', "
         "'" + _TEST_CHUNK_HIERARCHY + "', "
-        "'Test chunk content', CURRENT_DATE "
+        "'Test chunk content', md5('Test chunk content'), CURRENT_DATE "
         "FROM legal_source ls "
         "WHERE ls.source_url = 'https://example.com/test' "
         "AND NOT EXISTS ("
@@ -386,27 +466,32 @@ def _seed_test_chunk() -> None:
         "  WHERE lc.hierarchy_path = '" + _TEST_CHUNK_HIERARCHY + "'"
         ");"
     )
-    import subprocess
+    async def _seed() -> None:
+        import asyncpg
 
-    proc = subprocess.run(
-        [
-            "psql",
-            "-U",
-            "testuser",
-            "-d",
-            "testdb",
-            "-h",
-            "127.0.0.1",
-            "-c",
-            sql,
-        ],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    if proc.returncode != 0:
-        raise RuntimeError(f"DB seeding failed: {proc.stderr}")
+        conn = await asyncpg.connect(**_connect_params())
+        try:
+            await conn.execute(sql)
+        finally:
+            await conn.close()
+
+    asyncio.run(_seed())
+
+    async def _read_back() -> dict:
+        import asyncpg
+
+        conn = await asyncpg.connect(**_connect_params())
+        try:
+            row = await conn.fetchrow(
+                "SELECT id, hierarchy_path FROM legal_chunk "
+                "WHERE hierarchy_path = $1 LIMIT 1",
+                _TEST_CHUNK_HIERARCHY,
+            )
+            return {"chunk_id": str(row["id"]), "hierarchy_path": row["hierarchy_path"]} if row else {}
+        finally:
+            await conn.close()
+
+    _SEEDED_CHUNK.update(asyncio.run(_read_back()))
 
 
 # -------------------------------------------------------------------
@@ -444,21 +529,17 @@ class TestFullPipelineExecution:
         # Acceptance: total latency < 300 s
         assert elapsed < 300.0, f"Pipeline took {elapsed:.1f}s, exceeding 300s limit"
 
-        # Verify SSE events contain the expected stages in order
+        # Verify SSE events contain the canonical stages in order
         stage_events = [e for e in events if e.get("stage") and "final_output" not in e]
         # Filter corpus_health (pre-pipeline health check) from stage names
-        stage_names = [e["stage"] for e in stage_events if e["stage"] != "corpus_health"]
-        expected_stages = [
-            "normalization",
-            "classification",
-            "decomposition",
-            "retrieval",
-            "construction",
-            "verification",
-            "generation",
-            "adversarial_review",
+        from app.core.pipeline import _STAGES
+
+        completed = [
+            e["stage"]
+            for e in stage_events
+            if e["stage"] != "corpus_health" and e.get("status") == "complete"
         ]
-        assert stage_names == expected_stages, f"Stage order mismatch: {stage_names}"
+        assert completed == list(_STAGES), f"Stage order mismatch: {completed}"
 
         # Verify audit trail persisted via psql (avoids async loop issues
         # with the sync TestClient event loop).
@@ -527,6 +608,16 @@ class TestDisclaimerEnforcement:
             assert response.status_code == 200
             events = _consume_sse(response)
 
-        # Should have at least 8 stage events (excluding pre-pipeline corpus_health)
+        # Stage contract: every canonical pipeline stage must appear, in
+        # _STAGE_MAP order (each stage emits running+complete events).
+        from app.core.pipeline import _STAGES
+
         stage_events = [e for e in events if e.get("stage") and "final_output" not in e and e["stage"] != "corpus_health"]
-        assert len(stage_events) == 8
+        completed = [
+            e["stage"]
+            for e in stage_events
+            if e.get("status") == "complete"
+        ]
+        assert completed == list(_STAGES), (
+            f"Stage order/count mismatch: {completed}"
+        )

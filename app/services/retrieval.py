@@ -2,8 +2,8 @@
 
 Given a list of legal questions, this module:
 1. Generates an embedding for each question via the OpenRouter embedding API.
-2. Queries ``chunk_embedding`` using the cosine distance operator (pgvector
-   or sqlite-vec, depending on the dialect-agnostic backend).
+2. Queries ``chunk_embedding`` via the pgvector backend (single backend
+   since D-024).
 3. Filters results by ``MAX_COSINE_DISTANCE`` (cosine distance < threshold).
 4. Enforces ``TOP_K_RETRIEVAL`` per question.
 5. Joins with ``legal_chunk`` to fetch ``text_content``, ``hierarchy_path``,
@@ -12,7 +12,7 @@ Given a list of legal questions, this module:
 7. Returns a list of rich dictionaries.
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0 | 2026-08-25 — PostgreSQL-only doc/comment updates (D-024).
 
 from __future__ import annotations
 
@@ -233,7 +233,7 @@ async def retrieve_chunks_combined_filtered(
                 "ls.title",
             ],
             extra_conditions=[
-                "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
+                "ls.is_active = TRUE",
                 f"ls.source_type IN ({', '.join(repr(st) for st in source_types)})",
             ],
         )
@@ -317,7 +317,7 @@ async def retrieve_chunks_per_area(
                     "ls.title",
                 ],
                 extra_conditions=[
-                    "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
+                    "ls.is_active = TRUE",
                     f"ls.source_type IN ({', '.join(repr(st) for st in source_types)})",
                 ],
             )
@@ -421,7 +421,7 @@ async def retrieve_chunks(
                     "ls.title",
                 ],
                 extra_conditions=[
-                    "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
+                    "ls.is_active = TRUE",
                 ],
             )
 
@@ -612,7 +612,7 @@ async def retrieve_chunks_combined(
                 "ls.title",
             ],
             extra_conditions=[
-                "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
+                "ls.is_active = TRUE",
             ],
         )
 
@@ -777,7 +777,7 @@ async def _execute_query(
             "ls.title",
         ],
         extra_conditions=[
-            "ls.is_active = TRUE",  # cross-dialect: PG boolean + SQLite (TRUE==1)
+            "ls.is_active = TRUE",
         ],
     )
 

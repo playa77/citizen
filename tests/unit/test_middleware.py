@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import get_app_version_tag
+from app.core.config import get_app_version_tag, settings
 from app.main import app
 
 # -------------------------------------------------------------------
@@ -45,7 +45,7 @@ class TestDisclaimerMiddleware:
         data = response.json()
         assert data["error"] == "disclaimer_required"
         assert "required_version" in data
-        assert data["required_version"] == get_app_version_tag()
+        assert data["required_version"] == settings.DISCLAIMER_VERSION
 
     def test_disclaimer_wrong_version(self, client: TestClient) -> None:
         """Request with wrong version returns 403 with version mismatch."""
@@ -58,7 +58,7 @@ class TestDisclaimerMiddleware:
         assert response.status_code == 403
         data = response.json()
         assert data["error"] == "disclaimer_version_mismatch"
-        assert data["required_version"] == get_app_version_tag()
+        assert data["required_version"] == settings.DISCLAIMER_VERSION
         assert data["acknowledged_version"] == "v0.9.0"
 
     def test_disclaimer_passes_with_correct_header(self, client: TestClient) -> None:
@@ -67,7 +67,12 @@ class TestDisclaimerMiddleware:
         response = client.post(
             "/api/v1/ingest",
             files={"file": ("test.pdf", b"dummy", "application/pdf")},
-            headers={"X-Disclaimer-Ack": get_app_version_tag()},
+            # WP-62: dev instances also require a document tag; without it
+            # the dev guard (not the disclaimer middleware) 403s.
+            headers={
+                "X-Disclaimer-Ack": settings.DISCLAIMER_VERSION,
+                "X-Document-Tag": "synthetic",
+            },
         )
 
         # Should NOT be 403 from middleware - could be 400 from OCR or other
@@ -81,13 +86,19 @@ class TestDisclaimerMiddleware:
         data = response.json()
         assert data["status"] == "ok"
 
-    def test_static_files_bypass_disclaimer(self, client: TestClient) -> None:
-        """Static file requests bypass disclaimer check."""
-        response = client.get("/static/style.css")
+    def test_no_ui_routes_served(self, client: TestClient) -> None:
+        """API-only service (D-025): no static mount, no HTML root.
 
-        # Could be 200 or 404 depending on file existence
-        # But should NOT be 403 from middleware
-        assert response.status_code != 403
+        Guard G1: the former web UI surfaces must not return HTML. `/` and
+        `/static/*` must not respond 200 with an HTML body.
+        """
+        for path in ["/", "/static/style.css", "/static/app.js", "/index.html"]:
+            response = client.get(path)
+            if response.status_code == 200:
+                content_type = response.headers.get("content-type", "")
+                assert "text/html" not in content_type, (
+                    f"{path} unexpectedly serves HTML — web UI was removed (D-025)"
+                )
 
 
 # -------------------------------------------------------------------
@@ -104,7 +115,7 @@ class TestMetaEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["version"] == get_app_version_tag()
+        assert data["version"] == settings.DISCLAIMER_VERSION
 
     def test_disclaimer_text_endpoint(self, client: TestClient) -> None:
         """GET /api/v1/meta/disclaimer/text returns disclaimer text."""
@@ -123,7 +134,7 @@ class TestMetaEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["api_version"] == get_app_version_tag().lstrip("v")
-        assert data["disclaimer_version"] == get_app_version_tag()
+        assert data["disclaimer_version"] == settings.DISCLAIMER_VERSION
 
     def test_meta_endpoints_bypass_disclaimer(self, client: TestClient) -> None:
         """Meta endpoints work without X-Disclaimer-Ack header."""
@@ -153,7 +164,7 @@ def test_disclaimer_block() -> None:
     assert response.status_code == 403
     data = response.json()
     assert data["error"] == "disclaimer_required"
-    assert data["required_version"] == get_app_version_tag()
+    assert data["required_version"] == settings.DISCLAIMER_VERSION
 
 
 def test_disclaimer_pass() -> None:
@@ -169,7 +180,11 @@ def test_disclaimer_pass() -> None:
     response = client.post(
         "/api/v1/ingest",
         files={"file": ("dummy.pdf", b"not-a-real-pdf", "application/pdf")},
-        headers={"X-Disclaimer-Ack": get_app_version_tag()},
+        # WP-62: dev instances also require a document tag (see above).
+        headers={
+            "X-Disclaimer-Ack": settings.DISCLAIMER_VERSION,
+            "X-Document-Tag": "synthetic",
+        },
     )
 
     assert response.status_code != 403, (

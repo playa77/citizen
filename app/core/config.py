@@ -1,4 +1,5 @@
-# Semantic Version: 0.2.0 | 2026-07-10 — Desktop app support
+# Semantic Version: 0.3.0 | 2026-08-25 — PostgreSQL-only (D-024):
+# sqlite default URL removed; DATA_DIR (Electron desktop) removed as dead.
 
 import secrets
 import tomllib
@@ -30,8 +31,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    DATABASE_URL: str = "sqlite+aiosqlite:///citizen.db"
-    DATA_DIR: str = ""  # Desktop data directory — set by Electron at runtime
+    # PostgreSQL + pgvector is the only supported backend (D-024).
+    DATABASE_URL: str = "postgresql+asyncpg://citizen:citizen@localhost:5432/citizen"
     OPENROUTER_API_KEY: str
     EMBEDDING_API_KEY: str = ""  # separate key for embedding calls (falls back to OPENROUTER_API_KEY)
     EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1/embeddings"
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 3
     REQUEST_TIMEOUT: float = 25.0
     MAX_FILE_SIZE_MB: int = 25
-    DB_POOL_SIZE: int = 10  # PostgreSQL only — ignored for SQLite
+    DB_POOL_SIZE: int = 10  # asyncpg connection pool size
     OCR_DPI: int = 300
     OCR_JPG_QUALITY: int = 84
     OCR_CONTRAST_FACTOR: float = 2.0
@@ -105,7 +106,8 @@ class Settings(BaseSettings):
     # Calculation check (WP-014) — specialised model for numeric verification
     ENABLE_CALCULATION_CHECK: bool = True
     CALCULATION_MODEL: str | None = None  # None = use PRIMARY_MODEL
-    # Rate limiting — 0 = disabled (desktop app, no rate limiting needed)
+    # Rate limiting — 0 = disabled (RateLimitMiddleware is currently NOT
+    # mounted in app.main; values kept for optional enablement)
     RATE_LIMIT_REQUESTS: int = 0
     RATE_LIMIT_WINDOW: int = 60
     # Caching (WP-011)
