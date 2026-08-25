@@ -1,3 +1,35 @@
+## 2026-08-25 — Docs-Reconciliation: README.md und .gitignore gegen ausführbare Quellen
+
+### Änderungen
+
+- **README.md** — tote Links entfernt (`README-EN.md`, `docs/citizen-onepager.md`
+  existieren nicht); nichtexistierenden Befehl `citizen-eval` durch den realen
+  Harness-Aufruf `python -m eval.runner <goldset.yaml> [--save] [--baseline]`
+  ersetzt (Kernfunktionen + Tests-Sektion); Quickstart-Curl auf
+  `X-Disclaimer-Ack: v0.1.0` korrigiert (Default aus `app/core/config.py`);
+  Zähler aktualisiert (12 Migrationen/zwei DAGs, 24 Servicemodule, 36
+  Testdateien ~12.300 Zeilen); Verzeichnisbaum an Realität angepasst (`docs/`,
+  neu: `devdocs/`, `electron/`, `scripts/`); drei fehlende Meta-Endpunkte in die
+  API-Tabelle aufgenommen (`legal-timestamp`, `active-profile`,
+  `deployment-mode`); Codequalität-Befehle auf CI-Umfang (`app/` nur)
+  eingeschärft; Behauptung „Regressions-Gate in der CI" korrigiert (Gate läuft
+  per `--baseline` im Harness, nicht als CI-Schritt); Absatz zu
+  `docs/datenschutz/` entfernt (Verzeichnis existiert nicht).
+- **`.gitignore`** — ungültige Zeile `docker-compose.yml  # take out before
+  release` entfernt (Gitignore kennt keine Inline-Kommentare; Datei ist ohnehin
+  getrackt und Kernbestandteil des Deployments); `node_modules/` ergänzt
+  (Electron-Paket); Versionskopf aktualisiert.
+
+### Hinweis
+
+- Keine Code-, API- oder Schema-Änderungen. Alle Korrekturen gegen verifizierte
+  Quellen: `.github/workflows/ci.yml`, `app/api/routes/meta.py`,
+  `eval/runner.py`, `alembic/versions/`, `app/core/config.py`,
+  `tests/conftest.py`. Purpose-Drift-Lint nach README-Änderung grün
+  (`python scripts/check_purpose_drift.py` → Exit 0).
+
+---
+
 ## 2026-08-07 — WP-62: Dev-instance Art. 2(8) hardening (Roadmap v2.0.0)
 
 ### Änderungen

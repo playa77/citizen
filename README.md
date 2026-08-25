@@ -1,7 +1,5 @@
 # Citizen — Bescheid-Prüfung für deutsches Sozialrecht
 
-**🇬🇧 English version: [README-EN.md](README-EN.md)**
-
 ## Rechtsinformation, keine Rechtsberatung — siehe [DISCLAIMER_DE.md](DISCLAIMER_DE.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -17,8 +15,7 @@ wird an den Gesetzestext gebunden, jede Berechnung deterministisch
 nachgerechnet, jede Frist auf den Tag genau bestimmt — und die Qualität wird
 gegen ein öffentliches, versioniertes Golden Set gemessen statt behauptet.
 
-**Warum es dieses Projekt gibt:** [STATEMENT.md](STATEMENT.md) ·
-**Kurzfassung:** [One-Pager](docs/citizen-onepager.md)
+**Warum es dieses Projekt gibt:** [STATEMENT.md](STATEMENT.md)
 
 ## Rechtlicher Status
 
@@ -83,10 +80,10 @@ in Oberfläche und Ausgaben entsprechend gekennzeichnet.
   (synthetische Bescheide mit erwarteten Befunden, Berechnungen und
   Fristen) — im UI als „Prüfstand" klickbar aufbereitet, inklusive
   Demo-Modus („Diesen Fall live analysieren") und Eval-Ergebnisansicht.
-* **Eval-Harness:** `citizen-eval` führt die echte Pipeline gegen das
+* **Eval-Harness:** `python -m eval.runner` führt die echte Pipeline gegen das
   Goldset aus und misst Befund-Erkennung, Zitatpräzision,
-  Halluzinationsrate, Rechen- und Fristgenauigkeit. Versionierte Reports,
-  Regressions-Gate in der CI.
+  Halluzinationsrate, Rechen- und Fristgenauigkeit. Versionierte Reports;
+  Regressions-Gate per `--baseline`.
 * **Aktionsdokumente:** Widerspruch, Überprüfungsantrag (§ 44 SGB X) und
   Akteneinsichtsantrag (§ 25 SGB X) als Baustein-Entwürfe — jede
   Rechtsbehauptung im Dokument ist an verifizierte, vom Nutzer bestätigte
@@ -124,7 +121,7 @@ in Oberfläche und Ausgaben entsprechend gekennzeichnet.
 |---|---|
 | **Backend** | FastAPI, Uvicorn (SSE-Streaming) |
 | **Datenbank** | PostgreSQL 16 + `pgvector` + `tsvector` |
-| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (10 Migrationen) |
+| **ORM / Migrationen** | SQLAlchemy 2.0 (async), Alembic (12 Migrationen, zwei DAGs: PostgreSQL / SQLite) |
 | **Frontend** | Vanilla HTML/JS/CSS |
 | **LLM-Anbindung** | Versionierte Inferenzprofile (`eu-avv` Standard, `extern-openrouter`, `on-prem`-Slot); Modell je Pipeline-Stufe konfigurierbar; Fallback-Kette |
 | **OCR** | pdfplumber → PyMuPDF → Tesseract (deutsch) |
@@ -197,7 +194,7 @@ docker compose exec citizen-app alembic upgrade head
 #    Hinweis: erfordert bestätigten Disclaimer; Version siehe
 #    GET /api/v1/meta/disclaimer/version
 curl -X POST http://localhost:8000/api/v1/corpus/update \
-  -H "X-Disclaimer-Ack: v1.1.0" \
+  -H "X-Disclaimer-Ack: v0.1.0" \
   -H "Content-Type: application/json" -d '{}'
 
 # 7. App öffnen — beim ersten Start wird die Bestätigung des
@@ -252,6 +249,9 @@ docker compose down
 | **meta** | `GET` | `/api/v1/meta/disclaimer/version` | Disclaimer-Version |
 | **meta** | `GET` | `/api/v1/meta/disclaimer/text` | Vollständiger Disclaimer-Text |
 | **meta** | `GET` | `/api/v1/meta/version` | API- und Disclaimer-Versionen |
+| **meta** | `GET` | `/api/v1/meta/legal-timestamp` | Rechtsstand-Frischedaten (Parameter & Korpus) |
+| **meta** | `GET` | `/api/v1/meta/active-profile` | Aktives Inferenzprofil (Name, AVV-Status, Pseudonymisierung) |
+| **meta** | `GET` | `/api/v1/meta/deployment-mode` | Aktiver Betriebsmodus (`dev`/`self`/`provider`, D-019) + Dev-Banner |
 | **health** | `GET` | `/health` | Liveness-Probe |
 
 Vollständige, interaktive Dokumentation nach dem Start unter `/docs`
@@ -261,7 +261,7 @@ Vollständige, interaktive Dokumentation nach dem Start unter `/docs`
 
 ```
 citizen/
-├── alembic/                              # 10 Migrationen
+├── alembic/                              # 12 Migrationen (zwei DAGs: PG / SQLite)
 ├── app/
 │   ├── api/routes/                       # 12 Routenmodule (analyze, cases,
 │   │                                     #  conversations, corpus, documents,
@@ -270,7 +270,7 @@ citizen/
 │   ├── core/                             # config, pipeline (SSE), router
 │   ├── db/                               # 14 ORM-Modelle, Session, Vektor-Backend
 │   ├── middleware/                       # Disclaimer-Durchsetzung, Rate-Limit
-│   ├── services/                         # 23 Servicemodule, u.a.:
+│   ├── services/                         # 24 Servicemodule, u.a.:
 │   │                                     #  fristen, rules_engine, regime,
 │   │                                     #  parameter_store, pseudonymization,
 │   │                                     #  inference_profiles, verification,
@@ -278,8 +278,13 @@ citizen/
 │   └── utils/                            # image, pdf, text, tokens
 ├── eval/                                 # Goldsets, Eval-Harness, Reports
 ├── static/                               # Frontend (Analyse, Prüfstand, Einstellungen)
-├── tests/                                # 33 Testdateien (~11.700 Zeilen)
-├── docs/                                 # STATEMENT, One-Pager, Datenschutz-Vorlagen
+├── tests/                                # 36 Testdateien (~12.300 Zeilen)
+├── docs/                                 # Design-Dokument, technische Spezifikation,
+│                                         #  Roadmap v2.0.0, Gap-Report, Architektur
+├── devdocs/                              # Betriebsdokumentation (Dev-Instanz)
+├── electron/                             # Desktop-Variante (SQLite + sqlite-vec)
+├── scripts/                              # Wartungs-Skripte (Purpose-Drift-Lint,
+│                                         #  Parameter-Seeding, Benchmark)
 ├── docker-compose.yml
 ├── Dockerfile
 ├── pyproject.toml
@@ -308,17 +313,19 @@ Vollständige Liste in `.env.example`.
 # Unit-Tests (ohne Datenbank)
 pytest tests/unit/ -v
 
-# Integrationstests (laufende Datenbank erforderlich)
+# Integrationstests (PostgreSQL 16 + pgvector erforderlich)
 alembic upgrade head
 pytest tests/integration/ -v
 
-# Eval gegen das Goldset (Beispiel)
-citizen-eval run --goldset v0.2.0 --profile eu-avv \
-  --accept-disclaimer v1.1.0 --report eval/reports/
+# Eval gegen das Goldset (echte Pipeline; DB + API-Schlüssel nötig)
+python -m eval.runner eval/goldsets/goldset-v0.2.0.yaml --save
+# mit Regressions-Gate gegen einen Baseline-Report (Exit 1 bei Verschlechterung):
+python -m eval.runner eval/goldsets/goldset-v0.2.0.yaml \
+  --baseline eval/results/<baseline>.json --save
 
-# Codequalität
-ruff check app/ tests/
-ruff format --check app/ tests/
+# Codequalität (CI-Umfang)
+ruff check app/
+ruff format --check app/
 mypy app/
 ```
 
@@ -340,9 +347,6 @@ mypy app/
   automatisch erzeugtes `.secret_salt` beim ersten Start; Logs enthalten
   Platzhalter statt personenbezogener Klartextdaten.
 * **Rate-Limiting:** Sliding-Window-Limiter standardmäßig aktiv.
-
-Vorlagen für Datenschutzbeauftragte (AVV-Checkliste, Verzeichnis von
-Verarbeitungstätigkeiten) liegen unter `docs/datenschutz/`.
 
 ## Lizenz
 

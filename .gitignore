@@ -1,5 +1,6 @@
 # ==========================================
-# Citizen (v1.0) - .gitignore
+# Citizen - .gitignore
+# Version: 1.1.0 | 2026-08-25
 # ==========================================
 
 # Python / Bytecode
@@ -85,6 +86,7 @@ Thumbs.db
 build/
 develop-eggs/
 dist/
+node_modules/
 downloads/
 eggs/
 .eggs/
@@ -111,7 +113,6 @@ archive.zip
 citizen.zip
 .qwen/
 QWEN.md
-docker-compose.yml  # take out before release
 deploy_db.sh
 
 # Eval — goldsets are tracked; results and run outputs are not
