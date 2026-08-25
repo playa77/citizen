@@ -7,7 +7,8 @@ Endpoints:
 All endpoints require the ``X-Disclaimer-Ack`` header (enforced by middleware).
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
+# the generate response carries `provenance` alongside generation_metadata.
 
 from __future__ import annotations
 
@@ -321,6 +322,11 @@ async def generate_document_endpoint(
         ],
         "warnings": doc.warnings,
         "generation_metadata": doc.generation_metadata,
+        # Art. 50(2) machine-readable marker (D-032). generate_document always
+        # populates it; the None branch only guards against a manually
+        # constructed GeneratedDocument so a response never breaks. No
+        # `disclosure` here by design — it was delivered with the analysis.
+        "provenance": doc.provenance.model_dump(mode="json") if doc.provenance else None,
     }
 
     return response

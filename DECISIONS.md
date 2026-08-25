@@ -363,3 +363,78 @@ decision.
 describes a repository state that no longer exists; their "current truth"
 pointers already name surviving documents (AGENTS.md,
 API_DOCUMENTATION.md). Reversible via git at zero cost (R1).
+
+### D-032 R1 — 2026-08-25 — Art. 50 AI Act disclosure & provenance fields
+**Decision:** Implement Art. 50 VO (EU) 2024/1689 disclosure/provenance embedding
+(owner-delegated task spec). One new module `app/services/disclosure.py` holds the
+Pydantic models (`DisclosureInfo`, `ProvenanceMarker`), the canonical DE/EN
+disclosure constants (`DISCLOSURE_VERSION = "1.0"`,
+`PROVENANCE_SPEC_VERSION = "citizen-provenance-v1.0"`), and the single shared
+helper `build_disclosure_and_provenance(settings)` (no I/O, never raises — every
+field extraction falls back to `"unknown"` with a warning). Embedded on exactly
+the three AI-content surfaces named by the spec: analyze SSE terminal event,
+conversation chat `done` event (`generate_chat_response`), and
+`GeneratedDocument.provenance`; plus new `GET /api/v1/meta/disclosure`
+(response_model declared so openapi.json reflects it) and a `disclosure_version`
+key added to `GET /api/v1/meta/version`. API_DOCUMENTATION.md updated (G4 parity
+guard requires it for the new route).
+**Sub-decisions (all R1 unless noted):**
+- `X-Disclaimer-Ack` enforcement on `/meta/disclosure` via a route-level FastAPI
+  dependency, NOT via the middleware — editing `DisclaimerMiddleware` is
+  forbidden by the task, and the middleware currently excludes ALL of
+  `/api/v1/meta*` (the task text claimed only `disclaimer/version` is exempt;
+  `test_meta_endpoints_bypass_disclaimer` confirms). Existing meta endpoints stay
+  unprotected — changing their contract is forbidden.
+- `model_profile` sourced from `settings.INFERENCE_PROFILE` (getattr fallback
+  `"unknown"`), not `get_active_profile()` — avoids YAML file I/O and the
+  ValueError path inside a must-not-raise function.
+- `timestamp_utc`: ISO 8601 UTC, second precision, `Z` suffix
+  (`_utc_now_iso()` factored out so tests can freeze the clock).
+- Conversation first-message pipeline terminal event
+  (`run_first_message_pipeline`) and case-chat `done` (`case_chat.py:236`) are
+  intentionally NOT extended: spec names three surfaces; both are logged here as
+  observed Art. 50(2) coverage gaps for a future decision, not silently skipped.
+**Rejected:** Editing middleware EXCLUDED_PREFIXES (forbidden); adding
+`response_model` to existing dict-returning endpoints (changes existing OpenAPI
+contracts); putting disclosure on `GeneratedDocument` (spec forbids — document
+generation is downstream of an already-disclosed analysis).
+**Invariants derived from the task spec:**
+- guarded G-50-A: `/meta/disclosure` returns 200 `{version="1.0",
+  must_display_before="results", texts={de,en}}` with correct ack header; 403
+  without/mismatched header.
+- guarded G-50-B: `/meta/version` includes `disclosure_version:"1.0"`;
+  existing keys unchanged.
+- guarded G-50-C: analyze terminal SSE event has top-level `disclosure` +
+  `provenance` with required fields/types; error events carry neither.
+- guarded G-50-D: chat `done` event carries both fields.
+- guarded G-50-E: `/documents/generate` response carries `provenance`; carries
+  no `disclosure`.
+- guarded G-50-F: helper returns valid instances and never raises on a broken
+  settings object (fallbacks + warning log).
+- guarded G-50-G: models serialize to valid JSON (model_dump_json round-trip);
+  openapi.json parses and contains the new path/schema.
+- triggered T-50-H: disclaimer system untouched (middleware, disclaimer/*
+  endpoints, DISCLAIMER_*.md) — any diff touching these is flagged.
+- triggered T-50-I: no disclosure/provenance on error/corpus/goldset/eval/
+  intake/presets routes; DEPLOYMENT_MODE/X-Document-Tag/dev-guard logic
+  unchanged; all payload changes additive-only (existing keys untouched).
+
+### D-033 R1 — 2026-08-25 — Connection-leak fix in get_case_endpoint (D-032 follow-up)
+**Decision:** While writing G-50-E, every 200-response from
+`POST /documents/generate` leaked one pooled asyncpg connection until GC
+(exit-time `SAWarning: non-checked-in connection`; one run even failed with a
+cross-loop Future error before the test harness was made single-loop). Root
+cause found in pre-existing app code: `get_case_endpoint` executed its
+`legal_areas` query against the session AFTER the ``async with`` block had
+closed it (cases.py), silently reopening the session whose transaction kept
+the connection checked out forever. Fixed by moving the query (and the
+``case is None`` guard) back inside the session block; response payload is
+byte-identical. Flagged to the owner as an out-of-original-scope but
+task-exposed defect repair; no contract change, no behavior change.
+**Rejected:** Leaving it unfixed with a documented warning — the leak fires on
+every `GET /cases/{id}` and `POST /documents/generate` in production, and
+shipping tests that normalize connection-leak noise would defeat the audit
+trail the disclosure work is meant to strengthen.
+**Rationale:** Three-line scoping fix, fully reversible (R1); verified by the
+leak-free test run (`pytest tests/unit/test_disclosure.py` — no SAWarning) and
+the full green suite (854 unit + 37 integration).

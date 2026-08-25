@@ -3,25 +3,33 @@
 Provides:
     GET /api/v1/meta/disclaimer/version — current disclaimer version
     GET /api/v1/meta/disclaimer/text — full disclaimer text
-    GET /api/v1/meta/version — API version info
+    GET /api/v1/meta/disclosure — Art. 50(1) AI-system notification (D-032)
+    GET /api/v1/meta/version — API version info (incl. disclosure_version)
     GET /api/v1/meta/legal-timestamp — parameter & corpus freshness dates
     GET /api/v1/meta/active-profile — active inference profile info (WP-31)
     GET /api/v1/meta/deployment-mode — active deployment posture (WP-62/WP-66)
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-08-25 — Art. 50 disclosure endpoint (D-032):
+# /meta/disclosure added (ack-guarded via route-level dependency), /meta/version
+# carries disclosure_version.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import func as sa_func
 from sqlalchemy import select
 
 from app.core.config import _get_settings, get_app_version, get_app_version_tag
 from app.db.models import LegalParameter, LegalSource
 from app.db.session import get_async_session
+from app.services.disclosure import (
+    DISCLOSURE_VERSION,
+    DisclosureInfo,
+    build_disclosure,
+)
 
 router = APIRouter()
 
@@ -68,6 +76,55 @@ async def get_disclaimer_text() -> dict[str, str]:
     return {"text": _DISCLAIMER_TEXT, "version": _get_settings().DISCLAIMER_VERSION}
 
 
+async def require_disclaimer_ack(
+    x_disclaimer_ack: Annotated[str | None, Header()] = None,
+) -> None:
+    """Route-level ``X-Disclaimer-Ack`` enforcement for /meta/disclosure.
+
+    The DisclaimerMiddleware excludes the whole ``/api/v1/meta`` prefix, so a
+    middleware-based guard would require editing the disclaimer system — out
+    of scope for D-032. This dependency mirrors the middleware's error
+    contract (403 with ``error``/``required_version``) for this one endpoint;
+    existing meta endpoints keep their current (unprotected) contract.
+    """
+    settings = _get_settings()
+    if x_disclaimer_ack is None:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "disclaimer_required",
+                "message": "Legal disclaimer must be acknowledged before using this API.",
+                "required_version": settings.DISCLAIMER_VERSION,
+            },
+        )
+    if x_disclaimer_ack != settings.DISCLAIMER_VERSION:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "disclaimer_version_mismatch",
+                "message": "Disclaimer version has been updated. Please re-acknowledge.",
+                "required_version": settings.DISCLAIMER_VERSION,
+                "acknowledged_version": x_disclaimer_ack,
+            },
+        )
+
+
+@router.get(
+    "/meta/disclosure",
+    response_model=DisclosureInfo,
+    dependencies=[Depends(require_disclaimer_ack)],
+)
+async def get_disclosure() -> DisclosureInfo:
+    """Return the canonical Art. 50(1) AI-system notification (D-032).
+
+    This is the reference endpoint for consuming clients that want to cache or
+    pre-fetch the current disclosure text. It does NOT vary by deployment
+    mode: the client may need the text in any mode to inform the natural
+    person before presenting AI-generated results.
+    """
+    return build_disclosure()
+
+
 @router.get("/meta/version")
 async def get_api_version() -> dict[str, str]:
     """Return API version information."""
@@ -75,6 +132,9 @@ async def get_api_version() -> dict[str, str]:
     return {
         "api_version": get_app_version(),
         "disclaimer_version": settings.DISCLAIMER_VERSION,
+        # Art. 50(1) disclosure text version (D-032) — distinct from both the
+        # API version and the disclaimer version.
+        "disclosure_version": DISCLOSURE_VERSION,
     }
 
 

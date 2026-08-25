@@ -31,7 +31,8 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
+# the terminal summary event now embeds `disclosure` and `provenance`.
 
 from __future__ import annotations
 
@@ -48,6 +49,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.core.config import settings
 from app.core.pipeline import PipelineState, run_pipeline
 from app.db.models import (
     CaseRun,
@@ -60,6 +62,7 @@ from app.db.models import (
 from app.db.session import async_session_factory
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.corpus_readiness import check_preflight
+from app.services.disclosure import build_disclosure_and_provenance
 from app.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -400,6 +403,14 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             }
             if case_run_id:
                 final_payload["case_run_id"] = case_run_id
+            # Art. 50(1)/(2) EU AI Act (D-032): the terminal event carries the
+            # disclosure the consuming client must display to the person plus
+            # the machine-readable provenance marker. Both are derived from
+            # in-memory state; deliberately absent from error events (those
+            # carry no AI-generated text).
+            disclosure_info, provenance_marker = build_disclosure_and_provenance(settings)
+            final_payload["disclosure"] = disclosure_info.model_dump(mode="json")
+            final_payload["provenance"] = provenance_marker.model_dump(mode="json")
             yield _sse_format(final_payload)
 
         except Exception as exc:

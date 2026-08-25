@@ -21,7 +21,9 @@ fluent invention.
 are generated, slotted into the document, then reinjected post-generation.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
+# GeneratedDocument carries a machine-readable `provenance` marker (no
+# `disclosure` — that was already delivered with the analysis result).
 
 from __future__ import annotations
 
@@ -31,6 +33,7 @@ from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 from app.core.config import get_app_version, get_app_version_tag, settings
+from app.services.disclosure import ProvenanceMarker, build_disclosure_and_provenance
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +102,12 @@ class GeneratedDocument:
         List of unresolved placeholders or issues encountered.
     generation_metadata :
         App version, inference profile, generation date.
+    provenance :
+        Art. 50(2) machine-readable marker for the AI-generated document text
+        (D-032). Deliberately no ``disclosure`` field: document generation is
+        a downstream action from a completed analysis whose response already
+        carried the disclosure; repeating it would imply a second
+        first-exposure event.
     """
 
     document_type: str
@@ -107,6 +116,7 @@ class GeneratedDocument:
     slots: list[DocumentSlot] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     generation_metadata: dict[str, Any] = field(default_factory=dict)
+    provenance: ProvenanceMarker | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -844,6 +854,11 @@ def generate_document(
         "unresolved_slots": len(warnings),
     }
 
+    # Art. 50(2) marker (D-032): built through the same shared helper the SSE
+    # emitters use, so provenance content stays identical across surfaces for
+    # the same request. The helper never raises.
+    _, document_provenance = build_disclosure_and_provenance(settings)
+
     return GeneratedDocument(
         document_type=doc_type,
         title=title,
@@ -851,4 +866,5 @@ def generate_document(
         slots=slots,
         warnings=warnings,
         generation_metadata=generation_metadata,
+        provenance=document_provenance,
     )

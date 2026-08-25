@@ -194,7 +194,15 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 | `generation` | `running` → `complete` | `final_output` sections |
 | `adversarial_review` | `running` → `complete` | counter-analysis |
 | `calculation_check` | `running` → `complete` | arithmetic verification |
-| *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>"}` |
+| *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>", "disclosure": {...}, "provenance": {...}}` |
+
+The final summary event embeds two Art. 50 (VO (EU) 2024/1689) objects:
+`disclosure` (`{version, must_display_before: "results", texts: {de, en}}`) —
+the consuming client MUST display `texts[lang]` to the natural person before
+presenting any AI-generated result — and `provenance`
+(`{spec_version: "citizen-provenance-v1.0", generator: "citizen", app_version,
+model_profile, timestamp_utc, deployment_mode}`). Both are always present;
+error events carry neither.
 
 Terminal error event instead of the summary:
 
@@ -219,7 +227,7 @@ data: {"stage":"classification","status":"complete","payload":{"issues":["SGB II
 
 data: {"stage":"generation","status":"complete","payload":{"final_output":{"sachverhalt":"...","ergebnis":"..."}}}
 
-data: {"session_id":"…","sections":["sachverhalt","…"],"final_output":{…},"case_run_id":"…"}
+data: {"session_id":"…","sections":["sachverhalt","…"],"final_output":{…},"case_run_id":"…","disclosure":{"version":"1.0",…},"provenance":{"spec_version":"citizen-provenance-v1.0",…}}
 ```
 
 **Errors before streaming starts:** `400` (missing/empty `text`),
@@ -431,7 +439,8 @@ Returns conversation detail (below). Upload errors → `400`; dev-tag guard → 
 SSE response (`text/event-stream`). First-message-with-documents mode emits
 pipeline stage events plus a final summary containing `final_output`;
 otherwise chat/RAG token events ending with
-`{"type": "done", "full_response": "..."}`. Error event:
+`{"type": "done", "full_response": "...", "disclosure": {...}, "provenance": {...}}`
+(the two Art. 50 objects as in §7.1). Error event:
 `{"error": "message_generation_failed", ...}`. `400` empty content, `404`
 unknown conversation.
 
@@ -467,8 +476,15 @@ user-data slots. `404` unknown case_run.
  "rendered_text": "# Widerspruch\n\nSehr geehrte Damen und Herren, …",
  "slots": [{"key": "anspruch_hoehe", "value": "...", "verified": true,
             "needs_review": false}],
- "generation_metadata": {"selected_by": "auto", "frist_am": "2026-09-14"}}
+ "generation_metadata": {"selected_by": "auto", "frist_am": "2026-09-14"},
+ "provenance": {"spec_version": "citizen-provenance-v1.0", "generator": "citizen",
+                "app_version": "2.0.0", "model_profile": "eu-avv",
+                "timestamp_utc": "2026-08-07T14:23:00Z", "deployment_mode": "dev"}}
 ```
+
+`provenance` is the Art. 50(2) machine-readable marker (§7.1). There is no
+`disclosure` field on documents: the disclosure was already delivered with
+the analysis result that preceded generation.
 
 Unverified values render as `[BITTE PRÜFEN: …]` inside `rendered_text`.
 Errors: `400` (missing/invalid `case_run_id`, unknown `doc_type`), `404`.
@@ -520,7 +536,8 @@ header.
 |---|---|
 | `GET /api/v1/meta/disclaimer/version` *(no ack needed)* | `{"version": "v0.1.0"}` |
 | `GET /api/v1/meta/disclaimer/text` | `{"text": "<HTML disclaimer>", "version": "v0.1.0"}` |
-| `GET /api/v1/meta/version` | `{"api_version": "2.0.0", "disclaimer_version": "v0.1.0"}` |
+| `GET /api/v1/meta/disclosure` | `{"version": "1.0", "must_display_before": "results", "texts": {"de": "Diese Analyse wurde von einem KI-System erstellt …", "en": "This analysis was produced by an AI system …"}}` — Art. 50(1) notification; cacheable, does not vary by deployment mode |
+| `GET /api/v1/meta/version` | `{"api_version": "2.0.0", "disclaimer_version": "v0.1.0", "disclosure_version": "1.0"}` |
 | `GET /api/v1/meta/legal-timestamp` | `{"parameter_freshness": "2026-07-01", "corpus_freshness": "2026-08-01"}` (either may be `null`) |
 | `GET /api/v1/meta/active-profile` | `{"profile": "eu-avv", "label": "...", "avv_status": "...", "pseudonymization": true}` |
 | `GET /api/v1/meta/deployment-mode` | `{"mode": "dev", "synthetic_data_only": true, "dev": true, "dev_banner": "…" \| null}` |
@@ -531,14 +548,18 @@ header.
 
 1. `GET /api/v1/meta/disclaimer/version` → remember value V.
 2. Send `X-Disclaimer-Ack: V` on every subsequent request.
-3. On `DEPLOYMENT_MODE=dev` (check `meta/deployment-mode`), add
+3. Fetch `GET /api/v1/meta/disclosure` (cache by `version`); before presenting
+   any AI-generated result or document to a natural person, display
+   `texts[lang]` to them (Art. 50(1)) and persist the `provenance` marker
+   delivered with each AI-generated payload (Art. 50(2)).
+4. On `DEPLOYMENT_MODE=dev` (check `meta/deployment-mode`), add
    `X-Document-Tag: synthetic` to every upload.
-4. For analysis: `POST /analyze` (or conversation first-message) and consume
+5. For analysis: `POST /analyze` (or conversation first-message) and consume
    the SSE stream; tolerate `running`/`complete` pairs per stage and a terminal
    `final_output` summary event; handle `{"error": ...}` terminal events.
-5. For corpus setup: check `corpus/health`; if unhealthy trigger
+6. For corpus setup: check `corpus/health`; if unhealthy trigger
    `corpus/update` and poll `corpus/status/{job_id}`.
-6. Treat any unexpected disconnect mid-SSE as a failed run and re-submit.
+7. Treat any unexpected disconnect mid-SSE as a failed run and re-submit.
 
 ---
 

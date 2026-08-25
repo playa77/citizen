@@ -8,6 +8,9 @@ corpus using the conversation context, then generates a grounded response that
 references any uploaded documents and retrieved legal sources.
 """
 
+# Semantic Version: 1.1.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
+# the chat "done" event embeds disclosure + provenance alongside full_response.
+
 from __future__ import annotations
 
 import json
@@ -18,6 +21,7 @@ from typing import Any
 from app.core.config import settings
 from app.core.pipeline import PipelineState, run_pipeline
 from app.core.router import get_shared_client
+from app.services.disclosure import build_disclosure_and_provenance
 from app.services.retrieval import retrieve_chunks_combined
 from app.utils.tokens import trim_text
 
@@ -189,11 +193,16 @@ async def generate_chat_response(
         }
         yield f"data: {json.dumps(token_payload, ensure_ascii=False)}\n\n"
 
-    # Final event signalling completion.
+    # Final event signalling completion. Art. 50(1)/(2) EU AI Act (D-032):
+    # the done event carries the disclosure the client must display plus the
+    # machine-readable provenance marker, mirroring the analyze terminal event.
+    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings)
     done_payload = {
         "type": "done",
         "conversation_id": conversation_id,
         "full_response": response_text,
+        "disclosure": disclosure_info.model_dump(mode="json"),
+        "provenance": provenance_marker.model_dump(mode="json"),
     }
     yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
 

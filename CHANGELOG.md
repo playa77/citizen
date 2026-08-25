@@ -1,3 +1,44 @@
+## 2026-08-25 — Art. 50 EU AI Act disclosure & provenance fields (D-032/D-033)
+
+Decisions: D-032 (R1, disclosure/provenance embedding + invariants G-50-A..G /
+T-50-H..I), D-033 (R1, connection-leak fix exposed by the new tests).
+
+### Added
+
+- `app/services/disclosure.py` — `DisclosureInfo` / `ProvenanceMarker` models,
+  canonical Art. 50(1) DE/EN texts (`DISCLOSURE_VERSION = "1.0"`), and the
+  shared never-raises helper `build_disclosure_and_provenance(settings)`.
+- `GET /api/v1/meta/disclosure` — canonical disclosure endpoint, guarded by a
+  route-level `X-Disclaimer-Ack` dependency (middleware excludes all of
+  `/api/v1/meta*`; editing it was out of scope). Declared via
+  `response_model`, so openapi.json reflects the schema.
+- `disclosure_version: "1.0"` key on `GET /api/v1/meta/version`.
+- Analyze SSE terminal event now carries top-level `disclosure` + `provenance`
+  (error events carry neither); conversation chat `done` event carries both;
+  `GeneratedDocument` carries `provenance` (deliberately no `disclosure`) and
+  `POST /api/v1/documents/generate` serializes it.
+- `tests/unit/test_disclosure.py` — 13 tests covering G-50-A..G-50-G
+  (endpoint shape/ack enforcement, version key, analyze terminal + error
+  events, chat done event, documents provenance incl. cross-surface identity
+  with a frozen clock, helper fallback behavior on a broken settings object,
+  model JSON round-trips, openapi.json reflection).
+
+### Fixed
+
+- `GET /cases/{case_id}` (and therefore `POST /documents/generate`) leaked one
+  pooled asyncpg connection per call until GC: `get_case_endpoint` ran its
+  `legal_areas` query against the already-closed session (D-033).
+
+### Changed
+
+- `API_DOCUMENTATION.md` — new meta route row, updated `/meta/version`,
+  analyze terminal event, conversation done event, documents response, and
+  client checklist (display disclosure before results, persist provenance);
+  route-parity guard stays green.
+- Semantic-version headers bumped: meta.py 0.3.0→0.4.0, analyze.py
+  0.3.0→0.4.0, document_generators.py 0.1.0→0.2.0, documents.py 0.1.0→0.2.0,
+  cases.py →0.2.0; chat_reasoning.py gained its missing header (1.1.0).
+
 ## 2026-08-25 — Stale-document cleanup (D-031)
 
 ### Removed

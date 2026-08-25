@@ -12,6 +12,10 @@ Endpoints:
     GET    /api/v1/cases/{case_id}/export    Export case data
 """
 
+# Semantic Version: 0.2.0 | 2026-08-25 — D-032 follow-up fix: legal_areas query
+# in get_case_endpoint moved back inside its session block; it previously ran
+# against the closed session and leaked a pooled connection until GC.
+
 from __future__ import annotations
 
 import json
@@ -114,8 +118,19 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
         result = await db.execute(stmt)
         case = result.scalar_one_or_none()
 
-    if case is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
+        if case is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
+
+        # NOTE: this query must stay INSIDE the session block. It previously
+        # ran against the already-closed session, which silently reopened the
+        # session and leaked its checked-out connection until garbage
+        # collection (exposed by the D-032 disclosure tests).
+        areas_stmt = select(CaseRunArea).where(CaseRunArea.case_run_id == case.id)
+        areas_res = await db.execute(areas_stmt)
+        legal_areas = [
+            {"legal_area": a.legal_area, "is_primary": a.is_primary}
+            for a in areas_res.scalars().all()
+        ]
 
     # Reconstruct final_output from stage logs.
     final_output: dict[str, str] = {}
@@ -143,13 +158,6 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
             "created_at": sl.created_at.isoformat() if sl.created_at else None,
         }
         for sl in (case.stage_logs or [])
-    ]
-
-    # Fetch legal_areas for this case.
-    areas_stmt = select(CaseRunArea).where(CaseRunArea.case_run_id == case.id)
-    areas_res = await db.execute(areas_stmt)
-    legal_areas = [
-        {"legal_area": a.legal_area, "is_primary": a.is_primary} for a in areas_res.scalars().all()
     ]
 
     # Serialize claims with evidence bindings.
