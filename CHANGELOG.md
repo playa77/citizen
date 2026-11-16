@@ -1,3 +1,72 @@
+## 2026-11-16 — Prompt set 3.0.0 (prompt upgrade before WP-97; D-060, D-061)
+
+Implements `docs/prompt-upgrade-proposal.md` 1.0.0: new text for all 16
+model prompts and the code changes they need. Package version stays 2.0.0
+(core 3.0.0 is cut at WP-97); no migrations; `/api/v1` changes are additive.
+
+### Fixed
+
+- **Adversarial review output was discarded (F-17).** Stage 7 ran through
+  the grounded-answer parser, so `adversarial_pruefung`, `review_count` and
+  `key_risks` were always empty. `reasoning.adversarial_review` now parses
+  and validates `reviews` / `overall_assessment`, and the review message
+  carries the claims it reviews (F-01).
+- **Legal regime followed the server clock (F-06).** The `<rechtsstand>`
+  block now uses the document's benefit period or letter date
+  (`RegimeProvider.reference_period`, sdk 0.3.0); a 2024 notice is no longer
+  told to apply the 01.07.2026 regime. Banners state segment and dates only
+  (F-24, F-13).
+- Escape hatches that turned failures into empty "successes" removed
+  (strict suffix S-05, intake S-06; F-03).
+- Grounded-answer stream fallback kept no system prompt; the legacy
+  parallel triage ignored `legal_areas`; re-evaluated stages got no regime
+  block; triage cache ignored the prompt and area set (F-08); calculation
+  cross-check searched model-written context (F-22); case chat saw ~1,900
+  characters of analysis (F-20).
+
+### Changed
+
+- All prompts rewritten (prompt set 3.0.0, `app/services/prompts.py`
+  3.0.0): citizen-side role, input descriptions that match the messages,
+  norm anchors in issue labels (F-09), no "fact" claims in P-04 (F-18),
+  closed result vocabulary in `ergebnis`, defined risk levels, no model
+  arithmetic, module-aware chat personas (F-05), German headings and
+  transcript labels (F-11), valid JSON examples (F-10).
+- Module data: `sozialrecht` 1.1.0, `erbrecht` 0.2.0, `familienrecht` 0.2.1
+  (profile `issue_terms` with norm anchors, new slot `result_categories`;
+  calculator prompts P-14/P-15 with the field list generated from the
+  extraction schema).
+- Every LLM call reads `STAGE_TEMPERATURES` (F-04): triage and grounded
+  answer 0.1, review 0.3.
+- Eval harness (D-061): extractor 1.1.0 / metrics 1.2.0 parse "Satz", "§§"
+  lists and stop at the statute; citation precision normalises expected
+  norms; new `quote_verification_rate_sourced`; reports carry `prompt_set`;
+  `--save` writes raw outputs, `--rescore` re-scores them. Not comparable
+  with the D-050 baseline.
+
+### Added
+
+- Router: optional `max_tokens` / `response_format`, truncation retry with
+  twice the budget then `TruncatedResponseError`, token usage per call
+  (F-02). Settings `STAGE_MAX_TOKENS` (empty) and profile capability
+  `json_mode` (false) — to be set after calibration.
+- `POST /api/v1/conversations/{id}/messages`: optional `legal_areas`.
+  `POST /api/v1/presets/suggest`: `match`. Stage payloads: `prompts[]`
+  (prompt identity, F-14) and `legal_regime` on `decomposition`.
+- `docs/prompt-upgrade-proposal.md` (the approved proposal with its
+  implementation record); `docs/prompt-inventory.md` 2.0.0.
+- Tests: `test_prompt_set_v3.py`, `test_endpoint_prompts_v3.py`,
+  `test_adversarial_review.py`, `test_router_output_limits.py`,
+  `test_eval_extractors.py`, `test_prompt_identity.py`; regime and module
+  tests extended.
+
+### Notes
+
+- Golden `wp93_v2_baseline.json`: only prompt, banner, intake and preset keys
+  re-baselined (listed in its `_meta`); every other pinned surface unchanged.
+- Not yet run: the live goldset evaluation of the measurement plan (needs a
+  separate operator API key). No metric improvement is claimed until it is.
+
 ## 2026-11-16 — Prompt inventory and upgrade brief (WP-97 preparation)
 
 Documentation only: no code, migration, API or prompt-text change.
