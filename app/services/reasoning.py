@@ -13,12 +13,17 @@ Implements stages 2-3 and 5-8 of the 8-stage pipeline:
 Plus an OCR post-processing stage that runs before the pipeline:
     OCR Synthesis & Correction        → synthesize_and_correct_text()
 
-Every function enforces a strict JSON output schema via a ``response_format``
-directive embedded in the system prompt. Malformed JSON triggers one automatic
-retry with a stricter prompt before raising ``JSONParseError``.
+Every JSON stage states its schema in the system prompt's <ausgabeformat>
+block, followed by the strict suffix (S-05). The router sends
+``response_format`` only when the inference profile declares ``json_mode``
+(CR-03). Malformed JSON triggers one retry at temperature 0.0 with the same
+prompt (half the input for document stages) before ``JSONParseError``.
 """
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: default stage prompts imported as
+# Semantic Version: 0.2.0 | 2026-11-16 — prompt set 3.0.0: separate review parser
+# (F-17), claims in the review message (F-01), German strict suffix (F-03),
+# German legacy headings (F-11), stage temperatures/caps (CR-03/CR-04).
+# 0.1.1 | 2026-11-16 — WP-93: default stage prompts imported as
 # DEFAULT_PROMPTS (DEFAULT_MODULE profile) instead of SOCIALRECHT_PROMPTS.
 
 from __future__ import annotations
@@ -29,7 +34,12 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from app.core.router import get_shared_client
-from app.services.prompts import DEFAULT_PROMPTS, stage_max_tokens, stage_temperature
+from app.services.prompts import (
+    DEFAULT_PROMPTS,
+    STRICT_SUFFIX,
+    stage_max_tokens,
+    stage_temperature,
+)
 from app.utils.tokens import estimate_tokens, trim_document
 
 logger = logging.getLogger(__name__)
@@ -50,12 +60,11 @@ class JSONParseError(Exception):
 # JSON-parsing helper with retry
 # ---------------------------------------------------------------------------
 
-_STRICT_SUFFIX = (
-    "\n\nIMPORTANT: Respond with *only* valid JSON matching the schema above. "
-    "No prose, no markdown fences, no explanation. If you cannot produce "
-    "valid JSON matching the schema, return an empty array [] for array "
-    "schemas or an empty object {} for object schemas."
-)
+# S-05 (prompt set 3.0.0, CR-17): German reminder after the format block.
+# The v2 English suffix told the model to return [] / {} when it could not
+# comply — a parseable but empty "success" every schema forbids (F-03).
+# Failures now surface as JSONParseError after one temperature-0 retry.
+_STRICT_SUFFIX = STRICT_SUFFIX
 
 
 def _parse_json_response(raw: str, *, context: str) -> Any:
@@ -965,9 +974,9 @@ async def construct_claims(
     )
 
     user_content = (
-        "Questions:\n"
+        "Rechtsfragen:\n"
         + "\n".join(f"- {q}" for q in questions[:5])
-        + "\n\nRelevant legal chunks:\n"
+        + "\n\nRechtsquellen:\n"
         + chunk_context[: _s.MAX_CHUNK_CONTEXT_CHARS]
     )
 
@@ -1073,8 +1082,8 @@ async def verify_claims(
     )
 
     user_content = (
-        f"Claims to verify:\n{claims_text}\n\n"
-        f"Source chunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
+        f"Zu prüfende Claims:\n{claims_text}\n\n"
+        f"Quellen:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
     )
 
     messages = [
@@ -1183,7 +1192,7 @@ async def generate_output(
         for c in verified_claims
     )
 
-    user_content = f"Verified claims:\n{claims_text[:_s.MAX_FINAL_INPUT_CHARS]}"
+    user_content = f"Geprüfte Claims:\n{claims_text[:_s.MAX_FINAL_INPUT_CHARS]}"
 
     messages = [
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},

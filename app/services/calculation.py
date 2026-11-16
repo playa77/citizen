@@ -15,7 +15,10 @@ modules (``app.modules.runtime.request_modules``) decide which calculators
 run; a request whose modules ship none gets an empty result.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-11-16 — prompt set 3.0.0: cross-check scoped to
+# the document (CR-16), document truncation marked (CR-07), stage
+# temperatures/caps (CR-03/CR-04).
+# 0.3.0
 
 from __future__ import annotations
 
@@ -26,12 +29,30 @@ from typing import Any
 
 from app.core.router import get_shared_client
 from app.modules.sdk import Calculator, ParameterLookup
+from app.services.prompts import stage_max_tokens, stage_temperature
 from app.services.reasoning import (
     _STRICT_SUFFIX,
     JSONParseError,
     _parse_json_response,
 )
-from app.utils.tokens import trim_text
+from app.utils.tokens import trim_document, trim_text
+
+#: Heading that starts the analysis context appended after the document.
+_CONTEXT_HEADING = "\n\n## KONTEXT:"
+
+
+def _document_part(user_content: str) -> str:
+    """The ``## DOKUMENT`` part of the extraction message (CR-16, F-22).
+
+    The cross-check must search only the document: a number that appears
+    only in the appended analysis context (claims/sections written by a
+    model) is exactly what it exists to catch.
+    """
+    text = user_content
+    if text.startswith("## DOKUMENT\n"):
+        text = text[len("## DOKUMENT\n") :]
+    return text.split(_CONTEXT_HEADING, 1)[0]
+
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +153,7 @@ async def check_calculations(
     # ── Build the user prompt (shared between extraction and explanation) ──
     user_parts: list[str] = []
     user_parts.append("## DOKUMENT\n")
-    user_parts.append(trim_text(normalized_text, s.MAX_FINAL_INPUT_CHARS * 2))
+    user_parts.append(trim_document(normalized_text, s.MAX_FINAL_INPUT_CHARS * 2))
 
     if claims:
         user_parts.append("\n\n## KONTEXT: CLAIMS (aus der rechtlichen Analyse)\n")
@@ -337,7 +358,8 @@ async def _llm_extract(
     try:
         raw = await client.chat_completion(
             messages,
-            temperature=0.1,
+            temperature=stage_temperature("calc_extraction"),
+            max_tokens=stage_max_tokens("calc_extraction"),
             model=model,
             timeout=timeout,
             max_retries=1,
@@ -353,6 +375,7 @@ async def _llm_extract(
             raw2 = await client.chat_completion(
                 messages_minimal,
                 temperature=0.0,
+                max_tokens=stage_max_tokens("calc_extraction"),
                 model=model,
                 timeout=timeout,
                 max_retries=1,
@@ -370,9 +393,7 @@ async def _llm_extract(
         return None
 
     # Cross-check: verify extracted numbers appear in the document text.
-    document_text = user_content
-    if document_text.startswith("## DOKUMENT\n"):
-        document_text = document_text[len("## DOKUMENT\n") :]
+    document_text = _document_part(user_content)
     cross_check_warnings = calculator.cross_check(result, document_text)
     for warning in cross_check_warnings:
         logger.warning("cross_check: %s", warning)
@@ -437,7 +458,8 @@ async def _llm_explain(
     try:
         raw = await client.chat_completion(
             messages,
-            temperature=0.1,
+            temperature=stage_temperature("calc_explanation"),
+            max_tokens=stage_max_tokens("calc_explanation"),
             model=model,
             timeout=timeout,
             max_retries=1,

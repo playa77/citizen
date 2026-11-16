@@ -1,24 +1,32 @@
 # Stage prompt profile of module `erbrecht` (WP-93; ARCHITECTURE.md § 3.2).
 # Rendered by the core stage templates in app/services/prompts.py.
-# Extracted verbatim from the v2.0.0 AreaProfile in that file.
+# Extracted verbatim from the v2.0.0 AreaProfile in that file; prompt set 3.0.0
+# added norm anchors to issue_terms (search hints for the triage stage) and
+# result_categories (docs/prompt-upgrade-proposal.md, P-03/P-04).
 
 display_name: deutsches Erbrecht und Erbschaftsteuerrecht
 statutes: insbesondere BGB (Erbrecht), ErbStG, Höfeordnung, Schenkungsrecht und FamFG für Erbschaftsverfahren
 document_examples: eines Testaments, eines Erbvertrags, eines Erbscheinsantrags, eines Finanzamtsbescheids zur Erbschaftsteuer, eines Schreibens des Nachlassgerichts oder eines Familienrechtsstreits mit erbrechtlichen Bezügen
 issue_terms:
-- gesetzliche Erbfolge
-- Testamentsauslegung
-- Pflichtteilsanspruch
+- gesetzliche Erbfolge (§ 1924 BGB)
+- Testamentsauslegung (§ 2084 BGB)
+- Pflichtteilsanspruch (§ 2303 BGB)
 - Erbquote
-- Vorausvermächtnis
-- Annahme und Ausschlagung der Erbschaft
-- Erbschaftsteuer-Freibetrag
-- Steuerklasse
-- Bewertung des land- und forstwirtschaftlichen Vermögens
+- Vorausvermächtnis (§ 2150 BGB)
+- Annahme und Ausschlagung der Erbschaft (§ 1942 BGB)
+- Erbschaftsteuer-Freibetrag (§ 16 ErbStG)
+- Steuerklasse (§ 15 ErbStG)
+- Bewertung des land- und forstwirtschaftlichen Vermögens (§ 158 BewG)
 - Höfeordnung
-- Hofesübergabe
+- Hofübergabe (§ 17 HöfeO)
 formal_examples: Testamentsform, Eröffnungstermin, Anfechtungsfrist
 material_examples: Erbquote, Pflichtteil, Freibetrag, Steuerklasse, Bewertung landwirtschaftlicher Betriebe
 answerable_with: deutschem Erbrecht, Erbschaftsteuerrecht oder Schenkungsrecht (insbesondere BGB, ErbStG, Höfeordnung, FamFG)
 hierarchy_example: BGB > § 1922
 adversary_examples: Miterben, Pflichtteilsberechtigte, das Finanzamt oder das Nachlassgericht
+# Closed vocabulary for the first sentence of "ergebnis" ("Begriff – Definition");
+# the core appends "Einordnung offen" (prompt set 3.0.0).
+result_categories:
+- Position voraussichtlich tragfähig – die Quellen stützen die Rechtsposition der betroffenen Person
+- Position teilweise tragfähig – die Quellen stützen nur einen Teil
+- Position voraussichtlich nicht tragfähig – die Quellen sprechen gegen die Rechtsposition

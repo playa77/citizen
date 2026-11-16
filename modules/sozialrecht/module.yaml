@@ -7,10 +7,13 @@
 # rules engine, the 2026-07-01 regime provider, the action-draft templates
 # and the goldsets. Behaviour is unchanged for requests that name no module.
 
-# Semantic Version: 1.0.0
+# Semantic Version: 1.1.0 | 2026-11-16 — prompt set 3.0.0: prompt profile
+# (issue_terms with norm anchors, result_categories), calculator prompts
+# P-14/P-15, regime banners as constraints with a reference date (D-060).
+# 1.0.0
 
 id: sozialrecht
-version: 1.0.0
+version: 1.1.0
 core_api: ">=3.0,<4.0"
 title:
   de: "Sozialrecht"

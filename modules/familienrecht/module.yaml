@@ -4,12 +4,14 @@
 # (intake routing, corpus mapping, prompt profile) — no deadline specs,
 # no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
 
-# Semantic Version: 0.2.0 | 2026-11-16 — WP-96: compliance declaration
+# Semantic Version: 0.2.1 | 2026-11-16 — rendered prompts change with the
+# inherited erbrecht profile (prompt set 3.0.0, D-060); no file content change.
+# 0.2.0 | 2026-11-16 — WP-96: compliance declaration
 # (purpose-drift deny phrases).
 # 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
 
 id: familienrecht
-version: 0.2.0
+version: 0.2.1
 core_api: ">=3.0,<4.0"
 title:
   de: "Familienrecht"
