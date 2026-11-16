@@ -324,6 +324,55 @@ class TestAliasResolution:
         assert not resolution.enabled
 
 
+class TestCoreApiCompatibility:
+    """An enabled module whose core_api range excludes the running SDK
+    version must refuse startup (ARCHITECTURE.md § 6.1) — the contract
+    field exists to prevent exactly this breach."""
+
+    def _load(self, tmp_path: Path, core_api: str) -> object:
+        _write_module(tmp_path, "sozialrecht", {"core_api": core_api})
+        return load_registry(
+            modules_dir=tmp_path,
+            deployment_mode="dev",
+            enabled_modules=None,
+            default_module="sozialrecht",
+        )
+
+    def test_compatible_range_loads(self, tmp_path: Path) -> None:
+        registry = self._load(tmp_path, ">=3.0,<4.0")
+        assert registry.is_enabled("sozialrecht")
+
+    def test_open_ended_compatible_range_loads(self, tmp_path: Path) -> None:
+        registry = self._load(tmp_path, ">=3.0")
+        assert registry.is_enabled("sozialrecht")
+
+    def test_incompatible_major_refuses(self, tmp_path: Path) -> None:
+        from app.modules.registry import ModuleContractError
+
+        with pytest.raises(ModuleContractError):
+            self._load(tmp_path, ">=4.0,<5.0")
+
+    def test_incompatible_exact_pin_refuses(self, tmp_path: Path) -> None:
+        from app.modules.registry import ModuleContractError
+
+        with pytest.raises(ModuleContractError):
+            self._load(tmp_path, "=2.0")
+
+    def test_upper_bound_below_sdk_refuses(self, tmp_path: Path) -> None:
+        from app.modules.registry import ModuleContractError
+
+        with pytest.raises(ModuleContractError):
+            self._load(tmp_path, ">=2.0,<3.0")
+
+
+class TestDuplicateModuleId:
+    def test_duplicate_ids_refuse(self, tmp_path: Path) -> None:
+        _write_module(tmp_path, "sozialrecht")
+        _write_module(tmp_path, "sozialrecht_kopie", {"id": "sozialrecht"})
+        with pytest.raises(ModuleManifestError):
+            discover_modules(tmp_path)
+
+
 # ---------------------------------------------------------------------------
 # Settings-based loading (startup path)
 # ---------------------------------------------------------------------------

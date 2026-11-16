@@ -709,3 +709,38 @@ main fails with the same error class before this change.
 new E501s — the file currently fails both gates). This batch introduces no
 new ruff violations, and `app/fristen/`, `app/modules/` and
 `app/services/fristen.py` are check- and format-clean.
+
+### D-048 R1 — 2026-11-16 — OQ-1 alternate deadline follows the governing duration (WP-92, review finding)
+**Decision:** When the § 37 Abs. 2 SGB X fiction lands on a non-workday
+(OQ-1) *and* the Rechtsbehelfsbelehrung is defective, the
+`oq1_alternate_ende` alternate is computed with the **governing** duration
+(one year), not with the regular one-month duration. Pinned by
+`test_oq1_alternate_uses_governing_duration`.
+**Rejected:** Restoring the pre-split engine's behavior (alternate always
++1 month): there the "citizen-favorable" alternate (e.g. 08.02.2024) falls
+*before* the primary end (07.01.2025) — incoherent for a citizen-favorable
+reading. (b) Leaving the drift unrecorded: a silent semantic change against
+the batch's own zero-behavior-change criterion is exactly what the
+decision ledger exists to prevent.
+**Rationale:** Found by the fresh-context reviewer via differential
+execution (385,704 input combinations; this was the only behavioral
+difference, ~3.5% of the grid, uncovered by the unchanged test suite). The
+new behavior is a correction, not a regression; it is now recorded and
+pinned. Affects only the informational `oq1_alternate_ende` field and the
+Alternativberechnung line — never the primary `frist_ende`.
+
+### D-049 R1 — 2026-11-16 — core_api range is enforced against the running SDK version (WP-91, review finding)
+**Decision:** `load_registry` refuses startup with `ModuleContractError`
+when an *enabled* module's `core_api` range does not admit the running
+`app.modules.sdk.SDK_VERSION` ("3.0"). Range forms follow the schema
+pattern (`">=3.0,<4.0"`, `">=3.0"`, exact pins); an unparsable range is a
+`ModuleManifestError`, never silently compatible. Duplicate module ids
+(two directories declaring one id) also abort discovery instead of
+silently overwriting.
+**Rejected:** Deferring contract-version matching to WP-93 — D-042 deferred
+structural *file* validation, not the contract check; without it the
+`core_api` field validates format only and an incompatible community
+module surfaces as runtime breakage instead of the designed startup
+refusal (ARCHITECTURE.md § 6.1).
+**Rationale:** Reviewer finding; the contract field exists precisely to
+make the compatibility boundary explicit and enforced.

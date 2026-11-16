@@ -20,6 +20,7 @@ therefore refuses startup.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError as _JsonSchemaError
 
 from app.modules import SCHEMA_PATH
+from app.modules.sdk import SDK_VERSION
 
 #: Legacy v2.0.0 area keys for modules that are queued but not yet installed
 #: (D-038). Once a module ships, its manifest declares the alias itself and
@@ -40,6 +42,11 @@ LEGACY_ALIASES: dict[str, str] = {
 
 class ModuleManifestError(Exception):
     """A discovered ``module.yaml`` is missing, unreadable or schema-invalid."""
+
+
+class ModuleContractError(Exception):
+    """An enabled module's ``core_api`` range excludes the running SDK
+    version — the module contract is incompatible with this core."""
 
 
 class UnknownEnabledModuleError(Exception):
@@ -156,6 +163,8 @@ def discover_modules(modules_dir: Path) -> dict[str, ModuleManifest]:
     Returns a mapping id → manifest. Directories without a ``module.yaml``
     are ignored (staging/scratch). The first invalid manifest aborts
     discovery: the caller (startup) must refuse a partially-known module set.
+    Duplicate module ids (two directories declaring the same id) abort too —
+    a silent last-one-wins overwrite would make the served module ambiguous.
     """
     modules: dict[str, ModuleManifest] = {}
     if not modules_dir.is_dir():
@@ -167,8 +176,61 @@ def discover_modules(modules_dir: Path) -> dict[str, ModuleManifest]:
             # Not a module (staging/scratch directory) — skip, don't fail.
             continue
         manifest = _parse_manifest(module_dir, modules_dir)
+        if manifest.id in modules:
+            raise ModuleManifestError(
+                f"duplicate module id {manifest.id!r}: "
+                f"{modules[manifest.id].path} and {module_dir}"
+            )
         modules[manifest.id] = manifest
     return modules
+
+
+# ---------------------------------------------------------------------------
+# core_api contract compatibility (ARCHITECTURE.md § 6.1)
+# ---------------------------------------------------------------------------
+
+_RANGE_TERM = re.compile(r"^(>=|<=|>|<|==|=|~)?(\d+)\.(\d+)(?:\.(\d+))?$")
+
+
+def _sdk_version_tuple() -> tuple[int, int, int]:
+    parts = SDK_VERSION.split(".")
+    return (int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0)
+
+
+def _satisfies(sdk: tuple[int, int, int], op: str, bound: tuple[int, int, int]) -> bool:
+    if op in (">=", "~"):
+        return sdk >= bound
+    if op == ">":
+        return sdk > bound
+    if op == "<=":
+        return sdk <= bound
+    if op == "<":
+        return sdk < bound
+    return sdk == bound  # "==", "=" or an omitted operator (exact pin)
+
+
+def assert_core_api_compatible(manifest: ModuleManifest) -> None:
+    """Raise ``ModuleContractError`` unless *manifest*'s ``core_api`` range
+    admits the running SDK version.
+
+    Range syntax (mirrors the schema pattern): comma-separated comparators
+    such as ``">=3.0,<4.0"``, ``">=3.0"`` or an exact pin ``"=3.0"``. An
+    unparsable range is a manifest error, never silently compatible.
+    """
+    sdk = _sdk_version_tuple()
+    for term in manifest.core_api.split(","):
+        match = _RANGE_TERM.match(term.strip())
+        if match is None:
+            raise ModuleManifestError(
+                f"module {manifest.id!r}: unparsable core_api range {manifest.core_api!r}"
+            )
+        op = match.group(1) or "="
+        bound = (int(match.group(2)), int(match.group(3)), int(match.group(4) or 0))
+        if not _satisfies(sdk, op, bound):
+            raise ModuleContractError(
+                f"module {manifest.id!r} requires core_api {manifest.core_api!r}, "
+                f"but this core's module contract is {SDK_VERSION}"
+            )
 
 
 def compute_enabled_set(
@@ -249,6 +311,8 @@ def load_registry(
     """Discover → validate → enable → resolve (one startup-ready registry)."""
     modules = discover_modules(modules_dir)
     enabled = compute_enabled_set(modules, deployment_mode, enabled_modules)
+    for module_id in sorted(enabled):
+        assert_core_api_compatible(modules[module_id])
     if default_module not in enabled:
         raise MissingDefaultModuleError(
             f"DEFAULT_MODULE {default_module!r} is not in the enabled set "

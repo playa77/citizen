@@ -40,6 +40,13 @@ stays 2.0.0.
   it, D-047).
 - `/api/v1` unchanged; `API_DOCUMENTATION.md` not modified; no migrations
   in this batch.
+- Review fix pass (D-048/D-049): the OQ-1 alternate deadline now follows
+  the governing duration (the pre-split engine's +1-month alternate in the
+  defective-RBB corner was earlier than the primary end and is corrected —
+  affects only `oq1_alternate_ende`/explanations, never `frist_ende`);
+  `core_api` ranges are enforced against `SDK_VERSION` at startup;
+  duplicate module ids abort discovery; the manifest-schema description no
+  longer claims a file-existence check that WP-93 will add.
 
 ## 2026-11-16 — Re-founding on the free public path: module architecture + roadmap v3.0.0 (D-034…D-041)
 

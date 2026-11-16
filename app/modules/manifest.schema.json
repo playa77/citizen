@@ -3,7 +3,7 @@
   "$id": "https://citizen.dev/schemas/module-manifest-3.0.json",
   "x-core-api": "3.0",
   "title": "Citizen module manifest",
-  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.0. Structural fields (corpus, parameters, fristen, documents, intake, dossier, goldset, compliance) are optional at core_api 3.0 because modules may ship as manifest-only packages (WP-91) before their content lands (WP-92/WP-93); the registry additionally refuses an enabled manifest whose declared files do not exist once those keys are present.",
+  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.0. The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version. Structural fields (corpus, parameters, fristen, documents, intake, dossier, goldset, compliance) are optional at core_api 3.0 because modules may ship as manifest-only packages (WP-91) before their content lands (WP-92/WP-93); validation that declared files exist is deferred to WP-93 with the files themselves.",
   "type": "object",
   "required": ["id", "version", "core_api", "title", "tier"],
   "additionalProperties": false,

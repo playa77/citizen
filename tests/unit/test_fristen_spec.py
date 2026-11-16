@@ -186,6 +186,29 @@ class TestDefectiveRbbOneYear:
         # The one-year basis comes from the spec (§ 66 Abs. 2 SGG), not core.
         assert "§ 66 Abs. 2 SGG" in result.explanation_de
 
+    def test_oq1_alternate_uses_governing_duration(self) -> None:
+        """OQ-1 alternate deadline uses the GOVERNING duration, not always
+        one month (D-048).
+
+        aufgabe 03.01.2024 (Wed) + 4 = Sonntag 07.01.2024 → OQ-1;
+        citizen reading 08.01.2024 (Mon). With a defective RBB the governing
+        deadline is the Jahresfrist, so the citizen-favorable alternate is
+        08.01.2025 (+1 year) — the pre-split engine computed +1 month here,
+        which put the "alternate" BEFORE the primary end (07.01.2025) and
+        was therefore not citizen-favorable. Pinned to prevent regression
+        in either direction.
+        """
+        result = _evaluate(
+            bescheid_datum=date(2024, 1, 1),
+            aufgabe_zur_post=date(2024, 1, 3),
+            rbb_status="fehlt",
+        )
+        assert result.oq1_flag
+        assert result.bekanntgabe == date(2024, 1, 7)
+        assert result.frist_ende == date(2025, 1, 7)  # primary: +1 year
+        assert result.oq1_alternate_ende == date(2025, 1, 8)  # alternate: +1 year
+        assert result.oq1_alternate_ende > result.frist_ende
+
 
 # ---------------------------------------------------------------------------
 # Result contract
