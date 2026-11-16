@@ -13,7 +13,10 @@ timeouts and result assembly; nothing here performs I/O except through the
 ``ParameterSource`` the core passes in.
 """
 
-# Semantic Version: 1.0.0
+# Semantic Version: 1.1.0 | 2026-11-16 — prompt set 3.0.0: P-14/P-15 rewritten
+# (tagged layout, field definitions, values from ## DOKUMENT only, no model
+# arithmetic in explanations); cross_check covers the document only (CR-16).
+# 1.0.0
 
 from __future__ import annotations
 
@@ -32,44 +35,46 @@ from .rules_engine import process_extraction
 
 
 class ExtractionValues(BaseModel):
-    """LLM-extracted monetary values from an SGB II document."""
+    """LLM-extracted values from an SGB II document (EUR per month unless noted).
+
+    The field descriptions are the definitions the extraction prompt (P-14)
+    shows the model: the prompt's field list is generated from this model, so
+    schema and prompt cannot drift apart (prompt set 3.0.0).
+    """
 
     regelbedarf_authority: float | None = Field(
-        None, description="Vom Jobcenter angesetzter Regelbedarf in EUR"
+        None, description="von der Behörde angesetzter Regelbedarf"
     )
     regelbedarf_stufe: int | None = Field(
-        None, description="Angewendete Regelbedarfsstufe (1 oder 2)"
+        None, description="angewendete Regelbedarfsstufe (ganze Zahl, 1 oder 2)"
     )
-    brutto_einkommen: float | None = Field(None, description="Monatliches Bruttoeinkommen in EUR")
-    netto_einkommen: float | None = Field(None, description="Monatliches Nettoeinkommen in EUR")
+    brutto_einkommen: float | None = Field(None, description="monatliches Bruttoeinkommen")
+    netto_einkommen: float | None = Field(None, description="monatliches Nettoeinkommen")
     freibetrag_authority: float | None = Field(
-        None, description="Vom Jobcenter angesetzter Freibetrag in EUR"
+        None, description="von der Behörde angesetzter Freibetrag"
     )
     aufrechnung_authority: float | None = Field(
-        None, description="Vom Jobcenter angesetzte monatliche Aufrechnung in EUR"
+        None, description="von der Behörde angesetzte monatliche Aufrechnung"
     )
     aufrechnung_regelbedarf_used: float | None = Field(
-        None,
-        description="Der für die Aufrechnung zugrunde gelegte Regelbedarf in EUR",
+        None, description="der Aufrechnung zugrunde gelegter Regelbedarf"
     )
-    kdu_unterkunft: float | None = Field(None, description="Kaltmiete in EUR")
-    kdu_heizung: float | None = Field(None, description="Heizkosten in EUR")
-    kdu_nebenkosten: float | None = Field(None, description="Nebenkosten in EUR")
+    kdu_unterkunft: float | None = Field(None, description="Kaltmiete")
+    kdu_heizung: float | None = Field(None, description="Heizkosten")
+    kdu_nebenkosten: float | None = Field(None, description="Nebenkosten")
     kdu_gesamt_authority: float | None = Field(
-        None, description="Von der Behörde angegebener KdU-Gesamtbetrag in EUR"
+        None, description="von der Behörde angegebener Gesamtbetrag der Kosten der Unterkunft"
     )
     anrechenbares_einkommen_authority: float | None = Field(
-        None,
-        description="Von der Behörde als anrechenbar angesetztes Einkommen in EUR",
+        None, description="von der Behörde als anrechenbar angesetztes Einkommen"
     )
     auszahlungsbetrag_authority: float | None = Field(
-        None,
-        description="Von der Behörde festgesetzter Auszahlungsbetrag in EUR",
+        None, description="von der Behörde festgesetzter Auszahlungsbetrag"
     )
-    sanktion_authority: float | None = Field(None, description="Sanktionsbetrag in EUR")
-    mehrbedarf_authority: float | None = Field(None, description="Mehrbedarf in EUR")
-    unterhaltszahlung: float | None = Field(None, description="Unterhaltszahlung in EUR")
-    kindergeld: float | None = Field(None, description="Kindergeld in EUR")
+    sanktion_authority: float | None = Field(None, description="Minderungsbetrag (Sanktion)")
+    mehrbedarf_authority: float | None = Field(None, description="Mehrbedarf")
+    unterhaltszahlung: float | None = Field(None, description="Unterhaltszahlung")
+    kindergeld: float | None = Field(None, description="Kindergeld")
 
 
 class ExtractionResult(BaseModel):
@@ -127,108 +132,119 @@ def cross_check_extraction(extraction: dict[str, Any], document_text: str) -> li
 # Prompts (extraction: values only; explanation: engine numbers are authoritative)
 # ---------------------------------------------------------------------------
 
-_EXTRACTION_SYSTEM = (
-    "Du bist ein präziser Datenextraktor für deutsche Sozialrechtsdokumente "
-    "(SGB II / Bürgergeld).\n\n"
-    "Dir wird der Text eines behördlichen Dokuments vorgelegt (z. B. "
-    "Jobcenter-Bescheid).\n\n"
-    "Deine Aufgabe: Extrahiere strukturierte Daten aus dem Dokument — "
-    "ausschließlich die im Dokument genannten Werte. **Berechne nichts.** "
-    "Führe keine Additionen, Multiplikationen oder Prozentrechnungen durch.\n\n"
-    "Regeln:\n"
-    "- **Extrahiere ausschließlich Werte, die explizit im Dokument genannt "
-    "werden.**\n"
-    "- Setze jeden numerischen Wert, der nicht explizit im Dokument genannt "
-    "wird, auf ``null``.\n"
-    "- Setze jeden Wert, der nicht explizit mit einer Zahl genannt wird, auf "
-    "null. Auch wenn du ihn erschließen oder ableiten könntest.\n"
-    "- Wenn ein Wert unsicher ist oder interpretiert werden muss, setze ihn "
-    "auf ``null`` und vermerke die Unsicherheit in ``extraction_notes``.\n"
-    "- Wenn du unsicher bist, ob ein Wert korrekt ist, setze ihn auf null.\n"
-    "- Erfinde keine Zahlen, Personentypen, Zeiträume oder Haushaltsdaten.\n"
-    "- Verwende Punkt als Dezimaltrenner in JSON-Zahlenwerten.\n"
-    "- Alle Textfelder auf Deutsch.\n\n"
-    "Das JSON-Schema unten entspricht dem Pydantic-Modell. "
-    "Halte dich exakt an diese Struktur.\n"
-    "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
-    "{\n"
-    '  "person_type": "alleinstehend" | "partner" | "alleinerziehend" | null,\n'
-    '  "has_minor_child": true | false | null,\n'
-    '  "period_year": 2025 | null,\n'
-    '  "extracted_values": {\n'
-    '    "regelbedarf_authority": 563.00 | null,\n'
-    '    "regelbedarf_stufe": 1 | 2 | null,\n'
-    '    "brutto_einkommen": 1200.00 | null,\n'
-    '    "netto_einkommen": 950.00 | null,\n'
-    '    "freibetrag_authority": 184.00 | null,\n'
-    '    "aufrechnung_authority": 28.15 | null,\n'
-    '    "aufrechnung_regelbedarf_used": 563.00 | null,\n'
-    '    "kdu_unterkunft": 540.00 | null,\n'
-    '    "kdu_heizung": 80.00 | null,\n'
-    '    "kdu_nebenkosten": null,\n'
-    '    "kdu_gesamt_authority": 620.00 | null,\n'
-    '    "anrechenbares_einkommen_authority": 900.00 | null,\n'
-    '    "auszahlungsbetrag_authority": 500.00 | null,\n'
-    '    "sanktion_authority": null,\n'
-    '    "mehrbedarf_authority": null,\n'
-    '    "unterhaltszahlung": null,\n'
-    '    "kindergeld": null\n'
-    "  },\n"
-    '  "authority_calculation_text": "Freitext: Wie das Jobcenter die '
-    'Berechnung beschreibt (im Dokument genannter Text)",\n'
-    '  "extraction_notes": "Freitext: Unsicherheiten oder fehlende Angaben"\n'
-    "}\n\n"
-    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
-    "zusätzlichen Schlüssel."
+# Prompt set 3.0.0 (docs/prompt-upgrade-proposal.md, P-14/P-15). Module
+# code may import only app.modules.sdk, so the JSON-discipline block (S-02 of
+# the core prompt set) is kept here as module data, verbatim.
+_JSON_OBJECT_ONLY = (
+    "Antworte ausschließlich mit einem einzigen JSON-Objekt.\n"
+    "- Erstes Zeichen „{“, letztes Zeichen „}“; kein Text davor oder danach, keine "
+    "Markdown-Zäune, keine Kommentare.\n"
+    "- Genau die angegebenen Schlüssel (englisch): keiner fehlt, keiner kommt hinzu.\n"
+    '- Ohne Inhalt: "" für Text, [] für Listen; null nur, wo das Format es zeigt.\n'
+    "- Alle Textwerte auf Deutsch; Zeilenumbrüche in Strings als \\n."
 )
 
+#: Field definitions shown to the extractor; taken from the descriptions of
+#: ``ExtractionValues`` above (single source of truth for the schema).
+_EXTRACTION_FIELDS: list[tuple[str, str]] = [
+    (name, str(info.description)) for name, info in ExtractionValues.model_fields.items()
+]
 
-_EXPLANATION_SYSTEM = (
-    "Du bist ein sorgfältiger Erklärer für sozialrechtliche Berechnungen "
-    "(SGB II / Bürgergeld).\n\n"
-    "Dir werden vorgelegt:\n"
-    "1. Der Text des Originaldokuments (Jobcenter-Bescheid o. Ä.).\n"
-    "2. Extrahierte Werte aus dem Dokument (von einem Extraktor ermittelt).\n"
-    "3. Berechnungsergebnisse einer deterministischen Prüf-Engine, "
-    "die bereits erkannt hat, bei welchen Posten eine Abweichung "
-    "zwischen Behördenangabe und gesetzlichem Sollwert vorliegt.\n\n"
-    "Deine Aufgabe:\n"
-    "- Erkläre in verständlichem Deutsch, was die Prüf-Engine gefunden hat.\n"
-    "- Wenn Abweichungen vorliegen: Erkläre, warum die Behördenberechnung "
-    "möglicherweise falsch ist und woran der Fehler liegen könnte.\n"
-    "- Nenne, was die betroffene Person bei der Behörde erfragen oder "
-    "beanstanden kann.\n"
-    "- Formuliere eine Gesamtbewertung (summary) und eine konkrete "
-    "Handlungsempfehlung (recommended_action).\n\n"
-    "Wichtige Regeln:\n"
-    "- **Die von der Prüf-Engine berechneten Werte sind die autoritativen "
-    "Zahlen.** Du darfst sie nicht in Frage stellen oder neu berechnen.\n"
-    "- Verwende die von der Engine vorgegebene discrepancy_direction und "
-    "den discrepancy_amount_eur unverändert.\n"
-    "- Wenn die Engine keine Abweichung festgestellt hat, bestätige das, "
-    "weise aber darauf hin, dass nur die prüfbaren Posten kontrolliert "
-    "wurden.\n"
-    "- Wenn Daten fehlen und die Engine deshalb nichts prüfen konnte, "
-    "erkläre, welche Angaben für eine vollständige Prüfung fehlen.\n"
-    "- Erfinde keine Paragraphen, Rechtsprechung oder Tatsachen.\n"
-    "- Alle Texte auf Deutsch.\n\n"
-    "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
-    "{\n"
-    '  "enriched_calculations": [\n'
-    "    {\n"
-    '      "index": 0,\n'
-    '      "commentary": "Erläuterung auf Deutsch"\n'
-    "    }\n"
-    "  ],\n"
-    '  "overall_assessment": {\n'
-    '    "summary": "Gesamteindruck zu den Berechnungen",\n'
-    '    "recommended_action": "Was der Nutzer tun sollte '
-    '(z. B. Widerspruch einlegen, Behörde um Aufschlüsselung bitten)"\n'
-    "  }\n"
-    "}\n\n"
-    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
-    "zusätzlichen Schlüssel."
-)
+
+def _extraction_prompt() -> str:
+    null_values = ",\n".join(f'    "{k}": null' for k, _ in _EXTRACTION_FIELDS)
+    return (
+        "<rolle>\n"
+        "Du extrahierst Werte aus deutschen Sozialrechtsdokumenten (SGB II / Bürgergeld). "
+        "Eine nachgelagerte Prüf-Engine rechnet; du rechnest nicht.\n"
+        "</rolle>\n\n"
+        "<eingaben>\n"
+        "„## DOKUMENT“ (z. B. Jobcenter-Bescheid, ggf. gekürzt), danach eventuell "
+        "„## KONTEXT: CLAIMS“ und „## KONTEXT: ABSCHNITTE“ aus der rechtlichen Analyse. "
+        "Entnimm Werte nur aus „## DOKUMENT“; der Kontext dient nur dem Verständnis.\n"
+        "</eingaben>\n\n"
+        "<felder>\n"
+        "extracted_values (Euro-Beträge je Monat, soweit nicht anders angegeben):\n"
+        + "\n".join(f"- {k}: {d}" for k, d in _EXTRACTION_FIELDS)
+        + '\nperson_type: "alleinstehend", "partner" oder "alleinerziehend". '
+        "has_minor_child: minderjähriges Kind in der Bedarfsgemeinschaft. period_year: Jahr "
+        "des Leistungszeitraums, nicht des Schreibens.\n"
+        "</felder>\n\n"
+        "<regeln>\n"
+        "- Übernimm nur Werte, die im Dokument als Zahl stehen. Berechne nichts: keine "
+        "Summen, Differenzen, Prozente, auch nicht aus Teilbeträgen.\n"
+        "- Steht ein Wert nicht als Zahl im Dokument, ist er mehrdeutig oder mit „[OCR "
+        "unsicher]“ markiert: null, und Grund in extraction_notes.\n"
+        "- Nennt das Dokument mehrere Monate mit verschiedenen Werten: Werte des ersten "
+        "vollen Monats; vermerke das in extraction_notes.\n"
+        "- Zahlen als JSON-Zahlen mit Punkt als Dezimaltrenner, ohne Tausenderpunkt "
+        "(„1.234,56 €“ → 1234.56).\n"
+        "- authority_calculation_text: die Berechnungsdarstellung des Dokuments wörtlich, "
+        'höchstens 1.000 Zeichen; sonst "".\n'
+        "- Erfinde keine Zahlen, Personentypen, Zeiträume oder Haushaltsdaten.\n"
+        "</regeln>\n\n"
+        "<ausgabeformat>\n"
+        "{\n"
+        '  "person_type": null,\n'
+        '  "has_minor_child": null,\n'
+        '  "period_year": null,\n'
+        '  "extracted_values": {\n' + null_values + "\n  },\n"
+        '  "authority_calculation_text": "",\n'
+        '  "extraction_notes": ""\n'
+        "}\n\n" + _JSON_OBJECT_ONLY + "\n</ausgabeformat>"
+    )
+
+
+def _explanation_prompt() -> str:
+    return (
+        "<rolle>\n"
+        "Du erklärst einer betroffenen Person die Ergebnisse einer deterministischen "
+        "Prüf-Engine für Berechnungen nach SGB II (Bürgergeld). Die Werte der Engine sind "
+        "maßgeblich; du stellst sie nicht in Frage und rechnest nicht nach.\n"
+        "</rolle>\n\n"
+        "<eingaben>\n"
+        "„## DOKUMENT“ (ggf. mit Kontext aus der rechtlichen Analyse), „## EXTRAHIERTE "
+        "DATEN“ (JSON) und „## ERGEBNISSE DER PRÜF-ENGINE“: Liste mit index, label, "
+        "computation_detail, deterministic_result, discrepancy_found, "
+        "discrepancy_amount_eur, discrepancy_direction, relevant_rule.\n"
+        "</eingaben>\n\n"
+        "<aufgabe>\n"
+        "Schreibe für jeden Engine-Eintrag eine commentary (index = sein index) und danach "
+        "overall_assessment.\n"
+        "</aufgabe>\n\n"
+        "<regeln>\n"
+        "- commentary: höchstens 2 Sätze in Alltagssprache.\n"
+        "- Nenne nur Zahlen, die wörtlich in den Engine-Ergebnissen oder im Dokument stehen; "
+        "bilde keine Summen, Differenzen oder Prozente.\n"
+        "- discrepancy_direction und discrepancy_amount_eur unverändert übernehmen; deute "
+        "die Richtung nur, wenn computation_detail sie erklärt.\n"
+        "- relevant_rule unverändert nennen; keine weiteren Normen.\n"
+        "- discrepancy_found true: Die Angabe im Bescheid weicht möglicherweise ab. Ursache "
+        "nur aus computation_detail oder authority_calculation_text, sonst „Ursache aus den "
+        "Unterlagen nicht erkennbar“.\n"
+        "- Keine Abweichung: bestätigen und sagen, dass nur die prüfbaren Posten geprüft "
+        "wurden.\n"
+        "- deterministic_result null: nennen, welche Angabe für die Prüfung fehlt "
+        "(extraction_notes).\n"
+        "- summary: höchstens 3 Sätze. recommended_action: 1 bis 2 Schritte der Person, z. B. "
+        "Aufschlüsselung der Berechnung erbitten oder Widerspruch prüfen.\n"
+        "- Erfinde keine Normen, Rechtsprechung oder Tatsachen.\n"
+        "</regeln>\n\n"
+        "<ausgabeformat>\n"
+        "{\n"
+        '  "enriched_calculations": [ { "index": 0, "commentary": "..." } ],\n'
+        '  "overall_assessment": { "summary": "...", "recommended_action": "..." }\n'
+        "}\n\n" + _JSON_OBJECT_ONLY + "\n</ausgabeformat>"
+    )
+
+
+# ---------------------------------------------------------------------------
+# P-16 regime banner (module data) and the core wrapper (CR-06)
+# ---------------------------------------------------------------------------
+
+
+_EXTRACTION_SYSTEM = _extraction_prompt()
+_EXPLANATION_SYSTEM = _explanation_prompt()
 
 
 # ---------------------------------------------------------------------------

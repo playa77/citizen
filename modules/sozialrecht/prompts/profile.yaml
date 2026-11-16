@@ -1,22 +1,31 @@
 # Stage prompt profile of module `sozialrecht` (WP-93; ARCHITECTURE.md § 3.2).
 # Rendered by the core stage templates in app/services/prompts.py.
-# Extracted verbatim from the v2.0.0 AreaProfile in that file.
+# Extracted verbatim from the v2.0.0 AreaProfile in that file; prompt set 3.0.0
+# added norm anchors to issue_terms (search hints for the triage stage) and
+# result_categories (docs/prompt-upgrade-proposal.md, P-03/P-04).
 
 display_name: deutsches Sozialrecht
 statutes: insbesondere SGB I, SGB II, SGB III, SGB IX, SGB X und SGB XII
 document_examples: eines Jobcenter-Bescheids, einer Anhörung, einer Aufforderung zur Mitwirkung, einer Einladung, einer Eingliederungsvereinbarung oder eines Schreibens des Sozialamts oder einer anderen Sozialbehörde
 issue_terms:
-- Meldefristverletzung
-- Mitwirkungspflicht
-- Eingliederungsvereinbarung
-- Bewilligungsbescheid
-- Aufhebungs- und Erstattungsbescheid
-- Kosten der Unterkunft
-- Sanktion nach § 31 SGB II
-- Anhörung nach § 24 SGB X
-- Gesundheitsprüfung
+- Meldeversäumnis (§ 32 SGB II)
+- Mitwirkungspflicht (§ 60 SGB I)
+- Kooperationsplan / Eingliederungsvereinbarung (§ 15 SGB II)
+- Leistungsanspruch und Bewilligung (§ 19 SGB II)
+- Aufhebung und Erstattung (§ 48 SGB X, § 50 SGB X)
+- Kosten der Unterkunft und Heizung (§ 22 SGB II)
+- Leistungsminderung wegen Pflichtverletzung (§ 31 SGB II, § 31a SGB II)
+- Anhörung (§ 24 SGB X)
+- Ärztliche Untersuchung (§ 62 SGB I)
 formal_examples: Anhörung, Begründung, Frist, Zuständigkeit
 material_examples: Anspruch, Sanktion, Mitwirkung, Unterkunftskosten
 answerable_with: deutschem Sozialrecht, insbesondere SGB II, SGB X oder SGB XII
 hierarchy_example: SGB II > § 31 > Abs. 1
 adversary_examples: das Jobcenter, das Sozialamt oder eine andere Behörde
+# Closed vocabulary for the first sentence of "ergebnis" ("Begriff – Definition");
+# the core appends "Einordnung offen" (prompt set 3.0.0).
+result_categories:
+- rechtswidrig – ein Fehler zulasten der betroffenen Person erfasst die gesamte Regelung
+- teilweise rechtswidrig – ein Fehler erfasst nur einen abgrenzbaren Teil
+- überwiegend rechtmäßig – kein durchgreifender Fehler erkennbar
+- kein Verwaltungsakt – das Schreiben regelt keinen Einzelfall verbindlich (§ 31 SGB X)

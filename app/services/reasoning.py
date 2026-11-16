@@ -13,12 +13,17 @@ Implements stages 2-3 and 5-8 of the 8-stage pipeline:
 Plus an OCR post-processing stage that runs before the pipeline:
     OCR Synthesis & Correction        → synthesize_and_correct_text()
 
-Every function enforces a strict JSON output schema via a ``response_format``
-directive embedded in the system prompt. Malformed JSON triggers one automatic
-retry with a stricter prompt before raising ``JSONParseError``.
+Every JSON stage states its schema in the system prompt's <ausgabeformat>
+block, followed by the strict suffix (S-05). The router sends
+``response_format`` only when the inference profile declares ``json_mode``
+(CR-03). Malformed JSON triggers one retry at temperature 0.0 with the same
+prompt (half the input for document stages) before ``JSONParseError``.
 """
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: default stage prompts imported as
+# Semantic Version: 0.2.0 | 2026-11-16 — prompt set 3.0.0: separate review parser
+# (F-17), claims in the review message (F-01), German strict suffix (F-03),
+# German legacy headings (F-11), stage temperatures/caps (CR-03/CR-04).
+# 0.1.1 | 2026-11-16 — WP-93: default stage prompts imported as
 # DEFAULT_PROMPTS (DEFAULT_MODULE profile) instead of SOCIALRECHT_PROMPTS.
 
 from __future__ import annotations
@@ -29,8 +34,13 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from app.core.router import get_shared_client
-from app.services.prompts import DEFAULT_PROMPTS
-from app.utils.tokens import estimate_tokens, trim_text
+from app.services.prompts import (
+    DEFAULT_PROMPTS,
+    STRICT_SUFFIX,
+    stage_max_tokens,
+    stage_temperature,
+)
+from app.utils.tokens import estimate_tokens, trim_document
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +60,11 @@ class JSONParseError(Exception):
 # JSON-parsing helper with retry
 # ---------------------------------------------------------------------------
 
-_STRICT_SUFFIX = (
-    "\n\nIMPORTANT: Respond with *only* valid JSON matching the schema above. "
-    "No prose, no markdown fences, no explanation. If you cannot produce "
-    "valid JSON matching the schema, return an empty array [] for array "
-    "schemas or an empty object {} for object schemas."
-)
+# S-05 (prompt set 3.0.0, CR-17): German reminder after the format block.
+# The v2 English suffix told the model to return [] / {} when it could not
+# comply — a parseable but empty "success" every schema forbids (F-03).
+# Failures now surface as JSONParseError after one temperature-0 retry.
+_STRICT_SUFFIX = STRICT_SUFFIX
 
 
 def _parse_json_response(raw: str, *, context: str) -> Any:
@@ -218,11 +227,15 @@ async def classify_issues(
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
         {
             "role": "user",
-            "content": trim_text(normalized_text, triage_budget),
+            "content": trim_document(normalized_text, triage_budget),
         },
     ]
 
-    raw = await client.chat_completion(messages, temperature=0.1)
+    raw = await client.chat_completion(
+        messages,
+        temperature=stage_temperature("classification"),
+        max_tokens=stage_max_tokens("classification"),
+    )
     try:
         result = _parse_json_response(raw, context="issue classification")
     except JSONParseError:
@@ -230,9 +243,11 @@ async def classify_issues(
         logger.warning("JSON parse error in classify_issues, retrying with stricter prompt")
         messages_minimal = [
             {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-            {"role": "user", "content": trim_text(normalized_text, triage_budget // 2)},
+            {"role": "user", "content": trim_document(normalized_text, triage_budget // 2)},
         ]
-        raw2 = await client.chat_completion(messages_minimal, temperature=0.0)
+        raw2 = await client.chat_completion(
+            messages_minimal, temperature=0.0, max_tokens=stage_max_tokens("classification")
+        )
         result = _parse_json_response(raw2, context="issue classification (retry)")
 
     issues = result.get("issues", [])
@@ -278,20 +293,26 @@ async def decompose_questions(
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
         {
             "role": "user",
-            "content": trim_text(normalized_text, triage_budget),
+            "content": trim_document(normalized_text, triage_budget),
         },
     ]
 
-    raw = await client.chat_completion(messages, temperature=0.1)
+    raw = await client.chat_completion(
+        messages,
+        temperature=stage_temperature("decomposition"),
+        max_tokens=stage_max_tokens("decomposition"),
+    )
     try:
         result = _parse_json_response(raw, context="question decomposition")
     except JSONParseError:
         logger.warning("JSON parse error in decompose_questions, retrying with stricter prompt")
         messages_minimal = [
             {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-            {"role": "user", "content": trim_text(normalized_text, triage_budget // 2)},
+            {"role": "user", "content": trim_document(normalized_text, triage_budget // 2)},
         ]
-        raw2 = await client.chat_completion(messages_minimal, temperature=0.0)
+        raw2 = await client.chat_completion(
+            messages_minimal, temperature=0.0, max_tokens=stage_max_tokens("decomposition")
+        )
         result = _parse_json_response(raw2, context="question decomposition (retry)")
 
     questions = result.get("questions", [])
@@ -306,6 +327,18 @@ async def decompose_questions(
 # ---------------------------------------------------------------------------
 
 _TRIAGE_SYSTEM = DEFAULT_PROMPTS["triage"]
+
+
+def _triage_cache_text(system_prompt: str, normalized_text: str) -> str:
+    """Cache input for triage (CR-08, F-08).
+
+    The rendered prompt is part of the key: a new prompt version or another
+    area set (which renders a different prompt) must never be served a result
+    produced by different instructions.
+    """
+    from app.services.prompts import PROMPT_SET_VERSION, prompt_digest
+
+    return f"{PROMPT_SET_VERSION}\0{prompt_digest(system_prompt)}\0{normalized_text}"
 
 
 async def triage_document(
@@ -344,7 +377,9 @@ async def triage_document(
         from app.db.session import get_async_session
         from app.services.cache import get_json_cache, make_cache_key
 
-        cache_key = make_cache_key("triage", triage_model, normalized_text)
+        cache_key = make_cache_key(
+            "triage", triage_model, _triage_cache_text(sys_msg, normalized_text)
+        )
         async for session in get_async_session():
             try:
                 cached = await get_json_cache(session, cache_key)
@@ -374,7 +409,7 @@ async def triage_document(
     )
     client = get_shared_client()
 
-    trimmed_input = trim_text(normalized_text, triage_input_chars)
+    trimmed_input = trim_document(normalized_text, triage_input_chars)
     input_tokens = estimate_tokens(trimmed_input + sys_msg + _STRICT_SUFFIX)
 
     messages = [
@@ -398,7 +433,8 @@ async def triage_document(
 
     raw = await client.chat_completion(
         messages,
-        temperature=0.1,
+        temperature=stage_temperature("triage"),
+        max_tokens=stage_max_tokens("triage"),
         models=triage_models,
         timeout=triage_timeout,
         max_retries=3,
@@ -409,11 +445,12 @@ async def triage_document(
         logger.warning("JSON parse error in triage_document, retrying with stricter prompt")
         messages_minimal = [
             {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-            {"role": "user", "content": trim_text(normalized_text, triage_input_chars // 2)},
+            {"role": "user", "content": trim_document(normalized_text, triage_input_chars // 2)},
         ]
         raw2 = await client.chat_completion(
             messages_minimal,
             temperature=0.0,
+            max_tokens=stage_max_tokens("triage"),
             models=triage_models,
             timeout=triage_timeout,
             max_retries=3,
@@ -444,7 +481,7 @@ async def triage_document(
             try:
                 await _set(
                     session,
-                    _mk("triage", triage_model, normalized_text),
+                    _mk("triage", triage_model, _triage_cache_text(sys_msg, normalized_text)),
                     {"issues": clean_issues, "questions": clean_questions},
                 )
             except Exception as exc:
@@ -467,188 +504,100 @@ async def triage_document(
 # ---------------------------------------------------------------------------
 
 _GROUNDED_ANSWER_SYSTEM = DEFAULT_PROMPTS["grounded_answer"]
-
-
-# ---------------------------------------------------------------------------
-# Stage 7 — Adversarial Legal Review (Rechtsprüfungsrat)
-# ---------------------------------------------------------------------------
-
 _ADVERSARIAL_REVIEW_SYSTEM = DEFAULT_PROMPTS["adversarial_review"]
 
+_SECTION_KEYS: tuple[str, ...] = (
+    "sachverhalt",
+    "rechtliche_wuerdigung",
+    "ergebnis",
+    "handlungsempfehlung",
+    "entwurf",
+    "unsicherheiten",
+    "adversarial_pruefung",
+)
+_VALID_CLAIM_TYPES = frozenset({"fact", "interpretation", "recommendation"})
 
-async def adversarial_review(
+
+def _final_models(client: Any) -> list[str] | None:
+    """``FINAL_MODEL`` first, then the client's fallback chain."""
+    from app.core.config import settings as s
+
+    if s.FINAL_MODEL:
+        return [s.FINAL_MODEL] + [m for m in client.models if m != s.FINAL_MODEL]
+    return None
+
+
+def _final_user_content(
     normalized_text: str,
     issues: list[str],
     questions: list[str],
-    claims: list[dict[str, Any]],
     chunks: list[dict[str, Any]],
-    *,
-    system_prompt: str | None = None,
-) -> dict[str, Any]:
-    """Perform an adversarial legal review of the claims from multiple
-    perspectives (defense, authority, judicial, procedural).
+) -> tuple[str, int]:
+    """User message shared by the grounded answer (P-04) and the review (P-05).
 
-    This implements Stage 7 of the pipeline — the "Rechtsprüfungsrat"
-    (legal review council) that evaluates every claim from opposing
-    legal perspectives.
-
-    Parameters
-    ----------
-    normalized_text :
-        Cleaned text from the OCR / ingestion pipeline.
-    issues :
-        Legal topics identified during triage.
-    questions :
-        Explicit legal questions from triage.
-    claims :
-        Claims (verified or raw) to be adversarially reviewed.
-    chunks :
-        Evidence chunks retrieved from pgvector.
-
-    Returns
-    -------
-    dict[str, Any]
-        A dict with keys:
-        - ``reviews``: list of per-claim adversarial reviews
-        - ``overall_assessment``: dict with summary, key_risks,
-          recommended_next_steps, confidence_in_defense,
-          procedural_errors_found
+    Returns ``(content, number_of_chunks_included)``. Chunk blocks use the
+    header ``CHUNK [<chunk_id>] <hierarchy>:`` that P-04 tells the model to
+    copy; a chunk cut at the context budget ends in ``...``.
     """
     from app.core.config import settings as s
 
-    final_model = s.FINAL_MODEL or s.PRIMARY_MODEL
-    final_timeout = s.FINAL_TIMEOUT_SEC
-    max_chunks_for_final = s.MAX_CHUNKS_FOR_FINAL
-    max_chunk_context_chars = s.MAX_CHUNK_CONTEXT_CHARS
-    max_final_input_chars = s.MAX_FINAL_INPUT_CHARS
-    sys_msg = system_prompt if system_prompt is not None else _GROUNDED_ANSWER_SYSTEM
-
-    logger.info(
-        "generate_grounded_answer: starting (input=%d chars, %d issues, "
-        "%d questions, %d chunks, budget: max_input=%d max_chunks=%d "
-        "max_chunk_chars=%d, model=%s, timeout=%.1fs)",
-        len(normalized_text),
-        len(issues),
-        len(questions),
-        len(chunks),
-        max_final_input_chars,
-        max_chunks_for_final,
-        max_chunk_context_chars,
-        final_model,
-        final_timeout,
-    )
-    client = get_shared_client()
-
-    # Build model chain: use FINAL_MODEL first if set, then full fallback chain
-    if s.FINAL_MODEL:
-        final_models = [s.FINAL_MODEL] + [m for m in client.models if m != s.FINAL_MODEL]
-    else:
-        final_models = None
-
-    # Build chunk context (cap to manageable size, using top N by retrieval score).
     chunk_lines: list[str] = []
     total_chunk_chars = 0
-    for c in chunks[:max_chunks_for_final]:
+    for c in chunks[: s.MAX_CHUNKS_FOR_FINAL]:
         chunk_id = c.get("chunk_id", "?")
         hierarchy = c.get("hierarchy_path", "?")
         text = c.get("text_content", "")
-        line = f"CHUNK [{chunk_id}] {hierarchy}:\n" f"{text}\n"
-        if total_chunk_chars + len(line) > max_chunk_context_chars:
-            remaining = max_chunk_context_chars - total_chunk_chars
+        line = f"CHUNK [{chunk_id}] {hierarchy}:\n{text}\n"
+        if total_chunk_chars + len(line) > s.MAX_CHUNK_CONTEXT_CHARS:
+            remaining = s.MAX_CHUNK_CONTEXT_CHARS - total_chunk_chars
             if remaining > 100:
                 line = line[:remaining] + "..."
             else:
                 break
         chunk_lines.append(line)
         total_chunk_chars += len(line)
-    chunk_context = "\n---\n".join(chunk_lines)
 
-    # Build the user prompt (German).
-    user_parts: list[str] = []
-
-    user_parts.append("## DOKUMENT\n")
-    user_parts.append(trim_text(normalized_text, max_final_input_chars))
-
+    user_parts: list[str] = [
+        "## DOKUMENT\n",
+        trim_document(normalized_text, s.MAX_FINAL_INPUT_CHARS),
+    ]
     if issues:
         user_parts.append("\n\n## IDENTIFIZIERTE THEMEN\n")
         user_parts.append("\n".join(f"- {i}" for i in issues))
-
     if questions:
         user_parts.append("\n\n## RECHTSFRAGEN\n")
         user_parts.append("\n".join(f"- {q}" for q in questions))
-
     user_parts.append("\n\n## RECHTSQUELLEN (CHUNKS)\n")
-    user_parts.append(chunk_context)
+    user_parts.append("\n---\n".join(chunk_lines))
+    return "\n".join(user_parts), len(chunk_lines)
 
-    user_content = "\n".join(user_parts)
 
-    messages = [
-        {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-        {"role": "user", "content": user_content},
-    ]
-
-    prompt_chars = len(sys_msg) + len(_STRICT_SUFFIX) + len(user_content)
-    prompt_tokens = estimate_tokens(sys_msg + _STRICT_SUFFIX + user_content)
-    logger.info(
-        "generate_grounded_answer: prompt ~%d chars (user=%d, system=%d), ~%d tokens, "
-        "%d chunks included",
-        prompt_chars,
-        len(user_content),
-        len(sys_msg) + len(_STRICT_SUFFIX),
-        prompt_tokens,
-        len(chunk_lines),
-    )
-
-    raw = await client.chat_completion(
-        messages,
-        temperature=0.1,
-        models=final_models,
-        timeout=final_timeout,
-        max_retries=3,
-    )
-    try:
-        result = _parse_json_response(raw, context="grounded answer (claims + sections)")
-    except JSONParseError:
-        logger.warning(
-            "JSON parse error in generate_grounded_answer, retrying with stricter prompt"
-        )
-        messages_minimal = [
-            {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
-            {"role": "user", "content": user_content[: max_final_input_chars // 2]},
-        ]
-        raw2 = await client.chat_completion(
-            messages_minimal,
-            temperature=0.0,
-            models=final_models,
-            timeout=final_timeout,
-            max_retries=3,
-        )
-        result = _parse_json_response(raw2, context="grounded answer (retry)")
-
-    # --- Extract and validate claims ---
+def _validate_grounded_answer(result: Any, *, context: str) -> dict[str, Any]:
+    """Normalise a P-04 response to ``{"claims": [...], "sections": {...}}``."""
+    if not isinstance(result, dict):
+        logger.warning("%s: response is not an object (%s)", context, type(result).__name__)
+        result = {}
     raw_claims = result.get("claims", [])
     if not isinstance(raw_claims, list):
-        logger.warning("generate_grounded_answer: unexpected 'claims' type: %s", type(raw_claims))
+        logger.warning("%s: unexpected 'claims' type: %s", context, type(raw_claims))
         raw_claims = []
 
-    valid_claim_types = {"fact", "interpretation", "recommendation"}
-    validated_claims: list[dict[str, Any]] = []
+    claims: list[dict[str, Any]] = []
     for item in raw_claims:
         if not isinstance(item, dict):
             continue
         ct = item.get("claim_type", "fact")
-        if ct not in valid_claim_types:
+        if ct not in _VALID_CLAIM_TYPES:
             ct = "fact"
         cs = item.get("confidence_score", 0.5)
         try:
             cs = float(cs)
         except (TypeError, ValueError):
             cs = 0.5
-        cs = max(0.0, min(1.0, cs))
-        validated_claims.append(
+        claims.append(
             {
                 "claim_text": str(item.get("claim_text", "")).strip(),
-                "confidence_score": cs,
+                "confidence_score": max(0.0, min(1.0, cs)),
                 "claim_type": ct,
                 "question": str(item.get("question", "")).strip(),
                 "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
@@ -657,40 +606,86 @@ async def adversarial_review(
             }
         )
 
-    # --- Extract and validate sections ---
     raw_sections = result.get("sections", {})
     if not isinstance(raw_sections, dict):
-        logger.warning(
-            "generate_grounded_answer: unexpected 'sections' type: %s",
-            type(raw_sections),
-        )
+        logger.warning("%s: unexpected 'sections' type: %s", context, type(raw_sections))
         raw_sections = {}
+    sections = {key: str(raw_sections.get(key, "")).strip() for key in _SECTION_KEYS}
+    return {"claims": claims, "sections": sections}
 
-    required_keys = [
-        "sachverhalt",
-        "rechtliche_wuerdigung",
-        "ergebnis",
-        "handlungsempfehlung",
-        "entwurf",
-        "unsicherheiten",
-        "adversarial_pruefung",
+
+async def generate_grounded_answer(
+    normalized_text: str,
+    issues: list[str],
+    questions: list[str],
+    claims: list[dict[str, Any]],
+    chunks: list[dict[str, Any]],
+    *,
+    system_prompt: str | None = None,
+) -> dict[str, Any]:
+    """Combined claim construction + section generation (P-04, WP-007).
+
+    *claims* is accepted for call-site compatibility and ignored: the model
+    produces the claims. Returns ``{"claims": [...], "sections": {7 keys}}``.
+    Until prompt set 3.0.0 this body also served stage 7 under the name
+    ``adversarial_review`` and discarded the review (F-17).
+    """
+    from app.core.config import settings as s
+
+    del claims  # produced by the model, see docstring
+    sys_msg = system_prompt if system_prompt is not None else _GROUNDED_ANSWER_SYSTEM
+    client = get_shared_client()
+    final_models = _final_models(client)
+    user_content, n_chunks = _final_user_content(normalized_text, issues, questions, chunks)
+    messages = [
+        {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
+        {"role": "user", "content": user_content},
     ]
-    sections: dict[str, str] = {}
-    for key in required_keys:
-        sections[key] = str(raw_sections.get(key, "")).strip()
-
     logger.info(
-        "generate_grounded_answer: complete (model=%s, %d claims, %d sections)",
-        final_model,
-        len(validated_claims),
-        len(sections),
+        "generate_grounded_answer: prompt ~%d chars (user=%d, system=%d), ~%d tokens, "
+        "%d chunks included, model=%s, timeout=%.1fs",
+        len(sys_msg) + len(_STRICT_SUFFIX) + len(user_content),
+        len(user_content),
+        len(sys_msg) + len(_STRICT_SUFFIX),
+        estimate_tokens(sys_msg + _STRICT_SUFFIX + user_content),
+        n_chunks,
+        s.FINAL_MODEL or s.PRIMARY_MODEL,
+        s.FINAL_TIMEOUT_SEC,
     )
-    return {"claims": validated_claims, "sections": sections}
 
+    raw = await client.chat_completion(
+        messages,
+        temperature=stage_temperature("grounded_answer"),
+        models=final_models,
+        timeout=s.FINAL_TIMEOUT_SEC,
+        max_retries=3,
+        max_tokens=stage_max_tokens("grounded_answer"),
+    )
+    try:
+        result = _parse_json_response(raw, context="grounded answer (claims + sections)")
+    except JSONParseError:
+        logger.warning("JSON parse error in generate_grounded_answer, retrying at temperature 0")
+        messages_minimal = [
+            {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
+            {"role": "user", "content": user_content[: s.MAX_FINAL_INPUT_CHARS // 2]},
+        ]
+        raw2 = await client.chat_completion(
+            messages_minimal,
+            temperature=0.0,
+            models=final_models,
+            timeout=s.FINAL_TIMEOUT_SEC,
+            max_retries=3,
+            max_tokens=stage_max_tokens("grounded_answer"),
+        )
+        result = _parse_json_response(raw2, context="grounded answer (retry)")
 
-# Alias: the function above was originally named adversarial_review but also
-# serves as generate_grounded_answer (non-streaming entry point).
-generate_grounded_answer = adversarial_review
+    grounded = _validate_grounded_answer(result, context="generate_grounded_answer")
+    logger.info(
+        "generate_grounded_answer: complete (%d claims, %d sections)",
+        len(grounded["claims"]),
+        len(grounded["sections"]),
+    )
+    return grounded
 
 
 async def generate_grounded_answer_stream(
@@ -703,196 +698,239 @@ async def generate_grounded_answer_stream(
 ) -> AsyncGenerator[dict[str, Any], None]:
     """Stream tokens from a grounded answer generation, yielding progress.
 
-    Accepts the same parameters as :meth:`generate_grounded_answer` but uses
-    ``chat_completion_stream`` instead of ``chat_completion`` so tokens are
-    yielded incrementally.
-
-    Yields:
-        ``{"type": "token", "content": "..."}`` for each content token, and
-        finally ``{"type": "done", "result": <parsed JSON dict>}`` when the
-        stream is complete.
-
-    On JSON parse failure, falls back to ``generate_grounded_answer`` once.
+    Yields ``{"type": "token", "content": "..."}`` per token and finally
+    ``{"type": "done", "result": {"claims": [...], "sections": {...}}}``.
+    On JSON parse failure, falls back to ``generate_grounded_answer`` once —
+    with the same system prompt (it used to drop it, losing the area profile
+    and the regime block).
     """
     from app.core.config import settings as s
 
-    final_model = s.FINAL_MODEL or s.PRIMARY_MODEL
-    final_timeout = s.FINAL_TIMEOUT_SEC
-    max_chunks_for_final = s.MAX_CHUNKS_FOR_FINAL
-    max_chunk_context_chars = s.MAX_CHUNK_CONTEXT_CHARS
-    max_final_input_chars = s.MAX_FINAL_INPUT_CHARS
     sys_msg = system_prompt if system_prompt is not None else _GROUNDED_ANSWER_SYSTEM
-
-    logger.info(
-        "generate_grounded_answer_stream: starting (input=%d chars, %d issues, "
-        "%d questions, %d chunks, model=%s, timeout=%.1fs)",
-        len(normalized_text),
-        len(issues),
-        len(questions),
-        len(chunks),
-        final_model,
-        final_timeout,
-    )
     client = get_shared_client()
-
-    # Build model chain: use FINAL_MODEL first if set, then full fallback chain
-    if s.FINAL_MODEL:
-        final_models = [s.FINAL_MODEL] + [m for m in client.models if m != s.FINAL_MODEL]
-    else:
-        final_models = None
-
-    # Build chunk context (same logic as generate_grounded_answer).
-    chunk_lines: list[str] = []
-    total_chunk_chars = 0
-    for c in chunks[:max_chunks_for_final]:
-        chunk_id = c.get("chunk_id", "?")
-        hierarchy = c.get("hierarchy_path", "?")
-        text = c.get("text_content", "")
-        line = f"CHUNK [{chunk_id}] {hierarchy}:\n" f"{text}\n"
-        if total_chunk_chars + len(line) > max_chunk_context_chars:
-            remaining = max_chunk_context_chars - total_chunk_chars
-            if remaining > 100:
-                line = line[:remaining] + "..."
-            else:
-                break
-        chunk_lines.append(line)
-        total_chunk_chars += len(line)
-    chunk_context = "\n---\n".join(chunk_lines)
-
-    # Build the user prompt (German).
-    user_parts: list[str] = []
-    user_parts.append("## DOKUMENT\n")
-    user_parts.append(trim_text(normalized_text, max_final_input_chars))
-    if issues:
-        user_parts.append("\n\n## IDENTIFIZIERTE THEMEN\n")
-        user_parts.append("\n".join(f"- {i}" for i in issues))
-    if questions:
-        user_parts.append("\n\n## RECHTSFRAGEN\n")
-        user_parts.append("\n".join(f"- {q}" for q in questions))
-    user_parts.append("\n\n## RECHTSQUELLEN (CHUNKS)\n")
-    user_parts.append(chunk_context)
-    user_content = "\n".join(user_parts)
-
+    final_models = _final_models(client)
+    user_content, n_chunks = _final_user_content(normalized_text, issues, questions, chunks)
     messages = [
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
         {"role": "user", "content": user_content},
     ]
+    logger.info(
+        "generate_grounded_answer_stream: starting (prompt ~%d chars, %d chunks, model=%s)",
+        len(sys_msg) + len(_STRICT_SUFFIX) + len(user_content),
+        n_chunks,
+        s.FINAL_MODEL or s.PRIMARY_MODEL,
+    )
 
-    # Accumulate the raw response.
     raw_parts: list[str] = []
-
     try:
         async for token in client.chat_completion_stream(
             messages,
-            temperature=0.1,
+            temperature=stage_temperature("grounded_answer"),
             models=final_models,
-            timeout=final_timeout,
+            timeout=s.FINAL_TIMEOUT_SEC,
             max_retries=3,
+            max_tokens=stage_max_tokens("grounded_answer"),
         ):
             raw_parts.append(token)
             yield {"type": "token", "content": token}
     except Exception as exc:
-        logger.warning(
-            "chat_completion_stream failed, falling back to non-streaming: %s",
-            exc,
-        )
+        logger.warning("chat_completion_stream failed, falling back to non-streaming: %s", exc)
         raw = await client.chat_completion(
             messages,
-            temperature=0.1,
+            temperature=stage_temperature("grounded_answer"),
             models=final_models,
-            timeout=final_timeout,
+            timeout=s.FINAL_TIMEOUT_SEC,
             max_retries=3,
+            max_tokens=stage_max_tokens("grounded_answer"),
         )
         raw_parts = [raw]
-        # Yield the full response as a single token so the caller sees output.
         yield {"type": "token", "content": raw}
 
-    raw_response = "".join(raw_parts)
-
-    # Parse the accumulated response.
     try:
-        result = _parse_json_response(raw_response, context="grounded answer stream")
+        result = _parse_json_response("".join(raw_parts), context="grounded answer stream")
     except JSONParseError:
         logger.warning(
             "JSON parse error in generate_grounded_answer_stream, "
             "falling back to non-streaming generate_grounded_answer"
         )
-        # Fallback: call the non-streaming version directly.
-        # claims=[] is safe — adversarial_review regenerates claims from the LLM.
-        result = await generate_grounded_answer(
-            normalized_text,
-            issues,
-            questions,
-            [],
-            chunks,
+        fallback = await generate_grounded_answer(
+            normalized_text, issues, questions, [], chunks, system_prompt=sys_msg
         )
-        yield {"type": "done", "result": result}
+        yield {"type": "done", "result": fallback}
         return
 
-    # --- Extract and validate claims (same logic as generate_grounded_answer) ---
-    raw_claims = result.get("claims", [])
-    if not isinstance(raw_claims, list):
-        logger.warning(
-            "generate_grounded_answer_stream: unexpected 'claims' type: %s",
-            type(raw_claims),
-        )
-        raw_claims = []
+    grounded = _validate_grounded_answer(result, context="generate_grounded_answer_stream")
+    logger.info(
+        "generate_grounded_answer_stream: complete (%d claims, %d sections)",
+        len(grounded["claims"]),
+        len(grounded["sections"]),
+    )
+    yield {"type": "done", "result": grounded}
 
-    valid_claim_types = {"fact", "interpretation", "recommendation"}
-    claims: list[dict[str, Any]] = []
-    for item in raw_claims:
+
+# ---------------------------------------------------------------------------
+# Stage 7 — Adversarial Legal Review (Rechtsprüfungsrat, P-05)
+# ---------------------------------------------------------------------------
+
+_RISK_LEVELS = frozenset({"niedrig", "mittel", "hoch"})
+_REVIEW_TEXT_FIELDS: tuple[str, ...] = (
+    "defense_argument",
+    "authority_argument",
+    "judicial_assessment",
+    "procedural_issues",
+    "recommended_strategy",
+)
+
+
+def _claims_block(claims: list[dict[str, Any]], max_chars: int) -> str:
+    """``## CLAIMS`` block for the review (CR-01, F-01).
+
+    One entry per claim, numbered with the 0-based index that P-05 must
+    return as ``claim_index``; carries type, confidence, verification status
+    and the evidence the claim cites.
+    """
+    lines: list[str] = []
+    for i, c in enumerate(claims):
+        try:
+            confidence = float(c.get("confidence_score", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        status = c.get("verification_status") or (
+            "verifiziert" if c.get("verified") else "ungeprüft"
+        )
+        lines.append(
+            f"[{i}] ({c.get('claim_type', '?')}, {confidence:.2f}, {status}) "
+            f"{c.get('claim_text', '')}\n"
+            f"    Beleg: CHUNK [{c.get('evidence_chunk_id', '')}] "
+            f"{c.get('evidence_hierarchy', '')}: {c.get('evidence_quote', '')}"
+        )
+    return trim_document("\n".join(lines), max_chars, marker="\n[CLAIMS GEKÜRZT]")
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(v).strip() for v in value if str(v).strip()]
+
+
+def _validate_review(result: Any, *, n_claims: int) -> dict[str, Any]:
+    """Normalise a P-05 response (CR-02, F-17).
+
+    Keeps only reviews whose ``claim_index`` names an existing claim (first
+    one wins per index), maps unknown ``risk_level`` values to ``"hoch"``
+    (fail towards caution), clamps ``confidence_in_defense`` to [0, 1].
+    """
+    if not isinstance(result, dict):
+        result = {}
+    reviews: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    raw_reviews = result.get("reviews", [])
+    for item in raw_reviews if isinstance(raw_reviews, list) else []:
         if not isinstance(item, dict):
             continue
-        ct = item.get("claim_type", "fact")
-        if ct not in valid_claim_types:
-            ct = "fact"
-        cs = item.get("confidence_score", 0.5)
+        raw_index = item.get("claim_index")
+        if isinstance(raw_index, bool) or not isinstance(raw_index, int | str):
+            continue
         try:
-            cs = float(cs)
-        except (TypeError, ValueError):
-            cs = 0.5
-        cs = max(0.0, min(1.0, cs))
-        claims.append(
-            {
-                "claim_text": str(item.get("claim_text", "")).strip(),
-                "confidence_score": cs,
-                "claim_type": ct,
-                "question": str(item.get("question", "")).strip(),
-                "evidence_chunk_id": str(item.get("evidence_chunk_id", "")).strip(),
-                "evidence_hierarchy": str(item.get("evidence_hierarchy", "")).strip(),
-                "evidence_quote": str(item.get("evidence_quote", "")).strip(),
-            }
-        )
+            idx = int(raw_index)
+        except ValueError:
+            continue
+        if not 0 <= idx < n_claims or idx in seen:
+            continue
+        seen.add(idx)
+        risk = str(item.get("risk_level", "")).strip().lower()
+        review: dict[str, Any] = {"claim_index": idx}
+        for key in _REVIEW_TEXT_FIELDS:
+            review[key] = str(item.get(key, "")).strip()
+        review["risk_level"] = risk if risk in _RISK_LEVELS else "hoch"
+        reviews.append(review)
+    reviews.sort(key=lambda r: int(r["claim_index"]))
 
-    # --- Extract and validate sections ---
-    raw_sections = result.get("sections", {})
-    if not isinstance(raw_sections, dict):
-        logger.warning(
-            "generate_grounded_answer_stream: unexpected 'sections' type: %s",
-            type(raw_sections),
-        )
-        raw_sections = {}
+    raw_oa = result.get("overall_assessment", {})
+    oa = raw_oa if isinstance(raw_oa, dict) else {}
+    try:
+        confidence = float(oa.get("confidence_in_defense", 0.5))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    return {
+        "reviews": reviews,
+        "overall_assessment": {
+            "summary": str(oa.get("summary", "")).strip(),
+            "key_risks": _as_str_list(oa.get("key_risks")),
+            "recommended_next_steps": _as_str_list(oa.get("recommended_next_steps")),
+            "confidence_in_defense": max(0.0, min(1.0, confidence)),
+            "procedural_errors_found": _as_str_list(oa.get("procedural_errors_found")),
+        },
+    }
 
-    required_keys = [
-        "sachverhalt",
-        "rechtliche_wuerdigung",
-        "ergebnis",
-        "handlungsempfehlung",
-        "entwurf",
-        "unsicherheiten",
-        "adversarial_pruefung",
-    ]
-    sections: dict[str, str] = {}
-    for key in required_keys:
-        sections[key] = str(raw_sections.get(key, "")).strip()
 
-    logger.info(
-        "generate_grounded_answer_stream: complete (model=%s, %d claims, %d sections)",
-        final_model,
-        len(claims),
-        len(sections),
+async def adversarial_review(
+    normalized_text: str,
+    issues: list[str],
+    questions: list[str],
+    claims: list[dict[str, Any]],
+    chunks: list[dict[str, Any]],
+    *,
+    system_prompt: str | None = None,
+) -> dict[str, Any]:
+    """Adversarial review of the analysis' claims (stage 7, P-05).
+
+    The user message carries the grounded-answer blocks plus ``## CLAIMS``
+    (CR-01). Returns ``{"reviews": [...], "overall_assessment": {...}}``
+    validated by :func:`_validate_review` (CR-02). Raises ``JSONParseError``
+    when the response stays unparseable after one retry; the pipeline then
+    falls back to its "Prüfung nicht verfügbar" result.
+    """
+    from app.core.config import settings as s
+
+    sys_msg = system_prompt if system_prompt is not None else _ADVERSARIAL_REVIEW_SYSTEM
+    client = get_shared_client()
+    final_models = _final_models(client)
+    base_content, n_chunks = _final_user_content(normalized_text, issues, questions, chunks)
+    user_content = (
+        f"{base_content}\n\n## CLAIMS\n{_claims_block(claims, s.MAX_CHUNK_CONTEXT_CHARS)}"
     )
-    yield {"type": "done", "result": {"claims": claims, "sections": sections}}
+    messages = [
+        {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
+        {"role": "user", "content": user_content},
+    ]
+    logger.info(
+        "adversarial_review: prompt ~%d chars (user=%d), %d claims, %d chunks",
+        len(sys_msg) + len(_STRICT_SUFFIX) + len(user_content),
+        len(user_content),
+        len(claims),
+        n_chunks,
+    )
+
+    raw = await client.chat_completion(
+        messages,
+        temperature=stage_temperature("adversarial_review"),
+        models=final_models,
+        timeout=s.FINAL_TIMEOUT_SEC,
+        max_retries=3,
+        max_tokens=stage_max_tokens("adversarial_review"),
+    )
+    try:
+        result = _parse_json_response(raw, context="adversarial review")
+    except JSONParseError:
+        logger.warning("JSON parse error in adversarial_review, retrying at temperature 0")
+        raw2 = await client.chat_completion(
+            messages,
+            temperature=0.0,
+            models=final_models,
+            timeout=s.FINAL_TIMEOUT_SEC,
+            max_retries=3,
+            max_tokens=stage_max_tokens("adversarial_review"),
+        )
+        result = _parse_json_response(raw2, context="adversarial review (retry)")
+
+    review = _validate_review(result, n_claims=len(claims))
+    logger.info(
+        "adversarial_review: complete (%d of %d claims reviewed)",
+        len(review["reviews"]),
+        len(claims),
+    )
+    return review
 
 
 # ---------------------------------------------------------------------------
@@ -936,9 +974,9 @@ async def construct_claims(
     )
 
     user_content = (
-        "Questions:\n"
+        "Rechtsfragen:\n"
         + "\n".join(f"- {q}" for q in questions[:5])
-        + "\n\nRelevant legal chunks:\n"
+        + "\n\nRechtsquellen:\n"
         + chunk_context[: _s.MAX_CHUNK_CONTEXT_CHARS]
     )
 
@@ -947,7 +985,11 @@ async def construct_claims(
         {"role": "user", "content": user_content},
     ]
 
-    raw = await client.chat_completion(messages, temperature=0.1)
+    raw = await client.chat_completion(
+        messages,
+        temperature=stage_temperature("claim_construction"),
+        max_tokens=stage_max_tokens("claim_construction"),
+    )
     try:
         result = _parse_json_response(raw, context="claim construction")
     except JSONParseError:
@@ -958,6 +1000,7 @@ async def construct_claims(
                 {"role": "user", "content": user_content[: _s.MAX_CHUNK_CONTEXT_CHARS // 2]},
             ],
             temperature=0.0,
+            max_tokens=stage_max_tokens("claim_construction"),
         )
         result = _parse_json_response(raw2, context="claim construction (retry)")
 
@@ -1039,8 +1082,8 @@ async def verify_claims(
     )
 
     user_content = (
-        f"Claims to verify:\n{claims_text}\n\n"
-        f"Source chunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
+        f"Zu prüfende Claims:\n{claims_text}\n\n"
+        f"Quellen:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
     )
 
     messages = [
@@ -1048,7 +1091,11 @@ async def verify_claims(
         {"role": "user", "content": user_content},
     ]
 
-    raw = await client.chat_completion(messages, temperature=0.1)
+    raw = await client.chat_completion(
+        messages,
+        temperature=stage_temperature("verification"),
+        max_tokens=stage_max_tokens("verification"),
+    )
     try:
         result = _parse_json_response(raw, context="claim verification")
     except JSONParseError:
@@ -1065,6 +1112,7 @@ async def verify_claims(
                 },
             ],
             temperature=0.0,
+            max_tokens=stage_max_tokens("verification"),
         )
         result = _parse_json_response(raw2, context="claim verification (retry)")
 
@@ -1144,14 +1192,16 @@ async def generate_output(
         for c in verified_claims
     )
 
-    user_content = f"Verified claims:\n{claims_text[:_s.MAX_FINAL_INPUT_CHARS]}"
+    user_content = f"Geprüfte Claims:\n{claims_text[:_s.MAX_FINAL_INPUT_CHARS]}"
 
     messages = [
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
         {"role": "user", "content": user_content},
     ]
 
-    raw = await client.chat_completion(messages, temperature=0.1)
+    raw = await client.chat_completion(
+        messages, temperature=stage_temperature("output"), max_tokens=stage_max_tokens("output")
+    )
     try:
         result = _parse_json_response(raw, context="output generation")
     except JSONParseError:
@@ -1162,6 +1212,7 @@ async def generate_output(
                 {"role": "user", "content": user_content[: _s.MAX_FINAL_INPUT_CHARS // 2]},
             ],
             temperature=0.0,
+            max_tokens=stage_max_tokens("output"),
         )
         result = _parse_json_response(raw2, context="output generation (retry)")
 
@@ -1193,23 +1244,33 @@ async def generate_output(
 # OCR Synthesis & Correction — pre-pipeline stage
 # ---------------------------------------------------------------------------
 
+# P-13 (prompt set 3.0.0, F-21): merge two OCR readings without "correcting"
+# the wording of an official letter; conflicting numbers, dates, case numbers
+# and names keep version A and are marked "[OCR unsicher]" (P-14 nulls them).
 _OCR_SYNTHESIS_SYSTEM = (
-    "Du bist ein Experte für deutsche Texterkennung und -korrektur. "
-    "Dir werden zwei OCR-Texte desselben Dokuments vorgelegt, die von "
-    "unterschiedlich vorverarbeiteten Versionen stammen. "
-    "Deine Aufgabe:\n\n"
-    "1. Vergleiche beide Versionen und erstelle eine bestmögliche Synthese — "
-    "   wo beide Versionen übereinstimmen, übernimmt den Text. "
-    "   Wo Versionen voneinander abweichen, entscheide anhand des Kontexts, "
-    "   welche Version wahrscheinlicher korrekt ist.\n"
-    "2. Führe eine Rechtschreib- und Grammatikprüfung durch. "
-    "   Korrigiere offensichtliche OCR-Fehler (wie falsch erkannte Buchstaben, "
-    "   verschobene Zeilen, fehlende Leerzeichen).\n"
-    "3. Gib NUR den endgültigen, korrigierten deutschen Text zurück. "
-    "   Keine Erklärungen, keine Metadaten, keine Markdown-Formatierung.\n"
-    "4. Der ausgegebene Text muss ein vollständiges, zusammenhängendes "
-    "   Dokument sein. Keine Sätze dürfen fehlen. Der gesamte Inhalt beider "
-    "   OCR-Ergebnisse muss im Ergebnis enthalten sein (ggf. korrigiert)."
+    "<rolle>\n"
+    "Du führst zwei Texterkennungen desselben deutschen Dokuments zu einem Text "
+    "zusammen.\n"
+    "</rolle>\n\n"
+    "<eingaben>\n"
+    "„=== OCR-Version A (Graustufen + Kontrast) ===“ und „=== OCR-Version B "
+    "(Schwarz/Weiß) ===“, jeweils ggf. gekürzt.\n"
+    "</eingaben>\n\n"
+    "<regeln>\n"
+    "- Stimmen beide Versionen überein, übernimm die Stelle.\n"
+    "- Weichen sie ab, wähle die Lesart, die im Kontext ein deutsches Wort oder einen "
+    "sinnvollen Satz ergibt.\n"
+    "- Weichen sie bei Zahlen, Beträgen, Daten, Aktenzeichen oder Namen ab, übernimm "
+    "Version A und setze unmittelbar dahinter „[OCR unsicher]“.\n"
+    "- Korrigiere nur Erkennungsfehler (falsche Zeichen, fehlende Leerzeichen, "
+    "zerrissene Zeilen). Ändere keine Formulierung, Grammatik oder Rechtschreibung des "
+    "Originals.\n"
+    "- Gib jede Textstelle genau einmal aus, in der Reihenfolge des Dokuments; füge "
+    "nichts hinzu, was in keiner Version steht.\n"
+    "</regeln>\n\n"
+    "<ausgabeformat>\n"
+    "Nur der zusammengeführte Text. Keine Erklärung, keine Überschrift, kein Markdown.\n"
+    "</ausgabeformat>"
 )
 
 
@@ -1274,7 +1335,7 @@ async def synthesize_and_correct_text(
     try:
         raw = await client.chat_completion(
             messages,
-            temperature=0.1,
+            temperature=stage_temperature("ocr_synthesis"),
             model=synthesis_model,
         )
     except Exception as exc:

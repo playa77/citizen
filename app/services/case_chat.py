@@ -8,7 +8,12 @@ Targeted re-evaluation re-runs specific pipeline stages with user input as
 additional context, updating only affected sections.
 """
 
-# Semantic Version: 1.1.0 | 2026-11-16 — WP-96: the case-chat "done" event
+# Semantic Version: 1.2.0 | 2026-11-16 — prompt set 3.0.0: P-12 rendered from the
+# case's module profile (CR-05, F-05); context budget CR-14 (F-20): user edits
+# first, then adjudications, analysis, claims, each cut visibly; the context
+# gets MAX_CHUNK_CONTEXT_CHARS of its own instead of sharing 4,000 chars with
+# the prompt; user edits no longer declared authoritative for legal claims.
+# 1.1.0 | 2026-11-16 — WP-96: the case-chat "done" event
 # embeds Art. 50 disclosure + provenance (C-4 closed, D-059); new
 # ``legal_areas`` keyword names the case's recorded area keys.
 
@@ -23,6 +28,7 @@ from app.core.config import settings
 from app.core.pipeline import PipelineState, StageExecutionError, execute_stage
 from app.core.router import get_shared_client
 from app.services.disclosure import build_disclosure_and_provenance
+from app.services.prompts import get_chat_prompt, stage_max_tokens, stage_temperature
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -87,45 +93,12 @@ _DOWNSTREAM_MAP: dict[str, list[str]] = {
 # Case Chat system prompt
 # ---------------------------------------------------------------------------
 
-_CASE_CHAT_SYSTEM_PROMPT = (
-    "Du bist ein sachkundiger, sorgfältiger und präziser Assistent für "
-    "deutsches Sozialrecht (insbesondere SGB II, SGB X, SGB XII). Du hilfst "
-    "Bürgern, die Ergebnisse einer automatisierten rechtlichen Analyse zu "
-    "verstehen, zu hinterfragen und zu verbessern.\n\n"
-    "Dir liegt die **vollständige Analyse-Pipeline** für diesen Fall vor: "
-    "Sachverhalt, rechtliche Würdigung, Ergebnis, Handlungsempfehlung, "
-    "Entwurf, Unsicherheiten, adversarialle Prüfung und Berechnungsprüfung.\n\n"
-    "Deine Antworten sind:\n"
-    "- sachlich, präzise und gut nachvollziehbar\n"
-    "- auf Deutsch\n"
-    "- kurz und verständlich (kein Juristenkauderwelsch, aber fachlich korrekt)\n"
-    "- streng an den vorliegenden Analyseergebnissen orientiert\n"
-    "- klar getrennt in: was die Analyse ergibt, was rechtlich naheliegt "
-    "und was unsicher bleibt\n"
-    "- explizit vorsichtig, wenn Informationen oder Quellen nicht ausreichen\n\n"
-    "Wichtige Regeln:\n"
-    "- Beziehe dich auf konkrete Abschnitte der Analyse (z. B. "
-    "'Im Abschnitt zur rechtlichen Würdigung wird § 31 Abs. 1 SGB II zitiert …').\n"
-    "- Wenn der Nutzer einen Abschnitt korrigiert oder ergänzt hat (user_edits), "
-    "berücksichtige diese Änderungen als autoritativ.\n"
-    "- Wenn eine adversariale Prüfung (adversarial_pruefung) vorliegt, "
-    "weise auf Risiken und Gegenargumente hin, die dort identifiziert wurden.\n"
-    "- Wenn eine Berechnungsprüfung (berechnungspruefung) vorliegt, "
-    "berücksichtige festgestellte Abweichungen und Diskrepanzen.\n"
-    "- Erfinde keine Tatsachen, Paragraphen, Fristen, Aktenzeichen, "
-    "Behördenhandlungen oder Rechtsfolgen.\n"
-    "- Stelle Vermutungen niemals als feststehende Tatsachen dar.\n"
-    "- Belege rechtliche Aussagen nach Möglichkeit mit den Analyseergebnissen.\n"
-    "- Wenn die Analyse keine ausreichende Grundlage bietet, sage das klar "
-    "und deutlich.\n"
-    "- Gib keine übertriebene Sicherheit vor; benenne Unsicherheiten offen.\n"
-    "- Wenn der Nutzer eine vertiefte Prüfung eines bestimmten Aspekts "
-    "wünscht, schlage eine gezielte Neuauswertung vor.\n"
-    "- Formuliere praxisnah und bürgerverständlich.\n\n"
-    "Du zitierst Paragraphen im Format '§ 31 Abs. 1 Satz 2 SGB II'.\n"
-    "Wenn du etwas nicht weißt oder die Analyse nicht ausreicht, sagst du "
-    "das klar."
-)
+#: Default rendering of P-12 (default module), kept for importers. Requests
+#: render the prompt for the case's areas via ``get_chat_prompt`` (CR-05).
+_CASE_CHAT_SYSTEM_PROMPT = get_chat_prompt("case_chat")
+
+#: Appended to a context block cut at its budget (CR-07/CR-14).
+_CUT_MARKER = "\n[… gekürzt]"
 
 
 # ---------------------------------------------------------------------------
@@ -173,52 +146,22 @@ async def generate_case_chat_response(
     """
     client = get_shared_client()
 
-    # ── Build system prompt with pipeline context ───────────────────────
-    system_parts = [_CASE_CHAT_SYSTEM_PROMPT]
-
-    pipeline_context = _build_pipeline_context(pipeline_output)
-    system_parts.append(
-        f"\n\nHier sind die vollständigen Analyseergebnisse des Falls:\n" f"{pipeline_context}"
+    # ── Build system prompt with case context (CR-14) ───────────────────
+    system_content = get_chat_prompt("case_chat", legal_areas) + _assemble_case_context(
+        pipeline_output, user_edits, adjudications, claims
     )
+    llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_content}]
 
-    if user_edits:
-        edits_context = _build_edits_context(user_edits)
-        system_parts.append(
-            f"\n\nDer Nutzer hat folgende Korrekturen an der Analyse "
-            f"vorgenommen (diese sind als autoritativ zu betrachten):\n"
-            f"{edits_context}"
-        )
-
-    if adjudications:
-        adjudication_context = _build_adjudication_context(adjudications)
-        system_parts.append(
-            f"\n\nFolgende Claims wurden vom Nutzer geprüft "
-            f"(Adjudikationen):\n{adjudication_context}"
-        )
-
-    if claims:
-        claims_prompt = _build_claims_context(claims)
-        system_parts.append(f"\n\nDem Fall liegen folgende Claims zugrunde:\n{claims_prompt}")
-
-    # ── Build LLM message list ──────────────────────────────────────────
-    llm_messages: list[dict[str, str]] = []
-
-    system_content = "\n".join(system_parts)
-    # Ensure system content fits within the available budget (account for
-    # conversation history).
-    system_budget = max(settings.MAX_FINAL_INPUT_CHARS - 1000, 2000)
-    system_content = trim_text(system_content, system_budget)
-    llm_messages.append({"role": "system", "content": system_content})
-
-    # Conversation history (trimmed to remaining budget)
-    history_max = max(settings.MAX_FINAL_INPUT_CHARS - len(system_content), 500)
-    history = _trim_history(messages, max_chars=history_max)
-    llm_messages.extend(history)
+    # Conversation history has its own budget (it used to get what the
+    # 4,000-character system budget left over, often 500).
+    llm_messages.extend(_trim_history(messages, max_chars=settings.MAX_FINAL_INPUT_CHARS))
 
     # ── Call LLM and stream ────────────────────────────────────────────
     try:
         response_text = await client.chat_completion(
             llm_messages,
+            temperature=stage_temperature("case_chat"),
+            max_tokens=stage_max_tokens("case_chat"),
             model=settings.FINAL_MODEL,
             timeout=settings.FINAL_TIMEOUT_SEC,
             max_retries=1,
@@ -390,6 +333,53 @@ _PIPELINE_SECTION_LABELS: dict[str, str] = {
     "adversarial_pruefung": "Adversariale Prüfung (Gegenargumente & Risiken)",
     "berechnungspruefung": "Berechnungsprüfung",
 }
+
+
+def _assemble_case_context(
+    pipeline_output: dict[str, str],
+    user_edits: dict[str, Any] | None,
+    adjudications: dict[str, Any] | None,
+    claims: list[dict[str, Any]] | None,
+) -> str:
+    """Case context appended to P-12 within ``MAX_CHUNK_CONTEXT_CHARS`` (CR-14).
+
+    Priority order: the person's corrections, their claim adjudications, the
+    analysis sections, the claims. A block that does not fit is cut with
+    ``[… gekürzt]``; blocks with no room left are named as missing, so the
+    model can say what it does not see (P-12 rule).
+    """
+    blocks: list[tuple[str, str]] = []
+    if user_edits:
+        blocks.append(
+            (
+                "Korrekturen der Person (ersetzen die betroffenen Angaben der Analyse)",
+                _build_edits_context(user_edits),
+            )
+        )
+    if adjudications:
+        blocks.append(
+            (
+                "Bewertungen einzelner Claims durch die Person",
+                _build_adjudication_context(adjudications),
+            )
+        )
+    blocks.append(("Auszüge der Analyse des Falls", _build_pipeline_context(pipeline_output)))
+    if claims:
+        blocks.append(("Claims der Analyse", _build_claims_context(claims)))
+
+    remaining = settings.MAX_CHUNK_CONTEXT_CHARS
+    parts: list[str] = []
+    missing: list[str] = []
+    for heading, body in blocks:
+        if remaining < 200:
+            missing.append(heading)
+            continue
+        text = trim_text(body, remaining, _CUT_MARKER)
+        parts.append(f"\n\n{heading}:\n{text}")
+        remaining -= len(text)
+    if missing:
+        parts.append(f"\n\n[Nicht im Kontext: {', '.join(missing)}]")
+    return "".join(parts)
 
 
 def _build_pipeline_context(pipeline_output: dict[str, str]) -> str:

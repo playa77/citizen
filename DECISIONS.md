@@ -1096,3 +1096,88 @@ code while the service emits `case_chat_llm_failed` — pre-existing, untouched.
 **Rationale:** The widened purpose (D-035) takes effect only with a published
 disclaimer, a lint that covers every module's copy and an AI-output marker
 that names the modules — WP-96 delivers all three and closes C-3/C-4.
+
+### D-060 R2 — 2026-11-16 — Prompt set 3.0.0 (prompt upgrade before WP-97)
+**Scope and acceptance (recorded before the change, AGENTS.md):** implement
+`docs/prompt-upgrade-proposal.md` 1.0.0 as approved — new text for all 16
+prompts (P-01…P-16) and the shared blocks, and the code changes CR-01…CR-17
+it requires (CR-15 optional). Constraints: JSON schemas unchanged (no
+parser-visible shape change); `/api/v1` additive only (D-039); no area
+literals in core code (module data or domain-neutral wording); deadlines
+and amounts only from deterministic engines. Acceptance: every prompt
+byte-identical to the approved proposal text (checked against the rendered
+proposal); golden re-baselined only for prompt/banner keys (all other
+pinned surfaces unchanged); full unit + integration suites, ruff, mypy
+strict, purpose-drift lint green.
+**Decision:**
+(a) **Prompt texts** — `app/services/prompts.py` 3.0.0, `PROMPT_SET_VERSION =
+"3.0.0"`. Every prompt follows the sectioned layout with one format block,
+last; strict suffix S-05 is German and has no "return [] / {}" escape hatch
+(F-03); S-06 retired. Profile slot `result_categories` added (required);
+`issue_terms` carry norm anchors. Module versions: `sozialrecht` 1.1.0,
+`erbrecht` 0.2.0, `familienrecht` 0.2.1.
+(b) **Defects fixed in code** — F-17 (stage 7 output was discarded: own
+parser, `reasoning.adversarial_review` is a real reviewer), F-01 (claims in
+the review message), F-02 (router `max_tokens`/`response_format`, truncation
+detection), F-04 (stage temperatures read), F-05 (chat personas from the
+module profile, optional `legal_areas` on conversation messages), F-06
+(regime from the document's reference period, sdk 0.3.0
+`RegimeProvider.reference_period`), F-07 (truncation markers), F-08 (prompt
+digest in the triage cache key), F-11 (German headings and transcript
+labels), F-14 (prompt identity in stage payloads and eval reports), F-15
+(`is_multi_area`), F-16 (`match` on `/presets/suggest`), F-20 (case-chat
+budget), F-22 (cross-check on the document only). Found while implementing
+and fixed: the grounded-answer stream fallback dropped the system prompt;
+the legacy parallel triage path ignored `legal_areas`; stages re-run via
+`/cases/{id}/reevaluate` got no regime block.
+(c) **Deviations from the proposal** — (1) chat prompts are served by
+`get_chat_prompt(kind, legal_areas)`, not added to `get_prompts()`, whose
+key set is pinned; texts and area resolution as proposed. (2) Conversation
+`legal_areas` is a per-message body field, not a creation field:
+conversations persist no areas and a column would need a migration.
+(3) `STAGE_MAX_TOKENS` ships empty and every profile's `json_mode` is
+`false`: the proposal's caps were provisional pending calibration from the
+token usage the router now logs, and JSON mode must be verified per model of
+each fallback chain (OpenRouter forwards to providers that may reject
+`response_format`). (4) P-10 also receives S-05 (it is a JSON prompt).
+(5) CR-15 (verify "fact" claims against the document) not implemented — it
+was optional; P-04 no longer requests fact claims.
+(d) **Declined, as in the proposal** — F-12 (`risk_level` stays German; no
+code consumer exists, the inventory's reference was to goldset difficulty
+labels); the `per_stage` block of `config/inference_profiles.yaml` stays
+unwired (documented as informational: wiring it switches models, D-017).
+(e) **Golden** — `tests/unit/golden/wp93_v2_baseline.json` keys re-baselined
+deliberately and listed in its `_meta.rebaselined`: `prompts:*` (13),
+`calc:extraction_prompt`, `calc:explanation_prompt`, `regime:banners`,
+`intake:system`, `intake:strict_suffix`, `presets:suggest_system`,
+`presets:keyword_suggest` (gains `match`). No other key changed.
+**Rejected:** (a) Landing prompts and code changes in one commit — the review
+fix (F-17) and the measurement fixes must be separable from text changes.
+(b) Keeping the v2 escape hatch in a schema-valid form — the code's existing
+failure paths (stage error, graceful review/calculation fallback, keyword
+routing for intake) are more truthful than an empty "success".
+**Rationale:** The prompts were refactored but never tuned (D-051 pinned
+them byte-identical); the measured LLM-side metrics (D-050) and the
+structural defects F-01…F-24 are addressed where they can be. R2: observable
+output changes for every analysis; reversible by reverting the commits.
+**Open:** the live evaluation of the measurement plan (B0′ and arms A1–A5,
+`docs/prompt-upgrade-proposal.md` § 4) has not been run — it needs an
+operator-provided API key separate from the developer agent's (AGENTS.md).
+Until it runs, no claim about metric improvement is made.
+
+### D-061 R1 — 2026-11-16 — Eval metric definitions changed; D-050 baseline not comparable
+**Decision:** `eval/extractors.py` 1.1.0 and `eval/metrics.py` 1.2.0 change how
+norms are extracted (spelled-out "Satz", "§§" lists, statute stops at its
+abbreviation) and normalise the goldset's expected citations before
+comparing (F-19). New metric `quote_verification_rate_sourced`. Reports
+record `prompt_set`; the regression gate warns on a prompt-set mismatch;
+`--save` writes `<report>.outputs.json` and `--rescore` re-scores it without
+LLM calls.
+**Rejected:** Keeping the old extractor for comparability with D-050 — its
+citation-precision ceiling was a format artefact (expected norms were never
+normalised), so comparability would preserve a meaningless number.
+**Rationale:** The WP-90 report (`eval/results/20261116T094340Z-e9fb87a.json`)
+stores metrics only, so it cannot be re-scored. The next reference is B0′:
+commit `55ec1f2` — prompt set 2.0.0 texts and sampling (all stages at 0.1)
+with the 1.1.0/1.2.0 eval code — run with `--save`. Later commits change
+sampling (`8cfd320`) and texts, so they are the arms, not the baseline.

@@ -1,4 +1,7 @@
-# Version: 1.0.0 | 2026-07-12
+# Version: 1.1.0 | 2026-11-16 — prompt set 3.0.0 measurement fix (F-19, CR-13):
+# norm regex accepts spelled-out Satz and §§ lists and no longer swallows
+# trailing prose; hierarchy norms are normalised to the same key.
+# 1.0.0 | 2026-07-12
 """Deterministic extraction functions for pipeline output analysis.
 
 All functions are pure — no LLM calls, no side effects, no DB access.
@@ -18,33 +21,47 @@ if TYPE_CHECKING:
 
 # Match patterns like:
 #   § 11b Abs. 3 S. 2 Nr. 1-3 SGB II
-#   § 11b Abs. 2 S. 1 SGB II
+#   § 31 Abs. 1 Satz 2 SGB II          (Satz spelled out, 1.1.0)
 #   § 32 SGB II n.F.
 #   § 12 Abs. 4 SGB II a.F. (bis 30.06.2026)
-#   § 39 Nr. 1 SGB II
-#   §§ 45/48/50 SGB X
-#   § 31a Abs. 1 S. 2 SGB II n.F.
+#   § 41a Abs. 1, 3, 6 SGB II
+#   §§ 45/48/50 SGB X, §§ 45, 48 SGB X, §§ 45 und 48 SGB X
+#   § 40 Abs. 2 Nr. 3 SGB II i.V.m. § 330 Abs. 3 SGB III
 #
-# Strategy: match "§" + paragraph number(s) + optional subsection qualifiers
-# + statute name. n.F./a.F. and parentheticals are excluded from the statute
-# name and consumed separately.
+# Strategy (1.1.0): "§" + paragraph number(s) + optional subsection
+# qualifiers + a statute abbreviation. The statute is ONE token with at least
+# two capital letters (SGB, BGB, ErbStG, BewG, HöfeO, SGG ...) plus an
+# optional roman book number (SGB II, SGB XII). Matching stops there, so
+# trailing prose ("… SGB II zu übernehmen") is no longer swallowed into the
+# norm (F-19). n.F./a.F. and parentheticals are consumed separately.
+_PARA = r"\d+[a-z]?"
+_SUB_NUM = r"\d+[a-z]?(?:\s*(?:[-/,]|und|bis)\s*\d+[a-z]?)*"
 _SINGLE_NORM_RE = re.compile(
     r"§{1,2}\s*"  # § or §§
-    r"(?P<para>[A-Za-z0-9]+(?:\s*/\s*[A-Za-z0-9]+)*)"  # paragraph number(s)
-    r"(?:"
-    r"\s+(?:Abs\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*"  # optional: Abs. subsection
-    r"|S\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*"  # optional: S. subsection
-    r"|Nr\.\s*[A-Za-z0-9]+(?:[-/]\s*[A-Za-z0-9]+)*"  # optional: Nr. subsection
-    r")"
-    r")*"
+    rf"(?P<para>{_PARA}(?:\s*(?:/|,|und)\s*{_PARA})*)"  # paragraph number(s)
+    r"(?:\s+(?:"
+    rf"Abs\.\s*{_SUB_NUM}"  # Absatz
+    rf"|S\.\s*{_SUB_NUM}"  # Satz (abbreviated)
+    rf"|Satz\s*{_SUB_NUM}"  # Satz (spelled out)
+    rf"|Hs\.\s*{_SUB_NUM}"  # Halbsatz
+    r"|Nr\.\s*[A-Za-z0-9]+(?:\s*[-/,]\s*[A-Za-z0-9]+)*"  # Nummer
+    r"|(?:Buchst\.|lit\.)\s*[a-z]+"  # Buchstabe
+    r"))*"
     r"\s+"  # mandatory space before statute
     r"(?P<statute>"
-    r"[A-Za-z\u00C0-\u024F]+"  # first word of statute
-    r"(?:\s+(?![nNaA]\.F\.)[A-Za-z\u00C0-\u024F0-9]+){0,3}"  # additional words (exclude n.F./a.F.)
+    r"[A-ZÄÖÜ][A-Za-zÄÖÜäöüß]*"  # statute abbreviation (checked: >= 2 capitals)
+    r"(?:\s+(?:XIV|XIII|XII|XI|IX|X|VIII|VII|VI|V|IV|III|II|I)(?![A-Za-z]))?"  # book
     r")"
     r"(?:\s+(?:n\.F\.|a\.F\.))?"  # optional n.F./a.F.
     r"(?:\s*\([^)]*\))?"
 )
+
+
+def _is_statute_token(statute: str) -> bool:
+    """A statute abbreviation has at least two capital letters (SGB, BewG)."""
+    first = statute.split()[0]
+    return sum(1 for ch in first if ch.isupper()) >= 2
+
 
 # Case-law citations: "BSG, Urt. v. 19.02.2009 - B 4 AS 30/08 R"
 _CASE_LAW_RE = re.compile(
@@ -94,12 +111,14 @@ def extract_norm_references(text: str) -> set[str]:
     # --- Match statute references ---
     for match in _SINGLE_NORM_RE.finditer(text):
         raw_paras = match.group("para").strip()  # e.g. "11b" or "45/48/50"
-        statute = match.group("statute").strip()  # e.g. "SGB II"
+        statute = " ".join(match.group("statute").split())  # e.g. "SGB II"
+        if not _is_statute_token(statute):
+            continue  # "§ 22 Kosten …" — prose, not a statute
 
-        # Explode multiple paragraphs (e.g. "45/48/50")
-        for para in re.split(r"\s*/\s*", raw_paras):
-            norm = f"§ {para} {statute}"
-            found.add(norm)
+        # Explode multiple paragraphs (e.g. "45/48/50", "45, 48", "45 und 48")
+        for para in re.split(r"\s*(?:/|,|und)\s*", raw_paras):
+            if para:
+                found.add(f"§ {para} {statute}")
 
     return found
 
@@ -130,7 +149,8 @@ def extract_citations_from_pipeline(output: PipelineOutput) -> set[str]:
         if hierarchy:
             normalised = _hierarchy_to_norm(hierarchy)
             if normalised:
-                result.add(normalised)
+                # Same key as text citations ("§ 31 SGB II"), 1.1.0.
+                result.update(extract_norm_references(normalised) or {normalised})
 
     # Source 2: final output sections
     all_section_text = " ".join(

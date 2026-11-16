@@ -87,6 +87,29 @@ from app.services.corpus_readiness import check_preflight
 from app.services.disclosure import build_disclosure_and_provenance
 from app.utils.text import normalize_text
 
+
+def module_request_http_error(exc: ModuleRequestError) -> HTTPException:
+    """HTTP 422 for ``MODULE_UNKNOWN`` / ``MODULE_NOT_ENABLED`` (WP-95).
+
+    Shared with the conversation messages endpoint (prompt set 3.0.0), so
+    both report an invalid ``legal_areas`` value identically.
+    """
+    return HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail={
+            "error": exc.code,
+            "message": (
+                "Mindestens ein ausgewähltes Rechtsgebiet ist nicht installiert."
+                if exc.code == MODULE_UNKNOWN
+                else "Mindestens ein ausgewähltes Rechtsgebiet ist in dieser "
+                "Instanz nicht freigeschaltet."
+            ),
+            "legal_areas": exc.legal_areas,
+            "action": "GET /api/v1/modules lists the installed and enabled modules",
+        },
+    )
+
+
 # Strong references to scheduled audit-persist tasks (RUF006): the event
 # loop may garbage-collect a task with no reference before it completes,
 # silently losing the audit record.
@@ -223,20 +246,7 @@ async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # 
         try:
             resolved_modules = [entry.as_dict() for entry in resolve_request_areas(legal_areas)]
         except ModuleRequestError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
-                    "error": exc.code,
-                    "message": (
-                        "Mindestens ein ausgewähltes Rechtsgebiet ist nicht installiert."
-                        if exc.code == MODULE_UNKNOWN
-                        else "Mindestens ein ausgewähltes Rechtsgebiet ist in dieser "
-                        "Instanz nicht freigeschaltet."
-                    ),
-                    "legal_areas": exc.legal_areas,
-                    "action": "GET /api/v1/modules lists the installed and enabled modules",
-                },
-            ) from None
+            raise module_request_http_error(exc) from None
 
     # Pre-flight corpus check.
     if legal_areas:

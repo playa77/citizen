@@ -1,6 +1,8 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.4 | 2026-11-16 — WP-96: § 5 provenance v1.1 as built,
+<!-- Version: 3.0.0-draft.5 | 2026-11-16 — prompt set 3.0.0: § 2.4 RegimeProvider
+     reference_period, profile result_categories (D-060).
+     3.0.0-draft.4 | 2026-11-16 — WP-96: § 5 provenance v1.1 as built,
      § 6.3 disclaimer/provenance rows, § 7 lint + Part D as built.
      3.0.0-draft.3 | 2026-11-16 — WP-95: § 5 status (module routes, error
      codes, resolved_modules, meta/version modules as built; provenance still open),
@@ -102,7 +104,7 @@ modules/sozialrecht/
 ├── fristen.yaml              # deadline specs (§ 2.3)
 ├── calculators.py            # optional: Calculator implementations (§ 2.4)
 ├── rules_engine.py, regime.py  # further module code, imported relatively (sozialrecht)
-├── prompts/profile.yaml      # stage prompt profile (persona, statutes, terms) or {inherit: <id>}
+├── prompts/profile.yaml      # stage prompt profile (persona, statutes, terms, result_categories) or {inherit: <id>}
 ├── documents/templates.yaml  # action-draft templates, slot definitions, generator selection
 ├── intake.yaml               # intake-interview schema (questions, routing keywords; per area key its global `order`, WP-94)
 ├── dossier.yaml              # document checklist + lawyer-question list (§ 3.7)
@@ -179,7 +181,7 @@ golden date tests in its goldset.
 | Interface | Purpose | Rules |
 |---|---|---|
 | `Calculator` | deterministic area math (§ 11b SGB II cascade, Pfändungstabelle, Kappungsgrenze, Kündigungsfrist § 622 BGB, Tagessatz …) | pure function of (extraction, parameter snapshot, period) → typed result with "authority computed X / correct would be Y / difference Z"; no I/O, no LLM; every constant from the parameter store |
-| `RegimeProvider` | intertemporal law selection (e.g. SGB II reform 2026-07-01) | generalises `app/services/regime.py`; returns regime key per period |
+| `RegimeProvider` | intertemporal law selection (e.g. SGB II reform 2026-07-01) | generalises `app/services/regime.py`; returns regime key per period; optional `reference_period` reads the reference date from the document (sdk 0.3.0, prompt set 3.0.0) — the core renders the `<rechtsstand>` block |
 | `DocumentTypeClassifier` hints | area-specific document-type vocabulary (Bescheid, Mahnbescheid, Strafbefehl, Kündigung …) | data in `intake.yaml`; code only if a structural parser is required |
 
 Module code may import only `app.modules.sdk` (stable, versioned with

@@ -312,6 +312,29 @@ class TestRuntime:
         assert banner == regime_banner(regime)
         assert regime_banner_for(["erbrecht"], day) == (None, "")
 
+    def test_regime_block_uses_document_date(self) -> None:
+        from app.modules.runtime import NO_REFERENCE_DATE_SOURCE, regime_block_for
+
+        info, block = regime_block_for(
+            ["sozialrecht"], "Musterstadt, 03.05.2024\nBescheid", date(2026, 11, 16)
+        )
+        assert info["regimes"] == ["a.F._2023"] and info["as_of"] == "2024-05-03"
+        assert block.startswith("<rechtsstand>\nStichtag: 03.05.2024 (Datum des Schreibens")
+        assert block.endswith("keine Tatsache des Falls.\n</rechtsstand>")
+
+        info, block = regime_block_for(["sozialrecht"], "ohne Datum", date(2026, 11, 16))
+        assert info["source"] == NO_REFERENCE_DATE_SOURCE and info["regimes"] == ["n.F._2026"]
+
+        assert regime_block_for(["erbrecht"], "x", date(2026, 11, 16)) == ({}, "")
+
+    def test_regime_block_spanning_a_boundary_names_both_segments(self) -> None:
+        from app.modules.runtime import regime_block_for
+
+        text = "Bewilligungszeitraum: 01.05.2026 bis 31.10.2026"
+        info, block = regime_block_for(["sozialrecht"], text, date(2026, 11, 16))
+        assert info["regimes"] == ["a.F._2025", "n.F._2026"]
+        assert "Rechtsstandgrenze" in block
+
     def test_compute_deadline(self) -> None:
         from app.fristen.evaluator import FristInput
 

@@ -19,7 +19,9 @@ enabled → ``MODULE_NOT_ENABLED``. ``request_modules`` itself stays lenient
 already-validated keys.
 """
 
-# Semantic Version: 0.4.0 | 2026-11-16 — WP-96: module_provenance() /
+# Semantic Version: 0.5.0 | 2026-11-16 — CR-06: regime_block_for() anchors the
+# legal regime to the document's reference period and renders <rechtsstand>.
+# 0.4.0 | 2026-11-16 — WP-96: module_provenance() /
 # provenance_modules() for the citizen-provenance-v1.1 `modules` list.
 # 0.3.0 | 2026-11-16 — WP-95: module_registry() (process-wide
 # running registry), resolve_request_areas() with MODULE_UNKNOWN /
@@ -306,6 +308,78 @@ def regime_banner_for(module_ids: list[str], as_of: date) -> tuple[str | None, s
     return keys[0], "\n\n".join(b for b in banners if b)
 
 
+#: Constraint sentence of the <rechtsstand> block (P-16 wrapper, prompt set
+#: 3.0.0): phrased as a rule for choosing the version of the law, never as a
+#: statement about the case. Domain-neutral; the module supplies the segment.
+_REGIME_CONSTRAINT = (
+    "Wende Vorschriften nur in der am Stichtag geltenden Fassung an. Gibt ein Chunk "
+    "erkennbar eine andere Fassung wieder oder ist das unklar, kennzeichne das als "
+    "Unsicherheit. Dieser Hinweis bestimmt die anzuwendende Fassung; er ist keine "
+    "Tatsache des Falls."
+)
+_SPAN_NOTE = (
+    "Der Zeitraum reicht über eine Rechtsstandgrenze; wende für jeden Teilzeitraum "
+    "die dort geltende Fassung an."
+)
+#: Source label when no provider finds a date in the document (F-06 fallback).
+NO_REFERENCE_DATE_SOURCE = "kein Datum im Dokument erkannt – heutiges Datum"
+
+
+def regime_block_for(
+    module_ids: list[str], document_text: str, today: date
+) -> tuple[dict[str, Any], str]:
+    """Regime info and the ``<rechtsstand>`` prompt block (CR-06, F-06).
+
+    The reference date comes from the first provider whose
+    ``reference_period`` finds one in *document_text*; otherwise *today*,
+    labelled as such. When the document states a period whose end falls in
+    another regime, every regime from start to end is named (start and end
+    are sampled: one boundary per period, which holds for SGB II's ≤ 12-month
+    benefit periods against ≥ 18-month regime segments).
+
+    Returns ``(info, block)``; no provider → ``({}, "")``. *info* is
+    ``{"regimes", "as_of", "end", "source"}`` for the audit payload.
+    """
+    providers = regime_providers_for(module_ids)
+    if not providers:
+        return {}, ""
+    start: date | None = None
+    end: date | None = None
+    source = NO_REFERENCE_DATE_SOURCE
+    for _, provider in providers:
+        if provider.reference_period is None:
+            continue
+        found_start, found_end, found_source = provider.reference_period(document_text)
+        if found_start is not None:
+            start, end, source = found_start, found_end, found_source
+            break
+    as_of = start or today
+    dates = [as_of, end] if end is not None and end > as_of else [as_of]
+
+    regimes: list[str] = []
+    banners: list[str] = []
+    for _, provider in providers:
+        for day in dates:
+            key = provider.regime_for(day)
+            banner = provider.banner(key)
+            if key not in regimes:
+                regimes.append(key)
+            if banner and banner not in banners:
+                banners.append(banner)
+    lines = [f"Stichtag: {as_of:%d.%m.%Y} ({source}).", *banners]
+    if len(banners) > len(providers):
+        lines.append(_SPAN_NOTE)
+    lines.append(_REGIME_CONSTRAINT)
+    block = "<rechtsstand>\n" + "\n".join(lines) + "\n</rechtsstand>"
+    info = {
+        "regimes": regimes,
+        "as_of": as_of.isoformat(),
+        "end": end.isoformat() if end else None,
+        "source": source,
+    }
+    return info, block
+
+
 # ---------------------------------------------------------------------------
 # Data sections
 # ---------------------------------------------------------------------------
@@ -361,6 +435,7 @@ __all__ = [
     "parameter_domain",
     "provenance_modules",
     "regime_banner_for",
+    "regime_block_for",
     "regime_providers_for",
     "request_modules",
     "resolve_area",

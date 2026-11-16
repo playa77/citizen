@@ -4,7 +4,10 @@ Includes egress guard (WP-31) that enforces host allowlisting and PII scanning
 for every outbound LLM/embedding call.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — CR-03 (F-02): optional max_tokens and
+# response_format (JSON mode, gated on the profile's json_mode capability),
+# finish_reason "length" detection with one larger-budget retry, token usage log.
+# 0.1.0
 
 from __future__ import annotations
 
@@ -64,6 +67,44 @@ def _embedding_headers() -> dict[str, str]:
 
 class RouterExhaustedError(Exception):
     """Raised when all models in the fallback chain have been exhausted."""
+
+
+class TruncatedResponseError(Exception):
+    """The model stopped at the output-token cap (``finish_reason == "length"``).
+
+    Raised only for calls that set ``max_tokens`` and stayed truncated after
+    one retry with twice the budget: a cut-off JSON document must not be
+    "repaired" by re-asking with half the input (F-02).
+    """
+
+    def __init__(self, model: str, max_tokens: int) -> None:
+        super().__init__(f"response truncated at max_tokens={max_tokens} (model={model})")
+        self.model = model
+        self.max_tokens = max_tokens
+
+
+def _json_mode_enabled() -> bool:
+    """Whether the active inference profile declares ``json_mode`` support."""
+    from app.services.inference_profiles import get_active_profile
+
+    return bool(get_active_profile().capability_manifest.get("json_mode", False))
+
+
+def _build_payload(
+    model: str,
+    messages: list[dict[str, str]],
+    temperature: float,
+    *,
+    max_tokens: int | None,
+    response_format: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Chat payload; optional fields are only sent when set (CR-03)."""
+    payload: dict[str, Any] = {"model": model, "messages": messages, "temperature": temperature}
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
+    if response_format is not None and _json_mode_enabled():
+        payload["response_format"] = response_format
+    return payload
 
 
 class EmbeddingError(Exception):
@@ -194,6 +235,8 @@ class OpenRouterClient:
         timeout: float | None = None,
         max_retries: int | None = None,
         models: list[str] | None = None,
+        max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> str:
         """Return the assistant's final text response or raise on exhaustion.
 
@@ -209,12 +252,18 @@ class OpenRouterClient:
                          ``settings.MAX_RETRIES``).
             models: Explicit fallback chain (deduplicated, order-preserving). When
                     provided, *model* is ignored and this chain is used instead.
+            max_tokens: Output-token cap. When the response stops at the cap,
+                    the same model is asked once more with twice the budget;
+                    still truncated → ``TruncatedResponseError``.
+            response_format: e.g. ``{"type": "json_object"}``; sent only when the
+                    active inference profile declares ``json_mode: true``.
 
         Returns:
             The parsed ``content`` string from the response.
 
         Raises:
             RouterExhaustedError: If every model / retry attempt fails.
+            TruncatedResponseError: If a capped response stays truncated.
         """
         effective_max_retries = max_retries if max_retries is not None else settings.MAX_RETRIES
         timeout_config = httpx.Timeout(timeout) if timeout is not None else None
@@ -227,13 +276,18 @@ class OpenRouterClient:
             effective_models = self.models
 
         for current_model in effective_models:
-            for attempt in range(1, effective_max_retries + 1):
+            budget = max_tokens
+            attempt = 0
+            while attempt < effective_max_retries:
+                attempt += 1
                 try:
-                    payload: dict[str, Any] = {
-                        "model": current_model,
-                        "messages": messages,
-                        "temperature": temperature,
-                    }
+                    payload = _build_payload(
+                        current_model,
+                        messages,
+                        temperature,
+                        max_tokens=budget,
+                        response_format=response_format,
+                    )
                     _egress_check(_API_URL, payload)
                     logger.info(
                         "chat_completion → sending (model=%s, attempt=%d/%d, msg_chars=%d)",
@@ -264,19 +318,47 @@ class OpenRouterClient:
                     req_elapsed = time.monotonic() - req_start
                     resp.raise_for_status()
                     body = resp.json()
-                    content: str = body["choices"][0]["message"]["content"]
+                    choice = body["choices"][0]
+                    content: str = choice["message"]["content"]
+                    finish_reason = choice.get("finish_reason")
+                    usage = body.get("usage") or {}
                     prompt_chars = sum(len(m.get("content", "")) for m in messages)
                     response_chars = len(content)
                     logger.info(
                         "chat_completion OK (model=%s, attempt=%d/%d, elapsed=%.2fs, "
-                        "prompt_chars=%d, response_chars=%d)",
+                        "prompt_chars=%d, response_chars=%d, prompt_tokens=%s, "
+                        "completion_tokens=%s, finish_reason=%s, max_tokens=%s)",
                         current_model,
                         attempt,
                         effective_max_retries,
                         req_elapsed,
                         prompt_chars,
                         response_chars,
+                        usage.get("prompt_tokens"),
+                        usage.get("completion_tokens"),
+                        finish_reason,
+                        budget,
                     )
+                    if finish_reason == "length" and budget is not None:
+                        if budget == max_tokens:
+                            # One retry on the same model with twice the budget.
+                            logger.warning(
+                                "chat_completion truncated at max_tokens=%d (model=%s); "
+                                "retrying with %d",
+                                budget,
+                                current_model,
+                                budget * 2,
+                            )
+                            budget *= 2
+                            attempt -= 1  # the budget retry is not a failed attempt
+                            continue
+                        raise TruncatedResponseError(current_model, budget)
+                    if finish_reason == "length":
+                        logger.warning(
+                            "chat_completion stopped at the provider's output limit "
+                            "(model=%s); the response may be incomplete",
+                            current_model,
+                        )
                     return content
                 except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
                     fail_elapsed = time.monotonic() - req_start
@@ -328,6 +410,8 @@ class OpenRouterClient:
         timeout: float | None = None,
         max_retries: int | None = None,
         models: list[str] | None = None,
+        max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> AsyncGenerator[str, None]:
         """Stream tokens from a chat completion via SSE.
 
@@ -357,12 +441,14 @@ class OpenRouterClient:
         for current_model in effective_models:
             for attempt in range(1, effective_max_retries + 1):
                 try:
-                    payload: dict[str, Any] = {
-                        "model": current_model,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "stream": True,
-                    }
+                    payload = _build_payload(
+                        current_model,
+                        messages,
+                        temperature,
+                        max_tokens=max_tokens,
+                        response_format=response_format,
+                    )
+                    payload["stream"] = True
                     _egress_check(_API_URL, payload)
                     logger.info(
                         "chat_completion_stream → streaming "
@@ -382,6 +468,7 @@ class OpenRouterClient:
                     ) as resp:
                         resp.raise_for_status()
                         token_count = 0
+                        finish_reason: str | None = None
                         async for line in resp.aiter_lines():
                             # Hard wall-clock timeout check — httpx's read timeout
                             # does NOT fire on streaming responses because each
@@ -407,6 +494,9 @@ class OpenRouterClient:
                                     break
                                 try:
                                     chunk = json.loads(data_str)
+                                    finish_reason = (
+                                        chunk["choices"][0].get("finish_reason") or finish_reason
+                                    )
                                     delta = chunk["choices"][0]["delta"]
                                     content = delta.get("content", "")
                                     if content:
@@ -418,13 +508,24 @@ class OpenRouterClient:
                     req_elapsed = time.monotonic() - req_start
                     logger.info(
                         "chat_completion_stream OK (model=%s, attempt=%d/%d, "
-                        "elapsed=%.2fs, tokens=%d)",
+                        "elapsed=%.2fs, tokens=%d, finish_reason=%s, max_tokens=%s)",
                         current_model,
                         attempt,
                         effective_max_retries,
                         req_elapsed,
                         token_count,
+                        finish_reason,
+                        max_tokens,
                     )
+                    if finish_reason == "length":
+                        # Tokens are already yielded; the caller's JSON parse
+                        # fails and its non-streaming fallback handles the cap.
+                        logger.warning(
+                            "chat_completion_stream stopped at the output limit "
+                            "(model=%s, max_tokens=%s)",
+                            current_model,
+                            max_tokens,
+                        )
                     return
 
                 except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:

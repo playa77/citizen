@@ -1,10 +1,47 @@
 {
  "_meta": {
   "generated": "2026-11-16",
-  "source_tree": "v2.0.0 layout, commit aae2888 (pre-WP-93)"
+  "source_tree": "v2.0.0 layout, commit aae2888 (pre-WP-93)",
+  "rebaselined": [
+   {
+    "keys": [
+     "calc:explanation_prompt",
+     "calc:extraction_prompt",
+     "prompts:<empty>",
+     "prompts:andere",
+     "prompts:erbrecht",
+     "prompts:erbrecht+familienrecht",
+     "prompts:erbrecht+sozialrecht",
+     "prompts:familienrecht",
+     "prompts:familienrecht+sozialrecht+schenkungsrecht",
+     "prompts:mietrecht",
+     "prompts:mietrecht+erbrecht",
+     "prompts:schenkungsrecht",
+     "prompts:sozialrecht",
+     "prompts:sozialrecht+erbrecht",
+     "prompts:unknown-area"
+    ],
+    "reason": "prompt set 3.0.0: stage prompts P-01…P-08, shared blocks, profile data; calculator prompts P-14/P-15 (D-060)"
+   },
+   {
+    "keys": [
+     "regime:banners"
+    ],
+    "reason": "prompt set 3.0.0: regime banners state segment and dates only (P-16, F-24) (D-060)"
+   },
+   {
+    "keys": [
+     "intake:strict_suffix",
+     "intake:system",
+     "presets:keyword_suggest",
+     "presets:suggest_system"
+    ],
+    "reason": "prompt set 3.0.0: intake P-09 + S-06 retired, preset P-10, keyword fallback reports match (CR-11) (D-060)"
+   }
+  ]
  },
- "calc:explanation_prompt": "35d0353fa8669d94c825251206c6285dbdaa7f78115698ded79408a7bedb1009",
- "calc:extraction_prompt": "75c8533d416ee8aa99a3cfe13fce1b32bf82862d3d6bd04e7e11ded729855eaf",
+ "calc:explanation_prompt": "9d3ee7cb72515e71e3086b59b40aa4b9becb932738cfd71fec8d557ca67cfc3b",
+ "calc:extraction_prompt": "4670c9a67bbc7a4ab613fe9fcb72321143a486c2c929789b3b920c1caf0c1a0f",
  "calc:referral_hint": "Bitte lassen Sie die Berechnung von einer Fachstelle oder einem Rechtsanwalt für Sozialrecht überprüfen.",
  "corpus:area_source_types": {
   "andere": [],
@@ -204,8 +241,8 @@
   "andere",
   null
  ],
- "intake:strict_suffix": "bd8f5df14d30773754e17bbf7592327eb81b00b4a1a0ad156b8d89512b71eaeb",
- "intake:system": "d3d77450a2fcd72d20818b3859a708746e92e09956fbddc3ce65e83b0eb529b7",
+ "intake:strict_suffix": "0dfc7f2d9922738716910fcb66a2a3e6f21b6164a6ca2aecb4a4e88c6c07323a",
+ "intake:system": "0f941fb1a3db82847b07cfc44c82bc914254e86260fc47d051f5b053b992ddd1",
  "presets:keyword_fallback": [
   [
    "erbe-mit-testament",
@@ -232,105 +269,119 @@
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "erbe-mit-testament",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "schenkung-zu-lebzeiten",
    "primary_area": "schenkungsrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "erbe-mit-familie",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "erbe-mit-testament",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "hofesuebergabe",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   }
  ],
  "presets:list": "29e17b7206832f777e61b8308a2c3733be35d61e8ca128fedb66024832a16662",
- "presets:suggest_system": "3d586dbe4a27ced7bfb21bac6b076a813b5948539698fdc4fe543c3889babe59",
- "prompts:<empty>": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
- "prompts:andere": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
- "prompts:erbrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
- "prompts:erbrecht+familienrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
- "prompts:erbrecht+sozialrecht": "759fde2e2dda57c7545d2106179f01a01c5e2b965ac869fdc60211cc643c414c",
- "prompts:familienrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
- "prompts:familienrecht+sozialrecht+schenkungsrecht": "759fde2e2dda57c7545d2106179f01a01c5e2b965ac869fdc60211cc643c414c",
- "prompts:mietrecht": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
- "prompts:mietrecht+erbrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
- "prompts:schenkungsrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
- "prompts:sozialrecht": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
- "prompts:sozialrecht+erbrecht": "2c32d158574cee6d8c0e12bf60055226117be6ffb2386e12844bb6fe7449a1ad",
- "prompts:unknown-area": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
+ "presets:suggest_system": "d4b8a0381a3d48f3c48e1826fa15854820749d086d3546e7845a5bd9fc238c6d",
+ "prompts:<empty>": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
+ "prompts:andere": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
+ "prompts:erbrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
+ "prompts:erbrecht+familienrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
+ "prompts:erbrecht+sozialrecht": "a4be6c5467a6e23f81cfde57c5ce5b21a0497dbe8f61df1204cf8978a07c46d9",
+ "prompts:familienrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
+ "prompts:familienrecht+sozialrecht+schenkungsrecht": "a4be6c5467a6e23f81cfde57c5ce5b21a0497dbe8f61df1204cf8978a07c46d9",
+ "prompts:mietrecht": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
+ "prompts:mietrecht+erbrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
+ "prompts:schenkungsrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
+ "prompts:sozialrecht": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
+ "prompts:sozialrecht+erbrecht": "787298705646707a61eac1c129cae1dbf4a83f3db4705693ac364c5a30553789",
+ "prompts:unknown-area": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
  "regime:banners": {
   "2022-01-01": [
    "a.F._vor_2023",
-   "13edb2b5e88ab5ef9b3a75f42243e6538fbdcd01ec47204b0a098d6253986e4f"
+   "c462130ec3e7b87a6fb9f40a04f90a05878650b852c154620f5697a8ca796178"
   ],
   "2023-07-01": [
    "a.F._2023",
-   "908e58d92b9f79f2c8c04da0ae3bb7f9521e3bc1e024ef61fddb5e0ffa139cb0"
+   "901e8967e070144ff67efae7987e439f5342d983e8304a01fe3761105711a113"
   ],
   "2025-06-01": [
    "a.F._2025",
-   "eb26cda45af83299b4dea4290ef73cc35be8d8b73b1cdb236d6ea26a79d4af32"
+   "afff75166468a9a1b65dd277ded95f517adae4e1d2ac333ca413a2f44392006f"
   ],
   "2026-07-01": [
    "n.F._2026",
-   "0a770a9adb0b2c58faef782e16bb699a720c7965cdf2afb01390a5fc70bf4993"
+   "950e3ce88f6730efb372db5cf1f5092b27c0b83a42924afaf096f3a0cddc19f3"
   ]
  }
 }

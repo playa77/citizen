@@ -1,4 +1,6 @@
-# Version: 1.0.0 | 2026-07-12
+# Version: 1.1.0 | 2026-11-16 — CR-09/CR-13: warns when baseline and run used
+# different prompt sets; sourced quote verification compared (warn-only).
+# 1.0.0 | 2026-07-12
 """Per-case monotonic regression gate (D-6).
 
 Compares a current eval run against a baseline report and determines whether
@@ -60,6 +62,16 @@ def regression_gate(current: EvalReport, baseline: EvalReport) -> GateResult:
     """
     failures: list[str] = []
     warnings: list[str] = []
+
+    # CR-09: a baseline from another prompt set (or one recorded before prompt
+    # identities existed) is still compared, but the reader is told.
+    base_ps = (getattr(baseline, "prompt_set", None) or {}).get("version")
+    curr_ps = (getattr(current, "prompt_set", None) or {}).get("version")
+    if base_ps != curr_ps:
+        warnings.append(
+            f"prompt set differs: baseline={base_ps or 'unrecorded'}, "
+            f"current={curr_ps or 'unrecorded'} — LLM metric changes are expected"
+        )
 
     # Build lookup dicts by case_id
     current_by_id: dict[str, Any] = {c.case_id: c for c in current.cases}
@@ -136,6 +148,18 @@ def regression_gate(current: EvalReport, baseline: EvalReport) -> GateResult:
             )
 
         # --- LLM-dependent metrics (warn-only) ---
+
+        # quote_verification_rate_sourced (1.1.0) — only when the baseline has it
+        if getattr(base, "quote_verification_rate_sourced", None) is not None:
+            _compare_metric(
+                case_id,
+                "quote_verification_rate_sourced",
+                base.quote_verification_rate_sourced,
+                curr.quote_verification_rate_sourced,
+                strict=False,
+                failures=failures,
+                warnings=warnings,
+            )
 
         # issue_recall
         _compare_metric(

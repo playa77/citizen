@@ -8,10 +8,12 @@
 # area CHECK constraint, `schenkungsrecht` stays a distinct stored area value
 # with its own intake/corpus rows in this module's files.
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
+# Semantic Version: 0.2.0 | 2026-11-16 — prompt set 3.0.0: prompt profile gains
+# norm anchors in issue_terms and result_categories (D-060).
+# 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
 
 id: erbrecht
-version: 0.1.1
+version: 0.2.0
 core_api: ">=3.0,<4.0"
 title:
   de: "Erbrecht"
