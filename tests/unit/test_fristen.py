@@ -6,7 +6,9 @@ core + ``modules/sozialrecht/fristen.yaml``; WP-93 removed the
 all computation is pure and local.
 """
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: imports re-pointed (shim removed).
+# Semantic Version: 0.1.2 | 2026-11-16 — D-065: 2024 dispatch dates moved one day
+# later (three-day fiction before 2025-01-01); asserted arithmetic unchanged.
+# 0.1.1 | 2026-11-16 — WP-93: imports re-pointed (shim removed).
 
 from __future__ import annotations
 
@@ -370,9 +372,10 @@ class TestMonatsfrist:
 
     def test_month_end_feb_leap(self) -> None:
         """Bekanntgabe 31.01.2024 → Fristende 29.02.2024 (leap year)."""
+        # Dispatch in 2024: three-day fiction (§ 37 Abs. 2 SGB X a.F., D-065).
         result = compute_widerspruchsfrist(
-            bescheid_datum=date(2024, 1, 27),
-            aufgabe_zur_post=date(2024, 1, 27),
+            bescheid_datum=date(2024, 1, 28),
+            aufgabe_zur_post=date(2024, 1, 28),
         )
         # bekanntgabe 31.01.2024 (Wed) → fristende 29.02.2024 (Thu)
         assert result.bekanntgabe == date(2024, 1, 31)
@@ -630,7 +633,8 @@ class TestInvalidInput:
             bescheid_datum=date(2024, 1, 15),
             aufgabe_zur_post=date(2024, 1, 15),
         )
-        assert result.bekanntgabe == date(2024, 1, 19)
+        # Dispatch in 2024: three days (§ 37 Abs. 2 SGB X a.F., D-065).
+        assert result.bekanntgabe == date(2024, 1, 18)
         assert result.frist_ende is not None
 
 
@@ -733,11 +737,11 @@ class TestComprehensive:
 
     def test_leap_year_feb_29_bekanntgabe(self) -> None:
         """Bekanntgabe on 29.02.2024 (leap day)."""
-        # Can bekanntgabe fall on 29.02? Only if aufgabe_zur_post = 25.02.2024 (Sun)
-        # But 25.02 + 4 = 29.02 ✓
+        # Dispatch in 2024 → three-day fiction (§ 37 Abs. 2 SGB X a.F., D-065):
+        # 26.02.2024 (Mon) + 3 = 29.02 ✓
         result = compute_widerspruchsfrist(
-            bescheid_datum=date(2024, 2, 25),
-            aufgabe_zur_post=date(2024, 2, 25),  # Sunday
+            bescheid_datum=date(2024, 2, 26),
+            aufgabe_zur_post=date(2024, 2, 26),
         )
         # bekanntgabe = 29.02.2024 (Thu) → fristende = 29.03.2024 (Fri = Karfreitag)
         # → rolls past 30.03 (Sat), 31.03 (Sun), 01.04 (Mon = Ostermontag)

@@ -11,7 +11,10 @@ weekend or holiday the conservative (authority-favorable) date is used as
 Bekanntgabe and the citizen-favorable reading is reported alongside.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — sgbx_37_2 is intertemporal: three days
+# for dispatch before 2025-01-01, four days from then on (PostModG, D-065);
+# found by the dossier goldset (WP-104).
+# 0.1.0
 
 from __future__ import annotations
 
@@ -38,18 +41,25 @@ class FictionFn(Protocol):
     def __call__(self, effective_post: date, bundesland: str) -> FictionResult: ...
 
 
+#: § 37 Abs. 2 S. 1 SGB X: "drei" → "vier" Tage by Art. 33 PostModG for
+#: dispatch from this date on; earlier dispatch keeps the three-day fiction.
+SGBX_37_2_FOUR_DAYS_FROM = date(2025, 1, 1)
+
+
 def _sgbx_37_2(effective_post: date, bundesland: str) -> FictionResult:
     """§ 37 Abs. 2 S. 1 SGB X: VA gilt am 4. Tag nach Aufgabe zur Post als
     bekanntgegeben (geändert von "drei" auf "vier" durch Art. 33 PostModG
-    zum 01.01.2025)."""
-    bekanntgabe = effective_post + timedelta(days=4)
+    zum 01.01.2025); bei Aufgabe zur Post vor dem 01.01.2025 am 3. Tag."""
+    days = 4 if effective_post >= SGBX_37_2_FOUR_DAYS_FROM else 3
+    basis = "§ 37 Abs. 2 SGB X" if days == 4 else "§ 37 Abs. 2 SGB X a.F. (bis 31.12.2024)"
+    bekanntgabe = effective_post + timedelta(days=days)
 
     if not is_workday(bekanntgabe, bundesland):
         citizen_reading = next_workday(bekanntgabe, bundesland)
         explanation = (
             f"Bekanntgabe am {bekanntgabe.strftime('%d.%m.%Y')} "
-            f"(Aufgabe zur Post {effective_post.strftime('%d.%m.%Y')} + 4 "
-            f"Tage gem. § 37 Abs. 2 SGB X). "
+            f"(Aufgabe zur Post {effective_post.strftime('%d.%m.%Y')} + {days} "
+            f"Tage gem. {basis}). "
             f"HINWEIS: {bekanntgabe.strftime('%d.%m.%Y')} ist ein "
             f"{non_workday_name(bekanntgabe)} "
             f"— die Bekanntgabefiktion ist an dieser Stelle umstritten "
@@ -66,8 +76,8 @@ def _sgbx_37_2(effective_post: date, bundesland: str) -> FictionResult:
 
     explanation = (
         f"Bekanntgabe am {bekanntgabe.strftime('%d.%m.%Y')} "
-        f"(Aufgabe zur Post {effective_post.strftime('%d.%m.%Y')} + 4 "
-        f"Tage gem. § 37 Abs. 2 SGB X)"
+        f"(Aufgabe zur Post {effective_post.strftime('%d.%m.%Y')} + {days} "
+        f"Tage gem. {basis})"
     )
     return FictionResult(
         bekanntgabe=bekanntgabe,

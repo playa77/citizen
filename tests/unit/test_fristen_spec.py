@@ -9,7 +9,9 @@ end-to-end (unchanged) in ``tests/unit/test_fristen.py`` via the shim.
 All cases are pure date arithmetic — no mocking required.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — D-065: intertemporal § 37 Abs. 2 SGB X
+# fiction pinned; 2024 dispatch dates moved one day later (arithmetic unchanged).
+# 0.1.0
 
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ import pytest
 
 from app.fristen import FristResult
 from app.fristen.evaluator import FristInput, evaluate_spec
+from app.fristen.fictions import get_fiction
 from app.fristen.specs import DeadlineSpec, Duration, MissingRbb, find_spec, load_specs
 from app.modules.registry import default_modules_root
 
@@ -54,9 +57,10 @@ class TestMonthEndArithmetic:
         assert result.frist_typ == "monat"
 
     def test_month_end_jan_to_feb_leap(self) -> None:
+        # 2024 dispatch: three-day fiction (§ 37 Abs. 2 SGB X a.F., D-065).
         result = _evaluate(
-            bescheid_datum=date(2024, 1, 27),
-            aufgabe_zur_post=date(2024, 1, 27),
+            bescheid_datum=date(2024, 1, 28),
+            aufgabe_zur_post=date(2024, 1, 28),
         )
         assert result.bekanntgabe == date(2024, 1, 31)
         assert result.frist_ende == date(2024, 2, 29)
@@ -190,7 +194,8 @@ class TestDefectiveRbbOneYear:
         """OQ-1 alternate deadline uses the GOVERNING duration, not always
         one month (D-048).
 
-        aufgabe 03.01.2024 (Wed) + 4 = Sonntag 07.01.2024 → OQ-1;
+        aufgabe 04.01.2024 (Thu) + 3 (§ 37 Abs. 2 SGB X a.F., D-065) =
+        Sonntag 07.01.2024 → OQ-1;
         citizen reading 08.01.2024 (Mon). With a defective RBB the governing
         deadline is the Jahresfrist, so the citizen-favorable alternate is
         08.01.2025 (+1 year) — the pre-split engine computed +1 month here,
@@ -200,7 +205,7 @@ class TestDefectiveRbbOneYear:
         """
         result = _evaluate(
             bescheid_datum=date(2024, 1, 1),
-            aufgabe_zur_post=date(2024, 1, 3),
+            aufgabe_zur_post=date(2024, 1, 4),
             rbb_status="fehlt",
         )
         assert result.oq1_flag
@@ -302,3 +307,23 @@ class TestUnimplementedLibraryIds:
                 spec,
                 FristInput(bescheid_datum=date(2025, 3, 15), aufgabe_zur_post=None),
             )
+
+
+# ---------------------------------------------------------------------------
+# § 37 Abs. 2 SGB X intertemporal fiction (D-065)
+# ---------------------------------------------------------------------------
+
+
+class TestSgbx372Intertemporal:
+    """Three days for dispatch before 2025-01-01, four days since (PostModG)."""
+
+    def test_three_days_before_2025(self) -> None:
+        result = get_fiction("sgbx_37_2")(date(2024, 5, 3), "BE")
+        assert result.bekanntgabe == date(2024, 5, 6)
+        assert "+ 3 Tage" in result.explanation and "a.F." in result.explanation
+
+    def test_boundary(self) -> None:
+        fiction = get_fiction("sgbx_37_2")
+        assert fiction(date(2024, 12, 31), "NW").bekanntgabe == date(2025, 1, 3)
+        assert fiction(date(2025, 1, 1), "NW").bekanntgabe == date(2025, 1, 5)
+        assert "+ 4 Tage" in fiction(date(2025, 1, 1), "NW").explanation
