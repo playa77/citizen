@@ -1,0 +1,20 @@
+data: {"stage": "normalization", "status": "complete", "payload": {"duration_ms": 0, "text_length": 114}}
+
+data: {"stage": "classification", "status": "complete", "payload": {"duration_ms": 1200, "issues": ["Regelbedarf", "Kürzung ohne Ermessensprüfung"], "issue_count": 2}}
+
+data: {"stage": "decomposition", "status": "complete", "payload": {"duration_ms": 900, "questions": ["Ist die Kürzung des Regelbedarfs rechtmäßig?"], "legal_regime": {"regimes": ["n.F._2026"], "as_of": "2026-09-01"}, "question_count": 1}}
+
+data: {"stage": "retrieval", "status": "complete", "payload": {"duration_ms": 40, "chunk_count": 2}}
+
+data: {"stage": "construction", "status": "complete", "payload": {"duration_ms": 12000, "claim_count": 1, "claims": [{"claim_text": "Eine Kürzung setzt eine wirksame Rechtsgrundlage voraus.", "confidence_score": 0.8, "claim_type": "interpretation"}]}}
+
+data: {"stage": "verification", "status": "complete", "payload": {"duration_ms": 5, "verified_claim_count": 1, "verified_claims": [{"claim_text": "Eine Kürzung setzt eine wirksame Rechtsgrundlage voraus.", "verification_status": "verified", "confidence_score": 0.8, "evidence_quote": "§ 31 SGB II regelt die Leistungsminderung.", "evidence_hierarchy": "sgb2/31", "evidence_chunk_id": null}]}}
+
+data: {"stage": "adversarial_review", "status": "complete", "payload": {"duration_ms": 8000, "review_count": 1, "key_risks": ["Tatsachenvortrag zum Kürzungsgrund fehlt"]}}
+
+data: {"stage": "calculation_check", "status": "complete", "payload": {"duration_ms": 3000, "calculations_found": 1, "discrepancies": 0, "total_amount_eur": 563.0}}
+
+data: {"stage": "generation", "status": "complete", "payload": {"duration_ms": 2, "sections": ["sachverhalt", "rechtliche_wuerdigung", "ergebnis", "handlungsempfehlung", "entwurf", "unsicherheiten"]}}
+
+data: {"session_id": "<uuid>", "sections": ["sachverhalt", "rechtliche_wuerdigung", "ergebnis", "handlungsempfehlung", "entwurf", "unsicherheiten"], "final_output": {"sachverhalt": "Das Jobcenter kürzte den Regelbedarf um 87,00 EUR.", "rechtliche_wuerdigung": "Die Kürzung bedarf einer Rechtsgrundlage (§ 31 SGB II).", "ergebnis": "Der Bescheid ist in der Kürzung angreifbar.", "handlungsempfehlung": "Widerspruch innerhalb eines Monats prüfen.", "entwurf": "Sehr geehrte Damen und Herren, ich lege Widerspruch ein.", "unsicherheiten": "Der Kürzungsgrund ist im Bescheid nicht benannt."}, "case_run_id": "<uuid>", "disclosure": {"version": "1.0", "must_display_before": "results", "texts": {"de": "Diese Analyse wurde von einem KI-System erstellt (Art. 50 VO (EU) 2024/1689).\nErgebnisse sind nicht rechtsverbindlich und müssen vor Verwendung geprüft werden.", "en": "This analysis was produced by an AI system (Art. 50 of Regulation (EU) 2024/1689).\nOutputs are not legally binding and must be verified before use."}}, "provenance": {"spec_version": "citizen-provenance-v1.1", "generator": "citizen", "app_version": "<app_version>", "model_profile": "eu-avv", "timestamp_utc": "<timestamp_utc>", "deployment_mode": "dev", "modules": [{"id": "<module_id>", "version": "<module_version>", "parameter_set": "<parameter_set>"}]}}
+
