@@ -1,3 +1,53 @@
+## 2026-11-16 — P9 first batch: module contract, registry, Fristen split (WP-90/91/92; D-042…D-047)
+
+WP-90 ratifies D-021 (RDG single-case invariant, carry-over C-1) in
+`DECISIONS.md`. **Deferred:** the v2.0.0 baseline eval report
+(`eval/goldsets/goldset-v0.2.0.yaml --save`) — no LLM API key is available
+in this environment; the zero-regression reference for the P9 exit gate
+(WP-97) must be produced before WP-93 touches the pipeline. Package version
+stays 2.0.0.
+
+### Added
+
+- `app/modules/` (WP-91): `sdk.py` (stable import surface, `SDK_VERSION`
+  "3.0"), `manifest.schema.json` (core_api 3.0), `registry.py` (discover →
+  validate → enable → resolve, D-037 tier rule per `DEPLOYMENT_MODE`,
+  legacy alias `schenkungsrecht → erbrecht` per D-038), `lint.py` (module
+  code may import only `app.modules.sdk`).
+- Settings `DEFAULT_MODULE` (default `sozialrecht`) and `ENABLED_MODULES`
+  (unset → D-037 tier rule), mirrored in `.env.example` and conftest;
+  startup refuses an invalid enabled manifest, an unknown
+  `ENABLED_MODULES` id, or a `DEFAULT_MODULE` outside the enabled set.
+- `modules/sozialrecht/module.yaml` (manifest only, tier `verified`,
+  version 1.0.0) and `modules/sozialrecht/fristen.yaml` (WP-92).
+- `app/fristen/` (WP-92): holiday calendar per Bundesland, Bekanntgabe
+  fiction library (`sgbx_37_2` with OQ-1 ambiguity), rollover library
+  (`sgg_64_3`), Rechtsbehelfsbelehrung-defect extension, and the generic
+  evaluator for module deadline specs; `FristResult` gains additive
+  `module_id`/`spec_id`.
+- Tests: `tests/unit/test_modules_registry.py` (discovery, invalid
+  manifest, per-mode enablement, aliases, missing default, import lint),
+  `tests/unit/test_fristen_spec.py` (holidays per Land, month-end
+  arithmetic, rollover, defective-RBB one-year deadline).
+
+### Changed
+
+- `app/services/fristen.py` reduced to a compatibility shim;
+  `compute_widerspruchsfrist` now evaluates the sozialrecht spec through
+  the generic evaluator — `tests/unit/test_fristen.py` passes unchanged.
+- Dependencies: `jsonschema>=4.21,<5.0` (manifest validation, D-044) and
+  `types-PyYAML>=6.0` in dev extras (mypy strict was red on main without
+  it, D-047).
+- `/api/v1` unchanged; `API_DOCUMENTATION.md` not modified; no migrations
+  in this batch.
+- Review fix pass (D-048/D-049): the OQ-1 alternate deadline now follows
+  the governing duration (the pre-split engine's +1-month alternate in the
+  defective-RBB corner was earlier than the primary end and is corrected —
+  affects only `oq1_alternate_ende`/explanations, never `frist_ende`);
+  `core_api` ranges are enforced against `SDK_VERSION` at startup;
+  duplicate module ids abort discovery; the manifest-schema description no
+  longer claims a file-existence check that WP-93 will add.
+
 ## 2026-11-16 — Re-founding on the free public path: module architecture + roadmap v3.0.0 (D-034…D-041)
 
 Decisions: D-034 (free public path), D-035 (purpose widened, amends D-020),

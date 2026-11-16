@@ -10,7 +10,6 @@ internet-reachable development instance.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware

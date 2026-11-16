@@ -169,11 +169,10 @@ def _get_verified_claim_text(
     """
     for claim in claims:
         claim_text = (claim.get("claim_text") or "").lower()
-        if any(kw.lower() in claim_text for kw in topic_keywords):
-            if validate_slot_claim(claim):
-                return claim.get("claim_text"), True
-            # Found a candidate but it's not verified — continue searching
-            # for a verified one; keep this as fallback.
+        if any(kw.lower() in claim_text for kw in topic_keywords) and validate_slot_claim(claim):
+            return claim.get("claim_text"), True
+        # Found a candidate but it's not verified — continue searching
+        # for a verified one; keep this as fallback.
     return None, False
 
 
@@ -215,11 +214,10 @@ def _find_reconciliation_value(
         if hasattr(item, "label"):  # dataclass instance
             if item.label == label and hasattr(item, "korrekt"):
                 val = item.korrekt
-                return val if isinstance(val, (int, float)) else None
-        elif isinstance(item, dict):
-            if item.get("label") == label:
-                val = item.get("korrekt")
-                return val if isinstance(val, (int, float)) else None
+                return val if isinstance(val, int | float) else None
+        elif isinstance(item, dict) and item.get("label") == label:
+            val = item.get("korrekt")
+            return val if isinstance(val, int | float) else None
     return None
 
 
@@ -325,10 +323,9 @@ def _build_widerspruch_slots(
             if item.label == "Anspruch (Leistung)":
                 anspruch_diff = item.differenz
                 break
-        elif isinstance(item, dict):
-            if item.get("label") == "Anspruch (Leistung)":
-                anspruch_diff = item.get("differenz")
-                break
+        elif isinstance(item, dict) and item.get("label") == "Anspruch (Leistung)":
+            anspruch_diff = item.get("differenz")
+            break
 
     slots.append(
         DocumentSlot(
@@ -385,10 +382,7 @@ def _build_widerspruch_slots(
             topic = ct[:80] + ("..." if len(ct) > 80 else "")
             unverified_topics.append(topic)
 
-    if verified_claims_text:
-        claims_value = verified_claims_text
-    else:
-        claims_value = None
+    claims_value = verified_claims_text if verified_claims_text else None
 
     claims_review = bool(unverified_topics) or not verified_claims_text
     claims_topic = "; ".join(unverified_topics[:3]) if unverified_topics else "Geprüfte Ansprüche"

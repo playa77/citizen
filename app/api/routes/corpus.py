@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, status
 from sqlalchemy import func, select
@@ -125,7 +125,7 @@ async def _run_corpus_update(job_id: str, override_sources: list[str] | None = N
 
         # Stage 2 — generate embeddings (with fine-grained progress)
         _job_store[job_id].update(substage="embedding", chunks_embedded=0)
-        total_chunks = len(chunks)
+        len(chunks)
 
         async def _embed_progress(done: int, total: int) -> None:
             _job_store[job_id]["chunks_embedded"] = done
@@ -188,7 +188,7 @@ async def _run_corpus_update(job_id: str, override_sources: list[str] | None = N
 @router.post("/corpus/update", status_code=status.HTTP_202_ACCEPTED)
 async def corpus_update(
     background_tasks: BackgroundTasks,
-    payload: dict[str, Any] | None = Body(None),
+    payload: Annotated[dict[str, Any] | None, Body()] = None,
 ) -> dict[str, str | int]:
     """Trigger a manual corpus refresh in the background.
 
@@ -239,7 +239,8 @@ async def corpus_status(job_id: str) -> dict[str, Any]:
     Returns
     -------
     dict[str, Any]
-        ``{"job_id": "...", "status": "queued|running|completed|failed", "substage": "...", "chunks_scraped": 0, "chunks_processed": 0}``
+        ``{"job_id": "...", "status": "queued|running|completed|failed",
+        "substage": "...", "chunks_scraped": 0, "chunks_processed": 0}``
 
     Raises
     ------
@@ -364,7 +365,7 @@ async def get_sources() -> dict[str, object]:
 
 @router.put("/corpus/sources")
 async def set_sources(
-    payload: dict[str, Any] = Body(...),
+    payload: Annotated[dict[str, Any], Body(...)],
 ) -> dict[str, object]:
     """Persist a new corpus source selection to disk.
 

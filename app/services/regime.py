@@ -14,7 +14,7 @@ Usage::
     from app.services.regime import legal_regime, regime_banner
 
     reg = legal_regime(date(2026, 5, 1))   # → "a.F._2025"
-    print(regime_banner(reg))               # → "Achtung: Für diesen Zeitraum gilt die Rechtslage ..."
+    print(regime_banner(reg))  # → "Achtung: Für diesen Zeitraum gilt …"
 """
 
 # Semantic Version: 0.1.0

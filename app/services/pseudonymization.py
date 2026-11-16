@@ -344,11 +344,11 @@ _STREET_SUFFIXES_LOWER: frozenset[str] = frozenset(s.lower() for s in _STREET_SU
 # requirement).
 _STREET_SUFFIXES_CASE: tuple[str, ...] = tuple(
     sorted(
-        set(
+        {
             suffix
             for s in _STREET_SUFFIXES
             for suffix in (s, s[0].upper() + s[1:] if s[0].islower() else s)
-        ),
+        },
         key=len,
         reverse=True,
     )
@@ -855,7 +855,7 @@ def _detect_street_addresses(text: str, mapping: PiiMapping) -> list[tuple[int, 
     for match in pattern.finditer(text):
         street_part = match.group(1).strip()
         suffix = match.group(2).strip()
-        number = match.group(3).strip()
+        match.group(3).strip()
         original_address = match.group(0).strip()
 
         # Require uppercase start (German street names are capitalized).
@@ -914,7 +914,7 @@ def _detect_birth_dates(
     for match in pattern.finditer(text):
         context_word = match.group(1).strip()
         date_str = match.group(2).strip()
-        raw = match.group(0).strip()
+        match.group(0).strip()
 
         # Normalize date: remove spaces between components
         date_normalized = re.sub(r"\s+", "", date_str)
@@ -1144,7 +1144,8 @@ def pseudonymize(text: str, mapping: PiiMapping | None = None) -> tuple[str, Pii
     # 5. Detect names via spaCy NER
     ner_detections = _detect_ner_names(result, mapping)
     for start, end, placeholder, _ in sorted(ner_detections, key=lambda x: x[0], reverse=True):
-        # Check if this span overlaps with already-replaced regions (by checking if placeholder already present)
+        # Check if this span overlaps with already-replaced regions (check
+        # whether the placeholder is already present)
         # Simple check: if the span contains [[ then skip
         span_text = result[start:end]
         if "[[" in span_text:

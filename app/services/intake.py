@@ -491,7 +491,7 @@ async def continue_intake(
         initial_text = str(history[0].get("content", ""))
 
     # Append the new user turn.
-    new_history = history + [{"role": "user", "content": user_message.strip()}]
+    new_history = [*history, {"role": "user", "content": user_message.strip()}]
     messages = build_intake_messages(initial_text, history=new_history)
 
     try:
@@ -511,9 +511,8 @@ async def continue_intake(
         }
 
     # Append assistant turn (or finalise).
-    intake_session.messages = new_history + [
-        {"role": "assistant", "content": str(llm_result.get("question", "")).strip()},
-    ]
+    assistant_turn = {"role": "assistant", "content": str(llm_result.get("question", "")).strip()}
+    intake_session.messages = [*new_history, assistant_turn]
     intake_session.turn_count = intake_session.turn_count + 1
     await session.flush()
 

@@ -1,0 +1,28 @@
+# Sozialrecht deadline specs (WP-92; ARCHITECTURE.md § 2.3).
+#
+# Data, not code: the Fristen core (app/fristen/) provides the calendar,
+# Bekanntgabe fiction library, rollover library and the Rechtsbehelfsbelehrung
+# extension; this file declares which of them apply for SGB X/SGG.
+# Covered by the golden date tests in tests/unit/test_fristen.py (via the
+# app.services.fristen shim) and tests/unit/test_fristen_spec.py.
+
+# Semantic Version: 1.0.0
+
+- id: widerspruch_sgg_84
+  label_de: "Widerspruchsfrist"
+  trigger: bekanntgabe
+  bekanntgabe_fiction: sgbx_37_2        # § 37 Abs. 2 SGB X: 4 Tage nach Aufgabe zur Post
+  duration: { months: 1 }               # § 84 Abs. 1 SGG, § 188 Abs. 2 BGB
+  rollover: sgg_64_3                    # § 64 Abs. 3 SGG
+  missing_rechtsbehelfsbelehrung:
+    duration: { years: 1 }              # § 66 Abs. 2 SGG
+    basis: "§ 66 Abs. 2 SGG"
+  basis: "§ 84 Abs. 1 SGG"
+  fristbeginn_basis: "§ 64 Abs. 1 SGG, § 187 Abs. 1 BGB"
+  severity: critical
+  applies_when: { document_type: verwaltungsakt }
+  not_applicable:
+    frist_typ: kein_va
+    explanation_de: >-
+      kein Verwaltungsakt (keine Regelungswirkung gem. § 31 SGB X).
+      Eine Widerspruchsfrist besteht nicht.

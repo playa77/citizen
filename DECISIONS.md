@@ -572,3 +572,175 @@ MIT reimplementations.
 distribution AGPL.
 **Rationale:** Keeps the whole project unambiguously MIT, which is what makes
 module contribution and institutional reuse frictionless.
+
+### D-021 R2 — 2026-11-16 — RDG single-case invariant (ratification; carry-over C-1)
+**Decision:** Treat the RDG single-case boundary as a hard product invariant:
+every output is Rechtsinformation plus building blocks requiring human
+adjudication; no output is presented as a completed legal assessment of the
+individual case, and the generated action documents remain drafts with
+`[BITTE PRÜFEN]` placeholders for anything unadjudicated. The provider-mode
+deployment path for advice centers is documented against § 6/§ 8 RDG
+(unentgeltliche Rechtsdienstleistung / anerkannte Beratungsstellen), not
+against a claim that the tool itself renders no Rechtsdienstleistung.
+**Rejected:** Relying solely on the existing § 2 RDG disclaimer text. A
+disclaimer does not change what the software functionally does; the invariant
+has to live in the product behavior, not only in the notice.
+**Rationale:** This is the highest residual legal risk. The mitigation must be
+structural (human-in-the-loop enforced by the pipeline) and must survive the
+transition to advice-center use, where the RDG analysis actually shifts.
+**Note (WP-90):** Ratification event, not a new decision — D-021 was proposed
+in roadmap v2.0.0 § 1 and cited as built (WP-67, generator invariant) but was
+never appended to this ledger. Owner confirmed ratification 2026-11-16
+(roadmap v3.0.0 § 2, item C-1); wording unchanged from roadmap v2.0.0 § 1.
+
+---
+
+## P9 first batch — WP-90/91/92 (2026-11-16)
+
+### D-042 R1 — 2026-11-16 — Module contract shape at core_api 3.0 (WP-91)
+**Decision:** `manifest.schema.json` requires only `id`, `version`,
+`core_api`, `title`, `tier` and permits (not requires) the content sections
+(`scope`, `corpus`, `parameters`, `fristen`, `calculators`, `documents`,
+`intake`, `dossier`, `regimes`, `goldset`, `compliance`, `legacy_aliases`).
+`sdk.py` exports `SDK_VERSION = "3.0"` and nothing else. The registry exposes
+`discover_modules`, `compute_enabled_set`, `load_registry`,
+`load_registry_from_settings`, `ModuleRegistry.resolve` → `ModuleResolution`.
+**Rejected:** (a) Making all § 2.2 sections required now — WP-91 ships
+manifest-only modules ahead of WP-93; requiring files that cannot exist yet
+would make the shipped sozialrecht manifest invalid, contradicting WP-91's
+own exit criterion. (b) Pre-defining `Calculator`/`RegimeProvider` protocols
+in the SDK before any module code exists — speculative API that WP-93 would
+immediately change; the surface grows with the first real consumer.
+**Rationale:** The schema is the review boundary for community modules; a
+minimal required set plus `additionalProperties: false` keeps manifests
+strict where the core already consumes them and open where content is still
+moving. Structural validation of declared files (corpus/fristen paths) is
+deferred to WP-93 with the files themselves.
+
+### D-043 R1 — 2026-11-16 — Enablement edge cases and conftest default (WP-91)
+**Decision:** (a) An `ENABLED_MODULES` id that is not installed raises
+`UnknownEnabledModuleError` at startup instead of being ignored — the
+audit-relevant enablement list naming a non-existent module is a
+configuration error. (b) `tests/conftest.py` sets only `DEFAULT_MODULE`;
+`ENABLED_MODULES` is deliberately left unset because its configured default
+*is* "unset" (the D-037 tier rule) — setting it in conftest would mask the
+default path in every test. (c) Built-in legacy alias `schenkungsrecht →
+erbrecht` (D-038) lives in the registry and resolves even while `erbrecht`
+is not yet installed; a manifest-declared alias always shadows the built-in
+map. (d) Discovery skips directories without `module.yaml` (staging/scratch)
+but the first invalid manifest aborts discovery — startup must refuse a
+partially-known module set rather than silently run with a subset.
+**Rejected:** Treating unknown enabled ids as a warning — in `provider`
+mode a typo would silently narrow the served set against D-037's intent.
+**Rationale:** Startup refusal is the cheapest point to catch configuration
+drift; WP-95's `MODULE_NOT_ENABLED`/`MODULE_UNKNOWN` error codes handle the
+request-time cases instead.
+
+### D-044 R1 — 2026-11-16 — jsonschema dependency for manifest validation (WP-91)
+**Decision:** Add `jsonschema>=4.21,<5.0` to `pyproject.toml` dependencies;
+manifests are validated with `Draft202012Validator` against
+`app/modules/manifest.schema.json` (validator instance cached per
+`core_api` version).
+**Rejected:** (a) Hand-rolling a validator — the schema artefact is part of
+the module contract (WP-91 scope) and must be validated *as* JSON Schema,
+not just enforced by ad-hoc checks. (b) `fastjsonschema` — smaller, but the
+standard `jsonschema` library keeps the schema readable and error reporting
+consistent.
+**Rationale:** Module manifests are the compliance-relevant contract for
+community contributions; validation quality outweighs the dependency cost.
+
+### D-045 R1 — 2026-11-16 — Fristen core split and spec-shape extensions (WP-92)
+**Decision:** Generic machinery moves to `app/fristen/` (calendar,
+`fictions`, `rollover`, `rbb`, `specs`, `evaluator`, `results`); the SGB
+X/SGG rules are data in `modules/sozialrecht/fristen.yaml` and are evaluated
+by the generic evaluator. Two spec keys extend the § 2.3 example:
+`fristbeginn_basis` (the area's Fristbeginn citation, e.g. "§ 64 Abs. 1
+SGG, § 187 Abs. 1 BGB") and `not_applicable` (`frist_typ` +
+area-specific explanation text for the non-applicable case, e.g. § 31 SGB
+X "kein Verwaltungsakt"). Library ids a module may declare but that no
+implementation covers (`vwvfg_41_2`, `ao_122_2`, `zpo_222`, `vwgo_57`,
+`stpo_43`, `ao_108`) raise `NotImplementedError`, and unsupported trigger
+values fail at spec-load time.
+**Rejected:** (a) Keeping the non-VA and Fristbeginn wording in the core —
+both quote area law (§ 31 SGB X, § 64 Abs. 1 SGG) and would be the first
+area-specific strings back in the core, against the split's own rule.
+(b) Pre-implementing the other procedure codes' rollovers from memory
+(e.g. § 108 Abs. 2 AO's Saturday-as-Werktag semantics) — unverified legal
+constants in a correctness-critical core; each lands with its module and
+golden date tests. (c) A partially-tolerant evaluator that silently
+degrades unknown ids — a deadline engine must fail loudly, never guess.
+**Rationale:** Output contract shape is unchanged (`FristResult`, extended
+additively with `module_id`/`spec_id`, default `None`); every existing
+caller keeps working, and the existing `tests/unit/test_fristen.py` runs
+unchanged through the spec path.
+
+### D-046 R1 — 2026-11-16 — Compatibility shim in app/services/fristen.py (WP-92)
+**Decision:** `app/services/fristen.py` becomes a thin shim:
+`compute_widerspruchsfrist` keeps its exact signature and delegates to
+`evaluate_spec` with the `widerspruch_sgg_84` spec from
+`modules/sozialrecht/fristen.yaml` (loaded once, cached); the moved
+calendar helpers are re-exported under their historical underscore names
+(`_is_holiday`, `_is_workday`, `_next_workday`, `_same_day_next_month`).
+**Rejected:** (a) Updating all callers now — the callers (document
+generators, eval metrics) move into the module at WP-93; re-pointing them
+twice is churn. (b) Deleting the underscore aliases and editing
+`tests/unit/test_fristen.py` — the batch invariant requires that test file
+to pass *unchanged*.
+**Rationale:** The shim is transitional and clearly marked; WP-93 removes
+it. One transitional wrinkle, accepted: the core shim reads module *data*
+(YAML) by path — a data dependency in the direction core → module that
+dissolves when the caller moves at WP-93; it is not area-specific code in
+the core.
+
+### D-047 R1 — 2026-11-16 — types-PyYAML in dev extras (WP-91/92 gate repair)
+**Decision:** Add `types-PyYAML>=6.0` to the `[dev]` extras. Without the
+stubs, `mypy app/` (strict) fails on every PyYAML import — including on
+untouched `main` (`app/services/inference_profiles.py`,
+`eval/goldset_loader.py`), where the gate was already red.
+**Rejected:** Disabling the `import-untyped` error code for `yaml` — hides
+the finding instead of fixing it.
+**Rationale:** The batch invariant requires a green strict typecheck; the
+missing stub package is an environment gap, not a code defect. Verified:
+main fails with the same error class before this change.
+
+**Recorded alongside (no D-entry, measured fact):** on untouched `main`,
+`ruff check app/` reports 73 pre-existing violations and `ruff format
+--check app/` flags `app/core/config.py` (reformatting it would introduce
+new E501s — the file currently fails both gates). This batch introduces no
+new ruff violations, and `app/fristen/`, `app/modules/` and
+`app/services/fristen.py` are check- and format-clean.
+
+### D-048 R1 — 2026-11-16 — OQ-1 alternate deadline follows the governing duration (WP-92, review finding)
+**Decision:** When the § 37 Abs. 2 SGB X fiction lands on a non-workday
+(OQ-1) *and* the Rechtsbehelfsbelehrung is defective, the
+`oq1_alternate_ende` alternate is computed with the **governing** duration
+(one year), not with the regular one-month duration. Pinned by
+`test_oq1_alternate_uses_governing_duration`.
+**Rejected:** Restoring the pre-split engine's behavior (alternate always
++1 month): there the "citizen-favorable" alternate (e.g. 08.02.2024) falls
+*before* the primary end (07.01.2025) — incoherent for a citizen-favorable
+reading. (b) Leaving the drift unrecorded: a silent semantic change against
+the batch's own zero-behavior-change criterion is exactly what the
+decision ledger exists to prevent.
+**Rationale:** Found by the fresh-context reviewer via differential
+execution (385,704 input combinations; this was the only behavioral
+difference, ~3.5% of the grid, uncovered by the unchanged test suite). The
+new behavior is a correction, not a regression; it is now recorded and
+pinned. Affects only the informational `oq1_alternate_ende` field and the
+Alternativberechnung line — never the primary `frist_ende`.
+
+### D-049 R1 — 2026-11-16 — core_api range is enforced against the running SDK version (WP-91, review finding)
+**Decision:** `load_registry` refuses startup with `ModuleContractError`
+when an *enabled* module's `core_api` range does not admit the running
+`app.modules.sdk.SDK_VERSION` ("3.0"). Range forms follow the schema
+pattern (`">=3.0,<4.0"`, `">=3.0"`, exact pins); an unparsable range is a
+`ModuleManifestError`, never silently compatible. Duplicate module ids
+(two directories declaring one id) also abort discovery instead of
+silently overwriting.
+**Rejected:** Deferring contract-version matching to WP-93 — D-042 deferred
+structural *file* validation, not the contract check; without it the
+`core_api` field validates format only and an incompatible community
+module surfaces as runtime breakage instead of the designed startup
+refusal (ARCHITECTURE.md § 6.1).
+**Rationale:** Reviewer finding; the contract field exists precisely to
+make the compatibility boundary explicit and enforced.

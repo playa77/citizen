@@ -1,5 +1,5 @@
-# Semantic Version: 0.3.0 | 2026-08-25 — PostgreSQL-only (D-024):
-# sqlite default URL removed; DATA_DIR (Electron desktop) removed as dead.
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE and
+# ENABLED_MODULES settings added for the module registry.
 
 import secrets
 import tomllib
@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     # PostgreSQL + pgvector is the only supported backend (D-024).
     DATABASE_URL: str = "postgresql+asyncpg://citizen:citizen@localhost:5432/citizen"
     OPENROUTER_API_KEY: str
-    EMBEDDING_API_KEY: str = ""  # separate key for embedding calls (falls back to OPENROUTER_API_KEY)
+    # Separate key for embedding calls (falls back to OPENROUTER_API_KEY).
+    EMBEDDING_API_KEY: str = ""
     EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1/embeddings"
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
     FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
@@ -63,19 +64,19 @@ class Settings(BaseSettings):
         0.65  # Cosine distance = 1 - cosine similarity. 0.65 means similarity ≥ 0.35.
     )
     MAX_COSINE_DISTANCE_STRICT: float = 0.85
-    RETRIEVAL_MODE: str = "per_question"  # "combined" or "per_question" — per_question embeds each question separately, producing better legal-semantic queries
+    # "combined" or "per_question" — per_question embeds each question
+    # separately, producing better legal-semantic queries.
+    RETRIEVAL_MODE: str = "per_question"
     RETRIEVAL_KEYWORD_FALLBACK: bool = True
     TOP_K_KEYWORD: int = 5
     CORPUS_SOURCES: list[str] = ["sgb2", "sgbx"]
-    CORPUS_INGESTION_TIMEOUT_SEC: int = (
-        1800  # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased for large corpora)
-    )
-    EMBEDDING_BATCH_SIZE: int = (
-        64  # Number of texts per batch embedding request (OpenRouter batch API; OpenAI limit is 2048)
-    )
-    EMBEDDING_BATCH_CONCURRENCY: int = (
-        4  # Max simultaneous batch embedding requests
-    )
+    # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased
+    # for large corpora).
+    CORPUS_INGESTION_TIMEOUT_SEC: int = 1800
+    # Number of texts per batch embedding request (OpenRouter batch API;
+    # OpenAI limit is 2048).
+    EMBEDDING_BATCH_SIZE: int = 64
+    EMBEDDING_BATCH_CONCURRENCY: int = 4  # Max simultaneous batch embedding requests
     # --- Timeout budget -------------------------------------------------------
     # The chain must satisfy: sum(per-call) < PIPELINE_TIMEOUT < nginx timeout.
     #
@@ -136,6 +137,14 @@ class Settings(BaseSettings):
     # Goldset version change is a config change, not a code change (acceptance criterion).
     GOLDSET_PATH: str = "eval/goldsets/goldset-v0.1.0.yaml"
     EVAL_RESULTS_DIR: str = "eval/results"
+    # --- Modules (WP-91, D-036/D-037) ----------------------------------------
+    # Default module for requests that name none (D-036). Must be in the
+    # enabled set or startup fails.
+    DEFAULT_MODULE: str = "sozialrecht"
+    # Explicit enablement list. Unset (None) → the tier rule of D-037 applies:
+    # dev/self enable every installed module of tier experimental|verified,
+    # provider only verified; community is never enabled implicitly.
+    ENABLED_MODULES: list[str] | None = None
 
     @property
     def DISCLAIMER_SALT(self) -> str:

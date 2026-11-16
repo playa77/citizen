@@ -28,6 +28,7 @@ dependencies = [
     "spacy>=3.7,<4.0",  # PII NER — run: python -m spacy download de_core_news_lg
     "python-multipart==0.0.9",
     "PyYAML>=6.0,<7.0",
+    "jsonschema>=4.21,<5.0",  # module manifest validation (WP-91, D-044)
 ]
 
 [project.optional-dependencies]
@@ -40,6 +41,7 @@ dev = [
     "pytest-cov==5.0.0",
     "pytest-benchmark==4.0.0",
     "testcontainers[postgres]>=4.0.0",
+    "types-PyYAML>=6.0",  # mypy strict: PyYAML stubs were missing (D-047)
 ]
 
 [tool.ruff]
@@ -48,6 +50,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+# German typography (en dash, multiplication sign) is intentional in strings,
+# comments and docstrings — RUF001/2/3 false positives.
+allowed-confusables = ["–", "×"]
 
 [tool.mypy]
 python_version = "3.11"
