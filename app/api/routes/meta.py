@@ -10,7 +10,9 @@ Provides:
     GET /api/v1/meta/deployment-mode — active deployment posture (WP-62/WP-66)
 """
 
-# Semantic Version: 0.4.0 | 2026-08-25 — Art. 50 disclosure endpoint (D-032):
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-95: /meta/version carries
+# `modules: {id: version}` of the enabled modules (additive key).
+# 0.4.0 | 2026-08-25 — Art. 50 disclosure endpoint (D-032):
 # /meta/disclosure added (ack-guarded via route-level dependency), /meta/version
 # carries disclosure_version.
 
@@ -25,6 +27,7 @@ from sqlalchemy import select
 from app.core.config import _get_settings, get_app_version, get_app_version_tag
 from app.db.models import LegalParameter, LegalSource
 from app.db.session import get_async_session
+from app.modules.runtime import module_registry
 from app.services.disclosure import (
     DISCLOSURE_VERSION,
     DisclosureInfo,
@@ -126,15 +129,23 @@ async def get_disclosure() -> DisclosureInfo:
 
 
 @router.get("/meta/version")
-async def get_api_version() -> dict[str, str]:
-    """Return API version information."""
+async def get_api_version() -> dict[str, Any]:
+    """Return API version information.
+
+    ``modules`` maps every *enabled* module id to its version (WP-95) — the
+    module set a request can run with in this deployment.
+    """
     settings = _get_settings()
+    registry = module_registry()
     return {
         "api_version": get_app_version(),
         "disclaimer_version": settings.DISCLAIMER_VERSION,
         # Art. 50(1) disclosure text version (D-032) — distinct from both the
         # API version and the disclaimer version.
         "disclosure_version": DISCLOSURE_VERSION,
+        "modules": {
+            module_id: registry.modules[module_id].version for module_id in sorted(registry.enabled)
+        },
     }
 
 

@@ -17,6 +17,12 @@ retrieval and uses area-specific prompts. The endpoint also accepts an
 optional ``intake_session_id`` to link the resulting CaseRun back to
 the IntakeSession that produced the legal_areas.
 
+Each requested area key is validated against the module registry first
+(WP-95, D-039): a key no installed module serves → HTTP 422
+``MODULE_UNKNOWN``; a key whose module is installed but not enabled → HTTP
+422 ``MODULE_NOT_ENABLED``. When ``legal_areas`` is non-empty the terminal
+summary event carries ``resolved_modules`` (one entry per requested key).
+
 A pre-flight check verifies that all selected legal_areas have a
 populated corpus; if any are missing, the endpoint returns HTTP 409
 with the list of missing source_types so the UI can show a targeted
@@ -31,7 +37,12 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-94: case_run_area rows record module_id +
+# Semantic Version: 0.6.0 | 2026-11-16 — WP-95: legal_areas validated against the
+# registry (422 MODULE_UNKNOWN / MODULE_NOT_ENABLED); terminal event carries
+# resolved_modules when legal_areas is non-empty; body accepts a JSON list for
+# legal_areas (the documented shape — previously rejected by a dict[str, str]
+# body annotation).
+# 0.5.0 | 2026-11-16 — WP-94: case_run_area rows record module_id +
 # module_version; unknown area keys are rejected by the writer (no DB CHECK).
 # Previous: 0.4.1 | 2026-11-16 — WP-93: module-neutral docstring examples.
 # 0.4.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
@@ -63,7 +74,12 @@ from app.db.models import (
     PipelineStageLog,
 )
 from app.db.session import async_session_factory
-from app.modules.runtime import area_module_binding
+from app.modules.runtime import (
+    MODULE_UNKNOWN,
+    ModuleRequestError,
+    area_module_binding,
+    resolve_request_areas,
+)
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.corpus_readiness import check_preflight
 from app.services.disclosure import build_disclosure_and_provenance
@@ -124,12 +140,12 @@ async def _persist_audit_safely(audit_record: AuditRecord) -> None:
 
 
 @router.post("/analyze")
-async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # noqa: B008
+async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # noqa: B008
     """Execute the full 7-stage pipeline on *payload['text']*.
 
     Parameters
     ----------
-    payload : dict[str, str]
+    payload : dict[str, Any]
         JSON body::
 
             {
@@ -139,7 +155,8 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             }
 
         ``legal_areas`` is optional (defaults to ``[]``) and triggers
-        per-area retrieval and area-specific prompts.
+        per-area retrieval and area-specific prompts. A comma-separated
+        string is accepted as well.
 
     Returns
     -------
@@ -156,6 +173,9 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
         If the request body is missing the ``text`` field or it is empty.
     HTTPException(404)
         If the ``intake_session_id`` doesn't exist.
+    HTTPException(422)
+        ``MODULE_UNKNOWN`` / ``MODULE_NOT_ENABLED`` for a requested area
+        key (structured ``detail`` lists the offending keys).
     HTTPException(409)
         Pre-flight check failed: one or more selected ``legal_areas``
         have no corpus chunks. The response body lists per-area missing
@@ -192,6 +212,28 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="'intake_session_id' must be a valid UUID.",
+            ) from None
+
+    # Module gate (D-039): every requested key must resolve to an enabled
+    # module (or the core procedural library) before anything else runs.
+    resolved_modules: list[dict[str, Any]] = []
+    if legal_areas:
+        try:
+            resolved_modules = [entry.as_dict() for entry in resolve_request_areas(legal_areas)]
+        except ModuleRequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": exc.code,
+                    "message": (
+                        "Mindestens ein ausgewähltes Rechtsgebiet ist nicht installiert."
+                        if exc.code == MODULE_UNKNOWN
+                        else "Mindestens ein ausgewähltes Rechtsgebiet ist in dieser "
+                        "Instanz nicht freigeschaltet."
+                    ),
+                    "legal_areas": exc.legal_areas,
+                    "action": "GET /api/v1/modules lists the installed and enabled modules",
+                },
             ) from None
 
     # Pre-flight corpus check.
@@ -418,13 +460,17 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                 logger.exception("Failed to persist CaseRun for session %s", session_id)
 
             # After pipeline completes, yield a final compact summary event.
-            final_payload = {
+            final_payload: dict[str, Any] = {
                 "session_id": session_id,
                 "sections": list(state.final_output.keys()),
                 "final_output": state.final_output,
             }
             if case_run_id:
                 final_payload["case_run_id"] = case_run_id
+            # WP-95: only when the request named areas, so requests without
+            # legal_areas keep a byte-identical terminal event (WP-97 gate).
+            if resolved_modules:
+                final_payload["resolved_modules"] = resolved_modules
             # Art. 50(1)/(2) EU AI Act (D-032): the terminal event carries the
             # disclosure the consuming client must display to the person plus
             # the machine-readable provenance marker. Both are derived from

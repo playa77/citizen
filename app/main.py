@@ -1,4 +1,6 @@
-# Semantic Version: 0.6.0 | 2026-11-16 — WP-94: startup syncs the legal_module table
+# Semantic Version: 0.7.0 | 2026-11-16 — WP-95: /modules router; startup builds the
+# process-wide registry used by request validation (runtime.module_registry).
+# 0.6.0 | 2026-11-16 — WP-94: startup syncs the legal_module table
 # from the registry after migrations.
 # 0.5.0 | 2026-11-16 — WP-93: startup also builds the module
 # area tables and imports the enabled modules' calculators/regime providers, so
@@ -26,6 +28,7 @@ from app.api.routes import (
     ingest,
     intake,
     meta,
+    modules,
     ocr,
     presets,
 )
@@ -61,9 +64,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # manifest, an ENABLED_MODULES id that is not installed, or a
     # DEFAULT_MODULE outside the enabled set refuses startup (D-037).
     try:
-        from app.modules.registry import load_registry_from_settings
+        from app.modules.runtime import module_registry
 
-        _registry = load_registry_from_settings()
+        _registry = module_registry()
         logger.info(
             "Module registry: %d installed, enabled=%s, default=%s",
             len(_registry.modules),
@@ -215,6 +218,7 @@ app.include_router(corpus.router, prefix="/api/v1", tags=["corpus"])
 app.include_router(intake.router, prefix="/api/v1", tags=["intake"])
 app.include_router(presets.router, prefix="/api/v1", tags=["presets"])
 app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
+app.include_router(modules.router, prefix="/api/v1", tags=["modules"])
 app.include_router(ocr.router, prefix="/api/v1", tags=["ocr"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
 app.include_router(goldset.router, prefix="/api/v1", tags=["goldset"])

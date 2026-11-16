@@ -1,4 +1,6 @@
-# Version: 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
+# Version: 1.1.0 | 2026-11-16 — WP-95: --module <id> runs the goldset the module
+# manifest declares (positional goldset path becomes optional).
+# 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
 # 1.0.0 | 2026-07-12
 """CLI entry point for the Citizen eval harness.
 
@@ -6,6 +8,10 @@ Usage::
 
     python -m eval.runner modules/sozialrecht/goldset/goldset-v0.1.0.yaml \\
         [--case CASE_ID] [--save] [--baseline BASELINE_PATH]
+    python -m eval.runner --module sozialrecht [--case …] [--save] [--baseline …]
+
+``--module <id>`` selects the goldset declared in that module's manifest
+(``goldset.path``); give either a goldset path or ``--module``, not both.
 
 Runs the full pipeline on each goldset case, computes metrics, and optionally
 saves an ``EvalReport`` to ``eval/results/``.
@@ -583,12 +589,39 @@ def _setup_logging() -> None:
     )
 
 
+def resolve_goldset_path(goldset: str | None, module_id: str | None) -> str:
+    """Goldset path from the CLI: an explicit path or a module's declared goldset.
+
+    Raises ``ValueError`` (a usage error) when both or neither are given, the
+    module is not installed, or it declares no goldset.
+    """
+    if (goldset is None) == (module_id is None):
+        raise ValueError("give either a goldset path or --module <id>, not both")
+    if goldset is not None:
+        return goldset
+
+    from app.modules.content import module_path
+    from app.modules.registry import default_modules_root, discover_modules
+
+    manifest = discover_modules(default_modules_root()).get(str(module_id))
+    if manifest is None:
+        raise ValueError(f"module {module_id!r} is not installed")
+    declared = manifest.raw.get("goldset")
+    if not isinstance(declared, dict):
+        raise ValueError(f"module {module_id!r} declares no goldset")
+    return str(module_path(manifest, str(declared["path"])))
+
+
 async def main() -> None:
     """CLI entry point."""
     _setup_logging()
 
     parser = argparse.ArgumentParser(description="Citizen Eval Runner")
-    parser.add_argument("goldset", help="Path to goldset YAML file")
+    parser.add_argument("goldset", nargs="?", help="Path to goldset YAML file")
+    parser.add_argument(
+        "--module",
+        help="Run the goldset declared by this module's manifest (instead of a path)",
+    )
     parser.add_argument("--case", help="Run only a specific case ID")
     parser.add_argument("--save", action="store_true", help="Save report to eval/results/")
     parser.add_argument("--baseline", help="Path to baseline report for regression gate")
@@ -599,9 +632,13 @@ async def main() -> None:
         help="Enable PII metric computation (default: off for backward compat)",
     )
     args = parser.parse_args()
+    try:
+        goldset_path = resolve_goldset_path(args.goldset, args.module)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     report = await run_eval(
-        args.goldset,
+        goldset_path,
         case_filter=args.case,
         save=args.save,
         baseline_path=args.baseline,
