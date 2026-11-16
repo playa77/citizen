@@ -760,3 +760,16 @@ these bracket parameters yet; fixing the producer is the minimal change.
 **Rationale:** Found while producing the WP-90 baseline eval (required
 seeding the parameter store on a fresh database). The sentinel is
 documented at the seed site; no behavioural consumer exists to migrate.
+
+**Baseline eval record (WP-90, 2026-11-16):**
+`eval/results/20261116T094340Z-e9fb87a.json` — goldset v0.2.0, 12/12 cases
+run through the real pipeline (live DB + LLM API), aggregate: issue recall
+11.8 %, citation precision 1.8 %, calculation exact match 100 %, Frist
+exact match 100 %, assessment match 33.3 %, quote verification 38.9 %.
+Environment: fresh pg16+pgvector database, migrated to head; 27 legal
+parameters seeded; sgb2+sgbx corpus ingested (940 chunks); spaCy
+`de_core_news_lg` installed. Absolute recall/precision are low (the
+LLM's issue phrasings share no §-reference formats with the goldset's
+Tier-1 matcher) — recorded as-is: the report's role is the zero-regression
+reference for WP-97, and its absolute levels are flagged for the WP-97
+gate discussion.

@@ -1,11 +1,11 @@
 ## 2026-11-16 — P9 first batch: module contract, registry, Fristen split (WP-90/91/92; D-042…D-047)
 
 WP-90 ratifies D-021 (RDG single-case invariant, carry-over C-1) in
-`DECISIONS.md`. **Deferred:** the v2.0.0 baseline eval report
-(`eval/goldsets/goldset-v0.2.0.yaml --save`) — no LLM API key is available
-in this environment; the zero-regression reference for the P9 exit gate
-(WP-97) must be produced before WP-93 touches the pipeline. Package version
-stays 2.0.0.
+`DECISIONS.md`. **Baseline eval report produced** after this entry was
+first written with the run blocked on a missing LLM API key:
+`eval/results/20261116T094340Z-e9fb87a.json` (goldset v0.2.0, 12/12 cases,
+core `e9fb87a`) — the zero-regression reference for the WP-97 exit gate.
+Package version stays 2.0.0.
 
 ### Added
 
