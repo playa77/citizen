@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://citizen.dev/schemas/module-manifest-3.0.json",
+  "x-core-api": "3.0",
+  "title": "Citizen module manifest",
+  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.0. Structural fields (corpus, parameters, fristen, documents, intake, dossier, goldset, compliance) are optional at core_api 3.0 because modules may ship as manifest-only packages (WP-91) before their content lands (WP-92/WP-93); the registry additionally refuses an enabled manifest whose declared files do not exist once those keys are present.",
+  "type": "object",
+  "required": ["id", "version", "core_api", "title", "tier"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,63}$",
+      "description": "Stable module key; equals the legal_area value; never renamed."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+      "description": "Module semver (ARCHITECTURE.md § 6.2)."
+    },
+    "core_api": {
+      "type": "string",
+      "pattern": "^(>=|~|=|==)?\\d+\\.\\d+(,<\\d+\\.\\d+)?$",
+      "description": "Compatible core contract range, e.g. '>=3.0,<4.0'."
+    },
+    "title": {
+      "type": "object",
+      "required": ["de", "en"],
+      "additionalProperties": false,
+      "properties": {
+        "de": {"type": "string", "minLength": 1},
+        "en": {"type": "string", "minLength": 1}
+      }
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["planned", "experimental", "verified", "community"],
+      "description": "Lifecycle tier (ARCHITECTURE.md § 2.5); drives the D-037 default enablement."
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary_de", "own_matter_only"],
+      "properties": {
+        "summary_de": {"type": "string", "minLength": 1},
+        "own_matter_only": {"type": "boolean"},
+        "out_of_scope": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "corpus": {
+      "type": "string",
+      "pattern": "\\.yaml$",
+      "description": "Path of the module corpus scope file, relative to the module directory."
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "files"],
+      "properties": {
+        "domain": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "\\.yaml$"}
+        }
+      }
+    },
+    "fristen": {
+      "type": "string",
+      "pattern": "\\.yaml$",
+      "description": "Path of the deadline spec file (ARCHITECTURE.md § 2.3)."
+    },
+    "calculators": {
+      "type": "string",
+      "description": "Import path 'module_file:CONSTANT' of Calculator implementations."
+    },
+    "documents": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}
+    },
+    "intake": {
+      "type": "string",
+      "pattern": "\\.yaml$"
+    },
+    "dossier": {
+      "type": "string",
+      "pattern": "\\.yaml$"
+    },
+    "regimes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Import path 'module_file:CONSTANT' of the RegimeProvider."
+        }
+      }
+    },
+    "goldset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {"type": "string", "pattern": "\\.yaml$"},
+        "gate": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "purpose_drift_deny_file": {"type": "string"},
+        "special_regimes": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "referral": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required"],
+          "properties": {
+            "required": {"type": "boolean"},
+            "targets": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        "disclaimer_addendum": {"type": "string"}
+      }
+    },
+    "legacy_aliases": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+      "description": "Legacy v2.0.0 area keys that resolve to this module (D-038), e.g. erbrecht declares [\"schenkungsrecht\"]."
+    }
+  }
+}

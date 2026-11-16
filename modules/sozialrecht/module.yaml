@@ -1,0 +1,23 @@
+# Sozialrecht — the first Citizen module (WP-91: manifest only).
+#
+# core_api 3.0 manifest; the module's content (corpus scope, parameters,
+# deadline specs, prompts, calculators, goldset) still lives in the v2.0.0
+# single-area layout and moves here at WP-92 (fristen.yaml) and WP-93
+# (everything else). See ARCHITECTURE.md § 8.
+
+# Semantic Version: 1.0.0
+
+id: sozialrecht
+version: 1.0.0
+core_api: ">=3.0,<4.0"
+title:
+  de: "Sozialrecht"
+  en: "Social-benefits law"
+tier: verified
+scope:
+  summary_de: "Bürgergeld/Grundsicherung (SGB II), Verfahren (SGB X), Sozialgerichtsverfahren (SGG)"
+  own_matter_only: true
+  out_of_scope:
+    - "Rentenversicherung (SGB VI)"
+    - "Krankenversicherung (SGB V)"
+legacy_aliases: []

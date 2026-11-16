@@ -1,5 +1,5 @@
-# Semantic Version: 0.3.0 | 2026-08-25 — API-only service (D-024/D-025):
-# static frontend, root HTML route and desktop launcher removed.
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: module registry validation
+# at startup (refuses an invalid enabled manifest or a disabled default).
 
 import asyncio
 import logging
@@ -50,6 +50,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Refusing to start: DEPLOYMENT_MODE=dev without CITIZEN_SYNTHETIC_DATA_ONLY=true — %s",
             exc,
         )
+        raise
+
+    # WP-91: module registry validation. An enabled module with an invalid
+    # manifest, an ENABLED_MODULES id that is not installed, or a
+    # DEFAULT_MODULE outside the enabled set refuses startup (D-037).
+    try:
+        from app.modules.registry import load_registry_from_settings
+
+        _registry = load_registry_from_settings()
+        logger.info(
+            "Module registry: %d installed, enabled=%s, default=%s",
+            len(_registry.modules),
+            sorted(_registry.enabled),
+            _registry.default_module,
+        )
+    except Exception as exc:
+        logger.critical("Refusing to start: module registry validation failed — %s", exc)
         raise
 
     # PostgreSQL engine — no dialect-specific initialisation required (D-024).

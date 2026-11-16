@@ -1,5 +1,5 @@
-# Semantic Version: 0.3.0 | 2026-08-25 — PostgreSQL-only (D-024):
-# sqlite default URL removed; DATA_DIR (Electron desktop) removed as dead.
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE and
+# ENABLED_MODULES settings added for the module registry.
 
 import secrets
 import tomllib
@@ -136,6 +136,14 @@ class Settings(BaseSettings):
     # Goldset version change is a config change, not a code change (acceptance criterion).
     GOLDSET_PATH: str = "eval/goldsets/goldset-v0.1.0.yaml"
     EVAL_RESULTS_DIR: str = "eval/results"
+    # --- Modules (WP-91, D-036/D-037) ----------------------------------------
+    # Default module for requests that name none (D-036). Must be in the
+    # enabled set or startup fails.
+    DEFAULT_MODULE: str = "sozialrecht"
+    # Explicit enablement list. Unset (None) → the tier rule of D-037 applies:
+    # dev/self enable every installed module of tier experimental|verified,
+    # provider only verified; community is never enabled implicitly.
+    ENABLED_MODULES: list[str] | None = None
 
     @property
     def DISCLAIMER_SALT(self) -> str:

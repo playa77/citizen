@@ -1,8 +1,7 @@
 """Global pytest fixtures for Citizen test suite."""
 
-# Semantic Version: 0.3.0 | 2026-08-25 — PostgreSQL-only test database (D-024/D-026):
-# a session-scoped pgvector container is started automatically when no
-# DATABASE_URL is provided; SQLite URLs are no longer accepted.
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE conftest
+# default added; ENABLED_MODULES intentionally left unset (D-037 default).
 
 import contextlib
 import os
@@ -86,6 +85,12 @@ os.environ.setdefault("DISCLAIMER_VERSION", "v0.1.0")
 # lifespan is exercised (TestClient context managers, integration tests).
 os.environ.setdefault("DEPLOYMENT_MODE", "dev")
 os.environ.setdefault("CITIZEN_SYNTHETIC_DATA_ONLY", "true")
+
+# WP-91: DEFAULT_MODULE has a conftest default so settings always resolve.
+# ENABLED_MODULES is deliberately left unset: its configured default is
+# "unset" (None), which activates the D-037 tier rule — setting it here
+# would mask that default path in every test.
+os.environ.setdefault("DEFAULT_MODULE", "sozialrecht")
 
 
 def pytest_sessionfinish(session: object, exitstatus: object) -> None:
