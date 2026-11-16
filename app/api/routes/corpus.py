@@ -22,11 +22,11 @@ from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, status
 from sqlalchemy import func, select
 
 from app.core import config as cfg
-from app.core.config import settings
 from app.db.models import LegalChunk, LegalSource
 from app.db.session import get_session_factory
 from app.services.corpus import (
     CORPUS_SOURCE_METADATA,
+    default_corpus_sources,
     generate_embeddings,
     get_effective_corpus_sources,
     load_runtime_sources,
@@ -400,7 +400,7 @@ async def set_sources(
     save_runtime_sources(selected)
     logger.info(
         "Runtime corpus sources updated: %s → %s",
-        settings.CORPUS_SOURCES,
+        default_corpus_sources(),
         selected,
     )
     return {

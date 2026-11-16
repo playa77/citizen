@@ -86,6 +86,10 @@ class AreaTables:
     fallback_preset: str
     default_module: str
     norm_reference_source_types: tuple[str, ...]
+    # Default-module ``corpus.yaml`` ``default_ingest_sources``: what a fresh
+    # deployment ingests when neither ``CORPUS_SOURCES`` nor a runtime source
+    # selection is set (replaces the core's former ``["sgb2", "sgbx"]``).
+    default_ingest_sources: tuple[str, ...] = ()
     # area key → raw prompt profile mapping (inheritance resolved)
     prompt_profiles: dict[str, dict[str, Any]] = field(default_factory=dict)
     # module id → raw prompt profile mapping, for the default fallback
@@ -300,6 +304,7 @@ def build_area_tables(modules_dir: Path, default_module: str) -> AreaTables:
         fallback_preset=fallback_preset,
         default_module=default_module,
         norm_reference_source_types=tuple(default_corpus.get("norm_reference_source_types") or ()),
+        default_ingest_sources=tuple(default_corpus.get("default_ingest_sources") or ()),
         prompt_profiles=prompt_profiles,
         module_profiles=module_profiles,
     )

@@ -16,6 +16,12 @@ areas:
     - bsg
     - vwvfg
     - sgg
+# Sources a fresh deployment ingests when DEFAULT_MODULE is this module and
+# neither CORPUS_SOURCES nor a runtime selection is set (module 1.2.0; moved
+# out of the core config default, ARCHITECTURE.md § 8).
+default_ingest_sources:
+- sgb2
+- sgbx
 norm_reference_source_types:
 - sgb2
 - sgbx

@@ -1300,6 +1300,8 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
 
         # No-evidence guard: if retrieval returned nothing, stop safely
         if stage_name == "retrieval" and not state.retrieved_chunks:
+            from app.services.corpus import default_corpus_sources
+
             settings = cfg._get_settings()
             threshold = settings.MAX_COSINE_DISTANCE
             keyword_fallback = settings.RETRIEVAL_KEYWORD_FALLBACK
@@ -1328,7 +1330,7 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
                     f"  • Schwellenwert (Cosine Distance): {threshold:.2f}\n"
                     f"  • {fallback_note}\n"
                     f"  • Eine Corpus-Aktualisierung über /api/v1/corpus/update wird empfohlen.\n"
-                    f"  • Konfigurierte Quellen: {settings.CORPUS_SOURCES}"
+                    f"  • Konfigurierte Quellen: {default_corpus_sources(settings.CORPUS_SOURCES)}"
                 ),
             }
             break
