@@ -25,7 +25,9 @@ The gate thresholds come from the module's ``dossier.yaml`` ``goldset.gate``;
 every dossier must be schema-valid. Exit code 1 when the gate fails.
 """
 
-# Version: 1.0.0 | 2026-11-16 — WP-104 initial.
+# Version: 1.0.1 | 2026-11-16 — a --case subset reports metrics but no gate
+# verdict (the gate is defined over the whole goldset) and never exits 1 on it.
+# 1.0.0 | 2026-11-16 — WP-104 initial.
 
 from __future__ import annotations
 
@@ -324,7 +326,11 @@ def main(argv: list[str] | None = None) -> int:
     agg = aggregate(results)
     failures = gate(agg, content.gate)
     print("\nAggregate: " + ", ".join(f"{k}={v:.3f}" for k, v in agg.items()))
-    print("Gate: " + ("PASS" if not failures else "FAIL — " + "; ".join(failures)))
+    subset = bool(args.case)
+    if subset:
+        print("Gate: not evaluated (--case subset; the gate covers the whole goldset)")
+    else:
+        print("Gate: " + ("PASS" if not failures else "FAIL — " + "; ".join(failures)))
 
     if args.save:
         module_version = str(get_manifest(args.module).raw.get("version"))
@@ -347,7 +353,8 @@ def main(argv: list[str] | None = None) -> int:
             "run_timestamp": started.isoformat(),
             "drafts_included": not isinstance(_settings(), _UnconfiguredSettings),
             "gate_thresholds": content.gate,
-            "gate_passed": not failures,
+            "subset": [c["id"] for c in cases] if subset else None,
+            "gate_passed": None if subset else not failures,
             "gate_failures": failures,
             "aggregate": agg,
             "cases": [asdict(c) for c in results],
@@ -355,7 +362,7 @@ def main(argv: list[str] | None = None) -> int:
         path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"Report saved: {path.relative_to(PROJECT_ROOT)}")
 
-    return 0 if not failures else 1
+    return 0 if subset or not failures else 1
 
 
 if __name__ == "__main__":

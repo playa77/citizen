@@ -29,7 +29,8 @@ an advice centre or a lawyer, for every case and generic across modules.
   banner first, provenance in footer + metadata + embedded `dossier.json` /
   `provenance.json`.
 - **Dossier eval** `python -m eval.dossier_eval --module sozialrecht
-  [--save] [--pdf-dir DIR]` (1.0.0, WP-104): offline, no DB/LLM/API key.
+  [--save] [--pdf-dir DIR]` (1.0.1, WP-104): offline, no DB/LLM/API key;
+  a `--case` subset reports metrics without a gate verdict.
   Sozialrecht dossier goldset v1.0.0: schema-valid 12/12, deadline
   completeness **1.000**, checklist recall 0.979, chronology accuracy
   0.935 — gate passed.
