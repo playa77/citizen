@@ -1,0 +1,24 @@
+# Stage prompt profile of module `erbrecht` (WP-93; ARCHITECTURE.md § 3.2).
+# Rendered by the core stage templates in app/services/prompts.py.
+# Extracted verbatim from the v2.0.0 AreaProfile in that file.
+
+display_name: deutsches Erbrecht und Erbschaftsteuerrecht
+statutes: insbesondere BGB (Erbrecht), ErbStG, Höfeordnung, Schenkungsrecht und FamFG für Erbschaftsverfahren
+document_examples: eines Testaments, eines Erbvertrags, eines Erbscheinsantrags, eines Finanzamtsbescheids zur Erbschaftsteuer, eines Schreibens des Nachlassgerichts oder eines Familienrechtsstreits mit erbrechtlichen Bezügen
+issue_terms:
+- gesetzliche Erbfolge
+- Testamentsauslegung
+- Pflichtteilsanspruch
+- Erbquote
+- Vorausvermächtnis
+- Annahme und Ausschlagung der Erbschaft
+- Erbschaftsteuer-Freibetrag
+- Steuerklasse
+- Bewertung des land- und forstwirtschaftlichen Vermögens
+- Höfeordnung
+- Hofesübergabe
+formal_examples: Testamentsform, Eröffnungstermin, Anfechtungsfrist
+material_examples: Erbquote, Pflichtteil, Freibetrag, Steuerklasse, Bewertung landwirtschaftlicher Betriebe
+answerable_with: deutschem Erbrecht, Erbschaftsteuerrecht oder Schenkungsrecht (insbesondere BGB, ErbStG, Höfeordnung, FamFG)
+hierarchy_example: BGB > § 1922
+adversary_examples: Miterben, Pflichtteilsberechtigte, das Finanzamt oder das Nachlassgericht

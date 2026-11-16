@@ -1,0 +1,158 @@
+# Action-draft templates of module `sozialrecht` (WP-93; ARCHITECTURE.md § 3.6).
+#
+# Rendered by the core document renderer (app/services/document_generators.py),
+# which owns the guardrail: every legal assertion is a slot bound to a
+# verified + user-confirmed claim, the Fristen core or the module calculator;
+# anything unresolved renders as `[BITTE PRÜFEN: <topic>]`. Drafts stay drafts.
+#
+# selection  — generator choice from the Widerspruchsfrist result
+#              (no deadline → `no_deadline`; `by_frist_typ` first; then
+#              `open` if frist_ende >= today, else `lapsed`).
+# slots      — slot set of templates with `uses_slots: true`; kinds:
+#              input | frist_date | calc_amount | calc_difference | claims.
+# templates  — `parts` are str.format templates over slot keys (+ `absender`);
+#              a part with `when_resolved: <slot>` is emitted only if that
+#              slot rendered a value (not a review placeholder).
+#
+# Texts extracted verbatim from v2.0.0 (byte-identical rendering, pinned by
+# tests/unit/test_document_generators.py).
+
+selection:
+  no_deadline: akteneinsichtsantrag_25
+  by_frist_typ:
+    kein_va: akteneinsichtsantrag_25
+  open:
+    by_frist_typ:
+      jahr: widerspruch_jahresfrist
+    default: widerspruch
+  lapsed:
+    by_frist_typ:
+      jahr: widerspruch_jahresfrist
+    default: ueberpruefungsantrag_44
+slots:
+- key: bescheid_datum
+  label: Bescheid-Datum
+  kind: input
+  input: bescheid_datum
+  review_topic: Bescheid-Datum
+- key: bescheid_aktenzeichen
+  label: Aktenzeichen
+  kind: input
+  input: aktenzeichen
+  review_topic: Aktenzeichen
+- key: behoerde_name
+  label: Behördenname
+  kind: input
+  input: behoerde
+  review_topic: Behördenname
+- key: bekanntgabe
+  label: Bekanntgabe-Datum
+  kind: frist_date
+  field: bekanntgabe
+  prefix: 'am '
+  review_topic: Bekanntgabe-Datum
+- key: widerspruchsfrist_ende
+  label: Widerspruchsfrist-Ende
+  kind: frist_date
+  field: frist_ende
+  prefix: 'der '
+  review_topic: Widerspruchsfrist-Ende
+- key: anspruch_hoehe
+  label: Anspruchshöhe (korrekt)
+  kind: calc_amount
+  line: Anspruch (Leistung)
+  review_topic: Anspruchshöhe
+- key: differenz_gesamt
+  label: Gesamtdifferenz
+  kind: calc_difference
+  line: Anspruch (Leistung)
+  fallback_korrekt_line: Gesamtbedarf
+  tolerance_eur: 0.02
+  texts:
+    positive: '{amount} EUR (zulasten des Leistungsberechtigten)'
+    negative: '{amount} EUR (zugunsten des Leistungsberechtigten)'
+    zero: 0,00 EUR (keine Abweichung)
+  review_topic: Gesamtdifferenz
+- key: claims_text
+  label: Geprüfte Ansprüche
+  kind: claims
+  review_topic: Geprüfte Ansprüche
+templates:
+  widerspruch:
+    title: Widerspruch
+    uses_slots: true
+    parts:
+    - text: "{absender}\nAn {behoerde_name}\n\n**Widerspruch gegen den Bescheid vom {bescheid_datum},\
+        \ Aktenzeichen: {bescheid_aktenzeichen}**\n\nSehr geehrte Damen und Herren,\n\nhiermit lege ich\
+        \ Widerspruch gegen den oben genannten Bescheid vom {bescheid_datum} (Aktenzeichen: {bescheid_aktenzeichen})\
+        \ ein.\n\nDer Bescheid ist mir {bekanntgabe} bekanntgegeben worden. Die Widerspruchsfrist endet\
+        \ {widerspruchsfrist_ende}.\n\n"
+    - &id001
+      text: "**Begründung:**\n\n{claims_text}\n\n"
+      when_resolved: claims_text
+    - text: "**Berechnung des korrekten Anspruchs:**\n\nNach unserer Berechnung ergibt sich ein korrekter\
+        \ monatlicher Anspruch in Höhe von {anspruch_hoehe}. {differenz_gesamt}.\n\n**Antrag:**\n\nDer\
+        \ Bescheid vom {bescheid_datum} wird angefochten, soweit er von der korrekten Rechtslage abweicht.\
+        \ Ich beantrage,\n\n1. den Bescheid aufzuheben und\n2. die Leistung in gesetzlicher Höhe zu gewähren.\n\
+        \nFür den Fall, dass meinem Widerspruch nicht stattgegeben wird, beantrage ich die Vorlage an\
+        \ das zuständige Sozialgericht.\n\nMit freundlichen Grüßen\n\n[Unterschrift]\n\n"
+  widerspruch_jahresfrist:
+    title: Widerspruch (Jahresfrist, § 66 Abs. 2 SGG)
+    uses_slots: true
+    parts:
+    - text: "{absender}\nAn {behoerde_name}\n\n**Widerspruch gegen den Bescheid vom {bescheid_datum},\
+        \ Aktenzeichen: {bescheid_aktenzeichen} (Jahresfrist gem. § 66 Abs. 2 SGG)**\n\nSehr geehrte Damen\
+        \ und Herren,\n\nhiermit lege ich Widerspruch gegen den oben genannten Bescheid vom {bescheid_datum}\
+        \ (Aktenzeichen: {bescheid_aktenzeichen}) ein.\n\nDer Bescheid ist mir {bekanntgabe} bekanntgegeben\
+        \ worden. Die Rechtsbehelfsbelehrung war fehlerhaft bzw. fehlte, sodass gemäß § 66 Abs. 2 SGG\
+        \ die einjährige Widerspruchsfrist gilt. Diese endet {widerspruchsfrist_ende}.\n\n"
+    - *id001
+    - text: "**Berechnung des korrekten Anspruchs:**\n\nNach unserer Berechnung ergibt sich ein korrekter\
+        \ monatlicher Anspruch in Höhe von {anspruch_hoehe}. {differenz_gesamt}.\n\n**Antrag:**\n\nDer\
+        \ Bescheid vom {bescheid_datum} wird angefochten, soweit er von der korrekten Rechtslage abweicht.\
+        \ Ich beantrage,\n\n1. den Bescheid aufzuheben und\n2. die Leistung in gesetzlicher Höhe zu gewähren.\n\
+        \nFür den Fall, dass meinem Widerspruch nicht stattgegeben wird, beantrage ich die Vorlage an\
+        \ das zuständige Sozialgericht.\n\nMit freundlichen Grüßen\n\n[Unterschrift]\n\n"
+  ueberpruefungsantrag_44:
+    title: Antrag auf Überprüfung (§ 44 SGB X)
+    uses_slots: true
+    parts:
+    - text: "{absender}\nAn {behoerde_name}\n\n**Antrag auf Überprüfung nach § 44 SGB X**\n\n**Betrifft:**\
+        \ Bescheid vom {bescheid_datum}, Aktenzeichen: {bescheid_aktenzeichen}\n\nSehr geehrte Damen und\
+        \ Herren,\n\nhiermit beantrage ich die Überprüfung des oben genannten Bescheides gemäß § 44 SGB\
+        \ X.\n\nDie Widerspruchsfrist ist zwischenzeitlich abgelaufen. Der Bescheid ist jedoch rechtswidrig,\
+        \ da er von der geltenden Rechtslage abweicht und Leistungen zu Unrecht versagt oder in zu geringer\
+        \ Höhe festgesetzt hat. § 44 SGB X verpflichtet die Behörde zur Rücknahme rechtswidriger Verwaltungsakte,\
+        \ auch wenn diese bereits bestandskräftig geworden sind.\n\n"
+    - *id001
+    - text: "**Berechnung des korrekten Anspruchs:**\n\nNach unserer Berechnung ergibt sich ein korrekter\
+        \ monatlicher Anspruch in Höhe von {anspruch_hoehe}. {differenz_gesamt}.\n\n**Antrag:**\n\n1.\
+        \ Der Bescheid vom {bescheid_datum} wird gemäß § 44 Abs. 1 SGB X mit Wirkung für die Vergangenheit\
+        \ zurückgenommen.\n2. Die Leistung wird in gesetzlicher Höhe neu festgesetzt und die Differenz\
+        \ in Höhe von [BITTE PRÜFEN: Betrag] nachgezahlt.\n3. Über den Antrag ist ein gesonderter, mit\
+        \ einer Rechtsbehelfsbelehrung versehener Bescheid zu erteilen.\n\nMit freundlichen Grüßen\n\n\
+        [Unterschrift]\n\n"
+  akteneinsichtsantrag_25:
+    title: Antrag auf Akteneinsicht (§ 25 SGB X)
+    uses_slots: false
+    inputs:
+      bd:
+        input: bescheid_datum
+        review_topic: Bescheid-Datum
+      az:
+        input: aktenzeichen
+        review_topic: Aktenzeichen
+      beh:
+        input: behoerde
+        review_topic: Behördenname
+    parts:
+    - text: "{absender}\nAn {beh}\n\n**Antrag auf Akteneinsicht gemäß § 25 SGB X**\n\n**Betrifft:** Bescheid\
+        \ vom {bd}, Aktenzeichen: {az}\n\nSehr geehrte Damen und Herren,\n\nhiermit beantrage ich Akteneinsicht\
+        \ in die mich betreffenden Verfahrensakten gemäß § 25 SGB X.\n\nDie Akteneinsicht wird benötigt,\
+        \ um die Rechtmäßigkeit des Bescheides vom {bd} (Aktenzeichen: {az}) zu überprüfen und die Erfolgsaussichten\
+        \ eines Rechtsbehelfs beurteilen zu können.\n\n**Umfang der Akteneinsicht:**\n\nIch bitte um Einsicht\
+        \ in folgende Unterlagen:\n\n1. Den Bescheid vom {bd} einschließlich aller Anlagen\n2. Die vollständige\
+        \ Sachverhaltsermittlung und Berechnungsgrundlagen\n3. Sämtliche in der Behörde erstellte Vermerke\
+        \ und Stellungnahmen\n4. Die elektronische Akte (eAkte) sowie etwaige Parallelakten\n\nDie Einsicht\
+        \ kann in den Räumen der Behörde oder durch Übersendung von Kopien erfolgen. Sofern Kosten entstehen,\
+        \ bitte ich um vorherige Mitteilung.\n\nMit freundlichen Grüßen\n\n[Unterschrift]\n\n"

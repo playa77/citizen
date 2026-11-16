@@ -1,0 +1,11 @@
+# Corpus scope of the core procedural library (WP-93; D-038).
+# `verwaltungsrecht` is not a module: D-038 folds the legacy area key into
+# the core's procedural library (Verwaltungsverfahren basics shared by all
+# modules). These rows carry its v2.0.0 behaviour; read by app/modules/areas.py.
+# Extracted verbatim from v2.0.0 app/services/corpus_readiness.py.
+
+areas:
+  verwaltungsrecht:
+    source_types:
+    - vwvfg
+    - sgbx

@@ -7,7 +7,10 @@ Endpoints:
 All endpoints require the ``X-Disclaimer-Ack`` header (enforced by middleware).
 """
 
-# Semantic Version: 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
+# Semantic Version: 0.3.0 | 2026-11-16 — WP-93: no imports of module code;
+# FristResult from the Fristen core, reconciliation items passed as dicts to
+# the generic renderer (which reads dicts and dataclasses identically).
+# 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
 # the generate response carries `provenance` alongside generation_metadata.
 
 from __future__ import annotations
@@ -24,19 +27,14 @@ from sqlalchemy.orm import selectinload
 from app.api.routes.cases import get_case_endpoint
 from app.db.models import CaseRun, Claim
 from app.db.session import async_session_factory
+from app.fristen.results import FristResult
 from app.services.document_generators import (
     generate_document,
     select_generator,
 )
-from app.services.fristen import (
-    FristResult,
-)
 from app.services.pseudonymization import (
     PiiMapping,
     depseudonymize_tolerant,
-)
-from app.services.rules_engine import (
-    ReconciliationLineItem,
 )
 
 logger = logging.getLogger(__name__)
@@ -135,23 +133,26 @@ def _extract_claims_dicts(case: CaseRun) -> list[dict[str, Any]]:
 
 def _extract_reconciliation(
     case_dict: dict[str, Any],
-) -> list[ReconciliationLineItem]:
-    """Try to extract reconciliation data from case final_output."""
+) -> list[dict[str, Any]]:
+    """Try to extract reconciliation line items from case final_output.
+
+    Items stay plain dicts (module calculators own the line-item types); the
+    renderer looks up ``label``/``korrekt``/``differenz`` on either shape.
+    """
     final_output = case_dict.get("final_output", {}) or {}
     calc_raw = final_output.get("calculation_check", None)
     if isinstance(calc_raw, list):
-        items: list[ReconciliationLineItem] = []
+        items: list[dict[str, Any]] = []
         for entry in calc_raw:
             if isinstance(entry, dict):
                 items.append(
-                    ReconciliationLineItem(
-                        label=str(entry.get("label", "")),
-                        jobcenter_ergebnis=entry.get("jobcenter_ergebnis"),
-                        korrekt=entry.get("korrekt"),
-                        differenz=entry.get("differenz"),
-                        relevant_rule=str(entry.get("relevant_rule", "")),
-                        detail=str(entry.get("detail", "")),
-                    )
+                    {
+                        "label": str(entry.get("label", "")),
+                        "korrekt": entry.get("korrekt"),
+                        "differenz": entry.get("differenz"),
+                        "relevant_rule": str(entry.get("relevant_rule", "")),
+                        "detail": str(entry.get("detail", "")),
+                    }
                 )
         return items
     return []

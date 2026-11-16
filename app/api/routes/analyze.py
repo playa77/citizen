@@ -9,7 +9,7 @@ Request body accepts either raw text or a reference to a previously
 ingested document. The payload is a simple JSON object:
     {
         "text": "<normalized or raw text>",
-        "legal_areas": ["sozialrecht"]  // optional, defaults to []
+        "legal_areas": ["<module id>"]  // optional, defaults to [] (DEFAULT_MODULE)
     }
 
 When ``legal_areas`` is non-empty, the pipeline runs per-area
@@ -31,7 +31,8 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.4.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
+# Semantic Version: 0.4.1 | 2026-11-16 — WP-93: module-neutral docstring examples.
+# 0.4.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
 # the terminal summary event now embeds `disclosure` and `provenance`.
 
 from __future__ import annotations
@@ -130,7 +131,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
 
             {
                 "text": "<document text>",
-                "legal_areas": ["sozialrecht", "erbrecht"],
+                "legal_areas": ["<module id>", "<module id>"],
                 "intake_session_id": "<uuid>",
             }
 

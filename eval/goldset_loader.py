@@ -1,4 +1,5 @@
-# Version: 1.0.0 | 2026-07-12
+# Version: 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
+# 1.0.0 | 2026-07-12
 """Pydantic-typed loader for Citizen goldset YAML files.
 
 Validates structure on load and audits against DB schema constants
@@ -7,7 +8,7 @@ Validates structure on load and audits against DB schema constants
 Usage:
     from eval.goldset_loader import load_goldset
 
-    goldset = load_goldset("eval/goldsets/goldset-v0.1.0.yaml")
+    goldset = load_goldset("modules/sozialrecht/goldset/goldset-v0.1.0.yaml")
     for case in goldset.cases:
         print(case.id, case.title, case.category, case.difficulty)
 """
@@ -368,7 +369,7 @@ def resolve_goldset_path(version: str | None = None) -> str:
         raise ValueError(
             f"Unsupported goldset version {version!r}. " f"Supported: {sorted(_SUPPORTED_VERSIONS)}"
         )
-    return f"eval/goldsets/goldset-v{version}.yaml"
+    return f"modules/sozialrecht/goldset/goldset-v{version}.yaml"
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,6 @@
-# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE and
+# Semantic Version: 0.4.1 | 2026-11-16 — WP-93: GOLDSET_PATH default points into
+# modules/sozialrecht/goldset/ (goldsets moved with the module).
+# 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE and
 # ENABLED_MODULES settings added for the module registry.
 
 import secrets
@@ -135,7 +137,10 @@ class Settings(BaseSettings):
     CITIZEN_SYNTHETIC_DATA_ONLY: bool = False
     # WP-14 — Prüfstand: goldset YAML path and eval results directory.
     # Goldset version change is a config change, not a code change (acceptance criterion).
-    GOLDSET_PATH: str = "eval/goldsets/goldset-v0.1.0.yaml"
+    # WP-93: goldsets ship inside their module; /api/v1/goldset* stays the
+    # Sozialrecht alias until /api/v2 (ARCHITECTURE.md § 5), hence the
+    # module path as default. Per-module goldsets: manifest `goldset` (WP-95).
+    GOLDSET_PATH: str = "modules/sozialrecht/goldset/goldset-v0.1.0.yaml"
     EVAL_RESULTS_DIR: str = "eval/results"
     # --- Modules (WP-91, D-036/D-037) ----------------------------------------
     # Default module for requests that name none (D-036). Must be in the

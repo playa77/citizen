@@ -17,7 +17,7 @@ from eval.goldset_loader import (
 )
 
 _HERE = Path(__file__).resolve().parent
-_GOLDSETS = _HERE.parent.parent / "eval" / "goldsets"
+_GOLDSETS = _HERE.parent.parent / "modules" / "sozialrecht" / "goldset"
 
 
 # ---------------------------------------------------------------------------

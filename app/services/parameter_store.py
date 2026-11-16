@@ -4,7 +4,6 @@ Async functions
 ---------------
 - get_parameter_numeric() — async DB lookup for scalar numeric parameters
 - get_parameter_json() — async DB lookup for JSON-valued parameters
-- build_legal_snapshot() — audit-trail snapshot of which param versions were used
 - reload_parameter_cache() — rebuild the in-memory sync cache from the DB
 
 Sync functions
@@ -17,9 +16,16 @@ Architecture:
     module-level dict populated at startup by ``reload_parameter_cache()``
     (called from ``main.py`` lifespan).  This avoids async DB access in contexts
     that must be deterministic and synchronous.
+
+WP-93: the audit snapshot (which parameter versions a calculation used) is
+built by the module calculator through ``app.modules.sdk.ParameterSource``;
+the former ``build_legal_snapshot`` with its hard-coded SGB II keys moved to
+``modules/sozialrecht/calculators.py``. The ``domain`` default ``"sgb2"``
+remains until WP-94 rewrites stored domains to module ids
+(``sgb2 → sozialrecht``).
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 
@@ -313,33 +319,3 @@ async def get_parameter_json(
         result_dict["status"] = "verification_required"
 
     return result_dict
-
-
-# ---------------------------------------------------------------------------
-# Legal snapshot (audit trail)
-# ---------------------------------------------------------------------------
-
-
-async def build_legal_snapshot(session: AsyncSession, *, year: int) -> dict[str, Any]:
-    """Build a ``legal_snapshot`` dict recording which parameter versions were used.
-
-    Returns a dict suitable for storing in ``case_run.legal_snapshot``.
-
-    Parameters
-    ----------
-    session :
-        An open async SQLAlchemy session.
-    year :
-        Calendar year whose mid-year parameter versions to record.
-    """
-    as_of = date(year, 7, 1)  # mid-year lookup
-    snapshot: dict[str, Any] = {"year": year, "parameter_versions": []}
-
-    for key in ["sgb2.regelbedarf.rbs1", "sgb2.regelbedarf.rbs2"]:
-        result = await get_parameter_numeric(session, key, as_of)
-        if result["value"] is not None:
-            regime = result.get("regime") or ""
-            version_str = f"{key}@{result['valid_from']}" + (f"({regime})" if regime else "")
-            snapshot["parameter_versions"].append(version_str)
-
-    return snapshot

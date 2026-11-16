@@ -1,10 +1,12 @@
 """Unit tests for the deterministic Widerspruchsfrist engine.
 
-Covers every code path in ``app.services.fristen`` — no mocking required,
+Covers every code path of the sozialrecht Widerspruchsfrist spec (Fristen
+core + ``modules/sozialrecht/fristen.yaml``; WP-93 removed the
+``app.services.fristen`` shim) — no mocking required,
 all computation is pure and local.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: imports re-pointed (shim removed).
 
 from __future__ import annotations
 
@@ -12,13 +14,11 @@ from datetime import date
 
 import pytest
 
-from app.services.fristen import (
-    _is_holiday,
-    _is_workday,
-    _next_workday,
-    _same_day_next_month,
-    compute_widerspruchsfrist,
-)
+from app.fristen.calendar import is_holiday as _is_holiday
+from app.fristen.calendar import is_workday as _is_workday
+from app.fristen.calendar import next_workday as _next_workday
+from app.fristen.calendar import same_day_next_month as _same_day_next_month
+from tests.unit.sozialrecht_fristen import compute_widerspruchsfrist
 
 # ===========================================================================
 # Helper tests

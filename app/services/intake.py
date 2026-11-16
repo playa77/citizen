@@ -10,13 +10,16 @@ that:
      after disconnect
 
 The LLM is asked to return ``primary_area`` and ``secondary_areas`` as
-strings from a closed enum (the values in
-``app.db.models.LEGAL_AREA_ALLOWED``). The parser validates the result
-against that enum and falls back to keyword matching if the LLM
-hallucinated an unknown area.
+strings from a closed enum (the area keys of the module area tables,
+``app.modules.areas``). The parser validates the result against that enum
+and falls back to keyword matching if the LLM hallucinated an unknown area.
+
+WP-93: the routing keywords, synonyms and the catch-all area are module
+data (``modules/<id>/intake.yaml``); this file holds only the generic
+interview runner.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0
 
 from __future__ import annotations
 
@@ -29,7 +32,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.router import get_shared_client
-from app.db.models import LEGAL_AREA_ALLOWED, IntakeSession
+from app.db.models import IntakeSession
+from app.modules.areas import area_tables
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -55,9 +59,11 @@ class IntakeTurnLimitReached(IntakeError):
 # Prompts
 # ---------------------------------------------------------------------------
 
-# Closed enum the LLM must pick from. Mirrors
-# app.db.models.LEGAL_AREA_ALLOWED.
-_LEGAL_AREAS_ENUM: tuple[str, ...] = LEGAL_AREA_ALLOWED
+# Closed enum the LLM must pick from: every area key, in table order
+# (module data, WP-93). The catch-all key is the fallback for unclear cases.
+_LEGAL_AREAS_ENUM: tuple[str, ...] = area_tables().keys
+_CATCH_ALL_AREA: str = area_tables().catch_all
+_EXAMPLE_AREA: str = area_tables().default_module
 
 _INTAKE_SYSTEM = (
     "Du bist ein erfahrener juristischer Erstberater für deutsches Recht. "
@@ -78,12 +84,12 @@ _INTAKE_SYSTEM = (
     "für einfache Fälle, maximal 8 Fragen), beende das Gespräch mit "
     '"done": true und liefere die unten genannten Felder.\n'
     "- Erfinde keine Tatsachen, Paragraphen oder Aktenzeichen.\n"
-    "- Falls du dir unsicher bist, wähle '" + _LEGAL_AREAS_ENUM[-1] + "' als Fallback.\n\n"
+    "- Falls du dir unsicher bist, wähle '" + _CATCH_ALL_AREA + "' als Fallback.\n\n"
     "Antwortformat: GENAU ein JSON-Objekt mit folgenden Schlüsseln:\n"
     "{\n"
     '  "done": false,                     // true wenn Interview beendet\n'
     '  "question": "Deine Rückfrage",     // leer wenn done=true\n'
-    '  "primary_area": "sozialrecht",     // nur wenn done=true; sonst null\n'
+    '  "primary_area": "' + _EXAMPLE_AREA + '",     // nur wenn done=true; sonst null\n'
     '  "secondary_areas": ["..."],        // nur wenn done=true; sonst []\n'
     '  "summary": "Kurze Sachverhalts-Zusammenfassung",   // nur wenn done=true\n'
     '  "facts": ["Tatsache 1", "Tatsache 2"],            // nur wenn done=true\n'
@@ -99,109 +105,8 @@ _INTAKE_SYSTEM = (
 # Keyword fallback for area resolution
 # ---------------------------------------------------------------------------
 
-_AREA_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "sozialrecht": (
-        "jobcenter",
-        "bürgergeld",
-        "sozialamt",
-        "sanktion",
-        "harzt iv",
-        "harzt 2",
-        "sgb",
-        "sozialhilfe",
-        "arbeitslosengeld",
-        "kosten der unterkunft",
-        "eingliederungsvereinbarung",
-        "aufstocker",
-        "regelsatz",
-    ),
-    "erbrecht": (
-        "erbe",
-        "testament",
-        "erbfolge",
-        "erbschein",
-        "pflichtteil",
-        "nachlass",
-        "verstorb",
-        "hinterblieb",
-        "miterb",
-        "erbanteil",
-        "erbvertrag",
-        "erblasser",
-    ),
-    "schenkungsrecht": (
-        "schenkung",
-        "schenken",
-        "verschenk",
-        "schenkungsvertrag",
-        "freibetrag schenkung",
-    ),
-    "familienrecht": (
-        "scheidung",
-        "geschieden",
-        "unterhalt",
-        "sorgerecht",
-        "umgangsrecht",
-        "ehe",
-        "famili",
-        "kindesunterhalt",
-        "trennungsunterhalt",
-        "zugewinn",
-        "ex-mann",
-        "ex-frau",
-    ),
-    "mietrecht": (
-        "miete",
-        "vermieter",
-        "mieter",
-        "wohnung",
-        "kündigung wohnung",
-        "mietminderung",
-        "kaution",
-        "nebenkosten",
-    ),
-    "arbeitsrecht": (
-        "arbeitgeber",
-        "kündigung arbeit",
-        "abfindung",
-        "arbeitsvertrag",
-        "betriebsrat",
-        "kündigungsschutz",
-        "abmahnung",
-        "lohn",
-        "gehalt",
-    ),
-    "vertragsrecht": (
-        "vertrag",
-        "kaufvertrag",
-        "werkvertrag",
-        "darlehen",
-        "rücktritt",
-        "gewährleistung",
-        "garantie",
-        "widerruf",
-    ),
-    "verwaltungsrecht": (
-        "verwaltungsakt",
-        "widerspruch",
-        "baugenehmigung",
-        "gewerbe",
-        "ausländerbehörde",
-        "führerschein",
-        "bußgeldbescheid",
-    ),
-    "strafrecht": (
-        "anzeige",
-        "strafanzeige",
-        "verfahren",
-        "vorwurf",
-        "tat",
-        "strafrecht",
-        "bewährung",
-        "geldstrafe",
-        "freiheitsstrafe",
-    ),
-}
+# Area key → routing keywords, from the owning modules' intake.yaml.
+_AREA_KEYWORDS: dict[str, tuple[str, ...]] = dict(area_tables().keywords)
 
 
 def _fallback_areas_from_text(text: str) -> tuple[str, list[str]]:
@@ -211,7 +116,7 @@ def _fallback_areas_from_text(text: str) -> tuple[str, list[str]]:
     """
     haystack = (text or "").lower()
     if not haystack.strip():
-        return _LEGAL_AREAS_ENUM[-1], []  # 'andere'
+        return _CATCH_ALL_AREA, []
 
     hits: list[tuple[str, int]] = []
     for area, kws in _AREA_KEYWORDS.items():
@@ -219,7 +124,7 @@ def _fallback_areas_from_text(text: str) -> tuple[str, list[str]]:
         if score:
             hits.append((area, score))
     if not hits:
-        return _LEGAL_AREAS_ENUM[-1], []  # 'andere'
+        return _CATCH_ALL_AREA, []
 
     hits.sort(key=lambda h: h[1], reverse=True)
     primary = hits[0][0]
@@ -235,7 +140,7 @@ _STRICT_SUFFIX = (
     "\n\nIMPORTANT: Respond with *only* valid JSON matching the schema above. "
     "No prose, no markdown fences, no explanation. If you cannot produce "
     'valid JSON matching the schema, return {"done": true, "question": "", '
-    '"primary_area": "andere", "secondary_areas": [], '
+    '"primary_area": "' + _CATCH_ALL_AREA + '", "secondary_areas": [], '
     '"summary": "", "facts": [], "dates": [], "parties": []}.'
 )
 
@@ -296,20 +201,8 @@ def _normalise_area(area: str | None) -> str | None:
     a = str(area).strip().lower()
     if a in _LEGAL_AREAS_ENUM:
         return a
-    # Common synonyms.
-    _SYNONYMS: dict[str, str] = {
-        "social": "sozialrecht",
-        "sozial": "sozialrecht",
-        "soziales": "sozialrecht",
-        "arbeitslosengeld ii": "sozialrecht",
-        "erbschaft": "erbrecht",
-        "erben": "erbrecht",
-        "nachfolge": "erbrecht",
-        "schenken": "schenkungsrecht",
-        "schenkung": "schenkungsrecht",
-        "scheidungsrecht": "familienrecht",
-        "trennung": "familienrecht",
-    }
+    # Common synonyms (module data: ``synonyms`` rows of intake.yaml).
+    _SYNONYMS: dict[str, str] = area_tables().synonyms
     if a in _SYNONYMS:
         return _SYNONYMS[a]
     # Fuzzy: contains.

@@ -1,0 +1,6 @@
+# Stage prompt profile of module `familienrecht` (WP-93).
+# v2.0.0 ran Familienrecht cases with the Erbrecht persona (shared
+# AreaProfile); the stub keeps that behaviour by inheriting it. A dedicated
+# profile is the job of the M6 module build-out (docs/module-catalog.md).
+
+inherit: erbrecht

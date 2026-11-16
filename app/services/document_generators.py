@@ -1,10 +1,11 @@
-"""Court-ready action document generators (WP-40).
+"""Action-draft renderer (WP-40; generic since WP-93, ARCHITECTURE.md § 3.6).
 
-Generates three building-block documents:
-  - Widerspruch (objection against a Bescheid)
-  - Widerspruch under Jahresfrist (§ 66 Abs. 2 SGG, missing/wrong RBB)
-  - Überprüfungsantrag (§ 44 SGB X, after Frist lapse)
-  - Akteneinsichtsantrag (§ 25 SGB X, file access request)
+Renders building-block drafts declared by modules
+(``document_templates`` in ``module.yaml``, e.g.
+``modules/sozialrecht/documents/templates.yaml``: Widerspruch, Widerspruch
+unter Jahresfrist, Überprüfungsantrag, Akteneinsichtsantrag). The module
+supplies titles, slot definitions, template text and the generator-selection
+table; the core owns the slot mechanism, the guardrail and the footer.
 
 **Hard guardrail:** Every legal assertion in the rendered document must be
 traceable to a claim whose ``verification_status`` is ``"exakt"`` or
@@ -21,7 +22,10 @@ fluent invention.
 are generated, slotted into the document, then reinjected post-generation.
 """
 
-# Semantic Version: 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
+# Semantic Version: 0.3.0 | 2026-11-16 — WP-93: templates, slot definitions and
+# generator selection moved into module data; this file is the generic
+# renderer (output byte-identical for the sozialrecht drafts).
+# 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
 # GeneratedDocument carries a machine-readable `provenance` marker (no
 # `disclosure` — that was already delivered with the analysis result).
 
@@ -30,7 +34,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import Any, Literal
+from typing import Any
 
 from app.core.config import get_app_version, get_app_version_tag, settings
 from app.services.disclosure import ProvenanceMarker, build_disclosure_and_provenance
@@ -90,8 +94,7 @@ class GeneratedDocument:
     Attributes
     ----------
     document_type :
-        One of ``"widerspruch"``, ``"widerspruch_jahresfrist"``,
-        ``"ueberpruefungsantrag_44"``, ``"akteneinsichtsantrag_25"``.
+        Template id declared by the module (e.g. ``"widerspruch"``).
     title :
         Human-readable title.
     rendered_text :
@@ -234,138 +237,48 @@ def _fmt_eur(value: float | None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Generator 1: Widerspruch (standard, Frist open)
+# Module templates
 # ---------------------------------------------------------------------------
 
 
-def _build_widerspruch_slots(
-    frist_result: Any,
-    reconciliation: list[Any],
-    claims: list[dict[str, Any]],
-    bescheid_datum: date | None,
-    aktenzeichen: str | None,
-    behoerde: str | None,
-) -> list[DocumentSlot]:
-    """Build all slots for the Widerspruch template."""
-    slots: list[DocumentSlot] = []
+class _SlotValues(dict[str, str]):
+    """``str.format_map`` mapping: a slot the template names but the slot set
+    lacks renders as an empty review placeholder (v2.0.0 semantics)."""
 
-    # ── Fristen engine slots ──────────────────────────────────────────
-    if frist_result is not None:
-        frist_ende_str = frist_result.frist_ende.strftime("%d.%m.%Y")
-        bekanntgabe_str = frist_result.bekanntgabe.strftime("%d.%m.%Y")
-    else:
-        frist_ende_str = None
-        bekanntgabe_str = None
+    def __missing__(self, key: str) -> str:
+        return DocumentSlot("", "", "").render()
 
-    slots.append(
-        DocumentSlot(
-            key="bescheid_datum",
-            label="Bescheid-Datum",
-            source="user_input",
-            value=bescheid_datum.strftime("%d.%m.%Y") if bescheid_datum else None,
-            verified=bescheid_datum is not None,
-            needs_review=bescheid_datum is None,
-            review_topic="Bescheid-Datum" if bescheid_datum is None else "",
-        )
-    )
-    slots.append(
-        DocumentSlot(
-            key="bescheid_aktenzeichen",
-            label="Aktenzeichen",
-            source="user_input",
-            value=aktenzeichen,
-            verified=bool(aktenzeichen),
-            needs_review=not aktenzeichen,
-            review_topic="Aktenzeichen" if not aktenzeichen else "",
-        )
-    )
-    slots.append(
-        DocumentSlot(
-            key="behoerde_name",
-            label="Behördenname",
-            source="user_input",
-            value=behoerde,
-            verified=bool(behoerde),
-            needs_review=not behoerde,
-            review_topic="Behördenname" if not behoerde else "",
-        )
-    )
-    slots.append(
-        DocumentSlot(
-            key="bekanntgabe",
-            label="Bekanntgabe-Datum",
-            source="fristen",
-            value=("am " + bekanntgabe_str) if bekanntgabe_str else None,
-            verified=bool(bekanntgabe_str),
-            needs_review=not bekanntgabe_str,
-            review_topic="Bekanntgabe-Datum" if not bekanntgabe_str else "",
-        )
-    )
-    slots.append(
-        DocumentSlot(
-            key="widerspruchsfrist_ende",
-            label="Widerspruchsfrist-Ende",
-            source="fristen",
-            value=("der " + frist_ende_str) if frist_ende_str else None,
-            verified=bool(frist_ende_str),
-            needs_review=not frist_ende_str,
-            review_topic="Widerspruchsfrist-Ende" if not frist_ende_str else "",
-        )
-    )
 
-    # ── Calculation engine slots ──────────────────────────────────────
-    anspruch = _find_reconciliation_value(reconciliation, "Anspruch (Leistung)")
-    differenz = _find_reconciliation_value(reconciliation, "Gesamtbedarf")
-    # Use "Differenz" from the Anspruch line item if available
-    anspruch_diff = None
+def _templates(module_id: str | None) -> tuple[str, dict[str, Any]]:
+    from app.modules.areas import area_tables
+    from app.modules.runtime import document_templates
+
+    resolved = module_id or area_tables().default_module
+    data = document_templates(resolved)
+    if data is None:
+        raise ValueError(f"module {resolved!r} declares no document templates")
+    return resolved, data
+
+
+def _format_input(value: Any) -> str | None:
+    if isinstance(value, date):
+        return value.strftime("%d.%m.%Y")
+    return value or None
+
+
+def _find_reconciliation_attr(reconciliation: list[Any], label: str, attr: str) -> Any:
+    """First matching line item's *attr* (dataclass or dict), unfiltered."""
     for item in reconciliation:
-        if hasattr(item, "label") and hasattr(item, "differenz"):
-            if item.label == "Anspruch (Leistung)":
-                anspruch_diff = item.differenz
-                break
-        elif isinstance(item, dict) and item.get("label") == "Anspruch (Leistung)":
-            anspruch_diff = item.get("differenz")
-            break
+        if hasattr(item, "label") and hasattr(item, attr):
+            if item.label == label:
+                return getattr(item, attr)
+        elif isinstance(item, dict) and item.get("label") == label:
+            return item.get(attr)
+    return None
 
-    slots.append(
-        DocumentSlot(
-            key="anspruch_hoehe",
-            label="Anspruchshöhe (korrekt)",
-            source="berechnung",
-            value=_fmt_eur(anspruch),
-            verified=anspruch is not None,
-            needs_review=anspruch is None,
-            review_topic="Anspruchshöhe" if anspruch is None else "",
-        )
-    )
 
-    slot_diff = anspruch_diff if anspruch_diff is not None else differenz
-    # Calculate a total difference string
-    if slot_diff is not None:
-        abs_diff = abs(slot_diff)
-        if slot_diff > 0.02:
-            diff_text = f"{abs_diff:.2f} EUR (zulasten des Leistungsberechtigten)"
-        elif slot_diff < -0.02:
-            diff_text = f"{abs_diff:.2f} EUR (zugunsten des Leistungsberechtigten)"
-        else:
-            diff_text = "0,00 EUR (keine Abweichung)"
-    else:
-        diff_text = None
-
-    slots.append(
-        DocumentSlot(
-            key="differenz_gesamt",
-            label="Gesamtdifferenz",
-            source="berechnung",
-            value=diff_text,
-            verified=slot_diff is not None,
-            needs_review=slot_diff is None,
-            review_topic="Gesamtdifferenz" if slot_diff is None else "",
-        )
-    )
-
-    # ── Claim text slots ──────────────────────────────────────────────
-    # Collect all verified + confirmed claims
+def _claims_slot(definition: dict[str, Any], claims: list[dict[str, Any]]) -> DocumentSlot:
+    """Collect all verified + confirmed claims; unverified ones become topics."""
     verified_claims_text = ""
     unverified_topics: list[str] = []
 
@@ -383,278 +296,109 @@ def _build_widerspruch_slots(
             unverified_topics.append(topic)
 
     claims_value = verified_claims_text if verified_claims_text else None
-
     claims_review = bool(unverified_topics) or not verified_claims_text
-    claims_topic = "; ".join(unverified_topics[:3]) if unverified_topics else "Geprüfte Ansprüche"
+    claims_topic = (
+        "; ".join(unverified_topics[:3]) if unverified_topics else definition["review_topic"]
+    )
+    return DocumentSlot(
+        key=definition["key"],
+        label=definition["label"],
+        source="claim",
+        value=claims_value,
+        verified=bool(verified_claims_text),
+        needs_review=claims_review and not verified_claims_text,
+        review_topic=claims_topic if claims_review and not verified_claims_text else "",
+    )
 
-    slots.append(
-        DocumentSlot(
-            key="claims_text",
-            label="Geprüfte Ansprüche",
-            source="claim",
-            value=claims_value,
-            verified=bool(verified_claims_text),
-            needs_review=claims_review and not verified_claims_text,
-            review_topic=claims_topic if claims_review and not verified_claims_text else "",
+
+def _build_slot(
+    definition: dict[str, Any],
+    *,
+    frist_result: Any,
+    reconciliation: list[Any],
+    claims: list[dict[str, Any]],
+    inputs: dict[str, Any],
+) -> DocumentSlot:
+    kind = definition["kind"]
+    topic = definition["review_topic"]
+    if kind == "input":
+        raw = inputs.get(definition["input"])
+        value = _format_input(raw)
+        return DocumentSlot(
+            key=definition["key"],
+            label=definition["label"],
+            source="user_input",
+            value=value if isinstance(raw, date) else raw,
+            verified=bool(value),
+            needs_review=not value,
+            review_topic=topic if not value else "",
         )
-    )
-
-    return slots
-
-
-def _render_widerspruch_template(
-    slots: list[DocumentSlot],
-    absender_name: str | None,
-    absender_adresse: str | None,
-) -> str:
-    """Render the full Widerspruch document from its slots."""
-    slot_map: dict[str, DocumentSlot] = {s.key: s for s in slots}
-
-    absender_rendered = ""
-    if absender_name:
-        absender_rendered += absender_name + "\n"
-    if absender_adresse:
-        absender_rendered += absender_adresse
-
-    behoerde = slot_map.get("behoerde_name", DocumentSlot("", "", "")).render()
-    bescheid_datum = slot_map.get("bescheid_datum", DocumentSlot("", "", "")).render()
-    az = slot_map.get("bescheid_aktenzeichen", DocumentSlot("", "", "")).render()
-    bekanntgabe = slot_map.get("bekanntgabe", DocumentSlot("", "", "")).render()
-    frist_ende = slot_map.get("widerspruchsfrist_ende", DocumentSlot("", "", "")).render()
-    anspruch = slot_map.get("anspruch_hoehe", DocumentSlot("", "", "")).render()
-    differenz = slot_map.get("differenz_gesamt", DocumentSlot("", "", "")).render()
-    claims_rendered = slot_map.get("claims_text", DocumentSlot("", "", "")).render()
-
-    # If claims_rendered is a BITTE PRÜFEN placeholder but we have actual
-    # warnings, show them in document body instead
-    body_claims = claims_rendered
-
-    body = (
-        f"{absender_rendered}\n"
-        f"An {behoerde}\n\n"
-        f"**Widerspruch gegen den Bescheid vom {bescheid_datum}, "
-        f"Aktenzeichen: {az}**\n\n"
-        f"Sehr geehrte Damen und Herren,\n\n"
-        f"hiermit lege ich Widerspruch gegen den oben genannten Bescheid "
-        f"vom {bescheid_datum} (Aktenzeichen: {az}) ein.\n\n"
-        f"Der Bescheid ist mir {bekanntgabe} bekanntgegeben worden. "
-        f"Die Widerspruchsfrist endet {frist_ende}.\n\n"
-    )
-
-    if body_claims and not body_claims.startswith("[BITTE PRÜFEN"):
-        body += f"**Begründung:**\n\n" f"{body_claims}\n\n"
-
-    body += (
-        f"**Berechnung des korrekten Anspruchs:**\n\n"
-        f"Nach unserer Berechnung ergibt sich ein korrekter monatlicher "
-        f"Anspruch in Höhe von {anspruch}. {differenz}.\n\n"
-        f"**Antrag:**\n\n"
-        f"Der Bescheid vom {bescheid_datum} wird angefochten, soweit "
-        f"er von der korrekten Rechtslage abweicht. Ich beantrage,\n\n"
-        f"1. den Bescheid aufzuheben und\n"
-        f"2. die Leistung in gesetzlicher Höhe zu gewähren.\n\n"
-        f"Für den Fall, dass meinem Widerspruch nicht stattgegeben wird, "
-        f"beantrage ich die Vorlage an das zuständige Sozialgericht.\n\n"
-        f"Mit freundlichen Grüßen\n\n"
-        f"[Unterschrift]\n\n"
-    )
-
-    return body
+    if kind == "frist_date":
+        formatted = (
+            getattr(frist_result, definition["field"]).strftime("%d.%m.%Y")
+            if frist_result is not None
+            else None
+        )
+        return DocumentSlot(
+            key=definition["key"],
+            label=definition["label"],
+            source="fristen",
+            value=(definition.get("prefix", "") + formatted) if formatted else None,
+            verified=bool(formatted),
+            needs_review=not formatted,
+            review_topic=topic if not formatted else "",
+        )
+    if kind == "calc_amount":
+        amount = _find_reconciliation_value(reconciliation, definition["line"])
+        return DocumentSlot(
+            key=definition["key"],
+            label=definition["label"],
+            source="berechnung",
+            value=_fmt_eur(amount),
+            verified=amount is not None,
+            needs_review=amount is None,
+            review_topic=topic if amount is None else "",
+        )
+    if kind == "calc_difference":
+        line_diff = _find_reconciliation_attr(reconciliation, definition["line"], "differenz")
+        fallback = _find_reconciliation_value(reconciliation, definition["fallback_korrekt_line"])
+        slot_diff = line_diff if line_diff is not None else fallback
+        tolerance = float(definition["tolerance_eur"])
+        texts = definition["texts"]
+        diff_text: str | None
+        if slot_diff is not None:
+            amount_str = f"{abs(slot_diff):.2f}"
+            if slot_diff > tolerance:
+                diff_text = texts["positive"].format(amount=amount_str)
+            elif slot_diff < -tolerance:
+                diff_text = texts["negative"].format(amount=amount_str)
+            else:
+                diff_text = texts["zero"].format(amount=amount_str)
+        else:
+            diff_text = None
+        return DocumentSlot(
+            key=definition["key"],
+            label=definition["label"],
+            source="berechnung",
+            value=diff_text,
+            verified=slot_diff is not None,
+            needs_review=slot_diff is None,
+            review_topic=topic if slot_diff is None else "",
+        )
+    if kind == "claims":
+        return _claims_slot(definition, claims)
+    raise ValueError(f"unknown document slot kind: {kind!r}")
 
 
-# ---------------------------------------------------------------------------
-# Generator 2: Widerspruch under Jahresfrist (§ 66 Abs. 2 SGG)
-# ---------------------------------------------------------------------------
-
-
-def _render_widerspruch_jahresfrist_template(
-    slots: list[DocumentSlot],
-    absender_name: str | None,
-    absender_adresse: str | None,
-) -> str:
-    """Render a Widerspruch under the one-year Jahresfrist.
-
-    This path applies when the Widerspruchsfrist has nominally lapsed BUT
-    the Rechtsbehelfsbelehrung (RBB) was missing or incorrect, so the
-    one-year exceptional deadline under § 66 Abs. 2 SGG is still open.
-    """
-    slot_map: dict[str, DocumentSlot] = {s.key: s for s in slots}
-
-    absender_rendered = ""
-    if absender_name:
-        absender_rendered += absender_name + "\n"
-    if absender_adresse:
-        absender_rendered += absender_adresse
-
-    behoerde = slot_map.get("behoerde_name", DocumentSlot("", "", "")).render()
-    bescheid_datum = slot_map.get("bescheid_datum", DocumentSlot("", "", "")).render()
-    az = slot_map.get("bescheid_aktenzeichen", DocumentSlot("", "", "")).render()
-    bekanntgabe = slot_map.get("bekanntgabe", DocumentSlot("", "", "")).render()
-    frist_ende = slot_map.get("widerspruchsfrist_ende", DocumentSlot("", "", "")).render()
-    anspruch = slot_map.get("anspruch_hoehe", DocumentSlot("", "", "")).render()
-    differenz = slot_map.get("differenz_gesamt", DocumentSlot("", "", "")).render()
-    claims_rendered = slot_map.get("claims_text", DocumentSlot("", "", "")).render()
-
-    body = (
-        f"{absender_rendered}\n"
-        f"An {behoerde}\n\n"
-        f"**Widerspruch gegen den Bescheid vom {bescheid_datum}, "
-        f"Aktenzeichen: {az} (Jahresfrist gem. § 66 Abs. 2 SGG)**\n\n"
-        f"Sehr geehrte Damen und Herren,\n\n"
-        f"hiermit lege ich Widerspruch gegen den oben genannten Bescheid "
-        f"vom {bescheid_datum} (Aktenzeichen: {az}) ein.\n\n"
-        f"Der Bescheid ist mir {bekanntgabe} bekanntgegeben worden. "
-        f"Die Rechtsbehelfsbelehrung war fehlerhaft bzw. fehlte, sodass "
-        f"gemäß § 66 Abs. 2 SGG die einjährige Widerspruchsfrist gilt. "
-        f"Diese endet {frist_ende}.\n\n"
-    )
-
-    if claims_rendered and not claims_rendered.startswith("[BITTE PRÜFEN"):
-        body += f"**Begründung:**\n\n" f"{claims_rendered}\n\n"
-
-    body += (
-        f"**Berechnung des korrekten Anspruchs:**\n\n"
-        f"Nach unserer Berechnung ergibt sich ein korrekter monatlicher "
-        f"Anspruch in Höhe von {anspruch}. {differenz}.\n\n"
-        f"**Antrag:**\n\n"
-        f"Der Bescheid vom {bescheid_datum} wird angefochten, soweit "
-        f"er von der korrekten Rechtslage abweicht. Ich beantrage,\n\n"
-        f"1. den Bescheid aufzuheben und\n"
-        f"2. die Leistung in gesetzlicher Höhe zu gewähren.\n\n"
-        f"Für den Fall, dass meinem Widerspruch nicht stattgegeben wird, "
-        f"beantrage ich die Vorlage an das zuständige Sozialgericht.\n\n"
-        f"Mit freundlichen Grüßen\n\n"
-        f"[Unterschrift]\n\n"
-    )
-
-    return body
-
-
-# ---------------------------------------------------------------------------
-# Generator 3: Überprüfungsantrag (§ 44 SGB X)
-# ---------------------------------------------------------------------------
-
-
-def _render_ueberpruefungsantrag_template(
-    slots: list[DocumentSlot],
-    absender_name: str | None,
-    absender_adresse: str | None,
-) -> str:
-    """Render an Überprüfungsantrag under § 44 SGB X.
-
-    This path applies when the Widerspruchsfrist has lapsed AND no
-    Jahresfrist exception applies.  The applicant requests the authority
-    to retroactively revoke/remedy the illegal administrative act.
-    """
-    slot_map: dict[str, DocumentSlot] = {s.key: s for s in slots}
-
-    absender_rendered = ""
-    if absender_name:
-        absender_rendered += absender_name + "\n"
-    if absender_adresse:
-        absender_rendered += absender_adresse
-
-    behoerde = slot_map.get("behoerde_name", DocumentSlot("", "", "")).render()
-    bescheid_datum = slot_map.get("bescheid_datum", DocumentSlot("", "", "")).render()
-    az = slot_map.get("bescheid_aktenzeichen", DocumentSlot("", "", "")).render()
-    anspruch = slot_map.get("anspruch_hoehe", DocumentSlot("", "", "")).render()
-    differenz = slot_map.get("differenz_gesamt", DocumentSlot("", "", "")).render()
-    claims_rendered = slot_map.get("claims_text", DocumentSlot("", "", "")).render()
-
-    body = (
-        f"{absender_rendered}\n"
-        f"An {behoerde}\n\n"
-        f"**Antrag auf Überprüfung nach § 44 SGB X**\n\n"
-        f"**Betrifft:** Bescheid vom {bescheid_datum}, "
-        f"Aktenzeichen: {az}\n\n"
-        f"Sehr geehrte Damen und Herren,\n\n"
-        f"hiermit beantrage ich die Überprüfung des oben genannten "
-        f"Bescheides gemäß § 44 SGB X.\n\n"
-        f"Die Widerspruchsfrist ist zwischenzeitlich abgelaufen. "
-        f"Der Bescheid ist jedoch rechtswidrig, da er von der "
-        f"geltenden Rechtslage abweicht und Leistungen zu Unrecht "
-        f"versagt oder in zu geringer Höhe festgesetzt hat. "
-        f"§ 44 SGB X verpflichtet die Behörde zur Rücknahme "
-        f"rechtswidriger Verwaltungsakte, auch wenn diese "
-        f"bereits bestandskräftig geworden sind.\n\n"
-    )
-
-    if claims_rendered and not claims_rendered.startswith("[BITTE PRÜFEN"):
-        body += f"**Begründung:**\n\n" f"{claims_rendered}\n\n"
-
-    body += (
-        f"**Berechnung des korrekten Anspruchs:**\n\n"
-        f"Nach unserer Berechnung ergibt sich ein korrekter monatlicher "
-        f"Anspruch in Höhe von {anspruch}. {differenz}.\n\n"
-        f"**Antrag:**\n\n"
-        f"1. Der Bescheid vom {bescheid_datum} wird gemäß § 44 Abs. 1 "
-        f"SGB X mit Wirkung für die Vergangenheit zurückgenommen.\n"
-        f"2. Die Leistung wird in gesetzlicher Höhe neu festgesetzt "
-        f"und die Differenz in Höhe von {_fmt_eur(None)} nachgezahlt.\n"
-        f"3. Über den Antrag ist ein gesonderter, mit einer "
-        f"Rechtsbehelfsbelehrung versehener Bescheid zu erteilen.\n\n"
-        f"Mit freundlichen Grüßen\n\n"
-        f"[Unterschrift]\n\n"
-    )
-
-    return body
-
-
-# ---------------------------------------------------------------------------
-# Generator 4: Akteneinsichtsantrag (§ 25 SGB X)
-# ---------------------------------------------------------------------------
-
-
-def _render_akteneinsichtsantrag_template(
-    slots: list[DocumentSlot],
-    absender_name: str | None,
-    absender_adresse: str | None,
-    bescheid_datum: date | None,
-    aktenzeichen: str | None,
-    behoerde: str | None,
-) -> str:
-    """Render an Akteneinsichtsantrag under § 25 SGB X."""
-    absender_rendered = ""
-    if absender_name:
-        absender_rendered += absender_name + "\n"
-    if absender_adresse:
-        absender_rendered += absender_adresse
-
-    bd_str = (
-        bescheid_datum.strftime("%d.%m.%Y") if bescheid_datum else "[BITTE PRÜFEN: Bescheid-Datum]"
-    )
-    az_str = aktenzeichen if aktenzeichen else "[BITTE PRÜFEN: Aktenzeichen]"
-    beh_str = behoerde if behoerde else "[BITTE PRÜFEN: Behördenname]"
-
-    body = (
-        f"{absender_rendered}\n"
-        f"An {beh_str}\n\n"
-        f"**Antrag auf Akteneinsicht gemäß § 25 SGB X**\n\n"
-        f"**Betrifft:** Bescheid vom {bd_str}, "
-        f"Aktenzeichen: {az_str}\n\n"
-        f"Sehr geehrte Damen und Herren,\n\n"
-        f"hiermit beantrage ich Akteneinsicht in die mich betreffenden "
-        f"Verfahrensakten gemäß § 25 SGB X.\n\n"
-        f"Die Akteneinsicht wird benötigt, um die Rechtmäßigkeit des "
-        f"Bescheides vom {bd_str} (Aktenzeichen: {az_str}) zu überprüfen "
-        f"und die Erfolgsaussichten eines Rechtsbehelfs beurteilen zu "
-        f"können.\n\n"
-        f"**Umfang der Akteneinsicht:**\n\n"
-        f"Ich bitte um Einsicht in folgende Unterlagen:\n\n"
-        f"1. Den Bescheid vom {bd_str} einschließlich aller Anlagen\n"
-        f"2. Die vollständige Sachverhaltsermittlung und "
-        f"Berechnungsgrundlagen\n"
-        f"3. Sämtliche in der Behörde erstellte Vermerke und "
-        f"Stellungnahmen\n"
-        f"4. Die elektronische Akte (eAkte) sowie etwaige "
-        f"Parallelakten\n\n"
-        f"Die Einsicht kann in den Räumen der Behörde oder durch "
-        f"Übersendung von Kopien erfolgen. Sofern Kosten entstehen, "
-        f"bitte ich um vorherige Mitteilung.\n\n"
-        f"Mit freundlichen Grüßen\n\n"
-        f"[Unterschrift]\n\n"
-    )
-
+def _render_parts(parts: list[dict[str, Any]], values: _SlotValues) -> str:
+    body = ""
+    for part in parts:
+        gate = part.get("when_resolved")
+        if gate is not None:
+            rendered = values[gate]
+            if not rendered or rendered.startswith("[BITTE PRÜFEN"):
+                continue
+        body += str(part["text"]).format_map(values)
     return body
 
 
@@ -666,57 +410,47 @@ def _render_akteneinsichtsantrag_template(
 def select_generator(
     frist_result: Any,
     claims: list[dict[str, Any]] | None = None,
-) -> Literal[
-    "widerspruch",
-    "widerspruch_jahresfrist",
-    "ueberpruefungsantrag_44",
-    "akteneinsichtsantrag_25",
-]:
-    """Select which document generator to use based on Frist status.
+    *,
+    module_id: str | None = None,
+) -> str:
+    """Select which document template to use based on the Frist status.
 
-    Logic
-    -----
-    1. ``frist_typ == "kein_va"`` → No Widerspruch possible; suggest § 44
-       or Akteneinsicht.
-    2. ``frist_ende > today()`` → Standard Widerspruch (Frist still open).
-    3. Lapsed but ``rbb_status == "fehlerhaft"`` → Widerspruch under
-       Jahresfrist (§ 66 Abs. 2 SGG), with explanation in template.
-    4. Lapsed → Überprüfungsantrag (§ 44 SGB X).
+    The selection table is module data (``selection`` in the module's
+    document templates). For the sozialrecht module:
+
+    1. no Frist information or ``frist_typ == "kein_va"`` → Akteneinsicht;
+    2. ``frist_ende >= today()`` → Widerspruch (Jahresfrist variant for
+       ``frist_typ == "jahr"``);
+    3. lapsed → Widerspruch under Jahresfrist for ``"jahr"``, else
+       Überprüfungsantrag (§ 44 SGB X).
 
     Parameters
     ----------
     frist_result :
-        A ``FristResult`` from the Fristen engine.
+        A ``FristResult`` from the Fristen core.
     claims :
         Optional list of claims (used for future heuristics).
+    module_id :
+        Module whose templates apply; ``None`` → ``DEFAULT_MODULE``.
 
     Returns
     -------
     str
-        One of ``"widerspruch"``, ``"widerspruch_jahresfrist"``,
-        ``"ueberpruefungsantrag_44"``, ``"akteneinsichtsantrag_25"``.
+        A template id declared by the module.
     """
+    _, data = _templates(module_id)
+    selection = data["selection"]
+
     if frist_result is None:
-        # No Frist information — safest default is Akteneinsicht
-        return "akteneinsichtsantrag_25"
+        # No Frist information — module's safest default
+        return str(selection["no_deadline"])
 
-    if frist_result.frist_typ == "kein_va":
-        # Not a Verwaltungsakt — no Widerspruch possible
-        return "akteneinsichtsantrag_25"
+    by_typ = selection.get("by_frist_typ") or {}
+    if frist_result.frist_typ in by_typ:
+        return str(by_typ[frist_result.frist_typ])
 
-    today = date.today()
-
-    if frist_result.frist_ende >= today:
-        # Frist still open or ends today
-        if frist_result.frist_typ == "jahr":
-            return "widerspruch_jahresfrist"
-        return "widerspruch"
-
-    # Frist has lapsed
-    if frist_result.frist_typ == "jahr":
-        return "widerspruch_jahresfrist"
-
-    return "ueberpruefungsantrag_44"
+    branch = selection["open"] if frist_result.frist_ende >= date.today() else selection["lapsed"]
+    return str((branch.get("by_frist_typ") or {}).get(frist_result.frist_typ, branch["default"]))
 
 
 # ---------------------------------------------------------------------------
@@ -733,18 +467,19 @@ def generate_document(
     bescheid_datum: date | None = None,
     aktenzeichen: str | None = None,
     behoerde: str | None = None,
+    *,
+    module_id: str | None = None,
 ) -> GeneratedDocument:
-    """Generate an action document.
+    """Generate an action document from a module template.
 
     Parameters
     ----------
     doc_type :
-        One of ``"widerspruch"``, ``"widerspruch_jahresfrist"``,
-        ``"ueberpruefungsantrag_44"``, ``"akteneinsichtsantrag_25"``.
+        Template id declared by the module (e.g. ``"widerspruch"``).
     frist_result :
-        A ``FristResult`` from the Fristen engine (WP-21).
+        A ``FristResult`` from the Fristen core (WP-21/WP-92).
     reconciliation :
-        List of ``ReconciliationLineItem`` from the calculation engine
+        List of reconciliation line items from the module calculator
         (WP-23).
     claims :
         List of claim dicts from pipeline output, each containing
@@ -757,12 +492,15 @@ def generate_document(
         Reference number of the Bescheid (optional).
     behoerde :
         Name of the issuing authority (optional).
+    module_id :
+        Module whose templates apply; ``None`` → ``DEFAULT_MODULE``.
 
     Returns
     -------
     GeneratedDocument
         The assembled document with rendered text and slot audit trail.
     """
+    _, data = _templates(module_id)
     user_data = user_data or {}
     absender_name = user_data.get("name") or None
     absender_adresse = user_data.get("adresse") or None
@@ -771,64 +509,54 @@ def generate_document(
     if bescheid_datum is None and frist_result is not None:
         bescheid_datum = frist_result.bekanntgabe  # best-effort fallback
 
-    # ── Title mapping ─────────────────────────────────────────────────
-    titles = {
-        "widerspruch": "Widerspruch",
-        "widerspruch_jahresfrist": "Widerspruch (Jahresfrist, § 66 Abs. 2 SGG)",
-        "ueberpruefungsantrag_44": "Antrag auf Überprüfung (§ 44 SGB X)",
-        "akteneinsichtsantrag_25": "Antrag auf Akteneinsicht (§ 25 SGB X)",
+    absender_rendered = ""
+    if absender_name:
+        absender_rendered += absender_name + "\n"
+    if absender_adresse:
+        absender_rendered += absender_adresse
+
+    inputs: dict[str, Any] = {
+        "bescheid_datum": bescheid_datum,
+        "aktenzeichen": aktenzeichen,
+        "behoerde": behoerde,
     }
-    title = titles.get(doc_type, "Dokument")
+
+    template = (data.get("templates") or {}).get(doc_type)
+    title = str(template["title"]) if template else "Dokument"
 
     # ── Build slots ───────────────────────────────────────────────────
     slots: list[DocumentSlot] = []
     warnings: list[str] = []
+    values = _SlotValues(absender=absender_rendered)
 
-    if doc_type == "akteneinsichtsantrag_25":
-        # Akteneinsicht has minimal claim dependence — mainly procedural
-        body_rendered = _render_akteneinsichtsantrag_template(
-            slots,
-            absender_name,
-            absender_adresse,
-            bescheid_datum,
-            aktenzeichen,
-            behoerde,
-        )
+    if template is not None and not template.get("uses_slots", True):
+        # Procedural drafts without claim dependence: request inputs only.
+        for name, spec in (template.get("inputs") or {}).items():
+            formatted = _format_input(inputs.get(spec["input"]))
+            values[name] = formatted or f"[BITTE PRÜFEN: {spec['review_topic']}]"
+        body_rendered = _render_parts(template["parts"], values)
     else:
-        # Build slots for Widerspruch / Überprüfungsantrag
-        slots = _build_widerspruch_slots(
-            frist_result,
-            reconciliation,
-            claims,
-            bescheid_datum,
-            aktenzeichen,
-            behoerde,
-        )
+        slots = [
+            _build_slot(
+                definition,
+                frist_result=frist_result,
+                reconciliation=reconciliation,
+                claims=claims,
+                inputs=inputs,
+            )
+            for definition in data.get("slots") or ()
+        ]
 
         # Collect warnings from unresolved slots
-        for s in slots:
-            if s.needs_review or not s.verified:
-                warnings.append(f"Ungesicherter Slot '{s.key}': {s.review_topic or s.label}")
+        for slot in slots:
+            if slot.needs_review or not slot.verified:
+                warnings.append(
+                    f"Ungesicherter Slot '{slot.key}': {slot.review_topic or slot.label}"
+                )
 
-        # Render the appropriate template
-        if doc_type == "widerspruch_jahresfrist":
-            body_rendered = _render_widerspruch_jahresfrist_template(
-                slots,
-                absender_name,
-                absender_adresse,
-            )
-        elif doc_type == "widerspruch":
-            body_rendered = _render_widerspruch_template(
-                slots,
-                absender_name,
-                absender_adresse,
-            )
-        elif doc_type == "ueberpruefungsantrag_44":
-            body_rendered = _render_ueberpruefungsantrag_template(
-                slots,
-                absender_name,
-                absender_adresse,
-            )
+        if template is not None:
+            values.update({slot.key: slot.render() for slot in slots})
+            body_rendered = _render_parts(template["parts"], values)
         else:
             body_rendered = f"[Unbekannter Dokumenttyp: {doc_type}]"
             warnings.append(f"Unbekannter Dokumenttyp: {doc_type}")

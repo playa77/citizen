@@ -5,7 +5,8 @@ structure into ``§ → Absatz → Satz`` units, generates metadata, and returns
 normalised :class:`dict` objects ready for embedding and DB insertion.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-93: § range → legal_area chunk tags
+# come from module corpus scopes (`chunk_tags`), no hard-coded area table.
 
 from __future__ import annotations
 
@@ -370,19 +371,25 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
-# BGB paragraph → legal_area tagger
+# § range → legal_area tagger (module data, WP-93)
 # ---------------------------------------------------------------------------
-# Maps BGB paragraph ranges to legal_area values used by
-# legal_chunk.legal_area. Single paragraphs win over ranges; ranges are
-# inclusive on both ends. Tagging is purely additive: when a BGB chunk is
-# produced the parser tries to detect its paragraph number and stamps
-# the matching legal_area on the chunk. Chunks that fall outside any
-# defined range (e.g. "Allgemein" headers) get legal_area=None.
-_BGB_PARA_TO_LEGAL_AREA: list[tuple[tuple[int, int], str]] = [
-    ((1922, 2385), "erbrecht"),  # §§ 1922–2385 BGB = Erbrecht
-    ((516, 534), "schenkungsrecht"),  # §§ 516–534 BGB = Schenkungsrecht
-    ((1297, 1921), "familienrecht"),  # §§ 1297–1921 BGB = Familienrecht
-]
+# Paragraph ranges per source type are declared by modules as
+# ``chunk_tags`` in ``modules/<id>/corpus.yaml`` and stamped on
+# legal_chunk.legal_area. Ranges are inclusive on both ends; the first
+# matching range (area-table order) wins. Tagging is purely additive:
+# chunks outside every range (e.g. "Allgemein" headers) get legal_area=None.
+# legal_chunk.legal_area is kept for backward compatibility
+# (ARCHITECTURE.md § 4); module corpus scopes are the retrieval filter.
+
+
+def _chunk_tag_ranges(source_type: str) -> list[tuple[tuple[int, int], str]]:
+    from app.modules.areas import area_tables
+
+    return [
+        ((lo, hi), area)
+        for tag_source, lo, hi, area in area_tables().chunk_tags
+        if tag_source == source_type
+    ]
 
 
 def _infer_legal_area_for_bgb(hierarchy_path: str) -> str | None:
@@ -397,8 +404,8 @@ def _infer_legal_area_for_bgb(hierarchy_path: str) -> str | None:
     Returns
     -------
     str | None
-        The matched ``legal_area`` (e.g. ``"erbrecht"``) or ``None`` if
-        the paragraph falls outside any known range.
+        The matched ``legal_area`` (module-declared ``chunk_tags``) or
+        ``None`` if the paragraph falls outside any declared range.
     """
     if not hierarchy_path:
         return None
@@ -409,7 +416,7 @@ def _infer_legal_area_for_bgb(hierarchy_path: str) -> str | None:
         para = int(match.group(1))
     except (TypeError, ValueError):
         return None
-    for (lo, hi), area in _BGB_PARA_TO_LEGAL_AREA:
+    for (lo, hi), area in _chunk_tag_ranges("bgb"):
         if lo <= para <= hi:
             return area
     return None
@@ -808,8 +815,8 @@ def _parse_law_sections(
 
             hierarchy_path = " > ".join(hierarchy)
 
-            # Tag BGB chunks with their legal_area (erbrecht /
-            # schenkungsrecht / familienrecht / None). Other sources
+            # Tag BGB chunks with their legal_area (module chunk_tags,
+            # WP-93; None outside every declared range). Other sources
             # leave legal_area=None — they are either single-domain
             # (sgb*, weisung) or otherwise un-tagged.
             legal_area: str | None = None

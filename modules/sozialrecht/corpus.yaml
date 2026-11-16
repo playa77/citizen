@@ -1,0 +1,24 @@
+# Corpus scope of module `sozialrecht` (WP-93; ARCHITECTURE.md § 3.3).
+# `areas.<key>.source_types`: corpus source types that satisfy the area
+# (pre-flight readiness + per-area retrieval filter).
+# Extracted verbatim from v2.0.0 app/services/corpus_readiness.py.
+
+areas:
+  sozialrecht:
+    source_types:
+    - sgb1
+    - sgb2
+    - sgb3
+    - sgb9
+    - sgb12
+    - sgbx
+    - weisung
+    - bsg
+    - vwvfg
+    - sgg
+norm_reference_source_types:
+- sgb2
+- sgbx
+- sgg
+- sgb3
+- sgb12

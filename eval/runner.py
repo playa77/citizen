@@ -1,9 +1,10 @@
-# Version: 1.0.0 | 2026-07-12
+# Version: 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
+# 1.0.0 | 2026-07-12
 """CLI entry point for the Citizen eval harness.
 
 Usage::
 
-    python -m eval.runner eval/goldsets/goldset-v0.1.0.yaml \\
+    python -m eval.runner modules/sozialrecht/goldset/goldset-v0.1.0.yaml \\
         [--case CASE_ID] [--save] [--baseline BASELINE_PATH]
 
 Runs the full pipeline on each goldset case, computes metrics, and optionally

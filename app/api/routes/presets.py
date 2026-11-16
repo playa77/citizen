@@ -5,9 +5,13 @@ Endpoints:
     GET  /api/v1/presets/{id}         Get one preset
     POST /api/v1/presets/suggest      LLM-suggested composite for a case
     POST /api/v1/presets/apply        Apply a preset (returns IntakeResult-shaped dict)
+
+WP-93: the preset catalog, the keyword fallback table and the fallback
+preset are module data (``modules/<id>/intake.yaml``) assembled by
+``app.modules.areas``; the catch-all area replaces the hard-coded literal.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0
 
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ from typing import Any
 from fastapi import APIRouter, Body, HTTPException, status
 
 from app.core.router import OpenRouterClient
-from app.db.models import LEGAL_AREA_ALLOWED
+from app.modules.areas import area_tables
 from app.services.presets import get_preset, list_presets
 
 logger = logging.getLogger(__name__)
@@ -36,29 +40,29 @@ _SUGGEST_SYSTEM = (
     "von Fall-Presets, die am besten passt:\n\n"
     + "\n".join(f"- {p['id']}: {p['name']} — {p['description']}" for p in list_presets())
     + "\n\nZugelassene Rechtsgebiete: "
-    + ", ".join(LEGAL_AREA_ALLOWED)
+    + ", ".join(area_tables().keys)
     + '\n\nAntworte GENAU mit einem JSON-Objekt: {"preset_id": "<id>", '
     '"primary_area": "<legal_area>", "secondary_areas": ["<legal_area>", ...]}.\n'
     "Gib ausschließlich gültiges JSON zurück."
 )
 
+# (preset_id, primary_area, keywords) — module data; the default module's
+# entries come last so it wins ties only as the initial fallback.
 _KEYWORD_FALLBACK: list[tuple[str, str, tuple[str, ...]]] = [
-    # (preset_id, primary_area, keywords)
-    ("erbe-mit-testament", "erbrecht", ("testament", "erbschein", "erblasser", "erbfolge")),
-    ("erbe-mit-familie", "erbrecht", ("geschieden", "scheidung", "zugewinn", "ex-mann", "ex-frau")),
-    ("schenkung-zu-lebzeiten", "schenkungsrecht", ("schenkung", "schenken", "verschenk")),
-    ("hofesuebergabe", "erbrecht", ("hof", "landwirtschaft", "höfeordnung")),
-    (
-        "sozialrecht-allgemein",
-        "sozialrecht",
-        ("jobcenter", "bürgergeld", "sanktion", "sozialamt", "sgb"),
-    ),
+    (fb.preset_id, fb.primary_area, fb.keywords) for fb in area_tables().preset_fallback
 ]
+
+
+def _fallback_suggestion() -> tuple[str, str]:
+    tables = area_tables()
+    preset = get_preset(tables.fallback_preset)
+    primary = preset["legal_areas"][0] if preset and preset["legal_areas"] else tables.catch_all
+    return tables.fallback_preset, primary
 
 
 def _keyword_suggest(text: str) -> dict[str, Any]:
     haystack = (text or "").lower()
-    best = ("sozialrecht-allgemein", "sozialrecht")
+    best = _fallback_suggestion()
     best_score = 0
     for pid, primary, kws in _KEYWORD_FALLBACK:
         score = sum(1 for kw in kws if kw in haystack)
@@ -98,11 +102,12 @@ async def _call_llm_suggest(text: str) -> dict[str, Any]:
     preset_id = str(parsed.get("preset_id") or "").strip()
     if not get_preset(preset_id):
         return _keyword_suggest(text)
-    primary = str(parsed.get("primary_area") or "andere").strip()
-    if primary not in LEGAL_AREA_ALLOWED:
-        primary = "andere"
+    tables = area_tables()
+    primary = str(parsed.get("primary_area") or tables.catch_all).strip()
+    if primary not in tables.keys:
+        primary = tables.catch_all
     secs = parsed.get("secondary_areas") or []
-    secs_clean = [s for s in secs if s in LEGAL_AREA_ALLOWED and s != primary]
+    secs_clean = [s for s in secs if s in tables.keys and s != primary]
     return {"preset_id": preset_id, "primary_area": primary, "secondary_areas": secs_clean}
 
 
@@ -174,6 +179,8 @@ async def post_apply_preset(
         "preset_id": preset_id,
         "preset_name": preset["name"],
         "legal_areas": list(preset["legal_areas"]),
-        "primary_area": preset["legal_areas"][0] if preset["legal_areas"] else "andere",
+        "primary_area": (
+            preset["legal_areas"][0] if preset["legal_areas"] else area_tables().catch_all
+        ),
         "enriched_text": initial_text,  # callers can post-process as needed
     }

@@ -1,4 +1,7 @@
-# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: module registry validation
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-93: startup also builds the module
+# area tables and imports the enabled modules' calculators/regime providers, so
+# broken module content refuses startup instead of failing the first request.
+# 0.4.0 | 2026-11-16 — WP-91: module registry validation
 # at startup (refuses an invalid enabled manifest or a disabled default).
 
 import asyncio
@@ -64,6 +67,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             len(_registry.modules),
             sorted(_registry.enabled),
             _registry.default_module,
+        )
+        # WP-93: module content (area tables, typed code extension points).
+        from app.modules.areas import area_tables
+        from app.modules.runtime import calculators_for, regime_providers_for
+
+        _tables = area_tables()
+        _enabled = sorted(_registry.enabled)
+        logger.info(
+            "Module content: %d area keys, %d presets, calculators=%d, regime providers=%d",
+            len(_tables.keys),
+            len(_tables.presets),
+            len(calculators_for(_enabled)),
+            len(regime_providers_for(_enabled)),
         )
     except Exception as exc:
         logger.critical("Refusing to start: module registry validation failed — %s", exc)

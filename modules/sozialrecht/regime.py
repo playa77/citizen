@@ -9,20 +9,28 @@ Regime boundaries (derived from major SGB II reforms):
   - 2025-01-01 to 2026-06-30: "a.F._2025"      — Regelbedarf update
   - 2026-07-01 onward: "n.F._2026"              — major reform (new age tiers, Vermögensfreibeträge)
 
-Usage::
+Module code of ``sozialrecht`` (WP-93: moved from ``app/services/regime.py``;
+generalised by the core as an ``app.modules.sdk.RegimeProvider``, exported as
+``REGIME_PROVIDER`` below and declared in ``module.yaml`` under
+``regimes.provider``). The core reaches it only through
+``app.modules.runtime.regime_banner_for``.
 
-    from app.services.regime import legal_regime, regime_banner
+Usage (inside the module)::
+
+    from .regime import legal_regime, regime_banner
 
     reg = legal_regime(date(2026, 5, 1))   # → "a.F._2025"
     print(regime_banner(reg))  # → "Achtung: Für diesen Zeitraum gilt …"
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0
 
 from __future__ import annotations
 
 from datetime import date, timedelta
 from typing import Final
+
+from app.modules.sdk import RegimeProvider
 
 # ---------------------------------------------------------------------------
 # Regime boundary dates
@@ -191,3 +199,8 @@ def regime_banner(regime: str) -> str:
         valid = ", ".join(sorted(_banners))
         raise ValueError(f"Unbekanntes Regime: {regime!r}. Gültige Werte: {valid}")
     return banner
+
+
+#: The module's ``RegimeProvider`` (ARCHITECTURE.md § 2.4), declared in
+#: ``module.yaml`` as ``regimes.provider: regime:REGIME_PROVIDER``.
+REGIME_PROVIDER = RegimeProvider(regime_for=legal_regime, banner=regime_banner)

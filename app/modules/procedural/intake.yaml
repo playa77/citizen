@@ -1,0 +1,16 @@
+# Intake tables of the core procedural library (WP-93; D-038).
+# `verwaltungsrecht` is not a module: D-038 folds the legacy area key into
+# the core's procedural library (Verwaltungsverfahren basics shared by all
+# modules). These rows carry its v2.0.0 behaviour; read by app/modules/areas.py.
+# Extracted verbatim from the v2.0.0 tables in app/services/intake.py.
+
+areas:
+  verwaltungsrecht:
+    keywords:
+    - verwaltungsakt
+    - widerspruch
+    - baugenehmigung
+    - gewerbe
+    - ausländerbehörde
+    - führerschein
+    - bußgeldbescheid

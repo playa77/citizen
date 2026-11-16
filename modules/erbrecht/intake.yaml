@@ -1,0 +1,101 @@
+# Intake tables of module `erbrecht` (WP-93; ARCHITECTURE.md § 3.8).
+# `areas` is keyed by area key (module id or a legacy alias it owns, D-038):
+# `keywords` drive the keyword fallback of the intake interview,
+# `synonyms` map free-text LLM answers back onto the area key.
+# Extracted verbatim from the v2.0.0 hard-coded tables in
+# app/services/intake.py and app/api/routes/presets.py.
+
+areas:
+  erbrecht:
+    keywords:
+    - erbe
+    - testament
+    - erbfolge
+    - erbschein
+    - pflichtteil
+    - nachlass
+    - verstorb
+    - hinterblieb
+    - miterb
+    - erbanteil
+    - erbvertrag
+    - erblasser
+    synonyms:
+    - erbschaft
+    - erben
+    - nachfolge
+  schenkungsrecht:
+    keywords:
+    - schenkung
+    - schenken
+    - verschenk
+    - schenkungsvertrag
+    - freibetrag schenkung
+    synonyms:
+    - schenken
+    - schenkung
+presets:
+- id: erbe-mit-testament
+  name: Erbe mit Testament
+  description: 'Erbrecht mit letztwilliger Verfügung: Testamentsauslegung, Erbquote, Pflichtteil, Erbscheinsverfahren, Erbschaftsteuer-Freibeträge.'
+  legal_areas:
+  - erbrecht
+  typical_scenarios:
+  - Ich habe ein handschriftliches Testament geerbt — was nun?
+  - Mein Bruder beansprucht einen höheren Pflichtteil.
+  - Wie berechnet sich die Erbschaftsteuer auf ein Haus?
+- id: erbe-mit-familie
+  name: Erbe mit Familienkonflikt
+  description: 'Schnittstelle Erbrecht / Familienrecht: Erbfolge mit Scheidungsfolgen, Zugewinnausgleich im Nachlass, Ausgleichsansprüche zwischen Miterben.'
+  legal_areas:
+  - erbrecht
+  - familienrecht
+  typical_scenarios:
+  - Meine geschiedene Frau beansprucht Erbanteile.
+  - Mein Ex-Mann ist verstorben — steht mir ein Pflichtteil zu?
+- id: schenkung-zu-lebzeiten
+  name: Schenkung zu Lebzeiten
+  description: 'Schenkungsrecht und Erbschaftsteuer: vorzeitige Vermögensübertragung, Freibeträge alle 10 Jahre, Anzeigepflichten beim Finanzamt, Rückforderungsrechte.'
+  legal_areas:
+  - schenkungsrecht
+  - erbrecht
+  typical_scenarios:
+  - Ich will meinem Kind noch zu Lebzeiten das Haus übertragen.
+  - Welche Steuern fallen bei einer Schenkung an?
+- id: hofesuebergabe
+  name: Höfeübergabe (Landwirtschaft)
+  description: 'Sondererbrecht der Höfeordnung: Hofesübergabe zu Lebzeiten, Abfindung weichender Erben, Bewertung nach Ertragswert, Zusammenhang mit Erbschaftsteuer.'
+  legal_areas:
+  - erbrecht
+  - schenkungsrecht
+  typical_scenarios:
+  - Ich übernehme den Hof von meinen Eltern.
+  - Wie wird der Hof für die Erbschaftsteuer bewertet?
+preset_keyword_fallback:
+- preset: erbe-mit-testament
+  primary_area: erbrecht
+  keywords:
+  - testament
+  - erbschein
+  - erblasser
+  - erbfolge
+- preset: erbe-mit-familie
+  primary_area: erbrecht
+  keywords:
+  - geschieden
+  - scheidung
+  - zugewinn
+  - ex-mann
+  - ex-frau
+- preset: schenkung-zu-lebzeiten
+  primary_area: schenkungsrecht
+  keywords:
+  - schenkung
+  - schenken
+  - verschenk
+- preset: hofesuebergabe
+  primary_area: erbrecht
+  keywords:
+  - hof
+  - landwirtschaft
+  - höfeordnung

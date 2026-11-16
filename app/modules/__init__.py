@@ -5,12 +5,15 @@ for module code (`sdk`), the manifest schema (`manifest.schema.json`,
 versioned with the core contract) and the registry (`registry`) that
 discovers, validates, enables and resolves modules.
 
-Pipeline and API wiring is deliberately absent here — that is WP-93 and
-WP-95. The only consumer today is app startup validation and the module
-import lint (`lint`).
+WP-93 adds the content layer: `content` (manifest-declared files and
+code references, loaded under the synthetic package `citizen_modules`),
+`areas` (area-keyed tables reassembled from module data in v2.0.0 order),
+`runtime` (request → modules; calculators, regime providers, templates,
+deadline specs) and `parameters` (parameter files → `legal_parameter`
+rows). API wiring (`/modules*`, enablement errors) is WP-95.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0
 
 from pathlib import Path
 

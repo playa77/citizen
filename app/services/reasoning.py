@@ -18,7 +18,8 @@ directive embedded in the system prompt. Malformed JSON triggers one automatic
 retry with a stricter prompt before raising ``JSONParseError``.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: default stage prompts imported as
+# DEFAULT_PROMPTS (DEFAULT_MODULE profile) instead of SOCIALRECHT_PROMPTS.
 
 from __future__ import annotations
 
@@ -28,7 +29,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from app.core.router import get_shared_client
-from app.services.prompts import SOCIALRECHT_PROMPTS
+from app.services.prompts import DEFAULT_PROMPTS
 from app.utils.tokens import estimate_tokens, trim_text
 
 logger = logging.getLogger(__name__)
@@ -183,7 +184,7 @@ def _extract_json_segment(text: str) -> str | None:
 # area-specific variants. We re-export the socialrecht (default) prompts
 # under the original module-level names so any pre-existing importer
 # keeps working byte-for-byte.
-_CLASSIFICATION_SYSTEM = SOCIALRECHT_PROMPTS["classification"]
+_CLASSIFICATION_SYSTEM = DEFAULT_PROMPTS["classification"]
 
 
 async def classify_issues(
@@ -245,7 +246,7 @@ async def classify_issues(
 # Stage 3 — Question Decomposition
 # ---------------------------------------------------------------------------
 
-_DECOMPOSITION_SYSTEM = SOCIALRECHT_PROMPTS["decomposition"]
+_DECOMPOSITION_SYSTEM = DEFAULT_PROMPTS["decomposition"]
 
 
 async def decompose_questions(
@@ -304,7 +305,7 @@ async def decompose_questions(
 # Combined Stages 2+3 — Triage (WP-006)
 # ---------------------------------------------------------------------------
 
-_TRIAGE_SYSTEM = SOCIALRECHT_PROMPTS["triage"]
+_TRIAGE_SYSTEM = DEFAULT_PROMPTS["triage"]
 
 
 async def triage_document(
@@ -465,14 +466,14 @@ async def triage_document(
 # Combined Stages 5+6+7+8 — Grounded Answer Generation (WP-007)
 # ---------------------------------------------------------------------------
 
-_GROUNDED_ANSWER_SYSTEM = SOCIALRECHT_PROMPTS["grounded_answer"]
+_GROUNDED_ANSWER_SYSTEM = DEFAULT_PROMPTS["grounded_answer"]
 
 
 # ---------------------------------------------------------------------------
 # Stage 7 — Adversarial Legal Review (Rechtsprüfungsrat)
 # ---------------------------------------------------------------------------
 
-_ADVERSARIAL_REVIEW_SYSTEM = SOCIALRECHT_PROMPTS["adversarial_review"]
+_ADVERSARIAL_REVIEW_SYSTEM = DEFAULT_PROMPTS["adversarial_review"]
 
 
 async def adversarial_review(
@@ -898,7 +899,7 @@ async def generate_grounded_answer_stream(
 # Stage 5 — Claim Construction
 # ---------------------------------------------------------------------------
 
-_CLAIM_CONSTRUCTION_SYSTEM = SOCIALRECHT_PROMPTS["claim_construction"]
+_CLAIM_CONSTRUCTION_SYSTEM = DEFAULT_PROMPTS["claim_construction"]
 
 
 async def construct_claims(
@@ -994,7 +995,7 @@ async def construct_claims(
 # Stage 6 — Verification Pass
 # ---------------------------------------------------------------------------
 
-_VERIFICATION_SYSTEM = SOCIALRECHT_PROMPTS["verification"]
+_VERIFICATION_SYSTEM = DEFAULT_PROMPTS["verification"]
 
 
 async def verify_claims(
@@ -1110,7 +1111,7 @@ async def verify_claims(
 # Stage 7 — Output Generation
 # ---------------------------------------------------------------------------
 
-_OUTPUT_SYSTEM = SOCIALRECHT_PROMPTS["output"]
+_OUTPUT_SYSTEM = DEFAULT_PROMPTS["output"]
 
 
 async def generate_output(
