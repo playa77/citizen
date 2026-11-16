@@ -14,7 +14,7 @@
      WP-95 (module API) and WP-96 (compliance deltas) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
-<!-- Canonical package version: pyproject.toml (stays 2.0.0 until P9 exit). -->
+<!-- Canonical package version: pyproject.toml (3.0.0 — cut at the P9 exit gate, WP-97). -->
 
 ---
 

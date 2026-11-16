@@ -31,7 +31,7 @@ Teil A („Projektstatement")
 | **Weg** | Freier öffentlicher Pfad: MIT, kostenlos, nicht-kommerziell, nicht als Kanzlei-Software gebaut (Entscheidung **D-034**) |
 | **Architektur (Ziel)** | Domänenneutraler Kern + austauschbare **Rechtsgebiets-Module**; Sozialrecht ist Modul 1 und Standard (**D-036**) — siehe [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Roadmap** | [docs/roadmap-v3.0.0.md](docs/roadmap-v3.0.0.md): Modul-Architektur → Dossier → Modul-Plattform → Bürger-Oberfläche → zehn weitere Module |
-| **Stand des Codes** | v2.0.0: ein verifiziertes Gebiet (Sozialrecht), Logik noch fest verdrahtet; der Umbau zu Modulen ist Phase P9 der Roadmap |
+| **Stand des Codes** | v3.0.0: Modul-Architektur umgesetzt (WP-91…WP-97) — Kern ohne Rechtsgebietswissen, Sozialrecht als Modul `1.1.0` (Standard), sieben experimentelle Stub-Module, Modul-API und Compliance-Deltas; P10 (Dossier) ist die nächste Phase |
 
 ## Rechtlicher Status
 

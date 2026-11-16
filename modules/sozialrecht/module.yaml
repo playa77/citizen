@@ -7,9 +7,12 @@
 # rules engine, the 2026-07-01 regime provider, the action-draft templates
 # and the goldsets. Behaviour is unchanged for requests that name no module.
 
-# Semantic Version: 1.1.0 | 2026-11-16 — prompt set 3.0.0: prompt profile
-# (issue_terms with norm anchors, result_categories), calculator prompts
-# P-14/P-15, regime banners as constraints with a reference date (D-060).
+# Semantic Version: 1.1.0 | 2026-11-16 — released with core 3.0.0 at the P9
+# exit gate (WP-97): the version stays 1.1.0 (D-060's prompt-profile bump; 1.0.0
+# was never published), the gate pins zero goldset regression against B0′.
+# 1.1.0 — prompt set 3.0.0: prompt profile (issue_terms with norm anchors,
+# result_categories), calculator prompts P-14/P-15, regime banners as
+# constraints with a reference date (D-060).
 # 1.0.0
 
 id: sozialrecht
