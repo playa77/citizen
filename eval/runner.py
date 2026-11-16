@@ -1,4 +1,7 @@
-# Version: 1.1.0 | 2026-11-16 — WP-95: --module <id> runs the goldset the module
+# Version: 1.2.0 | 2026-11-16 — prompt set 3.0.0 measurement (CR-09/CR-13):
+# sourced quote-verification rate, prompt-set identity per report, --save also
+# writes raw pipeline outputs, --rescore re-scores them without LLM calls.
+# 1.1.0 | 2026-11-16 — WP-95: --module <id> runs the goldset the module
 # manifest declares (positional goldset path becomes optional).
 # 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
 # 1.0.0 | 2026-07-12
@@ -9,6 +12,7 @@ Usage::
     python -m eval.runner modules/sozialrecht/goldset/goldset-v0.1.0.yaml \\
         [--case CASE_ID] [--save] [--baseline BASELINE_PATH]
     python -m eval.runner --module sozialrecht [--case …] [--save] [--baseline …]
+    python -m eval.runner <goldset> --rescore eval/results/<report>.outputs.json
 
 ``--module <id>`` selects the goldset declared in that module's manifest
 (``goldset.path``); give either a goldset path or ``--module``, not both.
@@ -57,6 +61,7 @@ from eval.metrics import (
     compute_pii_recall,
     compute_quote_verification_rate,
     compute_reinjection_integrity,
+    compute_sourced_quote_verification_rate,
 )
 
 logger = logging.getLogger(__name__)
@@ -156,6 +161,8 @@ class CaseMetrics:
     pii_precision: float | None = None
     over_redaction_count: int | None = None
     reinjection_integrity: float | None = None
+    # 1.2.0: quote verification over claims that cite a chunk (None: none do)
+    quote_verification_rate_sourced: float | None = None
 
 
 @dataclass
@@ -168,6 +175,9 @@ class EvalReport:
     run_timestamp: str  # ISO 8601
     cases: list[CaseMetrics] = field(default_factory=list)
     aggregate: dict[str, float | None] = field(default_factory=dict)
+    # 1.2.0 (CR-09): prompt set version + sha256 of every default stage prompt,
+    # so reports produced by different prompt sets are never compared blindly.
+    prompt_set: dict[str, Any] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +218,7 @@ def _compute_aggregate(cases: list[CaseMetrics]) -> dict[str, float | None]:
         "frist_exact_match",
         "assessment_match",
         "quote_verification_rate",
+        "quote_verification_rate_sourced",
         "leakage_rate",
         "pii_recall",
         "pii_precision",
@@ -269,6 +280,9 @@ def _compute_case_metrics(
     quote_verification_rate = compute_quote_verification_rate(
         output.verified_claims,
     )
+    quote_verification_rate_sourced = compute_sourced_quote_verification_rate(
+        output.verified_claims,
+    )
 
     # PII metrics (optional, only when --pii-gate on)
     leakage_rate: float | None = None
@@ -324,6 +338,7 @@ def _compute_case_metrics(
         pii_precision=pii_precision,
         over_redaction_count=over_redaction_count,
         reinjection_integrity=reinjection_integrity,
+        quote_verification_rate_sourced=quote_verification_rate_sourced,
     )
 
 
@@ -395,6 +410,40 @@ def _print_aggregate(aggregate: dict[str, float | None]) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _prompt_set_identity() -> dict[str, Any]:
+    """Version and digests of the default stage prompts (CR-09)."""
+    try:
+        from app.services.prompts import DEFAULT_PROMPTS, PROMPT_SET_VERSION, prompt_identity
+    except Exception as exc:  # pragma: no cover - import guard for partial envs
+        logger.warning("prompt identity unavailable: %s", exc)
+        return {}
+    return {
+        "version": PROMPT_SET_VERSION,
+        "stages": {
+            stage: prompt_identity(stage, text)["sha256"]
+            for stage, text in sorted(DEFAULT_PROMPTS.items())
+        },
+    }
+
+
+def _output_to_json(output: PipelineOutput) -> dict[str, Any]:
+    """Raw pipeline output for re-scoring; chunk texts are dropped (size)."""
+    data = asdict(output)
+    data["retrieved_chunks"] = [
+        {k: v for k, v in c.items() if k != "text_content"} for c in output.retrieved_chunks
+    ]
+    return data
+
+
+def _save_outputs(report_path: Path, outputs: dict[str, PipelineOutput]) -> Path:
+    """Write ``<report>.outputs.json`` next to the report (1.2.0)."""
+    path = report_path.with_name(report_path.stem + ".outputs.json")
+    payload = {case_id: _output_to_json(o) for case_id, o in outputs.items()}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), "utf-8")
+    logger.info("Raw outputs saved to %s", path)
+    return path
+
+
 def _save_report(report: EvalReport, goldset_path: str) -> Path:
     """Serialize an ``EvalReport`` to ``eval/results/<timestamp>-<sha>.json``.
 
@@ -416,6 +465,7 @@ def _save_report(report: EvalReport, goldset_path: str) -> Path:
         "run_timestamp": report.run_timestamp,
         "cases": [asdict(c) for c in report.cases],
         "aggregate": report.aggregate,
+        "prompt_set": report.prompt_set,
     }
 
     path.write_text(
@@ -439,6 +489,7 @@ def _load_report(path_str: str) -> EvalReport:
         run_timestamp=data["run_timestamp"],
         cases=cases,
         aggregate=data["aggregate"],
+        prompt_set=data.get("prompt_set", {}),  # absent in reports before 1.2.0
     )
 
 
@@ -454,6 +505,7 @@ async def run_eval(
     save: bool = False,
     baseline_path: str | None = None,
     pii_gate: bool = False,
+    rescore_path: str | None = None,
 ) -> EvalReport:
     """Run the full eval suite on a goldset file.
 
@@ -467,6 +519,9 @@ async def run_eval(
         If ``True``, save the report to ``eval/results/``.
     baseline_path :
         If provided, run a regression gate against this baseline report.
+    rescore_path :
+        If provided, re-score the raw outputs saved by an earlier ``--save``
+        run instead of running the pipeline (no LLM or DB calls).
 
     Returns
     -------
@@ -514,13 +569,24 @@ async def run_eval(
 
     # ── Run each case ──────────────────────────────────────────────────
     all_metrics: list[CaseMetrics] = []
+    outputs: dict[str, PipelineOutput] = {}
+    saved_outputs: dict[str, Any] = {}
+    if rescore_path:
+        saved_outputs = json.loads(Path(rescore_path).read_text(encoding="utf-8"))
     for case in cases:
-        logger.info("[%s] Running pipeline ...", case.id)
-        print(f"  {case.id:24s}  Running...", end="\r")
-
+        from eval.pipeline_adapter import PipelineOutput as _Output
         from eval.pipeline_adapter import run_pipeline_for_case
 
-        output = await run_pipeline_for_case(case)
+        if rescore_path:
+            if case.id not in saved_outputs:
+                logger.warning("[%s] no saved output in %s — skipped", case.id, rescore_path)
+                continue
+            output = _Output(**saved_outputs[case.id])
+        else:
+            logger.info("[%s] Running pipeline ...", case.id)
+            print(f"  {case.id:24s}  Running...", end="\r")
+            output = await run_pipeline_for_case(case)
+        outputs[case.id] = output
         metrics = _compute_case_metrics(case, output, pii_gate=pii_gate)
         all_metrics.append(metrics)
 
@@ -540,11 +606,14 @@ async def run_eval(
         run_timestamp=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         cases=all_metrics,
         aggregate=aggregate,
+        prompt_set=_prompt_set_identity(),
     )
 
     # ── Save if requested ──────────────────────────────────────────────
     if save:
-        _save_report(report, goldset_path)
+        report_path = _save_report(report, goldset_path)
+        if not rescore_path:
+            _save_outputs(report_path, outputs)
 
     # ── Run regression gate if baseline provided ───────────────────────
     if baseline_path:
@@ -626,6 +695,10 @@ async def main() -> None:
     parser.add_argument("--save", action="store_true", help="Save report to eval/results/")
     parser.add_argument("--baseline", help="Path to baseline report for regression gate")
     parser.add_argument(
+        "--rescore",
+        help="Re-score raw outputs (<report>.outputs.json) instead of running the pipeline",
+    )
+    parser.add_argument(
         "--pii-gate",
         choices=["on", "off"],
         default="off",
@@ -643,6 +716,7 @@ async def main() -> None:
         save=args.save,
         baseline_path=args.baseline,
         pii_gate=(args.pii_gate == "on"),
+        rescore_path=args.rescore,
     )
 
     # If we ran a regression gate and it failed, exit with code 1

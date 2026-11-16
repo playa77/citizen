@@ -1,4 +1,6 @@
-# Version: 1.1.0 | 2026-11-16 — WP-93: Frist metric evaluates the goldset
+# Version: 1.2.0 | 2026-11-16 — CR-13: citation precision normalises expected
+# norms; sourced quote-verification rate added.
+# 1.1.0 | 2026-11-16 — WP-93: Frist metric evaluates the goldset
 # module's deadline spec through the Fristen core (shim app.services.fristen
 # removed).
 # 1.0.0 | 2026-07-12
@@ -118,7 +120,13 @@ def compute_citation_precision(
     float
         Precision score in ``[0, 1]``.
     """
-    expected_norms: set[str] = {c.norm for c in expected_citations}
+    # 1.2.0 (F-19, CR-13): expected norms go through the same normaliser as
+    # the pipeline side ("§ 11b Abs. 2 S. 1 SGB II" → "§ 11b SGB II"); before,
+    # the raw goldset strings could never equal an extracted key. A citation
+    # the extractor cannot parse keeps its raw form.
+    expected_norms: set[str] = set()
+    for c in expected_citations:
+        expected_norms.update(extract_norm_references(c.norm) or {c.norm})
 
     if not expected_norms and not pipeline_norms:
         return 1.0  # no expectations, none produced
@@ -316,6 +324,22 @@ def compute_quote_verification_rate(verified_claims: list[dict[str, Any]]) -> fl
         1 for vc in verified_claims if vc.get("verification_status") in ("exakt", "normalisiert")
     )
     return verified / len(verified_claims)
+
+
+def compute_sourced_quote_verification_rate(
+    verified_claims: list[dict[str, Any]],
+) -> float | None:
+    """Quote verification over claims that cite a chunk (1.2.0).
+
+    ``compute_quote_verification_rate`` counts every claim, so an honest
+    "nicht belegbar" claim (empty ``evidence_chunk_id``, prompt set 3.0.0)
+    reads as a failed quote. This variant only counts claims that name a
+    chunk; ``None`` when no claim does.
+    """
+    sourced = [vc for vc in verified_claims if str(vc.get("evidence_chunk_id", "")).strip()]
+    if not sourced:
+        return None
+    return compute_quote_verification_rate(sourced)
 
 
 def compute_assessment_match(

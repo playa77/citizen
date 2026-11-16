@@ -65,8 +65,32 @@ Versioning / breaking changes
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from functools import lru_cache
+
+# ---------------------------------------------------------------------------
+# Prompt identity (CR-09, F-14)
+# ---------------------------------------------------------------------------
+
+#: Version of the prompt set as a whole (every stage, shared block, endpoint
+#: and calculator prompt). Bumped on any change to prompt text.
+PROMPT_SET_VERSION = "2.0.0"
+
+
+def prompt_digest(text: str) -> str:
+    """SHA-256 hex digest of a rendered prompt."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def prompt_identity(stage: str, text: str) -> dict[str, str]:
+    """Identity of one rendered prompt: stage id, set version, digest.
+
+    Recorded in stage audit payloads and eval reports so that outputs can be
+    traced to the exact instruction text that produced them.
+    """
+    return {"id": stage, "version": PROMPT_SET_VERSION, "sha256": prompt_digest(text)}
+
 
 # ---------------------------------------------------------------------------
 # Stage metadata — recommended sampling temperatures

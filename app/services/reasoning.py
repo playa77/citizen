@@ -308,6 +308,18 @@ async def decompose_questions(
 _TRIAGE_SYSTEM = DEFAULT_PROMPTS["triage"]
 
 
+def _triage_cache_text(system_prompt: str, normalized_text: str) -> str:
+    """Cache input for triage (CR-08, F-08).
+
+    The rendered prompt is part of the key: a new prompt version or another
+    area set (which renders a different prompt) must never be served a result
+    produced by different instructions.
+    """
+    from app.services.prompts import PROMPT_SET_VERSION, prompt_digest
+
+    return f"{PROMPT_SET_VERSION}\0{prompt_digest(system_prompt)}\0{normalized_text}"
+
+
 async def triage_document(
     normalized_text: str,
     *,
@@ -344,7 +356,9 @@ async def triage_document(
         from app.db.session import get_async_session
         from app.services.cache import get_json_cache, make_cache_key
 
-        cache_key = make_cache_key("triage", triage_model, normalized_text)
+        cache_key = make_cache_key(
+            "triage", triage_model, _triage_cache_text(sys_msg, normalized_text)
+        )
         async for session in get_async_session():
             try:
                 cached = await get_json_cache(session, cache_key)
@@ -444,7 +458,7 @@ async def triage_document(
             try:
                 await _set(
                     session,
-                    _mk("triage", triage_model, normalized_text),
+                    _mk("triage", triage_model, _triage_cache_text(sys_msg, normalized_text)),
                     {"issues": clean_issues, "questions": clean_questions},
                 )
             except Exception as exc:

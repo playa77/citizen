@@ -118,6 +118,9 @@ class PipelineState:
     # for construction and generation stages (WP-24). Populated during
     # classification/decomposition using the current date.
     legal_regime_banner: str = ""
+    # CR-09: identity (stage id, prompt-set version, sha256) of every system
+    # prompt sent in this run, keyed by prompt stage; surfaced in stage payloads.
+    prompt_ids: dict[str, dict[str, str]] = field(default_factory=dict)
     # WP-42: OCR quality report from pre-processing quality gate
     ocr_quality_report: dict[str, Any] | None = None
 
@@ -168,6 +171,41 @@ def _populate_regime_banner(state: PipelineState) -> None:
         regime,
         len(state.legal_regime_banner),
     )
+
+
+#: Prompt stages that receive the legal-regime block (P-16). P-05 joined in
+#: prompt set 3.0.0: the review argues about law as much as the answer does.
+_REGIME_STAGES = frozenset(
+    {"grounded_answer", "adversarial_review", "claim_construction", "output"}
+)
+
+
+def _stage_prompt(state: PipelineState, stage: str) -> str:
+    """Render the system prompt for *stage* and record its identity (CR-09).
+
+    Area selection follows ``state.legal_areas``; stages in ``_REGIME_STAGES``
+    get the ``<rechtsstand>`` block prepended (WP-24, CR-06). The recorded
+    digest covers the full text actually sent, banner included.
+    """
+    from app.services.prompts import get_prompts, prompt_identity
+
+    text = get_prompts(state.legal_areas)[stage]
+    if stage in _REGIME_STAGES and state.legal_regime_banner:
+        text = f"{state.legal_regime_banner}\n\n{text}"
+    state.prompt_ids[stage] = prompt_identity(stage, text)
+    return text
+
+
+#: Which prompt stages feed which SSE/audit stage (CR-09). ``generation`` is
+#: left out on purpose: its audit snapshot is merged into ``final_output``.
+_PAYLOAD_PROMPTS: dict[str, tuple[str, ...]] = {
+    "classification": ("triage", "classification"),
+    "decomposition": ("triage", "decomposition"),
+    "construction": ("grounded_answer", "claim_construction"),
+    "verification": ("verification",),
+    "adversarial_review": ("adversarial_review",),
+    "calculation_check": ("calc_extraction", "calc_explanation"),
+}
 
 
 def _sse_event(stage: str, status: str, payload: dict[str, Any]) -> str:
@@ -236,6 +274,14 @@ def _stage_payload(
     elif stage_name == "generation":
         payload["sections"] = list(state.final_output.keys())
 
+    prompts = [
+        state.prompt_ids[key]
+        for key in _PAYLOAD_PROMPTS.get(stage_name, ())
+        if key in state.prompt_ids
+    ]
+    if prompts:
+        payload["prompts"] = prompts
+
     return payload
 
 
@@ -252,10 +298,9 @@ async def _stage_normalization(state: PipelineState) -> None:
 
 async def _stage_classification(state: PipelineState) -> None:
     """Stage 2 — LLM identifies legal topics at stake."""
-    from app.services.prompts import get_prompts
     from app.services.reasoning import classify_issues
 
-    system_prompt = get_prompts(state.legal_areas)["classification"]
+    system_prompt = _stage_prompt(state, "classification")
     state.issues = await classify_issues(
         state.normalized_text,
         system_prompt=system_prompt,
@@ -265,10 +310,9 @@ async def _stage_classification(state: PipelineState) -> None:
 
 async def _stage_decomposition(state: PipelineState) -> None:
     """Stage 3 — extract 3-5 explicit legal questions."""
-    from app.services.prompts import get_prompts
     from app.services.reasoning import decompose_questions
 
-    system_prompt = get_prompts(state.legal_areas)["decomposition"]
+    system_prompt = _stage_prompt(state, "decomposition")
     state.questions = await decompose_questions(
         state.normalized_text,
         system_prompt=system_prompt,
@@ -288,7 +332,6 @@ async def _run_classification_and_decomposition_stages(
     SSE events are emitted in the canonical order: classification first, then
     decomposition.
     """
-    from app.services.prompts import get_prompts
     from app.services.reasoning import (
         classify_issues,
         decompose_questions,
@@ -300,7 +343,7 @@ async def _run_classification_and_decomposition_stages(
     # ── WP-006: combined triage path ───────────────────────────────────
     if cfg._get_settings().COMBINE_TRIAGE_STAGES:
         logger.info("  → launching combined triage (classification + decomposition)")
-        system_prompt = get_prompts(state.legal_areas)["triage"]
+        system_prompt = _stage_prompt(state, "triage")
         try:
             triage_result = await triage_document(
                 state.normalized_text,
@@ -350,8 +393,20 @@ async def _run_classification_and_decomposition_stages(
     # ── WP-003: parallel path (legacy, COMBINE_TRIAGE_STAGES=False) ───
     logger.info("  → launching classification + decomposition in parallel")
 
-    cls_task = asyncio.create_task(classify_issues(state.normalized_text), name="classification")
-    dec_task = asyncio.create_task(decompose_questions(state.normalized_text), name="decomposition")
+    # Area-aware prompts (prompt set 3.0.0): this path used the default
+    # module's prompts regardless of ``legal_areas``.
+    cls_task = asyncio.create_task(
+        classify_issues(
+            state.normalized_text, system_prompt=_stage_prompt(state, "classification")
+        ),
+        name="classification",
+    )
+    dec_task = asyncio.create_task(
+        decompose_questions(
+            state.normalized_text, system_prompt=_stage_prompt(state, "decomposition")
+        ),
+        name="decomposition",
+    )
 
     # Wait for both concurrently.  ``return_exceptions=True`` lets us inspect
     # each result individually and produce clear failure messages.
@@ -419,7 +474,6 @@ async def _run_final_stages(
     SSE events are emitted in the canonical order: construction first, then
     verification, then generation.
     """
-    from app.services.prompts import get_prompts
     from app.services.verification import verify_claims_against_chunks
 
     t0 = time.monotonic()
@@ -429,11 +483,8 @@ async def _run_final_stages(
         logger.info(
             "  → launching combined grounded answer " "(construction + verification + generation)"
         )
-        grounded_prompt = get_prompts(state.legal_areas)["grounded_answer"]
-
-        # WP-24: inject regime awareness banner.
-        if state.legal_regime_banner:
-            grounded_prompt = f"{state.legal_regime_banner}\n\n{grounded_prompt}"
+        # WP-24/CR-06: the regime block is prepended inside _stage_prompt.
+        grounded_prompt = _stage_prompt(state, "grounded_answer")
 
         if stream_progress and cfg._get_settings().ENABLE_PROGRESS_STREAM:
             from app.services.reasoning import generate_grounded_answer_stream
@@ -687,14 +738,10 @@ async def _stage_retrieval(state: PipelineState) -> None:
 
 async def _stage_construction(state: PipelineState) -> None:
     """Stage 5 — build claims with confidence scores and types."""
-    from app.services.prompts import get_prompts
     from app.services.reasoning import construct_claims
 
-    system_prompt = get_prompts(state.legal_areas)["claim_construction"]
-
-    # WP-24: inject regime awareness banner.
-    if state.legal_regime_banner:
-        system_prompt = f"{state.legal_regime_banner}\n\n{system_prompt}"
+    # WP-24/CR-06: the regime block is prepended inside _stage_prompt.
+    system_prompt = _stage_prompt(state, "claim_construction")
 
     state.claims = await construct_claims(
         state.retrieved_chunks,
@@ -706,10 +753,9 @@ async def _stage_construction(state: PipelineState) -> None:
 
 async def _stage_verification(state: PipelineState) -> None:
     """Stage 6 — cross-reference claims against source text."""
-    from app.services.prompts import get_prompts
     from app.services.reasoning import verify_claims
 
-    system_prompt = get_prompts(state.legal_areas)["verification"]
+    system_prompt = _stage_prompt(state, "verification")
     state.verified_claims = await verify_claims(
         state.claims,
         state.retrieved_chunks,
@@ -727,7 +773,6 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
 
     Gracefully skips if the LLM call fails so the pipeline can continue.
     """
-    from app.services.prompts import get_prompts
     from app.services.reasoning import adversarial_review
 
     # Use verified claims if available, otherwise raw claims.
@@ -746,7 +791,7 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
         }
         return
 
-    system_prompt = get_prompts(state.legal_areas)["adversarial_review"]
+    system_prompt = _stage_prompt(state, "adversarial_review")
     try:
         result = await adversarial_review(
             normalized_text=state.normalized_text,
@@ -790,14 +835,10 @@ async def _stage_adversarial_review(state: PipelineState) -> None:
 
 async def _stage_generation(state: PipelineState) -> None:
     """Stage 8 — format into mandatory 7-part structure."""
-    from app.services.prompts import get_prompts
     from app.services.reasoning import generate_output
 
-    system_prompt = get_prompts(state.legal_areas)["output"]
-
-    # WP-24: inject regime awareness banner.
-    if state.legal_regime_banner:
-        system_prompt = f"{state.legal_regime_banner}\n\n{system_prompt}"
+    # WP-24/CR-06: the regime block is prepended inside _stage_prompt.
+    system_prompt = _stage_prompt(state, "output")
 
     state.final_output = await generate_output(
         state.verified_claims,
