@@ -3,9 +3,11 @@
 # the core's procedural library (Verwaltungsverfahren basics shared by all
 # modules). These rows carry its v2.0.0 behaviour; read by app/modules/areas.py.
 # Extracted verbatim from the v2.0.0 tables in app/services/intake.py.
+# `order` ranks the key in the global area-key order (WP-94).
 
 areas:
   verwaltungsrecht:
+    order: 80
     keywords:
     - verwaltungsakt
     - widerspruch

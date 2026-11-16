@@ -174,8 +174,10 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 
 - `text` (required, non-empty): the normalized input document.
 - `legal_areas` (optional): array or comma-separated string. Values drawn from
-  the legal-area enum (e.g. `sozialrecht`, `erbrecht`, `schenkungsrecht`,
-  `familienrecht`, `andere`). Triggers per-area retrieval and area-specific
+  the area keys of the installed modules (e.g. `sozialrecht`, `erbrecht`,
+  `schenkungsrecht`, `familienrecht`, `andere`; since WP-94 the key set is
+  module data, no longer a DB enum — the stored case records each key's
+  module id and module version). Triggers per-area retrieval and area-specific
   prompts.
   Each value resolves to the module that owns it (legacy key
   `schenkungsrecht` → module `erbrecht`, `verwaltungsrecht` → core procedural

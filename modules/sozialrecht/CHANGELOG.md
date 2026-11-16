@@ -3,7 +3,7 @@
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 1.0.0 is unreleased until the P9 exit gate (roadmap WP-97).
 
-## 1.0.0 — unreleased (WP-91 → WP-93)
+## 1.0.0 — unreleased (WP-91 → WP-94)
 
 - WP-91: manifest (`module.yaml`), tier `verified`, `DEFAULT_MODULE`.
 - WP-92: deadline specs (`fristen.yaml`: Widerspruchsfrist § 84 SGG with
@@ -24,3 +24,6 @@ Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
   - `documents/templates.yaml` — Widerspruch, Widerspruch (Jahresfrist),
     Überprüfungsantrag § 44 SGB X, Akteneinsichtsantrag § 25 SGB X;
   - `goldset/` — goldsets v0.1.0 and v0.2.0.
+- WP-94: `parameters.domain` is the module id `sozialrecht` (migration 013
+  rewrote stored `sgb2` rows; parameter keys keep their `sgb2.` prefix);
+  `intake.yaml` area row declares `order: 10` (global area-key order, D-057).

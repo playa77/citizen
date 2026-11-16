@@ -1,3 +1,67 @@
+## 2026-11-16 — P9 WP-94: data model migration (D-057)
+
+Migration `013_legal_module` lands the database half of the core/module split
+(ARCHITECTURE.md § 4). Package version stays 2.0.0 (core 3.0.0 is cut at
+WP-97); stub modules 0.1.0 → 0.1.1; `sozialrecht` 1.0.0 (unreleased).
+`/api/v1` routes and response shapes unchanged.
+
+### Added
+
+- Table `legal_module` (`id`, `version`, `tier`, `manifest_sha256`,
+  `installed_at`, `enabled`; CHECK on tier). Migration 013 seeds the eight
+  module ids behind the v2.0.0 area keys (unsynced: `manifest_sha256` NULL,
+  `enabled` false); `app/modules/sync.py` upserts one row per installed
+  module at startup (after migrations), never deletes, disables rows of
+  uninstalled modules, resets `installed_at` only on a new manifest.
+- `case_run_area.module_id` (FK → `legal_module.id`, `ON DELETE RESTRICT`;
+  NULL only for core-procedural keys) and `module_version`; existing rows
+  backfilled (`schenkungsrecht → erbrecht`, `verwaltungsrecht → NULL`,
+  others identity; `module_version` NULL = not recorded before WP-94).
+  `/analyze` writes both via `app.modules.runtime.area_module_binding`.
+- Tests: `tests/unit/alembic/test_migration_013.py` (fresh vs. upgraded DB
+  identical in schema and migration-owned data, backfill, FK, idempotent
+  replay, downgrade round trip, ORM ↔ schema parity of the WP-94 objects),
+  `tests/unit/test_modules_sync.py`, area-order/ownership tests, an
+  integration test for the persisted module binding.
+
+### Changed
+
+- Area keys and their order are module data: each `intake.yaml` area row
+  (and the core procedural library's) declares `order`; `app/modules/areas.py`
+  0.2.0 reads them and refuses missing/duplicate orders and keys declared by
+  a non-owner. v2.0.0 order preserved (pinned by `test_modules_content.py`
+  and the WP-93 golden).
+- `legal_parameter.domain`: stored `sgb2` rewritten to `sozialrecht`; the
+  column default is dropped; `parameter_store` lookups without `domain` use
+  `DEFAULT_MODULE`; `modules/sozialrecht/module.yaml` `parameters.domain:
+  sozialrecht`.
+- `eval/goldset_loader.py` audits `legal_area` against the area tables.
+
+### Removed
+
+- `LEGAL_AREA_ALLOWED`, `LEGAL_AREA_TIER` (`app/db/models.py`) and the CHECK
+  `ck_case_run_area_legal_area`. `app/db/models.py` is no longer allowlisted
+  by the WP-93 area-id AST check.
+
+### Deployment notes
+
+- Run `alembic upgrade head` (startup also runs it). A database must be at
+  013 before the new code persists cases (`module_id` column).
+- `.env`/scripts that relied on `legal_parameter.domain` defaulting to
+  `sgb2` must name the domain (the seed loader always does).
+- Downgrade to 012 restores the area CHECK and fails loudly if rows with keys
+  outside the v2.0.0 list were written meanwhile.
+
+### Not done here (handover)
+
+- WP-95: `/modules*` routes (will read `legal_module`), `MODULE_NOT_ENABLED`/
+  `MODULE_UNKNOWN`, `resolved_modules`, `eval.runner --module`.
+- Pre-existing, found while testing: `POST /api/v1/analyze` declares its
+  body as `dict[str, str]`, so `legal_areas` as a JSON list (the documented
+  shape) is rejected with 422; only the comma-string form works. Not changed
+  here (API behaviour; belongs to WP-95's `legal_areas` work).
+- Not verified here: CI's Python 3.11 job (local runs: Python 3.12).
+
 ## 2026-11-16 — P9 WP-93: Sozialrecht extracted into `modules/sozialrecht` (D-051…D-056)
 
 Every non-DB area coupling listed in `ARCHITECTURE.md` § 8 left the core.

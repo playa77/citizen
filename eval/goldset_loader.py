@@ -1,9 +1,11 @@
-# Version: 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
+# Version: 1.0.2 | 2026-11-16 — WP-94: legal_area audited against the module
+# area tables (LEGAL_AREA_ALLOWED removed).
+# 1.0.1 | 2026-11-16 — WP-93: goldsets live in modules/sozialrecht/goldset/
 # 1.0.0 | 2026-07-12
 """Pydantic-typed loader for Citizen goldset YAML files.
 
-Validates structure on load and audits against DB schema constants
-(LEGAL_AREA_ALLOWED, STATUTE_SOURCES, etc.).
+Validates structure on load and audits against known constants (area keys
+from the module area tables, STATUTE_SOURCES, etc.).
 
 Usage:
     from eval.goldset_loader import load_goldset
@@ -24,7 +26,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-from app.db.models import LEGAL_AREA_ALLOWED
+from app.modules.areas import area_tables
 
 logger = logging.getLogger(__name__)
 
@@ -77,12 +79,9 @@ class GoldsetMeta(BaseModel):
     @field_validator("legal_area")
     @classmethod
     def legal_area_must_be_known(cls, v: str) -> str:
-        if v not in LEGAL_AREA_ALLOWED:
-            logger.warning(
-                "Goldset legal_area '%s' is not in LEGAL_AREA_ALLOWED %s",
-                v,
-                LEGAL_AREA_ALLOWED,
-            )
+        keys = area_tables().keys
+        if v not in keys:
+            logger.warning("Goldset legal_area '%s' is not a known area key %s", v, keys)
         return v
 
 
@@ -233,8 +232,8 @@ def audit_goldset(doc: GoldsetDocument) -> list[str]:
     warnings: list[str] = []
 
     # Check legal_area
-    if doc.goldset.legal_area not in LEGAL_AREA_ALLOWED:
-        warnings.append(f"goldset.legal_area='{doc.goldset.legal_area}' not in LEGAL_AREA_ALLOWED")
+    if doc.goldset.legal_area not in area_tables().keys:
+        warnings.append(f"goldset.legal_area='{doc.goldset.legal_area}' is not a known area key")
 
     # Check case count
     if len(doc.cases) != doc.goldset.case_count:

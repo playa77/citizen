@@ -4,7 +4,8 @@ Behaviour identity with v2.0.0 is pinned by ``test_wp93_golden.py``; this
 file covers the contracts and invariants of the new layer itself.
 """
 
-# Semantic Version: 1.0.0
+# Semantic Version: 1.1.0 | 2026-11-16 — WP-94: area keys pinned to the frozen v2.0.0
+# order (LEGAL_AREA_ALLOWED removed); models.py no longer allowlisted.
 
 from __future__ import annotations
 
@@ -18,7 +19,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import yaml
 
-from app.db.models import LEGAL_AREA_ALLOWED
 from app.modules.areas import PROCEDURAL_OWNER, area_tables
 from app.modules.content import (
     assert_declared_files_exist,
@@ -109,14 +109,30 @@ class TestInstalledModules:
 # Area tables
 # ---------------------------------------------------------------------------
 
+#: The v2.0.0 area-key order (former ``app.db.models.LEGAL_AREA_ALLOWED``).
+#: Since WP-94 it is declared by the intake data (``order``); the order is
+#: behaviour (table and prompt order), so it stays pinned here.
+V2_AREA_KEYS = (
+    "sozialrecht",
+    "erbrecht",
+    "schenkungsrecht",
+    "familienrecht",
+    "mietrecht",
+    "arbeitsrecht",
+    "vertragsrecht",
+    "verwaltungsrecht",
+    "strafrecht",
+    "andere",
+)
+
 
 class TestAreaTables:
-    def test_keys_follow_db_enum(self) -> None:
-        assert area_tables().keys == tuple(LEGAL_AREA_ALLOWED)
+    def test_keys_follow_v2_order(self) -> None:
+        assert area_tables().keys == V2_AREA_KEYS
 
     def test_every_key_has_one_owner(self) -> None:
         owner = area_tables().owner
-        assert set(owner) == set(LEGAL_AREA_ALLOWED)
+        assert set(owner) == set(V2_AREA_KEYS)
         assert owner["schenkungsrecht"] == "erbrecht"
         assert owner["verwaltungsrecht"] == PROCEDURAL_OWNER
         assert owner["sozialrecht"] == "sozialrecht"
@@ -146,6 +162,86 @@ class TestAreaTables:
         from app.modules.areas import build_area_tables
 
         with pytest.raises(ModuleManifestError, match="exactly one owner"):
+            build_area_tables(tmp_path, "sozialrecht")
+
+    # -- WP-94: the key set and order are intake data ------------------------
+
+    @staticmethod
+    def _copy_tree(tmp_path: Path) -> None:
+        import shutil
+
+        for mid in ("sozialrecht", *_STUBS):
+            shutil.copytree(default_modules_root() / mid, tmp_path / mid)
+
+    @staticmethod
+    def _edit_intake(tmp_path: Path, module_id: str, edit: Any) -> None:
+        path = tmp_path / module_id / "intake.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        edit(data)
+        path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+
+    def test_order_drives_key_order(self, tmp_path: Path) -> None:
+        from app.modules.areas import build_area_tables
+
+        self._copy_tree(tmp_path)
+        self._edit_intake(tmp_path, "andere", lambda d: d["areas"]["andere"].update(order=1))
+        keys = build_area_tables(tmp_path, "sozialrecht").keys
+        assert keys[0] == "andere"
+        assert keys[1:] == V2_AREA_KEYS[:-1]
+
+    def test_uninstalled_module_drops_its_keys(self, tmp_path: Path) -> None:
+        import shutil
+
+        from app.modules.areas import build_area_tables
+
+        self._copy_tree(tmp_path)
+        shutil.rmtree(tmp_path / "erbrecht")
+        # familienrecht inherits the erbrecht prompt profile — drop it too.
+        shutil.rmtree(tmp_path / "familienrecht")
+        keys = build_area_tables(tmp_path, "sozialrecht").keys
+        assert "erbrecht" not in keys and "schenkungsrecht" not in keys
+        assert keys == tuple(
+            k for k in V2_AREA_KEYS if k not in {"erbrecht", "schenkungsrecht", "familienrecht"}
+        )
+
+    @pytest.mark.parametrize(
+        ("order", "message"),
+        [(None, "integer `order`"), ("10", "integer `order`"), (10, "duplicate area-key")],
+    )
+    def test_invalid_order_is_rejected(self, tmp_path: Path, order: Any, message: str) -> None:
+        from app.modules.areas import build_area_tables
+
+        def edit(data: dict[str, Any]) -> None:
+            entry = data["areas"]["mietrecht"]
+            entry.pop("order")
+            if order is not None:
+                entry["order"] = order  # 10 collides with sozialrecht
+
+        self._copy_tree(tmp_path)
+        self._edit_intake(tmp_path, "mietrecht", edit)
+        with pytest.raises(ModuleManifestError, match=message):
+            build_area_tables(tmp_path, "sozialrecht")
+
+    def test_key_declared_by_non_owner_is_rejected(self, tmp_path: Path) -> None:
+        from app.modules.areas import build_area_tables
+
+        def move(data: dict[str, Any]) -> None:
+            data["areas"]["schenkungsrecht"] = {"order": 30}
+
+        self._copy_tree(tmp_path)
+        self._edit_intake(tmp_path, "erbrecht", lambda d: d["areas"].pop("schenkungsrecht"))
+        self._edit_intake(tmp_path, "mietrecht", move)
+        with pytest.raises(ModuleManifestError, match="declared by 'mietrecht'"):
+            build_area_tables(tmp_path, "sozialrecht")
+
+    def test_key_declared_twice_is_rejected(self, tmp_path: Path) -> None:
+        from app.modules.areas import build_area_tables
+
+        self._copy_tree(tmp_path)
+        self._edit_intake(
+            tmp_path, "mietrecht", lambda d: d["areas"].update(sozialrecht={"order": 999})
+        )
+        with pytest.raises(ModuleManifestError, match="declared by both"):
             build_area_tables(tmp_path, "sozialrecht")
 
 
@@ -245,7 +341,7 @@ class TestParameters:
     def test_sozialrecht_rows(self) -> None:
         rows = load_parameter_rows(get_manifest("sozialrecht"))
         assert len(rows) == 27
-        assert {row.domain for row in rows} == {"sgb2"}
+        assert {row.domain for row in rows} == {"sozialrecht"}
         top = next(r for r in rows if r.key == "sgb2.par11b.income_bracket_4_pct")
         assert top.value_json is not None and top.value_json["max_income"] == 10_000_000.0
 
@@ -257,8 +353,14 @@ class TestParameters:
         ("entry", "message"),
         [
             ({"key": "k", "valid_from": "2025-01-01", "review_status": "verified"}, "ISO dates"),
-            ({"key": "k", "valid_from": date(2025, 1, 1), "review_status": "draft"}, "review_status"),
-            ({"key": "k", "valid_from": date(2025, 1, 1), "review_status": "verified", "x": 1}, "unknown"),
+            (
+                {"key": "k", "valid_from": date(2025, 1, 1), "review_status": "draft"},
+                "review_status",
+            ),
+            (
+                {"key": "k", "valid_from": date(2025, 1, 1), "review_status": "verified", "x": 1},
+                "unknown",
+            ),
         ],
     )
     def test_invalid_rows(self, tmp_path: Path, entry: dict[str, Any], message: str) -> None:
@@ -285,7 +387,6 @@ class TestParameters:
 
 #: Files allowed to name area ids in code: registry/alias tables only.
 _ALLOWED = {
-    "app/db/models.py",  # LEGAL_AREA_ALLOWED/TIER + CHECK — removed by WP-94
     "app/modules/registry.py",  # built-in legacy alias table (D-038)
     "app/core/config.py",  # DEFAULT_MODULE default; goldset API alias path
 }
@@ -297,7 +398,7 @@ def test_core_code_names_no_area_ids_outside_registry_tables() -> None:
     comments are documentation, not coupling)."""
     # "andere" is also an ordinary German word ("other") used in generic
     # prompt text, so the catch-all id counts only as an exact literal.
-    words = [a for a in LEGAL_AREA_ALLOWED if a != "andere"]
+    words = [a for a in V2_AREA_KEYS if a != "andere"]
     pattern = re.compile(r"\b(" + "|".join(words) + r")\b")
     offenders: list[str] = []
     for path in sorted((_REPO / "app").rglob("*.py")):

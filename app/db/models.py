@@ -9,10 +9,17 @@ Plus (migration 006):
   case_run_area  — many-to-many link between a case_run and one or more
                    legal_areas (sozialrecht, erbrecht, …)
   legal_chunk.legal_area — explicit area tag for retrieval filtering
+
+Plus (migration 013, WP-94):
+  legal_module — one row per installed module, synced by the registry
+  case_run_area.module_id / module_version — the module (and its version)
+                   a case ran with; the area-key CHECK is gone (D-057)
 """
 
-# Semantic Version: 0.4.0 | 2026-08-25 — ChunkEmbedding.embedding is now
-# pgvector Vector(1536) (D-024); LargeBinary mapping removed.
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-94: LegalModule; CaseRunArea
+# module_id (FK) + module_version, area CHECK dropped; LEGAL_AREA_ALLOWED /
+# LEGAL_AREA_TIER removed (registry is the source of truth); legal_parameter
+# domain holds the module id, column default dropped.
 
 import uuid
 from datetime import date, datetime
@@ -77,40 +84,6 @@ SOURCE_TYPE_ALLOWED = (
     "burlg",
     "tvg",
 )
-
-# Legal area values used in case_run_area.legal_area and
-# legal_chunk.legal_area. The closed set is enforced via CHECK
-# constraints in the DB; this Python tuple is the source of truth.
-LEGAL_AREA_ALLOWED: tuple[str, ...] = (
-    "sozialrecht",
-    "erbrecht",
-    "schenkungsrecht",
-    "familienrecht",
-    "mietrecht",
-    "arbeitsrecht",
-    "vertragsrecht",
-    "verwaltungsrecht",
-    "strafrecht",
-    "andere",
-)
-
-# WP-02: Support tier mapping — used by frontend and API to render
-# experimental badges on non-primary legal areas for v1.0.0.
-# "supported" = primary v1.0.0 claim (SGB II / Sozialrecht)
-# "experimental" = structurally supported, no goldset, use at own risk
-# "unsupported" = reserved for future (none yet)
-LEGAL_AREA_TIER: dict[str, str] = {
-    "sozialrecht": "supported",
-    "erbrecht": "experimental",
-    "schenkungsrecht": "experimental",
-    "familienrecht": "experimental",
-    "mietrecht": "experimental",
-    "arbeitsrecht": "experimental",
-    "vertragsrecht": "experimental",
-    "verwaltungsrecht": "experimental",
-    "strafrecht": "experimental",
-    "andere": "experimental",
-}
 
 
 class LegalSource(Base):
@@ -481,7 +454,10 @@ class LegalParameter(Base):
     value_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    domain: Mapped[str] = mapped_column(String(50), nullable=False, server_default="sgb2")
+    # Owning module id (WP-94: stored `sgb2` rewritten to the module id). No
+    # server default: the writer (module parameter loader) always names the
+    # module — a default would hard-code one area of law into the schema.
+    domain: Mapped[str] = mapped_column(String(50), nullable=False)
     regime: Mapped[str | None] = mapped_column(String(50), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
@@ -744,7 +720,19 @@ class CaseRunArea(Base):
         ForeignKey("case_run.id", ondelete="CASCADE"),
         nullable=False,
     )
+    # Area key as requested/selected (module id, legacy alias or core
+    # procedural key). No DB CHECK since WP-94: the key set is module data,
+    # validated by the writer against the area tables (D-057).
     legal_area: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Owning module and the version the case ran with. NULL module_id only
+    # for keys served by the core procedural library; NULL module_version
+    # for rows written before WP-94 (version was not recorded).
+    module_id: Mapped[str | None] = mapped_column(
+        String(50),
+        ForeignKey("legal_module.id", name="fk_case_run_area_module_id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    module_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_primary: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
@@ -772,10 +760,44 @@ class CaseRunArea(Base):
             "legal_area",
             name="uq_case_run_area_case_area",
         ),
-        CheckConstraint(
-            f"legal_area IN ({_sql_in(LEGAL_AREA_ALLOWED)})",
-            name="ck_case_run_area_legal_area",
-        ),
         Index("idx_case_run_area_case", "case_run_id"),
         Index("idx_case_run_area_area", "legal_area"),
+        Index("idx_case_run_area_module", "module_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 14. legal_module (WP-94)
+# ---------------------------------------------------------------------------
+
+#: Mirrors the manifest schema's ``tier`` enum (app/modules/manifest.schema.json).
+MODULE_TIER_ALLOWED = ("planned", "experimental", "verified", "community")
+
+
+class LegalModule(Base):
+    """One row per installed module, synced by the registry at startup.
+
+    Rows are never deleted by the sync: ``case_run_area.module_id`` keeps
+    referencing a module that was uninstalled later (``enabled`` turns
+    false). ``installed_at`` is the time the current manifest (version +
+    ``manifest_sha256``) was first seen. ``manifest_sha256`` is NULL only
+    for rows seeded by migration 013 that no sync has touched yet.
+    """
+
+    __tablename__ = "legal_module"
+
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    version: Mapped[str] = mapped_column(String(50), nullable=False)
+    tier: Mapped[str] = mapped_column(String(20), nullable=False)
+    manifest_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    installed_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=sa.text("false"))
+
+    __table_args__ = (
+        CheckConstraint(
+            f"tier IN ({_sql_in(MODULE_TIER_ALLOWED)})",
+            name="ck_legal_module_tier",
+        ),
     )

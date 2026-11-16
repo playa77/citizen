@@ -895,3 +895,50 @@ path; report comparison does not depend on it.
 served API goldset; splitting one module's goldsets across two trees would
 leave `eval/` area-coupled.
 **Rationale:** Per-module goldsets (§ 6.3) start with the module that has one.
+
+### D-057 R2 — 2026-11-16 — WP-94 data model: module binding beside the area key
+**Decision:** Migration `013_legal_module` (single linear chain after `012`,
+idempotent DDL) adds table `legal_module` (`id` PK = module id, `version`,
+`tier` CHECK = manifest tier enum, `manifest_sha256`, `installed_at`
+TIMESTAMPTZ, `enabled`), drops CHECK `ck_case_run_area_legal_area`, and
+rewrites `legal_parameter.domain` `sgb2 → sozialrecht`. **Deviation from the
+roadmap/ARCHITECTURE wording** ("`case_run_area.legal_area` FK →
+`legal_module.id`"): the FK sits on a new column `case_run_area.module_id`
+(nullable, `ON DELETE RESTRICT`) next to the new `module_version`;
+`legal_area` keeps the stored area key unchanged. Reason: two of the ten
+v2.0.0 keys are not module ids — `schenkungsrecht` is an `erbrecht` alias and
+`verwaltungsrecht` is served by the core procedural library (D-038). Backfill
+of existing rows from a frozen map (`schenkungsrecht → erbrecht`,
+`verwaltungsrecht → NULL`, others identity); `module_version` stays NULL for
+pre-WP-94 rows (never recorded — no invented values). The migration seeds
+the eight module ids behind v2.0.0 keys with `manifest_sha256 = NULL`,
+`enabled = false` so the FK can be created on populated databases and fresh
+and upgraded databases are identical; `app/modules/sync.py` (startup, after
+migrations) upserts one row per installed module, never deletes (audit rows
+reference it), disables uninstalled modules, and resets `installed_at` only
+on a new manifest hash. Writers bind via `app.modules.runtime.area_module_binding`;
+an unknown area key raises there, as the dropped CHECK did at flush (the
+case is not persisted — unchanged outcome). `LEGAL_AREA_ALLOWED`/
+`LEGAL_AREA_TIER` are removed: each `intake.yaml` area row declares `order`
+(v2.0.0 order kept: 10…100, `verwaltungsrecht` 80 in the procedural library);
+`app/modules/areas.py` refuses missing/duplicate orders and keys declared by
+a non-owner. `legal_parameter.domain` loses its column default (a default
+would hard-code an area into the schema); `parameter_store` lookups without
+`domain` resolve to `DEFAULT_MODULE`. Stub modules 0.1.0 → 0.1.1 (data-only:
+`order` rows); `core_api` stays "3.0" (unreleased contract, D-052 precedent).
+**Acceptance:** G2 single head; `tests/unit/alembic/test_migration_013.py`
+proves fresh vs. upgraded (012 + v2.0.0 data → 013) identical in schema
+(columns, constraints, indexes) and migration-owned data, backfill, FK
+rejection, idempotent replay, downgrade round trip and ORM ↔ schema parity of
+the WP-94 objects; WP-93 golden unchanged.
+**Rejected:** (a) FK on `legal_area` with an alias rewrite
+`schenkungsrecht → erbrecht` plus a pseudo-module row for `verwaltungsrecht`
+— changes historical `/cases` output (D-039) and puts a non-module into the
+module table. (b) Keeping a core tuple for the key order — area ids in core
+code (WP-93 exit criterion). (c) Seeding `legal_module` only via the startup
+sync — the FK could not be created on a database that already has cases.
+**Rationale:** The module a case ran with becomes referentially checked and
+versioned without rewriting what the user selected. R2: schema change with
+a deviation from the written target; reversible by downgrade (which fails
+loudly on post-upgrade keys outside the v2.0.0 list rather than deleting
+audit rows).

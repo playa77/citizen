@@ -99,7 +99,7 @@ modules/sozialrecht/
 ├── rules_engine.py, regime.py  # further module code, imported relatively (sozialrecht)
 ├── prompts/profile.yaml      # stage prompt profile (persona, statutes, terms) or {inherit: <id>}
 ├── documents/templates.yaml  # action-draft templates, slot definitions, generator selection
-├── intake.yaml               # intake-interview schema (questions, routing keywords)
+├── intake.yaml               # intake-interview schema (questions, routing keywords; per area key its global `order`, WP-94)
 ├── dossier.yaml              # document checklist + lawyer-question list (§ 3.7)
 ├── copy/                     # plain-language layer: de/, de-LS/ (Leichte Sprache), en/, …
 ├── goldset/
@@ -298,14 +298,19 @@ these off.
 | Table / column | As-is | Target |
 |---|---|---|
 | `legal_module` | — | **new**: `id` (PK, = module id), `version`, `tier`, `manifest_sha256`, `installed_at`, `enabled` — synced by the registry at startup |
-| `case_run_area.legal_area` | CHECK against `LEGAL_AREA_ALLOWED` (hard-coded tuple in `models.py`) | FK → `legal_module.id`; CHECK removed. Plus `module_version` column so every case records the module version it ran with |
+| `case_run_area.legal_area` | CHECK against `LEGAL_AREA_ALLOWED` (hard-coded tuple in `models.py`) | CHECK removed; `legal_area` keeps the stored area key. New `module_id` FK → `legal_module.id` (NULL only for core-procedural keys) plus `module_version`, so every case records the module and version it ran with (as built: D-057 — the FK sits beside the key because `schenkungsrecht`/`verwaltungsrecht` are not module ids) |
 | `legal_chunk.legal_area` | single tag derived from § range | kept for backward compatibility, no longer used for filtering; retrieval uses module corpus scopes (§ 3.3). Dropped in a later major |
-| `legal_parameter.domain` | default `sgb2` | holds module id; migration rewrites `sgb2 → sozialrecht` |
+| `legal_parameter.domain` | default `sgb2` | holds module id; migration rewrites `sgb2 → sozialrecht`; no column default |
 | `case_run` | — | `dossier_json` (nullable, versioned schema) — or a separate `dossier` table if size requires (decided in WP-100) |
 
 All changes extend the single linear Alembic chain (`… → 012 → 013 …`); no
 branch DAGs (D-024). The `LEGAL_AREA_ALLOWED` / `LEGAL_AREA_TIER` constants in
-`app/db/models.py` are removed; the registry is the source of truth.
+`app/db/models.py` are removed; the registry is the source of truth (area keys
+and their order: `order` in each module's `intake.yaml`).
+
+**Status:** `legal_module`, the `case_run_area` module binding and the domain
+rewrite are done (WP-94, migration `013_legal_module`, D-057);
+`legal_chunk.legal_area` and `case_run.dossier_json` remain open.
 
 ---
 
@@ -423,7 +428,7 @@ Every place where v2.0.0 code is area-specific, and where it goes:
 
 | As-is location (v2.0.0) | Area coupling | Target | Status |
 |---|---|---|---|
-| `app/db/models.py` `LEGAL_AREA_ALLOWED`, `LEGAL_AREA_TIER`, CHECK `ck_case_run_area_legal_area` | closed area list + tiers in code/DB | registry + `legal_module` table (§ 4) | **open → WP-94**; until then `LEGAL_AREA_ALLOWED` is the ordered area-key table read by `app/modules/areas.py` |
+| `app/db/models.py` `LEGAL_AREA_ALLOWED`, `LEGAL_AREA_TIER`, CHECK `ck_case_run_area_legal_area` | closed area list + tiers in code/DB | registry + `legal_module` table (§ 4) | done (WP-94, D-057): key set/order from module `intake.yaml` `order`; `case_run_area.module_id` FK + `module_version` |
 | `app/services/corpus_readiness.py` `AREA_TO_SOURCE_TYPES` | area → source types | module `corpus.yaml` | done (WP-93) |
 | `app/services/corpus.py` `CORPUS_SOURCE_METADATA`, § range → area tagging | SGB-centric source list, BGB range tagging | core source catalog + module corpus scopes | done (WP-93): tags = module `chunk_tags`; source catalog stays core |
 | `app/core/config.py` `CORPUS_SOURCES=["sgb2","sgbx"]`, `ENABLE_CALCULATION_CHECK` | Sozialrecht defaults | `DEFAULT_MODULE`, `ENABLED_MODULES`; calculation toggle per module | partly: calculators per module (WP-93); global toggle + default ingest sources remain |
@@ -435,10 +440,11 @@ Every place where v2.0.0 code is area-specific, and where it goes:
 | `app/services/regime.py` | SGB II reform 2026-07-01 | `RegimeProvider` in the Sozialrecht module | done (WP-93) |
 | `app/services/document_generators.py` | Widerspruch/§ 44/§ 25 templates | renderer in core, templates in module | done (WP-93) |
 | `app/api/routes/goldset.py`, `eval/` | goldset assumed Sozialrecht | per-module goldsets; `eval.runner --module` | partly: goldsets in `modules/sozialrecht/goldset/`; `--module` and `/modules/{id}/goldset` → WP-95 |
-| `scripts/seed_legal_parameters.py`, `legal_parameter.domain='sgb2'` | SGB II seeding | generic module parameter loader | loader done (WP-93, `scripts/seed_module_parameters.py`); `sgb2 → sozialrecht` domain rewrite → WP-94 |
+| `scripts/seed_legal_parameters.py`, `legal_parameter.domain='sgb2'` | SGB II seeding | generic module parameter loader | done: loader (WP-93, `scripts/seed_module_parameters.py`); domain `sgb2 → sozialrecht` (WP-94) |
 
-Legacy area keys (D-038) after WP-93: `schenkungsrecht` is declared by the
-`erbrecht` stub (distinct stored value until WP-94); `verwaltungsrecht` is
+Legacy area keys (D-038) after WP-94: `schenkungsrecht` is declared by the
+`erbrecht` stub (stays a distinct stored `legal_area`, bound to module
+`erbrecht` via `module_id`, D-057); `verwaltungsrecht` is
 served by the core procedural library `app/modules/procedural/`; `andere`
 is the engine-less catch-all stub. All stubs are tier `experimental` and
 carry only their v2.0.0 intake/corpus/prompt data.

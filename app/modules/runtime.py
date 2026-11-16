@@ -12,7 +12,8 @@ resolves to ``DEFAULT_MODULE``. Enablement gating (``MODULE_NOT_ENABLED``)
 is WP-95 and deliberately absent here.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-94: area_module_binding() for the
+# case_run_area module_id/module_version columns.
 
 from __future__ import annotations
 
@@ -63,6 +64,26 @@ def request_modules(legal_areas: list[str] | None) -> list[str]:
             continue
         modules.append(owner)
     return modules
+
+
+class UnknownAreaKeyError(KeyError):
+    """An area key that no installed module or the procedural library owns."""
+
+
+def area_module_binding(area_key: str) -> tuple[str | None, str | None]:
+    """``(module_id, module_version)`` to record for a stored area key.
+
+    Legacy aliases bind to the module that declares them; keys served by the
+    core procedural library bind to ``(None, None)``. An unknown key raises
+    ``UnknownAreaKeyError`` — since WP-94 no DB CHECK rejects it, so the
+    writer must (D-057).
+    """
+    owner = area_tables().owner.get(area_key)
+    if owner is None:
+        raise UnknownAreaKeyError(area_key)
+    if owner == PROCEDURAL_OWNER:
+        return None, None
+    return owner, get_manifest(owner).version
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +177,8 @@ def compute_deadline(module_id: str, spec_id: str, frist_input: FristInput) -> F
 
 
 __all__ = [
+    "UnknownAreaKeyError",
+    "area_module_binding",
     "calculators_for",
     "compute_deadline",
     "deadline_specs",

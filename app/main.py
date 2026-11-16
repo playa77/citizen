@@ -1,4 +1,6 @@
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-93: startup also builds the module
+# Semantic Version: 0.6.0 | 2026-11-16 — WP-94: startup syncs the legal_module table
+# from the registry after migrations.
+# 0.5.0 | 2026-11-16 — WP-93: startup also builds the module
 # area tables and imports the enabled modules' calculators/regime providers, so
 # broken module content refuses startup instead of failing the first request.
 # 0.4.0 | 2026-11-16 — WP-91: module registry validation
@@ -125,6 +127,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logger.info("Alembic migrations applied successfully (target=head).")
     except Exception as exc:
         logger.warning("Alembic migration skipped or failed: %s. Continuing anyway.", exc)
+
+    # WP-94: sync one legal_module row per installed module (needs the
+    # migrated schema). case_run_area.module_id references these rows, so a
+    # failed sync is logged as an error: cases of modules without a row
+    # cannot be persisted until the next successful startup sync.
+    try:
+        from app.modules.sync import sync_legal_modules
+
+        async with async_session_factory() as session:
+            await sync_legal_modules(session, _registry)
+            await session.commit()
+    except Exception as exc:
+        logger.error("legal_module sync failed: %s. Continuing anyway.", exc)
 
     # Preload the legal parameter cache for synchronous param() lookups.
     from app.services.parameter_store import reload_parameter_cache

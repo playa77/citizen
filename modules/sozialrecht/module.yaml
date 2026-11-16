@@ -25,10 +25,10 @@ scope:
 corpus: corpus.yaml
 intake: intake.yaml
 prompts: prompts/profile.yaml
-# Parameter-store namespace: stays `sgb2` until WP-94 rewrites stored
-# domains to module ids (`sgb2 → sozialrecht`, ARCHITECTURE.md § 4).
+# Parameter-store namespace = module id (WP-94: migration 013 rewrote the
+# stored `sgb2` domain, ARCHITECTURE.md § 4).
 parameters:
-  domain: sgb2
+  domain: sozialrecht
   files: [parameters/*.yaml]
 fristen: fristen.yaml
 calculators: calculators:CALCULATORS

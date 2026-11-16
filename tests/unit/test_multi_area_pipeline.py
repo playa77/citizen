@@ -13,7 +13,8 @@ refactor that don't require a live DB or a real LLM call:
   closed-enum legal_areas
 """
 
-# Semantic Version: 0.3.1 | 2026-11-16 — WP-93: prompt constants derived from get_prompts.
+# Semantic Version: 0.3.2 | 2026-11-16 — WP-94: area keys from the area tables.
+# 0.3.1 | 2026-11-16 — WP-93: prompt constants derived from get_prompts.
 
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ import inspect
 import pytest
 
 from app.core.pipeline import PipelineState
-from app.db.models import LEGAL_AREA_ALLOWED
+from app.modules.areas import area_tables
 from app.services import retrieval
 from app.services.corpus_readiness import (
     AREA_TO_SOURCE_TYPES,
@@ -106,7 +107,7 @@ class TestMultiAreaRetrieval:
 
 
 class TestAreaToSourceTypes:
-    @pytest.mark.parametrize("area", LEGAL_AREA_ALLOWED)
+    @pytest.mark.parametrize("area", area_tables().keys)
     def test_area_has_mapping(self, area: str) -> None:
         # Every enum value is a key in AREA_TO_SOURCE_TYPES (even if
         # the value is an empty tuple).

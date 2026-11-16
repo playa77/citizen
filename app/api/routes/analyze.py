@@ -31,7 +31,9 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.4.1 | 2026-11-16 — WP-93: module-neutral docstring examples.
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-94: case_run_area rows record module_id +
+# module_version; unknown area keys are rejected by the writer (no DB CHECK).
+# Previous: 0.4.1 | 2026-11-16 — WP-93: module-neutral docstring examples.
 # 0.4.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
 # the terminal summary event now embeds `disclosure` and `provenance`.
 
@@ -61,6 +63,7 @@ from app.db.models import (
     PipelineStageLog,
 )
 from app.db.session import async_session_factory
+from app.modules.runtime import area_module_binding
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.corpus_readiness import check_preflight
 from app.services.disclosure import build_disclosure_and_provenance
@@ -339,14 +342,20 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                     db.add(case_run)
                     await db.flush()
 
-                    # Persist case_run_area rows for every selected legal area.
+                    # Persist case_run_area rows for every selected legal area,
+                    # with the module (and version) the case ran with (WP-94).
+                    # An unknown area key raises here, as the former DB CHECK
+                    # did at flush: the case is not persisted (D-057).
                     if state.legal_areas:
                         primary = state.legal_areas[0] if state.legal_areas else None
                         for area in state.legal_areas:
+                            module_id, module_version = area_module_binding(area)
                             db.add(
                                 CaseRunArea(
                                     case_run_id=case_run.id,
                                     legal_area=area,
+                                    module_id=module_id,
+                                    module_version=module_version,
                                     is_primary=(area == primary),
                                     intake_session_id=(
                                         uuid.UUID(state.intake_session_id)

@@ -7,10 +7,10 @@
 # Engine-less catch-all (D-038): the intake interview falls back to this
 # area when nothing else matches (`catch_all: true` in intake.yaml).
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
 
 id: andere
-version: 0.1.0
+version: 0.1.1
 core_api: ">=3.0,<4.0"
 title:
   de: "Andere Rechtsgebiete"

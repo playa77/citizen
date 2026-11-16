@@ -2,8 +2,8 @@
 #
 # Seeded into `legal_parameter` by the generic module loader
 # (`python -m scripts.seed_module_parameters`), domain from module.yaml
-# `parameters.domain` (`sgb2` until WP-94 rewrites stored domains to module
-# ids). Rows are upserted on (key, domain, valid_from).
+# `parameters.domain` (= module id `sozialrecht` since WP-94; the parameter
+# keys keep their `sgb2.` prefix). Rows are upserted on (key, domain, valid_from).
 #
 # Fields: key, value_numeric | value_json | value_text, unit, valid_from,
 # valid_to (open-ended if absent), review_status (verified | proposed),
