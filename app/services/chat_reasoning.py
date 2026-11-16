@@ -8,7 +8,11 @@ corpus using the conversation context, then generates a grounded response that
 references any uploaded documents and retrieved legal sources.
 """
 
-# Semantic Version: 1.2.0 | 2026-11-16 — WP-96: the first-message pipeline
+# Semantic Version: 1.3.0 | 2026-11-16 — prompt set 3.0.0: P-11 rendered from the
+# request's module profile (CR-05, F-05); optional legal_areas reach the
+# first-message pipeline and the provenance marker; the appended citation
+# instruction is folded into P-11; cut documents are marked (CR-07).
+# 1.2.0 | 2026-11-16 — WP-96: the first-message pipeline
 # terminal event embeds disclosure + provenance too (C-4 closed, D-059).
 # 1.1.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
 # the chat "done" event embeds disclosure + provenance alongside full_response.
@@ -24,8 +28,9 @@ from app.core.config import settings
 from app.core.pipeline import PipelineState, run_pipeline
 from app.core.router import get_shared_client
 from app.services.disclosure import build_disclosure_and_provenance
+from app.services.prompts import get_chat_prompt, stage_max_tokens, stage_temperature
 from app.services.retrieval import retrieve_chunks_combined
-from app.utils.tokens import trim_text
+from app.utils.tokens import trim_document, trim_text
 
 logger = logging.getLogger(__name__)
 
@@ -33,37 +38,9 @@ logger = logging.getLogger(__name__)
 # Chat system prompt
 # ---------------------------------------------------------------------------
 
-_CHAT_SYSTEM_PROMPT = (
-    "Du bist ein sachkundiger, sorgfältiger und präziser Assistent für "
-    "deutsches Sozialrecht (insbesondere SGB II, SGB X, SGB XII). Du hilfst "
-    "Bürgern, behördliche Schreiben von Jobcenter, Sozialamt und anderen "
-    "Behörden zu verstehen und rechtlich einzuordnen.\n\n"
-    "Deine Antworten sind:\n"
-    "- sachlich, präzise und gut nachvollziehbar\n"
-    "- auf Deutsch\n"
-    "- kurz und verständlich (kein Juristenkauderwelsch, aber fachlich korrekt)\n"
-    "- streng an den bereitgestellten Dokumenten, dem Gesprächskontext und "
-    "den bereitgestellten Rechtsquellen orientiert\n"
-    "- klar getrennt in: was aus dem Dokument hervorgeht, was rechtlich "
-    "naheliegt und was unsicher bleibt\n"
-    "- explizit vorsichtig, wenn Informationen oder Quellen nicht ausreichen\n\n"
-    "Wichtige Regeln:\n"
-    "- Erfinde keine Tatsachen, Paragraphen, Fristen, Aktenzeichen, "
-    "Behördenhandlungen oder Rechtsfolgen.\n"
-    "- Stelle Vermutungen niemals als feststehende Tatsachen dar.\n"
-    "- Belege rechtliche Aussagen nach Möglichkeit mit den bereitgestellten "
-    "Rechtsquellen.\n"
-    "- Wenn die Quellenlage nicht ausreicht, sage das klar und deutlich.\n"
-    "- Wenn eine Information für die rechtliche Bewertung fehlt, benenne "
-    "konkret, welche Information fehlt.\n"
-    "- Gib keine übertriebene Sicherheit vor; benenne Unsicherheiten offen.\n"
-    "- Formuliere praxisnah und bürgerverständlich.\n"
-    "- Wenn sinnvoll, nenne als nächsten Schritt, welche Unterlagen, Daten "
-    "oder Angaben noch benötigt werden.\n\n"
-    "Du zitierst Paragraphen im Format '§ 31 Abs. 1 Satz 2 SGB II'.\n"
-    "Wenn du etwas nicht weißt oder die Quellen nicht ausreichen, sagst du "
-    "das klar."
-)
+#: Default rendering of P-11 (default module), kept for importers. Requests
+#: render the prompt for their own areas via ``get_chat_prompt`` (CR-05).
+_CHAT_SYSTEM_PROMPT = get_chat_prompt("chat")
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +50,7 @@ _CHAT_SYSTEM_PROMPT = (
 
 async def run_first_message_pipeline(
     document_texts: list[str],
+    legal_areas: list[str] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Execute the full 7-stage pipeline on combined document texts.
 
@@ -84,9 +62,12 @@ async def run_first_message_pipeline(
     document_texts :
         Normalized texts of all documents attached to the conversation.
         They are joined with double newlines.
+    legal_areas :
+        Optional area keys (already validated by the route); empty or
+        ``None`` runs ``DEFAULT_MODULE``.
     """
     combined_text = "\n\n".join(document_texts)
-    state = PipelineState(input_text=combined_text)
+    state = PipelineState(input_text=combined_text, legal_areas=list(legal_areas or []))
 
     async for sse_event in run_pipeline(state):
         yield sse_event
@@ -94,9 +75,9 @@ async def run_first_message_pipeline(
     # Yield a compact final event matching the existing analyze endpoint format.
     # Art. 50(1)/(2) (WP-96, closes the D-032 coverage gap C-4): this terminal
     # event carries AI-generated text, so it gets the disclosure + provenance
-    # like the analyze terminal event. Conversations name no legal_areas, so
-    # the pipeline (and the marker) run with DEFAULT_MODULE.
-    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings)
+    # like the analyze terminal event. Without legal_areas the pipeline (and
+    # the marker) run with DEFAULT_MODULE.
+    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings, legal_areas)
     final_payload = {
         "sections": list(state.final_output.keys()),
         "final_output": state.final_output,
@@ -111,8 +92,12 @@ async def generate_chat_response(
     *,
     document_texts: list[str] | None = None,
     conversation_id: str | None = None,
+    legal_areas: list[str] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Generate a grounded chat response using RAG retrieval and conversation context.
+
+    *legal_areas* (optional, validated by the route) selects the module
+    profile P-11 is rendered with and the modules the provenance names.
 
     For each user message, this:
     1. Builds a search query from the message + document context.
@@ -155,7 +140,7 @@ async def generate_chat_response(
     llm_messages: list[dict[str, str]] = []
 
     # System prompt with legal context
-    system_parts = [_CHAT_SYSTEM_PROMPT]
+    system_parts = [get_chat_prompt("chat", legal_areas)]
 
     if document_texts:
         doc_context = _build_document_context(document_texts)
@@ -164,11 +149,8 @@ async def generate_chat_response(
     if chunks:
         chunk_context = _build_chunk_context(chunks)
         system_parts.append(f"\n\nRelevante Rechtsquellen aus dem lokalen Corpus:\n{chunk_context}")
-        system_parts.append(
-            "\n\nNutze diese Rechtsquellen, um die Fragen des Nutzers zu beantworten. "
-            "Zitiere Paragraphen mit exaktem Wortlaut aus den Quellen. "
-            "Wenn eine Frage nicht beantwortet werden kann, weise darauf hin."
-        )
+        # The v2 citation instruction appended here ("Zitiere Paragraphen mit
+        # exaktem Wortlaut") contradicted "kurz"; P-11 3.0.0 carries the rule.
 
     llm_messages.append({"role": "system", "content": "\n".join(system_parts)})
 
@@ -180,6 +162,8 @@ async def generate_chat_response(
     try:
         response_text = await client.chat_completion(
             llm_messages,
+            temperature=stage_temperature("chat"),
+            max_tokens=stage_max_tokens("chat"),
             model=settings.FINAL_MODEL,
             timeout=settings.FINAL_TIMEOUT_SEC,
             max_retries=1,
@@ -205,7 +189,7 @@ async def generate_chat_response(
     # Final event signalling completion. Art. 50(1)/(2) EU AI Act (D-032):
     # the done event carries the disclosure the client must display plus the
     # machine-readable provenance marker, mirroring the analyze terminal event.
-    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings)
+    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings, legal_areas)
     done_payload = {
         "type": "done",
         "conversation_id": conversation_id,
@@ -229,7 +213,7 @@ def _build_document_context(document_texts: list[str]) -> str:
     max_doc_chars = settings.MAX_CHUNK_CONTEXT_CHARS // 2
 
     for i, text in enumerate(document_texts, 1):
-        trimmed = trim_text(text, min(max_doc_chars, 3000))
+        trimmed = trim_document(text, min(max_doc_chars, 3000))
         parts.append(f"Dokument {i}:\n{trimmed}")
         total_chars += len(trimmed)
         if total_chars >= max_doc_chars:

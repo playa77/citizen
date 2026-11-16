@@ -19,7 +19,10 @@ data (``modules/<id>/intake.yaml``); this file holds only the generic
 interview runner.
 """
 
-# Semantic Version: 0.4.0
+# Semantic Version: 0.5.0 | 2026-11-16 — prompt set 3.0.0: P-09 rewritten (valid
+# JSON example, F-10; no counselling persona), S-06 retired (F-03), transcript
+# labels Bürger/Assistent (F-11), stage temperature (CR-04).
+# 0.4.0
 
 from __future__ import annotations
 
@@ -34,6 +37,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.router import get_shared_client
 from app.db.models import IntakeSession
 from app.modules.areas import area_tables
+from app.services.prompts import (
+    JSON_OBJECT_ONLY,
+    STRICT_SUFFIX,
+    stage_max_tokens,
+    stage_temperature,
+)
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -63,42 +72,51 @@ class IntakeTurnLimitReached(IntakeError):
 # (module data, WP-93). The catch-all key is the fallback for unclear cases.
 _LEGAL_AREAS_ENUM: tuple[str, ...] = area_tables().keys
 _CATCH_ALL_AREA: str = area_tables().catch_all
-_EXAMPLE_AREA: str = area_tables().default_module
 
-_INTAKE_SYSTEM = (
-    "Du bist ein erfahrener juristischer Erstberater für deutsches Recht. "
-    "Deine Aufgabe ist ein strukturiertes Aufnahmegespräch (Intake), um "
-    "den Fall eines Bürgers rechtlich einzuordnen, BEVOR eine automatisierte "
-    "Rechtsanalyse läuft.\n\n"
-    "Dir wird die bisherige Schilderung des Bürgers sowie das bisherige "
-    "Gesprächsprotokoll vorgelegt. Du sollst jeweils EINE einzige, gut "
-    "fokussierte Rückfrage stellen, die den Sachverhalt weiter eingrenzt.\n\n"
-    "Zugelassene Rechtsgebiete (du MUSST exakt einen dieser Werte verwenden):\n"
-    + "\n".join(f"- {a}" for a in _LEGAL_AREAS_ENUM)
-    + "\n\n"
-    "Wichtige Regeln:\n"
-    "- Stelle nur EINE Frage pro Antwort — keine Aufzählungen.\n"
-    "- Die Frage soll kurz, klar und für Laien verständlich sein.\n"
-    "- Vermeide doppelte Fragen; prüfe das Gesprächsprotokoll.\n"
-    "- Wenn du genug Informationen hast (typischerweise nach 2–3 Fragen "
-    "für einfache Fälle, maximal 8 Fragen), beende das Gespräch mit "
-    '"done": true und liefere die unten genannten Felder.\n'
-    "- Erfinde keine Tatsachen, Paragraphen oder Aktenzeichen.\n"
-    "- Falls du dir unsicher bist, wähle '" + _CATCH_ALL_AREA + "' als Fallback.\n\n"
-    "Antwortformat: GENAU ein JSON-Objekt mit folgenden Schlüsseln:\n"
-    "{\n"
-    '  "done": false,                     // true wenn Interview beendet\n'
-    '  "question": "Deine Rückfrage",     // leer wenn done=true\n'
-    '  "primary_area": "' + _EXAMPLE_AREA + '",     // nur wenn done=true; sonst null\n'
-    '  "secondary_areas": ["..."],        // nur wenn done=true; sonst []\n'
-    '  "summary": "Kurze Sachverhalts-Zusammenfassung",   // nur wenn done=true\n'
-    '  "facts": ["Tatsache 1", "Tatsache 2"],            // nur wenn done=true\n'
-    '  "dates": ["YYYY-MM-DD oder ungefähre Angabe"],    // nur wenn done=true\n'
-    '  "parties": ["Partei A", "Partei B"]                // nur wenn done=true\n'
-    "}\n\n"
-    "Gib ausschließlich gültiges JSON zurück. Kein Prosatext. Keine "
-    "Markdown-Formatierung."
-)
+
+def _render_intake_system() -> str:
+    """P-09 (prompt set 3.0.0): area list and fallback from the module tables."""
+    return (
+        "<rolle>\n"
+        "Du führst ein kurzes Aufnahmegespräch für eine Vorbereitungshilfe. Ziel: das "
+        "Rechtsgebiet der Angelegenheit bestimmen und den Sachverhalt so weit klären, dass "
+        "eine automatisierte Analyse vorbereitet werden kann. Du berätst nicht rechtlich.\n"
+        "</rolle>\n\n"
+        "<eingaben>\n"
+        "Die Nutzernachricht enthält „## Bisherige Schilderung des Bürgers“ und, falls "
+        "vorhanden, „## Gesprächsprotokoll“ mit deinen bisherigen Fragen und den Antworten "
+        "der Person.\n"
+        "</eingaben>\n\n"
+        "<aufgabe>\n"
+        "Fehlt eine Angabe, die das Rechtsgebiet oder den Kern der Angelegenheit bestimmt "
+        "(Art des Schreibens, Absender, Datum, Gegenstand, Ziel der Person), stelle genau "
+        'eine Frage ("done": false). Sonst beende das Gespräch ("done": true) und fülle '
+        "die Felder.\n"
+        "</aufgabe>\n\n"
+        "<regeln>\n"
+        "- Eine Frage, ein Satz, ohne Aufzählung, für Laien verständlich.\n"
+        "- Frage nichts, was Schilderung oder Protokoll schon beantworten.\n"
+        "- Beende in der Regel nach 2 bis 3 Fragen, spätestens nach 8.\n"
+        "- primary_area: genau einer dieser Werte: "
+        + ", ".join(_LEGAL_AREAS_ENUM)
+        + f'. Ist das Gebiet unklar: "{_CATCH_ALL_AREA}".\n'
+        "- secondary_areas: weitere berührte Werte aus derselben Liste, ohne primary_area.\n"
+        "- summary: 2 bis 4 Sätze, nur Angaben der Person. facts: einzelne Tatsachen aus "
+        "ihren Angaben. dates: Daten als JJJJ-MM-TT, sonst wörtlich. parties: beteiligte "
+        "Personen und Stellen.\n"
+        '- Bei "done": false: question gefüllt, primary_area null, alle Listen leer, '
+        'summary "". Bei "done": true: question "".\n'
+        "- Erfinde keine Tatsachen, Normen oder Aktenzeichen. Bewerte keine "
+        "Erfolgsaussichten.\n"
+        "</regeln>\n\n"
+        "<ausgabeformat>\n"
+        '{ "done": false, "question": "Von welcher Stelle stammt das Schreiben?", '
+        '"primary_area": null, "secondary_areas": [], "summary": "", "facts": [], '
+        '"dates": [], "parties": [] }\n\n' + JSON_OBJECT_ONLY + "\n</ausgabeformat>"
+    )
+
+
+_INTAKE_SYSTEM = _render_intake_system()
 
 
 # ---------------------------------------------------------------------------
@@ -136,13 +154,11 @@ def _fallback_areas_from_text(text: str) -> tuple[str, list[str]]:
 # JSON parsing helpers
 # ---------------------------------------------------------------------------
 
-_STRICT_SUFFIX = (
-    "\n\nIMPORTANT: Respond with *only* valid JSON matching the schema above. "
-    "No prose, no markdown fences, no explanation. If you cannot produce "
-    'valid JSON matching the schema, return {"done": true, "question": "", '
-    '"primary_area": "' + _CATCH_ALL_AREA + '", "secondary_areas": [], '
-    '"summary": "", "facts": [], "dates": [], "parties": []}.'
-)
+# S-06 retired (prompt set 3.0.0, F-03): the v2 suffix told the model to
+# answer {"done": true, "primary_area": "<catch-all>", ...} when confused,
+# ending the interview as "andere". A parse failure now reaches the code's
+# own fallback (keyword routing, ``_fallback_areas_from_text``) instead.
+_STRICT_SUFFIX = STRICT_SUFFIX
 
 
 def _parse_intake_response(raw: str) -> dict[str, Any]:
@@ -217,6 +233,10 @@ def _normalise_area(area: str | None) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+#: Transcript labels shown to the model, as the docstring always promised.
+_TRANSCRIPT_LABELS = {"user": "Bürger", "assistant": "Assistent"}
+
+
 def build_intake_messages(
     initial_text: str,
     history: list[dict[str, str]] | None = None,
@@ -244,7 +264,8 @@ def build_intake_messages(
     if history:
         parts.append("\n\n## Gesprächsprotokoll")
         for entry in history:
-            role = entry.get("role", "").capitalize()
+            # German labels (F-11); v2 sent "User:"/"Assistant:".
+            role = _TRANSCRIPT_LABELS.get(entry.get("role", ""), entry.get("role", ""))
             content = entry.get("content", "")
             parts.append(f"\n{role}: {content}")
     user_content = "".join(parts)
@@ -261,7 +282,8 @@ async def _call_llm(messages: list[dict[str, str]]) -> dict[str, Any]:
     client = get_shared_client()
     raw = await client.chat_completion(
         messages,
-        temperature=0.1,
+        temperature=stage_temperature("intake"),
+        max_tokens=stage_max_tokens("intake"),
         model=s.PRIMARY_MODEL,
         max_retries=1,
     )

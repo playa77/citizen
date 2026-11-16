@@ -28,6 +28,15 @@
      "regime:banners"
     ],
     "reason": "prompt set 3.0.0: regime banners state segment and dates only (P-16, F-24) (D-060)"
+   },
+   {
+    "keys": [
+     "intake:strict_suffix",
+     "intake:system",
+     "presets:keyword_suggest",
+     "presets:suggest_system"
+    ],
+    "reason": "prompt set 3.0.0: intake P-09 + S-06 retired, preset P-10, keyword fallback reports match (CR-11) (D-060)"
    }
   ]
  },
@@ -232,8 +241,8 @@
   "andere",
   null
  ],
- "intake:strict_suffix": "bd8f5df14d30773754e17bbf7592327eb81b00b4a1a0ad156b8d89512b71eaeb",
- "intake:system": "d3d77450a2fcd72d20818b3859a708746e92e09956fbddc3ce65e83b0eb529b7",
+ "intake:strict_suffix": "0dfc7f2d9922738716910fcb66a2a3e6f21b6164a6ca2aecb4a4e88c6c07323a",
+ "intake:system": "0f941fb1a3db82847b07cfc44c82bc914254e86260fc47d051f5b053b992ddd1",
  "presets:keyword_fallback": [
   [
    "erbe-mit-testament",
@@ -260,76 +269,90 @@
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "erbe-mit-testament",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "schenkung-zu-lebzeiten",
    "primary_area": "schenkungsrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "erbe-mit-familie",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "erbe-mit-testament",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "hofesuebergabe",
    "primary_area": "erbrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   },
   {
    "preset_id": "sozialrecht-allgemein",
    "primary_area": "sozialrecht",
-   "secondary_areas": []
+   "secondary_areas": [],
+   "match": "keyword_fallback"
   }
  ],
  "presets:list": "29e17b7206832f777e61b8308a2c3733be35d61e8ca128fedb66024832a16662",
- "presets:suggest_system": "3d586dbe4a27ced7bfb21bac6b076a813b5948539698fdc4fe543c3889babe59",
+ "presets:suggest_system": "d4b8a0381a3d48f3c48e1826fa15854820749d086d3546e7845a5bd9fc238c6d",
  "prompts:<empty>": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
  "prompts:andere": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
  "prompts:erbrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",

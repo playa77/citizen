@@ -1244,23 +1244,33 @@ async def generate_output(
 # OCR Synthesis & Correction — pre-pipeline stage
 # ---------------------------------------------------------------------------
 
+# P-13 (prompt set 3.0.0, F-21): merge two OCR readings without "correcting"
+# the wording of an official letter; conflicting numbers, dates, case numbers
+# and names keep version A and are marked "[OCR unsicher]" (P-14 nulls them).
 _OCR_SYNTHESIS_SYSTEM = (
-    "Du bist ein Experte für deutsche Texterkennung und -korrektur. "
-    "Dir werden zwei OCR-Texte desselben Dokuments vorgelegt, die von "
-    "unterschiedlich vorverarbeiteten Versionen stammen. "
-    "Deine Aufgabe:\n\n"
-    "1. Vergleiche beide Versionen und erstelle eine bestmögliche Synthese — "
-    "   wo beide Versionen übereinstimmen, übernimmt den Text. "
-    "   Wo Versionen voneinander abweichen, entscheide anhand des Kontexts, "
-    "   welche Version wahrscheinlicher korrekt ist.\n"
-    "2. Führe eine Rechtschreib- und Grammatikprüfung durch. "
-    "   Korrigiere offensichtliche OCR-Fehler (wie falsch erkannte Buchstaben, "
-    "   verschobene Zeilen, fehlende Leerzeichen).\n"
-    "3. Gib NUR den endgültigen, korrigierten deutschen Text zurück. "
-    "   Keine Erklärungen, keine Metadaten, keine Markdown-Formatierung.\n"
-    "4. Der ausgegebene Text muss ein vollständiges, zusammenhängendes "
-    "   Dokument sein. Keine Sätze dürfen fehlen. Der gesamte Inhalt beider "
-    "   OCR-Ergebnisse muss im Ergebnis enthalten sein (ggf. korrigiert)."
+    "<rolle>\n"
+    "Du führst zwei Texterkennungen desselben deutschen Dokuments zu einem Text "
+    "zusammen.\n"
+    "</rolle>\n\n"
+    "<eingaben>\n"
+    "„=== OCR-Version A (Graustufen + Kontrast) ===“ und „=== OCR-Version B "
+    "(Schwarz/Weiß) ===“, jeweils ggf. gekürzt.\n"
+    "</eingaben>\n\n"
+    "<regeln>\n"
+    "- Stimmen beide Versionen überein, übernimm die Stelle.\n"
+    "- Weichen sie ab, wähle die Lesart, die im Kontext ein deutsches Wort oder einen "
+    "sinnvollen Satz ergibt.\n"
+    "- Weichen sie bei Zahlen, Beträgen, Daten, Aktenzeichen oder Namen ab, übernimm "
+    "Version A und setze unmittelbar dahinter „[OCR unsicher]“.\n"
+    "- Korrigiere nur Erkennungsfehler (falsche Zeichen, fehlende Leerzeichen, "
+    "zerrissene Zeilen). Ändere keine Formulierung, Grammatik oder Rechtschreibung des "
+    "Originals.\n"
+    "- Gib jede Textstelle genau einmal aus, in der Reihenfolge des Dokuments; füge "
+    "nichts hinzu, was in keiner Version steht.\n"
+    "</regeln>\n\n"
+    "<ausgabeformat>\n"
+    "Nur der zusammengeführte Text. Keine Erklärung, keine Überschrift, kein Markdown.\n"
+    "</ausgabeformat>"
 )
 
 

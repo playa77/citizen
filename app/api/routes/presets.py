@@ -16,13 +16,15 @@ can see the owning module, legacy-alias mapping and enablement before it
 calls ``/analyze``.
 """
 
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-95: resolved_modules on suggest/apply
+# Semantic Version: 0.6.0 | 2026-11-16 — prompt set 3.0.0: P-10 rewritten with a
+# "no match" path (F-16); tolerant JSON parsing and an additive "match" field
+# ("llm" | "keyword_fallback") on /presets/suggest (CR-11).
+# 0.5.0 | 2026-11-16 — WP-95: resolved_modules on suggest/apply
 # (additive key).
 # 0.4.0
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -32,6 +34,13 @@ from app.core.router import OpenRouterClient
 from app.modules.areas import area_tables
 from app.modules.runtime import resolved_modules
 from app.services.presets import get_preset, list_presets
+from app.services.prompts import (
+    JSON_OBJECT_ONLY,
+    STRICT_SUFFIX,
+    stage_max_tokens,
+    stage_temperature,
+)
+from app.services.reasoning import JSONParseError, _parse_json_response
 
 logger = logging.getLogger(__name__)
 
@@ -42,17 +51,38 @@ router = APIRouter()
 # Always-LLM-suggest with keyword fallback
 # ---------------------------------------------------------------------------
 
-_SUGGEST_SYSTEM = (
-    "Du bist ein juristischer Erstberater. Dir wird die Schilderung "
-    "eines Bürgers vorgelegt. Wähle EINE ID aus dem folgenden Katalog "
-    "von Fall-Presets, die am besten passt:\n\n"
-    + "\n".join(f"- {p['id']}: {p['name']} — {p['description']}" for p in list_presets())
-    + "\n\nZugelassene Rechtsgebiete: "
-    + ", ".join(area_tables().keys)
-    + '\n\nAntworte GENAU mit einem JSON-Objekt: {"preset_id": "<id>", '
-    '"primary_area": "<legal_area>", "secondary_areas": ["<legal_area>", ...]}.\n'
-    "Gib ausschließlich gültiges JSON zurück."
-)
+
+def _render_suggest_system() -> str:
+    """P-10 (prompt set 3.0.0): catalogue and areas from module data.
+
+    Has an explicit "no match" answer (``preset_id: ""``) instead of forcing a
+    pick (F-16); the route then falls back to keyword matching and reports
+    ``match: "keyword_fallback"`` (CR-11).
+    """
+    tables = area_tables()
+    return (
+        "<rolle>\n"
+        "Du ordnest die Fallschilderung einer Person einer Fallvorlage zu. Du berätst nicht "
+        "rechtlich.\n"
+        "</rolle>\n\n"
+        "<katalog>\n"
+        + "\n".join(f"- {p['id']}: {p['name']} — {p['description']}" for p in list_presets())
+        + "\n</katalog>\n\n"
+        "<regeln>\n"
+        "- preset_id: die id der Vorlage, deren Beschreibung den Gegenstand der Schilderung "
+        'trifft; einzelne Stichwörter genügen nicht. Passt keine: "".\n'
+        "- primary_area: genau einer dieser Werte: "
+        + ", ".join(tables.keys)
+        + f'. Unklar: "{tables.catch_all}".\n'
+        "- secondary_areas: weitere Werte aus derselben Liste, ohne primary_area.\n"
+        "</regeln>\n\n"
+        "<ausgabeformat>\n"
+        f'{{ "preset_id": "{tables.fallback_preset}", "primary_area": "{tables.default_module}", '
+        '"secondary_areas": [] }\n\n' + JSON_OBJECT_ONLY + "\n</ausgabeformat>"
+    )
+
+
+_SUGGEST_SYSTEM = _render_suggest_system()
 
 # (preset_id, primary_area, keywords) — module data; the default module's
 # entries come last so it wins ties only as the initial fallback.
@@ -77,7 +107,12 @@ def _keyword_suggest(text: str) -> dict[str, Any]:
         if score > best_score:
             best_score = score
             best = (pid, primary)
-    return {"preset_id": best[0], "primary_area": best[1], "secondary_areas": []}
+    return {
+        "preset_id": best[0],
+        "primary_area": best[1],
+        "secondary_areas": [],
+        "match": "keyword_fallback",
+    }
 
 
 async def _call_llm_suggest(text: str) -> dict[str, Any]:
@@ -87,10 +122,11 @@ async def _call_llm_suggest(text: str) -> dict[str, Any]:
     try:
         raw = await client.chat_completion(
             [
-                {"role": "system", "content": _SUGGEST_SYSTEM},
+                {"role": "system", "content": _SUGGEST_SYSTEM + STRICT_SUFFIX},
                 {"role": "user", "content": text[:4000]},
             ],
-            temperature=0.1,
+            temperature=stage_temperature("preset_suggest"),
+            max_tokens=stage_max_tokens("preset_suggest"),
             max_retries=1,
         )
     except Exception as exc:
@@ -99,12 +135,13 @@ async def _call_llm_suggest(text: str) -> dict[str, Any]:
     finally:
         await client.close()
 
-    # Parse JSON.
+    # Parse JSON — tolerant of fences/prose (CR-11; a fenced answer used to
+    # drop silently into the keyword fallback).
     try:
-        parsed = json.loads(raw)
-        if not isinstance(parsed, dict):
-            return _keyword_suggest(text)
-    except (json.JSONDecodeError, ValueError):
+        parsed = _parse_json_response(raw, context="preset suggestion")
+    except JSONParseError:
+        return _keyword_suggest(text)
+    if not isinstance(parsed, dict):
         return _keyword_suggest(text)
 
     preset_id = str(parsed.get("preset_id") or "").strip()
@@ -116,7 +153,12 @@ async def _call_llm_suggest(text: str) -> dict[str, Any]:
         primary = tables.catch_all
     secs = parsed.get("secondary_areas") or []
     secs_clean = [s for s in secs if s in tables.keys and s != primary]
-    return {"preset_id": preset_id, "primary_area": primary, "secondary_areas": secs_clean}
+    return {
+        "preset_id": preset_id,
+        "primary_area": primary,
+        "secondary_areas": secs_clean,
+        "match": "llm",
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -26,7 +26,9 @@ from uuid import UUID
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 
+from app.api.routes.analyze import module_request_http_error
 from app.db.session import async_session_factory
+from app.modules.runtime import ModuleRequestError, resolve_request_areas
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.chat_reasoning import generate_chat_response, run_first_message_pipeline
 from app.services.conversation import (
@@ -159,11 +161,15 @@ async def delete_conversation_endpoint(conversation_id: UUID) -> dict[str, str]:
 @router.post("/conversations/{conversation_id}/messages")
 async def send_message_endpoint(
     conversation_id: UUID,
-    payload: dict[str, str] = Body(...),  # noqa: B008
+    payload: dict[str, Any] = Body(...),  # noqa: B008
 ) -> StreamingResponse:
     """Send a message in a conversation and stream the assistant's response via SSE.
 
-    Request body: ``{"content": "..."}``
+    Request body: ``{"content": "...", "legal_areas": ["<area key>", ...]}`` —
+    ``legal_areas`` is optional (prompt set 3.0.0, additive): it selects the
+    module profile of the chat persona (P-11), the areas of a first-message
+    pipeline run and the modules named in the provenance marker. Validated
+    like ``/analyze`` (422 ``MODULE_UNKNOWN`` / ``MODULE_NOT_ENABLED``).
 
     If this is the **first user message** in the conversation *and*
     documents are attached, the full 7-stage pipeline is executed and the
@@ -172,11 +178,22 @@ async def send_message_endpoint(
     Subsequent messages use a focused chat + RAG mode.
     """
     content = payload.get("content", "")
-    if not content or not content.strip():
+    if not isinstance(content, str) or not content.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Message content must be non-empty.",
         )
+    raw_areas = payload.get("legal_areas") or []
+    if not isinstance(raw_areas, list) or not all(isinstance(a, str) for a in raw_areas):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="'legal_areas' must be a list of area keys.",
+        )
+    legal_areas: list[str] = list(raw_areas)
+    try:
+        resolve_request_areas(legal_areas)
+    except ModuleRequestError as exc:
+        raise module_request_http_error(exc) from None
 
     async with async_session_factory() as db:
         conv = await get_conversation(
@@ -215,7 +232,7 @@ async def send_message_endpoint(
         try:
             if is_first_pipeline_run:
                 # ── Full 7-stage pipeline ──────────────────────────────
-                async for event in run_first_message_pipeline(doc_texts):
+                async for event in run_first_message_pipeline(doc_texts, legal_areas):
                     yield event
                     # Collect the final output from the last event.
                     if event.startswith("data: "):
@@ -247,6 +264,7 @@ async def send_message_endpoint(
                     messages=messages_history,
                     document_texts=doc_texts,
                     conversation_id=str(conversation_id),
+                    legal_areas=legal_areas,
                 ):
                     yield event
                     if event.startswith("data: "):

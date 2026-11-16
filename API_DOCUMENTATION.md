@@ -505,7 +505,13 @@ Returns conversation detail (below). Upload errors → `400`; dev-tag guard → 
 
 #### `DELETE /api/v1/conversations/{conversation_id}` → `{"status": "deleted", "id": "..."}`
 
-#### `POST /api/v1/conversations/{conversation_id}/messages` — body `{"content": "..."}`
+#### `POST /api/v1/conversations/{conversation_id}/messages` — body `{"content": "...", "legal_areas": ["<area key>", ...]}`
+
+`legal_areas` is optional (prompt set 3.0.0, additive): it selects the
+module profile of the chat persona, the areas of a first-message pipeline
+run and the modules named in `provenance.modules`. Validated like
+`/analyze`: `422` `MODULE_UNKNOWN` / `MODULE_NOT_ENABLED` (same detail
+shape), `400` when it is not a list of strings.
 
 SSE response (`text/event-stream`). First-message-with-documents mode emits
 pipeline stage events plus a final summary
@@ -513,8 +519,8 @@ pipeline stage events plus a final summary
 (the two Art. 50 objects added by WP-96, D-059; additive); otherwise chat/RAG
 token events ending with
 `{"type": "done", "full_response": "...", "disclosure": {...}, "provenance": {...}}`
-(the two Art. 50 objects as in §7.1). Conversations carry no `legal_areas`,
-so `provenance.modules` is `[DEFAULT_MODULE]` on both terminal events. Error event:
+(the two Art. 50 objects as in §7.1). Without `legal_areas`,
+`provenance.modules` is `[DEFAULT_MODULE]` on both terminal events. Error event:
 `{"error": "message_generation_failed", ...}`. `400` empty content, `404`
 unknown conversation.
 
@@ -597,8 +603,11 @@ characters, `404` unknown, `500` corrupt file.
 ```
 #### `GET /api/v1/presets/{preset_id}` — single preset; `404` unknown.
 #### `POST /api/v1/presets/suggest` — body `{"text": "<case description>"}` →
-`{"preset_id": "...", "primary_area": "sozialrecht", "secondary_areas": [], "resolved_modules": [...]}`
-(LLM-assisted with deterministic fallback). `400` empty text.
+`{"preset_id": "...", "primary_area": "sozialrecht", "secondary_areas": [], "match": "llm", "resolved_modules": [...]}`
+(LLM-assisted with deterministic fallback). `match` (prompt set 3.0.0,
+additive) says which path produced the suggestion: `"llm"`, or
+`"keyword_fallback"` when the model named no catalogue preset (it may
+answer "no match"), failed, or returned unparseable output. `400` empty text.
 #### `POST /api/v1/presets/apply` — body
 `{"preset_id": "...", "session_id": "...", "initial_text": "..."}` →
 `{"preset_id", "preset_name", "legal_areas", "primary_area", "enriched_text", "resolved_modules"}`.

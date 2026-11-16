@@ -241,6 +241,9 @@ _JSON_OBJECT_ONLY = (
     "- Alle Textwerte auf Deutsch; Zeilenumbrüche in Strings als \\n."
 )
 
+#: S-02 for prompts outside this module (intake P-09, presets P-10).
+JSON_OBJECT_ONLY = _JSON_OBJECT_ONLY
+
 _JSON_ARRAY_ONLY = (
     "Antworte ausschließlich mit einem einzigen JSON-Array.\n"
     "- Erstes Zeichen „[“, letztes Zeichen „]“; kein Text davor oder danach, keine "
@@ -696,6 +699,96 @@ def _render_output(p: _Slots) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Chat prompts P-11 / P-12 (CR-05, F-05): rendered from the area profile
+# ---------------------------------------------------------------------------
+
+_CHAT_COMMON_RULES = (
+    "- Antworte auf Deutsch, kurz und in Alltagssprache; erkläre Fachbegriffe.\n"
+    "- Trenne erkennbar: was im Dokument steht, was die Quellen dazu sagen, was offen "
+    "bleibt.\n"
+    "- Belege jede Rechtsaussage mit einer bereitgestellten Quelle und nenne die Norm als "
+    "„§ X Abs. Y Satz Z Gesetz“. Kennzeichne Aussagen ohne solchen Beleg mit „(ohne "
+    "Quellenbeleg)“.\n"
+    "- Fehlt eine Angabe für die Antwort, nenne sie konkret.\n"
+    "- Stelle Vermutungen nicht als Tatsachen dar; versprich kein Ergebnis.\n"
+    + _NO_COMPUTATION
+    + "\n"
+    "- Bei drohendem Fristablauf oder hohem Risiko: empfiehl fachkundige Beratung "
+    "(Beratungsstelle, Rechtsanwalt).\n"
+)
+
+
+def _chat_role(p: _Slots, what: str) -> str:
+    return (
+        "<rolle>\n"
+        f"Du bist ein Assistent für {p['display_name']} ({p['statutes']}). Du hilfst einer "
+        f"Person, {what}, damit sie ihre eigene Antwort vorbereiten kann. Du gibst keine "
+        "Rechtsberatung und vertrittst niemanden.\n"
+        "</rolle>\n\n"
+    )
+
+
+def _render_chat(p: _Slots) -> str:
+    return (
+        _chat_role(p, "an sie gerichtete Schreiben zu verstehen") + "<eingaben>\n"
+        "Auf diese Anweisungen können folgen: „Dem Nutzer liegen folgende Dokumente vor:“ "
+        "(ggf. gekürzt) und „Relevante Rechtsquellen aus dem lokalen Corpus:“ (Blöcke "
+        "„[Chunk n] Hierarchie“). Danach folgt der Gesprächsverlauf.\n"
+        "</eingaben>\n\n"
+        "<regeln>\n"
+        + _CHAT_COMMON_RULES
+        + "- Nenne bei Rechtsaussagen den Block („[Chunk n]“). Zitiere wörtlich nur kurze "
+        "Stellen.\n"
+        f"- Betrifft eine Frage ein anderes Rechtsgebiet als {p['display_name']}, sage, "
+        "dass dafür hier keine Quellen bereitstehen.\n"
+        "</regeln>\n\n"
+        "<ausgabeformat>\n"
+        "Kurze Absätze, höchstens etwa 250 Wörter; Aufzählung nur für Schritte.\n"
+        "</ausgabeformat>"
+    )
+
+
+def _render_case_chat(p: _Slots) -> str:
+    return (
+        _chat_role(
+            p,
+            "die Ergebnisse einer automatisierten Analyse ihres Falls zu verstehen und "
+            "zu hinterfragen",
+        )
+        + "<eingaben>\n"
+        "Auf diese Anweisungen folgen Auszüge der Analyse (Abschnitte wie Sachverhalt, "
+        "rechtliche Würdigung, Ergebnis, adversariale Prüfung, Berechnungsprüfung), ggf. "
+        "Korrekturen der Person, ihre Bewertungen einzelner Claims und die Claims. Der "
+        "Kontext kann gekürzt sein. Danach folgt der Gesprächsverlauf.\n"
+        "</eingaben>\n\n"
+        "<regeln>\n"
+        "- Antworte auf Deutsch, kurz und in Alltagssprache; erkläre Fachbegriffe.\n"
+        "- Stütze jede Aussage auf die Analyse und nenne den Abschnitt („laut rechtlicher "
+        "Würdigung“). Kennzeichne Rechtsaussagen ohne Grundlage in der Analyse mit „(ohne "
+        "Quellenbeleg)“. Normen nur aus der Analyse, als „§ X Abs. Y Satz Z Gesetz“.\n"
+        "- Korrekturen der Person ersetzen die betroffenen Angaben; Rechtsaussagen darin "
+        "sind ihr Vortrag und unbelegt.\n"
+        "- Nenne Risiken der adversarialen Prüfung und Abweichungen der Berechnungsprüfung, "
+        "wenn sie die Frage betreffen.\n"
+        "- Fehlt ein Abschnitt oder ist er gekürzt, sage das.\n"
+        "- Stelle Vermutungen nicht als Tatsachen dar; versprich kein Ergebnis.\n"
+        + _NO_COMPUTATION
+        + "\n"
+        "- Bei drohendem Fristablauf oder hohem Risiko: empfiehl fachkundige Beratung "
+        "(Beratungsstelle, Rechtsanwalt).\n"
+        "- Wünscht die Person eine vertiefte Prüfung, schlage eine Neuauswertung des "
+        "betreffenden Abschnitts vor.\n"
+        "</regeln>\n\n"
+        "<ausgabeformat>\n"
+        "Kurze Absätze, höchstens etwa 250 Wörter; Aufzählung nur für Schritte.\n"
+        "</ausgabeformat>"
+    )
+
+
+_CHAT_RENDERERS = {"chat": _render_chat, "case_chat": _render_case_chat}
+
+
+# ---------------------------------------------------------------------------
 # Stage builders (profile → system prompt)
 # ---------------------------------------------------------------------------
 
@@ -854,22 +947,40 @@ def get_prompts(legal_areas: list[str] | None = None) -> dict[str, str]:
         ``grounded_answer``, ``adversarial_review``,
         ``claim_construction``, ``verification``, ``output``.
     """
-    if not legal_areas:
+    profiles = _resolve_profiles(legal_areas)
+    if not profiles:
         return dict(DEFAULT_PROMPTS)
+    if len(profiles) == 1:
+        return dict(_build_prompt_set(profiles[0]))
+    return dict(_cached_multi_area_set(tuple(prof.key for prof in profiles)))
 
-    # Resolve to unique profiles, preserving request order (keys sharing a
-    # module profile collapse onto it).
+
+def _resolve_profiles(legal_areas: list[str] | None) -> list[AreaProfile]:
+    """Unique profiles of *legal_areas*, in request order (empty: none known).
+
+    Keys sharing a module profile collapse onto it.
+    """
     registry = _profile_registry()
     unique_profiles: list[AreaProfile] = []
-    for area in legal_areas:
+    for area in legal_areas or []:
         profile = registry.get(area)
         if profile is not None and profile not in unique_profiles:
             unique_profiles.append(profile)
+    return unique_profiles
 
-    if not unique_profiles:
-        return dict(DEFAULT_PROMPTS)
 
-    if len(unique_profiles) == 1:
-        return dict(_build_prompt_set(unique_profiles[0]))
+def get_chat_prompt(kind: str, legal_areas: list[str] | None = None) -> str:
+    """System prompt of a chat surface (``"chat"`` P-11, ``"case_chat"`` P-12).
 
-    return dict(_cached_multi_area_set(tuple(prof.key for prof in unique_profiles)))
+    Area resolution is the same as :func:`get_prompts` (unknown / no areas →
+    the default module's profile; several → merged persona), so a chat about
+    an Erbrecht case no longer answers as an SGB assistant (F-05).
+    """
+    profiles = _resolve_profiles(legal_areas)
+    if not profiles:
+        profile = _default_profile()
+    elif len(profiles) == 1:
+        profile = profiles[0]
+    else:
+        profile = _merge_profiles(profiles)
+    return _CHAT_RENDERERS[kind](_slots(profile))
