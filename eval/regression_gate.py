@@ -1,4 +1,7 @@
-# Version: 1.1.0 | 2026-11-16 — CR-09/CR-13: warns when baseline and run used
+# Version: 1.2.0 | 2026-11-16 — WP-97 follow-up: a sourced quote rate that
+# has no denominator in the current run (zero sourced claims) is reported as
+# "undefined (no sourced claims)", never confused with a measured 0 %.
+# 1.1.0 | 2026-11-16 — CR-09/CR-13: warns when baseline and run used
 # different prompt sets; sourced quote verification compared (warn-only).
 # 1.0.0 | 2026-07-12
 """Per-case monotonic regression gate (D-6).
@@ -159,6 +162,7 @@ def regression_gate(current: EvalReport, baseline: EvalReport) -> GateResult:
                 strict=False,
                 failures=failures,
                 warnings=warnings,
+                undefined_label="undefined (no sourced claims)",
             )
 
         # issue_recall
@@ -231,6 +235,7 @@ def _compare_metric(
     strict: bool,
     failures: list[str],
     warnings: list[str],
+    undefined_label: str = "None",
 ) -> None:
     """Compare a single metric between baseline and current.
 
@@ -251,6 +256,11 @@ def _compare_metric(
         List to which deterministic failure messages are appended.
     warnings :
         List to which LLM warning messages are appended.
+    undefined_label :
+        How a ``None`` current value is rendered. For ratio metrics whose
+        denominator can legitimately be empty (``quote_verification_rate_sourced``
+        with zero sourced claims) this names the cause, so the reader does not
+        mistake "no denominator" for a measured 0 %.
     """
     # Both None → skip (metric not applicable in either run)
     if base_val is None and curr_val is None:
@@ -258,7 +268,10 @@ def _compare_metric(
 
     # Baseline has a value but current doesn't → regression
     if base_val is not None and curr_val is None:
-        msg = f"Case {case_id} — {metric_name}: baseline={base_val:.4f}, current=None"
+        msg = (
+            f"Case {case_id} — {metric_name}: baseline={base_val:.4f}, "
+            f"current={undefined_label}"
+        )
         if strict:
             failures.append(msg)
             logger.warning("REGRESSION: %s", msg)
