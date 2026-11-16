@@ -123,13 +123,17 @@ deploy_db.sh
 
 # Eval — goldsets are tracked; results and run outputs are not
 # Eval results are git-ignored by default; the gate reports are the tracked
-# exceptions — WP-90 baseline (D-050), B0′ reference, the red 3.0.0 gate run
-# and the release run (WP-97, D-062). Negations must come after the ignore
-# rule; `<report>.outputs.json` stays ignored.
+# exceptions — WP-90 baseline (D-050), B0′ reference, the red 3.0.0 gate run,
+# the release run (WP-97, D-062) and the P10 dossier gate report (D-064).
+# Negations must come after the ignore rule (a directory needs its own
+# negation); `<report>.outputs.json` stays ignored.
 eval/results/*
 !eval/results/.gitkeep
 !eval/results/20261116T094340Z-e9fb87a.json
 !eval/results/20261116T170321Z-55ec1f2.json
 !eval/results/20261116T170935Z-0f3ae05.json
 !eval/results/20261116T175355Z-60c4afd.json
+!eval/results/dossier/
+eval/results/dossier/*
+!eval/results/dossier/sozialrecht-dossier-goldset-v1.0.0-core3.2.0-sozialrecht1.3.0-20261116T220431Z.json
 eval/__pycache__/
