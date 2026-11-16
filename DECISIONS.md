@@ -744,3 +744,19 @@ module surfaces as runtime breakage instead of the designed startup
 refusal (ARCHITECTURE.md § 6.1).
 **Rationale:** Reviewer finding; the contract field exists precisely to
 make the compatibility boundary explicit and enforced.
+
+### D-050 R1 — 2026-11-16 — Unbounded parameter brackets use a finite sentinel (seed fix, WP-90 prerequisite)
+**Decision:** `scripts/seed_legal_parameters.py` writes
+`"max_income": 10_000_000.0` for the open-ended § 11b Abs. 3 top bracket
+instead of `float("inf")`: JSON/JSONB cannot carry ±Infinity (asyncpg
+rejects the `Infinity` token — `InvalidTextRepresentationError`), so the
+official seeding path crashed mid-seed, leaving `legal_parameter`
+partially populated (4 of 27 rows).
+**Rejected:** (a) `null` for `max_income` — a future consumer comparing
+`income <= max_income` would `TypeError`; a finite sentinel far above any
+real monthly income keeps the data comparison-safe. (b) Widening the
+in-memory parameter store to translate `Infinity` — nothing consumes
+these bracket parameters yet; fixing the producer is the minimal change.
+**Rationale:** Found while producing the WP-90 baseline eval (required
+seeding the parameter store on a fresh database). The sentinel is
+documented at the seed site; no behavioural consumer exists to migrate.
