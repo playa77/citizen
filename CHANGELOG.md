@@ -1,3 +1,25 @@
+## 2026-11-16 — Prompt inventory and upgrade brief (WP-97 preparation)
+
+Documentation only: no code, migration, API or prompt-text change.
+
+### Added
+
+- `docs/prompt-inventory.md` — byte-exact record of every model-facing prompt
+  (16 system prompts P-01…P-16, 6 shared blocks S-01…S-06), with call paths,
+  models, sampling, input layout, output contracts, the ten interpolated
+  profile slots and a 16-item findings register (F-01…F-16). Bodies are
+  rendered from the live registry, not transcribed.
+- `docs/prompt-upgrade-brief.md` — task prompt for a frontier model to rewrite
+  all prompts: project introduction, role of the prompts, the measured and
+  structural reasons they are insufficient, hard constraints, deliverables,
+  measurement plan and acceptance criteria.
+
+### Notes
+
+- Records, but does not fix, the prompt-level defects behind the WP-90
+  baseline metrics (D-050) and the byte-identical prompt pinning of WP-93
+  (D-051) that carried them forward unchanged.
+
 ## 2026-11-16 — P9 WP-96: compliance deltas for modularity (D-059)
 
 Provenance v1.1, purpose-drift lint 2.0.0 and DISCLAIMER 3.0.0 for the
