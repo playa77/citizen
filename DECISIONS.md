@@ -1181,3 +1181,104 @@ stores metrics only, so it cannot be re-scored. The next reference is B0′:
 commit `55ec1f2` — prompt set 2.0.0 texts and sampling (all stages at 0.1)
 with the 1.1.0/1.2.0 eval code — run with `--save`. Later commits change
 sampling (`8cfd320`) and texts, so they are the arms, not the baseline.
+
+### D-062 R2 — 2026-11-16 — WP-97 P9 exit gate: core 3.0.0, `sozialrecht` 1.1.0
+**Scope and acceptance (recorded before the change, AGENTS.md):** roadmap
+v3.0.0 WP-97 — goldset v0.2.0 eval **zero regression** against the WP-90
+baseline; full suite + ruff + mypy strict + purpose-drift lint green; requests
+without `legal_areas` behave byte-identically (golden SSE transcripts); cut
+core **3.0.0**, `sozialrecht` **1.0.0**; CHANGELOG + D-entry.
+**Decision:**
+(a) **Gate reference: B0′, not the WP-90 report.** D-061 already recorded that
+`eval/results/20261116T094340Z-e9fb87a.json` (D-050) is not comparable — the
+eval extractors/metrics changed (1.1.0/1.2.0) after it was produced, and its
+metrics-only format cannot be re-scored. The manifest-declared
+`gate.baseline_report` therefore pointed at an unusable reference. B0′ was
+produced for this gate at commit `55ec1f2` (prompt set 2.0.0 texts, eval code
+1.1.0/1.2.0, run-to-run comparable): `eval/results/20261116T170321Z-55ec1f2.json`
+— recall 29.0 %, citation precision 27.1 %, calculation exact 100 %, Frist
+exact 100 %, assessment match 0.0 %, quote verification 43.9 % (sourced
+94.4 %), mean latency 165 s. **Gate rule:** `eval/regression_gate.py` 1.1.0 —
+deterministic metrics (`calculation_exact_match`, `frist_exact_match`,
+`quote_verification_rate`, `leakage_rate`) strict, LLM metrics warn-only.
+The manifest's `gate.baseline_report` follows the reference: it now names the
+release run (`eval/results/20261116T175355Z-60c4afd.json`), so the next gate
+compares like-for-like; the WP-90 path stays in the tree as historical
+evidence.
+(b) **The gate was red on the first release candidate and the cause was the
+prompt set, not the module refactor.** The `0f3ae05` run
+(`eval/results/20261116T170935Z-0f3ae05.json`, prompt set 3.0.0) failed with
+five deterministic quote-verification regressions (GS-003 0.545→0.000,
+GS-009 0.400→0.000, GS-011 0.625→0.000, GS-012 0.429→0.000, GS-007
+0.667→0.600). Diagnosis: P-04 (3.0.0) required a claim for *every* question
+and a separate „Mit den bereitgestellten Quellen nicht belegbar“ claim for
+each question a chunk could not answer, so questions only the document
+answers (§ 35 SGB X Begründung, Rechtsbehelfsbelehrung, Bewilligungszeitraum)
+consumed the claim budget; four cases ended with **zero sourced claims** and
+claims per case fell from 8–13 to 3–6. The proposal's A3 rule (sourced quote
+rate 94.4→96.9 %, assessment match 0→33.3 %, precision 27.1→27.6 %) would
+have passed it — the raw metric is what the gate treats as strict, so the
+release was not cut on the A3 reading alone.
+(c) **Prompt set 3.0.1 (owner instruction):** one „nicht belegbar“ claim per
+response instead of one per question, document-factual questions explicitly
+exempt, claim density back to 1–3 per legal question (cap 12). Text-only
+change in `app/services/prompts.py` (`_UNSOURCED_CLAIM`, the P-04 `<aufgabe>`
+claim rule, `PROMPT_SET_VERSION` 3.0.1); the 13 `prompts:*` golden digests
+re-baselined in `tests/unit/golden/wp93_v2_baseline.json` `_meta` — no other
+key changed; prompt still fits the 6,000-char budget (5,940). Prompt-inventory
+2.0.1.
+(d) **Gate result (green):** `eval/results/20261116T175355Z-60c4afd.json`
+(prompt set 3.0.1) vs B0′ — **zero deterministic failures**, six warn-only
+LLM wobbles (incl. the prompt-set mismatch warning the gate emits by design).
+Recall 41.5 %, precision 30.3 %, calculation exact 100 %, Frist exact 100 %,
+assessment match 16.7 %, quote verification **70.5 %** (sourced 95.1 %), mean
+latency 173 s. Per-case quote verification is at or above B0′ in all twelve
+cases.
+(e) **Versions:** core **3.0.0** (`pyproject.toml`); `sozialrecht` **1.1.0**
+released. The roadmap says 1.0.0, but D-060's prompt-profile change was a
+MINOR bump while 1.0.0 was still unreleased — the first published version is
+therefore 1.1.0 and 1.0.0 is retired unpublished (module CHANGELOG records
+both). No migration in this package (`013_legal_module` shipped with WP-94).
+(f) **Golden SSE transcripts:** `tests/integration/test_analyze_transcript.py`
+pins the raw SSE stream of a request without `legal_areas` byte-for-byte
+against `tests/integration/golden/analyze_transcript_no_areas.txt`
+(`run_pipeline` stubbed deterministically; uuids, provenance
+`timestamp_utc`/`app_version` and module version/parameter_set are normalised
+and asserted separately). Recorded with the same stub against the pre-P9 tree
+(`aae2888`), the transcripts differ **only** in the documented provenance
+v1.1 delta (D-059: `spec_version` + additive `modules`); every stage event and
+every other terminal field is identical.
+(g) **Suite / gates:** unit 1156 passed, 2 failed, 2 skipped — the two
+`test_pseudonymization` negative controls fail identically at `aae2888` with
+the spaCy model installed (D-051) and pass in CI, which does not install the
+model; integration 42 passed; `ruff check app/`, `ruff format --check app/`,
+`mypy app/ --python-version 3.12` (CI's 3.12 invocation) and
+`scripts/check_purpose_drift.py` green. Fixed a test defect: the config-default
+test read the developer `.env` instead of the class defaults.
+(h) **Residual couplings recorded, not removed:** `CORPUS_SOURCES` still
+defaults to the Sozialrecht source pair (the module `corpus.yaml` supplies the
+per-area scope; the setting is the deployment's default ingest list) and
+`ENABLE_CALCULATION_CHECK` stays a global toggle. Both were already listed as
+"partly" in ARCHITECTURE.md § 8; changing them would change behaviour beyond
+the additive remit of the release.
+**Rejected:** (1) Gating against the WP-90 report because the manifest names
+it — the comparison is meaningless (D-061) and would have produced both false
+reds and false greens. (2) Shipping 3.0.0 on the A3 criteria while the strict
+gate was red — a red gate is red. (3) Gating against the 3.0.0 run
+(`0f3ae05`) as the reference — a red candidate must not become the baseline.
+(4) Renumbering the module to 1.0.0 at the cut — it would contradict the
+unreleased-version history in D-060 without a technical benefit.
+(5) Making `quote_verification_rate` warn-only or switching the strict metric
+to the sourced variant — both change what the gate measures, and neither was
+needed once the prompt defect was fixed.
+**Rationale:** The P9 goal is a domain-neutral core with zero behaviour change
+for the default path; the refactor itself passed every deterministic check,
+and the only red flags were caused by the already-landed prompt upgrade. Fixing
+the prompt (rather than the gate or the reference) restores claim coverage and
+keeps the strict metric meaningful.
+**Open:** the proposal's measurement arms A1–A5 (and the 3-repetition spread
+B0′ should carry) are still unrun; the goldset is a single repetition per
+state, so the warn-only metric moves are not evidence of improvement, only the
+deterministic gate is. Claim density is restored but no longer matches 3.0.0's
+smaller, more selective claim set — a follow-up may revisit P-04 once the
+spread is known.

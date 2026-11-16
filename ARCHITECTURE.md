@@ -478,6 +478,14 @@ eval must show **zero regression** against the last v2.0.0 baseline report,
 the full test suite stays green, and every `/api/v1` route behaves identically
 for requests that do not name a module.
 
+**P9 gate closed (WP-97, D-062):** measured against the B0′ reference
+(`eval/results/20261116T170321Z-55ec1f2.json`, prompt set 2.0.0 with the
+1.1.0/1.2.0 eval code — the WP-90 report is not comparable, D-061) with zero
+deterministic regressions; the no-module transport contract is pinned by
+`tests/integration/test_analyze_transcript.py` (byte-identical to the pre-P9
+tree apart from the documented provenance v1.1 delta). Residual couplings:
+`CORPUS_SOURCES` default and the global `ENABLE_CALCULATION_CHECK` toggle.
+
 ---
 
 *Changes to this document follow semantic versioning. Statements marked target

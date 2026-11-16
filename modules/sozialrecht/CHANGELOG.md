@@ -1,9 +1,14 @@
 # Changelog — module `sozialrecht`
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
-1.0.0 is unreleased until the P9 exit gate (roadmap WP-97).
 
-## 1.0.0 — unreleased (WP-91 → WP-96)
+## 1.1.0 — 2026-11-16 — released with core 3.0.0 (WP-97)
+
+First published version. The roadmap named 1.0.0, but D-060's prompt-profile
+change was a MINOR bump while 1.0.0 was still unreleased, so the P9 exit gate
+publishes 1.1.0; 1.0.0 is retired without ever having been released.
+
+Contents (everything below was unreleased until this entry):
 
 - WP-91: manifest (`module.yaml`), tier `verified`, `DEFAULT_MODULE`.
 - WP-92: deadline specs (`fristen.yaml`: Widerspruchsfrist § 84 SGG with
@@ -32,4 +37,16 @@ Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
   purpose-drift lint), `DISCLAIMER_ADDENDUM.md` (scope, deadlines, amounts,
   drafts, Art. 9 DSGVO, referral; compiled into DISCLAIMER v3.0.0 Part D.2),
   special regime Art. 9 DSGVO. Parameter-set id for provenance v1.1:
-  `1.0.0+<latest valid_from>`. No behaviour change.
+  `1.1.0+<latest valid_from>`.
+- WP-97 (P9 exit gate): goldset v0.2.0 zero deterministic regression against
+  B0′ (`eval/results/20261116T170321Z-55ec1f2.json` → release run
+  `eval/results/20261116T175355Z-60c4afd.json`; D-062). Prompt set 3.0.1
+  (P-04 claim-rule fix, D-062). `goldset.gate.baseline_report` now names the
+  release run so the next gate compares like-for-like (the WP-90 report is not
+  comparable, D-061).
+
+## 1.0.0 — retired before release
+
+Never published: the version number was superseded by 1.1.0 while the module
+was still unreleased. The history above is the content that 1.0.0 would have
+carried before D-060.

@@ -1,12 +1,12 @@
 # Prompt Inventory
 
-**Version 2.0.0 — 2026-11-16 — prompt set 3.0.0, working tree at commit `d68d37e`.**
+**Version 2.0.1 — 2026-11-16 — prompt set 3.0.1, working tree at commit `60c4afd`.**
 
 This document records **every instruction this service sends to a language model** — text, file, call path, sampling, input layout and output contract. Version 1.0.0 recorded prompt set 2.0.0 and its 16 findings and was the input for `docs/prompt-upgrade-proposal.md`; this version records prompt set 3.0.0, the implemented proposal (D-060).
 
 The prompt bodies were **not transcribed by hand**: they are rendered from the running code (the stage templates over the module profiles, the endpoint prompts and the module calculator) and written out verbatim; file locations are computed from the source. Reproduction: § 13.
 
-Versions: 2.0.0 (2026-11-16) — prompt set 3.0.0 (all bodies, sizes, call paths, sampling; findings register with status, F-17…F-24 added). 1.0.0 (2026-11-16) — prompt set 2.0.0 at commit `ef90906`.
+Versions: 2.0.1 (2026-11-16) — prompt set 3.0.1: P-04 claim rules only (one "nicht belegbar" claim per response, document-factual questions exempt, 1–3 claims per legal question); § 2 lengths and the P-04 body updated (WP-97 gate, D-062). 2.0.0 (2026-11-16) — prompt set 3.0.0 (all bodies, sizes, call paths, sampling; findings register with status, F-17…F-24 added). 1.0.0 (2026-11-16) — prompt set 2.0.0 at commit `ef90906`.
 
 ---
 
@@ -55,13 +55,13 @@ Rendered lengths (characters), 2.0.0 → 3.0.0:
 | P-01 classification | 1,902 → 2,922 | P-09 intake | 1,864 (+314 suffix) → 2,216 (+51) |
 | P-02 decomposition | 1,856 → 2,537 | P-10 preset_suggest | 1,477 → 2,054 |
 | P-03 triage | 2,438 → 3,657 | P-11 chat | 1,502 → 1,662 |
-| P-04 grounded_answer | 5,971 → 5,839 | P-12 case_chat | 2,074 → 1,874 |
+| P-04 grounded_answer | 5,971 → 5,839 → 5,940 | P-12 case_chat | 2,074 → 1,874 |
 | P-05 adversarial_review | 4,870 → 3,928 | P-13 ocr_synthesis | 958 → 964 |
 | P-06 claim_construction | 1,929 → 2,189 | P-14 calc_extraction | 2,332 → 3,498 |
 | P-07 verification | 1,702 → 1,439 | P-15 calc_explanation | 1,910 → 2,212 |
 | P-08 output | 2,138 → 3,019 | P-16 banner (4 variants; wrapped) | 187–223 → 102–229 (block 470 in the § 8 example) |
 
-All eight stage prompts: 22,806 → **25,530** characters; the three on the default path (P-03, P-04, P-05): 13,279 → **13,424**. The strict suffix S-05 appended to every JSON prompt: 255 → 51.
+All eight stage prompts: 22,806 → **25,530** characters; the three on the default path (P-03, P-04, P-05): 13,279 → 13,424 → **13,525**. The strict suffix S-05 appended to every JSON prompt: 255 → 51.
 
 ---
 
@@ -262,7 +262,7 @@ Antworte ausschließlich mit einem einzigen JSON-Objekt.
 | User message | `## DOKUMENT` (5,000, marked when cut), `## IDENTIFIZIERTE THEMEN`, `## RECHTSFRAGEN`, `## RECHTSQUELLEN (CHUNKS)` — ≤ 12 chunks, ≤ 7,000 chars, each `CHUNK [<chunk_id>] <hierarchy>:` + text, separated by `---`, a cut chunk ends in `...` (`app/services/reasoning.py:530`) |
 | Output contract | `{"claims": [{claim_text, confidence_score, claim_type, question, evidence_chunk_id, evidence_hierarchy, evidence_quote}], "sections": {sachverhalt, rechtliche_wuerdigung, ergebnis, handlungsempfehlung, entwurf, unsicherheiten, adversarial_pruefung}}` — unchanged shape; `fact` is not requested (F-18) |
 | Consumers | `state.claims` → deterministic verification (keeps every claim, sets `verification_status`); `state.final_output` |
-| Rendered length | 5,839 chars (`sozialrecht`); 6,767 merged with `erbrecht` |
+| Rendered length | 5,940 chars (`sozialrecht`); 6,868 merged with `erbrecht` (prompt set 3.0.1) |
 
 ````text
 <rolle>
@@ -278,7 +278,7 @@ Text nach der Zeile „--- Nutzerkontext für Neuauswertung ---“ ist Vortrag d
 </eingaben>
 
 <aufgabe>
-1. claims: Beantworte jede Rechtsfrage mit 1 oder 2 Claims, insgesamt höchstens 10.
+1. claims: Beantworte jede rechtliche Frage mit 1 bis 3 Claims, insgesamt höchstens 12.
 2. sections: Schreibe die sieben Abschnitte nur auf Grundlage der Claims und des Dokuments.
 Widerspricht eine Abschnittsregel einer Claim-Regel, gilt die Claim-Regel.
 </aufgabe>
@@ -291,7 +291,7 @@ Widerspricht eine Abschnittsregel einer Claim-Regel, gilt die Claim-Regel.
 - evidence_quote: ein zusammenhängender Abschnitt aus dem Text dieses Chunks, 1 bis 2 Sätze, Zeichen für Zeichen kopiert. Keine Auslassungszeichen, keine Umformulierung, keine Zusammenfügung zweier Stellen, nicht die Kopfzeile, nicht das „...“ eines gekürzten Chunks.
 - Das Zitat muss die Aussage des Claims tragen; thematische Nähe genügt nicht.
 - confidence_score: 0.8–1.0 nur, wenn die Quelle die Aussage ohne Auslegung trägt; 0.5–0.7, wenn Auslegung oder fehlende Tatsachen entscheiden; höchstens 0.4, wenn die Quelle sie nur teilweise trägt.
-- Trägt keine Quelle eine Antwort auf eine Frage: genau ein Claim mit claim_text „Mit den bereitgestellten Quellen nicht belegbar: <Frage in Kurzform>“, claim_type "interpretation", confidence_score 0.2, "" in allen evidence-Feldern. Gib nie eine leere Liste zurück, wenn Fragen vorliegen.
+- Trägt keine Quelle eine Antwort auf eine rechtliche Frage: höchstens ein solcher Claim insgesamt (nicht je Frage) mit claim_text „Mit den bereitgestellten Quellen nicht belegbar: <Frage in Kurzform>“, claim_type "interpretation", confidence_score 0.2, "" in allen evidence-Feldern. Fragen, die das Dokument selbst beantwortet (Angaben, Daten, Fristen, Beträge), brauchen keinen Claim.
 - Nenne keine Tatsache, kein Datum, keine Frist, keinen Geldbetrag, keine Norm, kein Aktenzeichen, keine Gerichtsentscheidung und keine Behördenhandlung, die weder im Dokument noch in den bereitgestellten Quellen steht.
 - Fehlt eine Angabe, benenne die Lücke („im Dokument nicht angegeben“). Fülle sie nicht durch Annahmen.
 - Kennzeichne eine unbelegte Aussage als unbelegt, statt sie abzuschwächen.

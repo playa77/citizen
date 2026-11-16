@@ -1,3 +1,80 @@
+## 2026-11-16 — Core 3.0.0: P9 exit gate (WP-97, D-062)
+
+P9 is closed. The core carries no area-specific code, Sozialrecht ships as
+`modules/sozialrecht` **1.1.0** (still `DEFAULT_MODULE`), the package is
+**3.0.0**, and the release is gated by a goldset run against a fresh B0′
+reference instead of the no-longer-comparable WP-90 report (D-061).
+
+### Verified against B0′ — gate PASSED
+
+Goldset v0.2.0, 12/12 cases through the real pipeline (live DB + LLM API):
+`eval/results/20261116T175355Z-60c4afd.json` vs the B0′ reference
+`eval/results/20261116T170321Z-55ec1f2.json` (commit `55ec1f2`, prompt set
+2.0.0, eval code 1.1.0/1.2.0 — the same metric definitions).
+
+| metric | B0′ (prompt 2.0.0) | release (prompt 3.0.1) |
+|---|---|---|
+| issue recall | 29.0 % | 41.5 % |
+| citation precision | 27.1 % | 30.3 % |
+| calculation exact | 100 % | 100 % |
+| Frist exact | 100 % | 100 % |
+| assessment match | 0.0 % | 16.7 % |
+| quote verification | 43.9 % | **70.5 %** |
+| quote verification (sourced) | 94.4 % | 95.1 % |
+| mean latency | 165 s | 173 s |
+
+`regression_gate`: **zero deterministic failures**; six warn-only LLM metric
+wobbles (the gate reports the prompt-set difference as a warning by design).
+
+### Fixed
+
+- **P-04 answered every question with a claim and marked each unanswered one
+  separately "nicht belegbar"** (prompt set 3.0.0) — document-factual
+  questions (§ 35 SGB X Begründung, Rechtsbehelfsbelehrung,
+  Bewilligungszeitraum) then produced responses with no citation at all. Four
+  of twelve cases fell to zero sourced claims; the first gate run against B0′
+  was **red** with five quote-verification regressions (`0f3ae05`,
+  `eval/results/20261116T170935Z-0f3ae05.json`). Prompt set **3.0.1** emits
+  at most one such claim per response, exempts document-factual questions and
+  restores 1–3 claims per legal question; the 13 `prompts:*` golden digests
+  are re-baselined (no other key changed).
+- `test_default_deployment_mode_is_dev` read the developer's `.env`
+  (`CITIZEN_SYNTHETIC_DATA_ONLY=true`) instead of the class defaults — green
+  in CI, red on every provisioned dev box.
+
+### Added
+
+- `tests/integration/test_analyze_transcript.py` +
+  `tests/integration/golden/analyze_transcript_no_areas.txt` — the WP-97
+  golden SSE transcript for requests that name no legal areas. Recorded
+  against the pre-P9 tree (`aae2888`) with the same stub, the only difference
+  is the documented provenance v1.1 delta (D-059); the pin now fails on any
+  contract change.
+- `eval/results/20261116T170321Z-55ec1f2.json` (B0′) and the two gate runs,
+  committed as the P9 evidence.
+
+### Changed
+
+- Package **3.0.0**; `sozialrecht` **1.1.0** released (the roadmap named
+  1.0.0 — superseded by D-060's unreleased MINOR bump). Module CHANGELOG
+  rewritten with the release entry; `API_DOCUMENTATION.md`,
+  `ARCHITECTURE.md`, `README.md`, `docs/module-catalog.md` and
+  `DEPLOYMENT.md` (migration chain was missing `013`) follow.
+- `docs/prompt-inventory.md` 2.0.1 (P-04 body, P-04 lengths, prompt set
+  3.0.1).
+
+### Notes
+
+- Gate reference changed on the owner's instruction after D-061 declared the
+  WP-90 report incomparable; B0′ was produced for this gate (it had never
+  been run). The proposal's arms A1–A5 remain open — only B0′ and the release
+  state were measured.
+- Suite: unit 1156 passed / 2 failed / 2 skipped — the two
+  `test_pseudonymization` negative controls fail identically at `aae2888`
+  with the spaCy model installed (D-051) and pass in CI, where the model is
+  absent; integration 42 passed. ruff, `ruff format --check`, mypy strict and
+  the purpose-drift lint are green.
+
 ## 2026-11-16 — Prompt set 3.0.0 (prompt upgrade before WP-97; D-060, D-061)
 
 Implements `docs/prompt-upgrade-proposal.md` 1.0.0: new text for all 16

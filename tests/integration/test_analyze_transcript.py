@@ -35,6 +35,12 @@ tests/integration/test_analyze_transcript.py``. Re-baseline **only** for a
 deliberate contract change (a new key on the terminal event, a changed stage
 payload shape) and record it in ``DECISIONS.md`` — the transcript is the
 WP-97 behaviour gate, so a silent re-baseline defeats it.
+
+Run this file as part of an integration-only pytest invocation, like CI does.
+A combined ``pytest tests/unit/ tests/integration/`` process reuses one async
+engine across event loops; the resulting asyncpg "another operation is in
+progress" error makes the route's audit write fail, which drops
+``case_run_id`` from the terminal event and (correctly) fails the pin.
 """
 
 # Semantic Version: 1.0.0 | 2026-11-16 — WP-97 P9 exit gate.
