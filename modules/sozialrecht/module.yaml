@@ -7,9 +7,12 @@
 # rules engine, the 2026-07-01 regime provider, the action-draft templates
 # and the goldsets. Behaviour is unchanged for requests that name no module.
 
-# Semantic Version: 1.1.0 | 2026-11-16 — prompt set 3.0.0: prompt profile
-# (issue_terms with norm anchors, result_categories), calculator prompts
-# P-14/P-15, regime banners as constraints with a reference date (D-060).
+# Semantic Version: 1.1.0 | 2026-11-16 — released with core 3.0.0 at the P9
+# exit gate (WP-97): the version stays 1.1.0 (D-060's prompt-profile bump; 1.0.0
+# was never published), the gate pins zero goldset regression against B0′.
+# 1.1.0 — prompt set 3.0.0: prompt profile (issue_terms with norm anchors,
+# result_categories), calculator prompts P-14/P-15, regime banners as
+# constraints with a reference date (D-060).
 # 1.0.0
 
 id: sozialrecht
@@ -41,10 +44,13 @@ documents: [widerspruch, widerspruch_jahresfrist, ueberpruefungsantrag_44, akten
 document_templates: documents/templates.yaml
 goldset:
   path: goldset/goldset-v0.2.0.yaml
-  # P9 exit gate (roadmap WP-97): zero regression against the WP-90 baseline.
+  # P9 exit gate (roadmap WP-97): zero regression against the WP-90 baseline
+  # was replaced by the B0′ reference (D-061/D-062); this now names the
+  # released state, so the next gate compares like-for-like (prompt set
+  # 3.0.1, eval 1.1.0/1.2.0).
   gate:
     rule: zero_regression
-    baseline_report: eval/results/20261116T094340Z-e9fb87a.json
+    baseline_report: eval/results/20261116T175355Z-60c4afd.json
 # WP-96: compliance declarations (ARCHITECTURE.md § 7). The deny phrases feed
 # scripts/check_purpose_drift.py; the addendum is compiled into
 # DISCLAIMER_DE.md / DISCLAIMER_EN.md Part D.

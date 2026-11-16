@@ -21,7 +21,7 @@
      "prompts:sozialrecht+erbrecht",
      "prompts:unknown-area"
     ],
-    "reason": "prompt set 3.0.0: stage prompts P-01…P-08, shared blocks, profile data; calculator prompts P-14/P-15 (D-060)"
+    "reason": "prompt set 3.0.0: stage prompts P-01\u2026P-08, shared blocks, profile data; calculator prompts P-14/P-15 (D-060)"
    },
    {
     "keys": [
@@ -37,12 +37,30 @@
      "presets:suggest_system"
     ],
     "reason": "prompt set 3.0.0: intake P-09 + S-06 retired, preset P-10, keyword fallback reports match (CR-11) (D-060)"
+   },
+   {
+    "keys": [
+     "prompts:<empty>",
+     "prompts:andere",
+     "prompts:erbrecht",
+     "prompts:erbrecht+familienrecht",
+     "prompts:erbrecht+sozialrecht",
+     "prompts:familienrecht",
+     "prompts:familienrecht+sozialrecht+schenkungsrecht",
+     "prompts:mietrecht",
+     "prompts:mietrecht+erbrecht",
+     "prompts:schenkungsrecht",
+     "prompts:sozialrecht",
+     "prompts:sozialrecht+erbrecht",
+     "prompts:unknown-area"
+    ],
+    "reason": "prompt set 3.0.1: P-04 claim rules \u2014 one 'nicht belegbar' claim per response, document-factual questions need no claim, 1-3 claims per legal question (WP-97 gate, D-062)"
    }
   ]
  },
  "calc:explanation_prompt": "9d3ee7cb72515e71e3086b59b40aa4b9becb932738cfd71fec8d557ca67cfc3b",
  "calc:extraction_prompt": "4670c9a67bbc7a4ab613fe9fcb72321143a486c2c929789b3b920c1caf0c1a0f",
- "calc:referral_hint": "Bitte lassen Sie die Berechnung von einer Fachstelle oder einem Rechtsanwalt für Sozialrecht überprüfen.",
+ "calc:referral_hint": "Bitte lassen Sie die Berechnung von einer Fachstelle oder einem Rechtsanwalt f\u00fcr Sozialrecht \u00fcberpr\u00fcfen.",
  "corpus:area_source_types": {
   "andere": [],
   "arbeitsrecht": [
@@ -353,19 +371,19 @@
  ],
  "presets:list": "29e17b7206832f777e61b8308a2c3733be35d61e8ca128fedb66024832a16662",
  "presets:suggest_system": "d4b8a0381a3d48f3c48e1826fa15854820749d086d3546e7845a5bd9fc238c6d",
- "prompts:<empty>": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
- "prompts:andere": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
- "prompts:erbrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
- "prompts:erbrecht+familienrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
- "prompts:erbrecht+sozialrecht": "a4be6c5467a6e23f81cfde57c5ce5b21a0497dbe8f61df1204cf8978a07c46d9",
- "prompts:familienrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
- "prompts:familienrecht+sozialrecht+schenkungsrecht": "a4be6c5467a6e23f81cfde57c5ce5b21a0497dbe8f61df1204cf8978a07c46d9",
- "prompts:mietrecht": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
- "prompts:mietrecht+erbrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
- "prompts:schenkungsrecht": "7909d64e55c4eb2e70fe2f30e658ad571d8ecae6fbecd3e9b3867b8d841cf12a",
- "prompts:sozialrecht": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
- "prompts:sozialrecht+erbrecht": "787298705646707a61eac1c129cae1dbf4a83f3db4705693ac364c5a30553789",
- "prompts:unknown-area": "945b57eb34c03cf7b63e34044952483a8ce3beae9ad739dcf5073e1c06d043c1",
+ "prompts:<empty>": "b5012769907abc3e9a33b5718e00bcb7c9356de02ec35b47d64252e9eeac2b74",
+ "prompts:andere": "b5012769907abc3e9a33b5718e00bcb7c9356de02ec35b47d64252e9eeac2b74",
+ "prompts:erbrecht": "10211382f82177f7354e6db56eca431ed8c31aed25a7fe4571694c16f4721aa1",
+ "prompts:erbrecht+familienrecht": "10211382f82177f7354e6db56eca431ed8c31aed25a7fe4571694c16f4721aa1",
+ "prompts:erbrecht+sozialrecht": "2d38680aa2d71db127750aaa7c792213478433157635a1058a2f78070dedb518",
+ "prompts:familienrecht": "10211382f82177f7354e6db56eca431ed8c31aed25a7fe4571694c16f4721aa1",
+ "prompts:familienrecht+sozialrecht+schenkungsrecht": "2d38680aa2d71db127750aaa7c792213478433157635a1058a2f78070dedb518",
+ "prompts:mietrecht": "b5012769907abc3e9a33b5718e00bcb7c9356de02ec35b47d64252e9eeac2b74",
+ "prompts:mietrecht+erbrecht": "10211382f82177f7354e6db56eca431ed8c31aed25a7fe4571694c16f4721aa1",
+ "prompts:schenkungsrecht": "10211382f82177f7354e6db56eca431ed8c31aed25a7fe4571694c16f4721aa1",
+ "prompts:sozialrecht": "b5012769907abc3e9a33b5718e00bcb7c9356de02ec35b47d64252e9eeac2b74",
+ "prompts:sozialrecht+erbrecht": "95a8bf6ac47df731e6f7bb4c593b2b8f0f37617d8fd045c24c400c969f3a89d5",
+ "prompts:unknown-area": "b5012769907abc3e9a33b5718e00bcb7c9356de02ec35b47d64252e9eeac2b74",
  "regime:banners": {
   "2022-01-01": [
    "a.F._vor_2023",

@@ -16,6 +16,7 @@ import pytest
 from app.services.prompts import (
     _OPEN_CATEGORY,
     DEFAULT_PROMPTS,
+    PROMPT_SET_VERSION,
     STRICT_SUFFIX,
     _merge_profiles,
     _profile_registry,
@@ -170,7 +171,7 @@ def test_regime_block_reaches_answer_and_review_not_triage() -> None:
     assert review.startswith("<rechtsstand>")
     assert not triage.startswith("<rechtsstand>")
     assert state.legal_regime_info["regimes"] == ["a.F._2023"]
-    assert state.prompt_ids["adversarial_review"]["version"] == "3.0.0"
+    assert state.prompt_ids["adversarial_review"]["version"] == PROMPT_SET_VERSION
 
 
 def test_no_regime_block_for_modules_without_provider() -> None:

@@ -32,7 +32,7 @@ Changes
 longer follows the server's clock (F-06). Additive; ``SDK_VERSION`` stays "3.0".
 0.2.0 (WP-93): ``Calculator``, ``RegimeProvider``, ``ParameterSource``,
 ``ParameterLookup``. Additive to an unreleased contract; ``SDK_VERSION``
-stays "3.0" (core 3.0.0 is cut at P9 exit, WP-97).
+stays "3.0" (core 3.0.0 shipped at the P9 exit gate, WP-97).
 0.1.0 (WP-91): ``SDK_VERSION`` only.
 """
 

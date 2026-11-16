@@ -233,7 +233,8 @@ Historically the tree had two branches (PG 001→006 and SQLite 007→010), whic
 `alembic upgrade head` fail with "Multiple head revisions are present."
 Since D-024 (2026-08-25) the SQLite branch is deleted; a new migration `012_pg_collapse_sqlite_branch`
 folds its schema content (CHECK constraint update, regime/notes, pii_mapping) into the
-single linear PG chain: **001 → … → 006 → 011_pg → 012**. `alembic upgrade head` is unambiguous.
+single linear PG chain: **001 → … → 006 → 011_pg → 012 → 013_legal_module** (WP-94:
+`legal_module` table, `case_run_area` module binding). `alembic upgrade head` is unambiguous.
 
 ### D-005: Missing schema columns (regime, notes, pii_mapping)
 Migrations 008–010 (on the SQLite branch) add columns to `legal_parameter` and

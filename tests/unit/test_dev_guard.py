@@ -15,10 +15,9 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.config import get_app_version_tag, settings
+from app.core.config import settings
 from app.main import app
 from app.services import dev_guard
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -140,7 +139,12 @@ class TestConfigDefaults:
 
         from app.core.config import Settings
 
-        s = Settings()
+        # `_env_file=None`: the class defaults are the subject here. A
+        # developer's repo-root `.env` sets CITIZEN_SYNTHETIC_DATA_ONLY=true
+        # (required by the dev-guard posture) and would otherwise decide this
+        # assertion — CI has no `.env`, so the test passed there and failed on
+        # every properly provisioned dev box.
+        s = Settings(_env_file=None)
         assert s.DEPLOYMENT_MODE == "dev"
         assert s.CITIZEN_SYNTHETIC_DATA_ONLY is False
 
