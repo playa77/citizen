@@ -13,7 +13,9 @@ Covers:
 - Genitive/inflected forms
 """
 
-# Semantic Version: 0.1.0 | 2026-07-12 — WP-30 tests
+# Semantic Version: 0.2.0 | 2026-11-16 — I-07: authority exemption tests
+# (case-sensitive matching, in-context names, NER-dependent controls).
+# 0.1.0 | 2026-07-12 — WP-30 tests
 
 from __future__ import annotations
 
@@ -66,6 +68,34 @@ class TestStructuredIds:
         result, mapping = pseudonymize(text)
         assert "[[" in result
         assert "12345/1234567" not in result
+
+    def test_bg_nummer_bg_infix(self):
+        """Current Jobcenter form: 5 digits + "BG" + 7 digits (was leaked)."""
+        text = "Ihre BG-Nummer lautet 23401BG0012345."
+        result, mapping = pseudonymize(text)
+        assert "23401BG0012345" not in result
+        assert "BG-Nummer lautet [[ID_1]]" in result
+
+    def test_two_ibans_and_two_phones_fully_redacted(self):
+        """Same-pattern matches used stale offsets and leaked the 2nd value."""
+        text = (
+            "Bitte rufen Sie 0201 1234567 oder mobil 0151 23456789 an. "
+            "IBAN DE89 3704 0044 0532 0130 00 und DE12 5001 0517 5407 3249 31."
+        )
+        result, mapping = pseudonymize(text)
+        assert result == (
+            "Bitte rufen Sie [[ID_3]] oder mobil [[ID_4]] an. IBAN [[ID_1]] und [[ID_2]]."
+        )
+        assert depseudonymize(result, mapping) == text
+
+    def test_phone_with_slash(self):
+        result, _ = pseudonymize("Meine Telefonnummer ist 0176/12345678.")
+        assert "12345678" not in result
+
+    def test_month_periods_are_not_phone_numbers(self):
+        text = "Zeitraum 01/2026 bis 12/2026, Monat 02/26."
+        result, _ = pseudonymize(text)
+        assert result == text
 
     def test_aktenzeichen(self):
         text = "Az.: 12/34/56789"
@@ -231,6 +261,89 @@ class TestNegativeControls:
         text = "Agentur für Arbeit"
         result, mapping = pseudonymize(text)
         assert "Agentur für Arbeit" in result
+
+    def test_authorities_kept_in_context(self):
+        """I-07: names inside a sentence, as in every goldset letterhead."""
+        text = (
+            "Jobcenter Essen, BG-Nummer: 56102//0034917. Der Bescheid der Agentur "
+            "für Arbeit Düsseldorf und der Bundesagentur für Arbeit."
+        )
+        result, _ = pseudonymize(text)
+        assert "Jobcenter Essen" in result
+        assert "Agentur für Arbeit Düsseldorf" in result
+        assert "Bundesagentur für Arbeit" in result
+        assert "BG-Nummer: [[ID_1]]" in result  # label kept, number redacted
+        assert "[[FIRMA_" not in result
+
+
+class TestPlaceholderIntegrity:
+    """Later detectors must never cut into placeholders written earlier."""
+
+    def test_no_nested_placeholders_and_no_placeholder_values(self):
+        text = (
+            "Jobcenter Essen\nKurfürstenstraße 58, 45138 Essen\n"
+            "BG-Nummer: 56102//0034917\nTeam 512 — Frau Beckmann\n\n"
+            "Herrn\nTimo Vahrenholt\nSteeler Straße 214\n45138 Essen\n\n"
+            "Bitte senden Sie Unterlagen an die Kurfürstenstraße 58."
+        )
+        result, mapping = pseudonymize(text)
+        assert "[[[[" not in result
+        assert not any(
+            re.fullmatch(r"[A-ZÄÖÜ]+_\d+", v) for v in mapping.placeholder_to_value.values()
+        )
+        # Authority letterhead kept, its street redacted consistently.
+        assert result.startswith("Jobcenter Essen\n")
+        assert "Kurfürstenstraße 58" not in result
+        assert "Vahrenholt" not in result and "Steeler Straße 214" not in result
+        assert depseudonymize(result, mapping) == text
+
+    def test_mapped_value_replaced_everywhere(self):
+        """A surname seen after "Herr" is also replaced in the bare signature."""
+        text = "Team 517 — Herr Okonkwo\n\nWiderspruch ist möglich.\n\nIm Auftrag\nOkonkwo\n"
+        result, mapping = pseudonymize(text)
+        assert "Okonkwo" not in result
+        assert result.count("[[PERSON_1]]") == 2
+        assert depseudonymize(result, mapping) == text
+
+
+class TestAuthorityMatching:
+    """I-07 root cause: patterns are case-sensitive and were fed lower case."""
+
+    def test_patterns_match_original_casing(self):
+        from app.services.pseudonymization import _is_authority
+
+        assert _is_authority("Jobcenter Köln")
+        assert _is_authority("Agentur für Arbeit")
+
+    def test_overlap_helper(self):
+        from app.services.pseudonymization import _authority_spans, _overlaps
+
+        text = "Das Jobcenter Köln schreibt."
+        spans = _authority_spans(text)
+        assert spans == [(4, 18)]
+        assert _overlaps(4, 13, spans)  # NER tagged only "Jobcenter"
+        assert not _overlaps(0, 3, spans)
+
+
+def _ner_available() -> bool:
+    from app.services.pseudonymization import _get_nlp
+
+    return _get_nlp() is not None
+
+
+@pytest.mark.skipif(not _ner_available(), reason="spaCy de_core_news_lg not installed")
+class TestNerControls:
+    """Run only where the NER model is installed (dev boxes, eval runs)."""
+
+    def test_company_still_redacted(self):
+        result, mapping = pseudonymize("Mein Arbeitgeber, die Müller Logistik GmbH, zahlt 450 EUR.")
+        assert "Müller Logistik" not in result
+        assert mapping.company_counter == 1
+
+    def test_person_next_to_authority_still_redacted(self):
+        result, _ = pseudonymize("Herr Thomas Müller vom Jobcenter Köln rief an.")
+        assert "Müller" not in result
+        assert "Jobcenter Köln" in result
 
 
 # =========================================================================
@@ -479,9 +592,7 @@ class TestEdgeCases:
                 "12345//1234567": "[[ID_1]]",
             },
         )
-        result = depseudonymize(
-            "Herr [[PERSON_1]], ID: [[ID_1]]", mapping
-        )
+        result = depseudonymize("Herr [[PERSON_1]], ID: [[ID_1]]", mapping)
         assert result == "Herr Thomas, ID: 12345//1234567"
 
     def test_full_address_with_city(self):

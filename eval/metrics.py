@@ -1,4 +1,7 @@
-# Version: 1.2.0 | 2026-11-16 — CR-13: citation precision normalises expected
+# Version: 1.3.0 | 2026-11-16 — WP-97 follow-up: PII recall counts a span whose
+# value is absent from the output as recalled even when the output is shorter
+# than the span offset (was a false miss).
+# 1.2.0 | 2026-11-16 — CR-13: citation precision normalises expected
 # norms; sourced quote-verification rate added.
 # 1.1.0 | 2026-11-16 — WP-93: Frist metric evaluates the goldset
 # module's deadline spec through the Fristen core (shim app.services.fristen
@@ -461,12 +464,16 @@ def compute_pii_recall(
         for span in ann.spans:
             total_spans += 1
             span_text = text[span.start : span.end]
-            # Check that the span position in pseudonymized text has a placeholder
-            if span.end > len(pseudo_text):
-                continue  # Text changed length — can't verify
-            pseudonymized_slice = pseudo_text[span.start : span.end]
-            # Recalled if placeholder present in the slice OR original value absent
-            if "[[" in pseudonymized_slice or span_text not in pseudo_text:
+            # The value is gone from the output → recalled. Checked first: the
+            # positional test below is meaningless once earlier replacements
+            # changed the text length, and a span past the shortened end used
+            # to be counted as a miss (metrics 1.3.0).
+            if span_text not in pseudo_text:
+                recalled += 1
+                continue
+            # Value still present somewhere: recalled only if this occurrence
+            # (same offset, unchanged prefix) was replaced.
+            if span.end <= len(pseudo_text) and "[[" in pseudo_text[span.start : span.end]:
                 recalled += 1
 
     return recalled / total_spans if total_spans > 0 else 1.0
