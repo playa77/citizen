@@ -10,7 +10,7 @@ Tests cover:
   per run (7 stages + 1 disclaimer_ack).
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-94: case_run_area module binding test.
 
 from __future__ import annotations
 
@@ -621,3 +621,66 @@ class TestDisclaimerEnforcement:
         assert completed == list(_STAGES), (
             f"Stage order/count mismatch: {completed}"
         )
+
+
+# -------------------------------------------------------------------
+# WP-94: case_run_area records module id + version
+# -------------------------------------------------------------------
+
+
+class TestCaseRunAreaModuleBinding:
+    """Every persisted area row names the module (and version) the case ran
+    with; legacy aliases bind to their module, procedural keys to none."""
+
+    def test_area_rows_carry_module_binding(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import app.api.routes.analyze as analyze_route
+        from app.modules.runtime import get_manifest
+
+        _mock_pipeline_for_test(monkeypatch)
+
+        async def _ready(_db: object, areas: list[str]) -> dict:
+            return {
+                "is_ready": True,
+                "areas": {},
+                "missing_source_types": [],
+                "ready_source_types": [],
+            }
+
+        monkeypatch.setattr(analyze_route, "check_preflight", _ready)
+        areas = ["sozialrecht", "schenkungsrecht", "verwaltungsrecht"]
+        with client.stream(
+            "POST",
+            "/api/v1/analyze",
+            # Comma-string form: the route's body type is dict[str, str], so a
+            # JSON list is rejected with 422 (pre-existing; see WP-94 notes).
+            json={"text": SAMPLE_LEGAL_TEXT, "legal_areas": ",".join(areas)},
+            headers=DISCLAIMER_HEADER,
+        ) as response:
+            assert response.status_code == 200
+            _consume_sse(response)
+
+        async def _rows() -> list[tuple]:
+            import asyncpg
+
+            conn = await asyncpg.connect(**_connect_params())
+            try:
+                rows = await conn.fetch(
+                    "SELECT legal_area, module_id, module_version, is_primary "
+                    "FROM case_run_area WHERE case_run_id = "
+                    "(SELECT id FROM case_run ORDER BY created_at DESC LIMIT 1)"
+                )
+                return sorted(tuple(r) for r in rows)
+            finally:
+                await conn.close()
+
+        soz = get_manifest("sozialrecht").version
+        erb = get_manifest("erbrecht").version
+        assert asyncio.run(_rows()) == [
+            ("schenkungsrecht", "erbrecht", erb, False),
+            ("sozialrecht", "sozialrecht", soz, True),
+            ("verwaltungsrecht", None, None, False),
+        ]

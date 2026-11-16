@@ -20,12 +20,15 @@ Architecture:
 WP-93: the audit snapshot (which parameter versions a calculation used) is
 built by the module calculator through ``app.modules.sdk.ParameterSource``;
 the former ``build_legal_snapshot`` with its hard-coded SGB II keys moved to
-``modules/sozialrecht/calculators.py``. The ``domain`` default ``"sgb2"``
-remains until WP-94 rewrites stored domains to module ids
-(``sgb2 → sozialrecht``).
+``modules/sozialrecht/calculators.py``.
+
+WP-94: ``domain`` is the owning module's id (migration 013 rewrote stored
+``sgb2`` rows). An omitted ``domain`` means ``DEFAULT_MODULE`` — the core
+names no area id itself.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-94: domain default is DEFAULT_MODULE
+# (module id) instead of the literal "sgb2".
 
 from __future__ import annotations
 
@@ -37,6 +40,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import LegalParameter
+
+
+def _domain(domain: str | None) -> str:
+    """Resolve an omitted parameter domain to ``DEFAULT_MODULE`` (WP-94)."""
+    if domain is not None:
+        return domain
+    from app.core.config import settings
+
+    return settings.DEFAULT_MODULE
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +110,7 @@ def param(
     key: str,
     on_date: date,
     *,
-    domain: str = "sgb2",
+    domain: str | None = None,
     regime: str | None = None,
 ) -> dict[str, Any]:
     """Synchronous parameter lookup from the in-memory cache.
@@ -120,13 +133,13 @@ def param(
     on_date :
         Date for validity check.
     domain :
-        Legal domain (default ``"sgb2"``).
+        Parameter domain = module id (default ``DEFAULT_MODULE``).
     regime :
         Optional regime tag to filter by (e.g. ``"a.F._2025"`` or
         ``"n.F._2026"``).  When provided, only parameters whose regime
         matches this value are returned.
     """
-    entries = _parameter_cache.get((key, domain), [])
+    entries = _parameter_cache.get((key, _domain(domain)), [])
     if not entries:
         return {
             "value": None,
@@ -192,7 +205,7 @@ async def get_parameter_numeric(
     parameter_key: str,
     as_of_date: date,
     *,
-    domain: str = "sgb2",
+    domain: str | None = None,
 ) -> dict[str, Any]:
     """Get a scalar numeric legal parameter valid on a given date.
 
@@ -214,13 +227,13 @@ async def get_parameter_numeric(
     as_of_date :
         The date for which the parameter should be valid.
     domain :
-        Legal domain filter (default ``"sgb2"``).
+        Parameter domain = module id (default ``DEFAULT_MODULE``).
     """
     stmt = (
         select(LegalParameter)
         .where(
             LegalParameter.parameter_key == parameter_key,
-            LegalParameter.domain == domain,
+            LegalParameter.domain == _domain(domain),
             LegalParameter.valid_from <= as_of_date,
             LegalParameter.review_status.in_(["verified", "proposed"]),
         )
@@ -270,7 +283,7 @@ async def get_parameter_json(
     parameter_key: str,
     as_of_date: date,
     *,
-    domain: str = "sgb2",
+    domain: str | None = None,
 ) -> dict[str, Any]:
     """Get a JSON-valued legal parameter valid on a given date.
 
@@ -281,7 +294,7 @@ async def get_parameter_json(
         select(LegalParameter)
         .where(
             LegalParameter.parameter_key == parameter_key,
-            LegalParameter.domain == domain,
+            LegalParameter.domain == _domain(domain),
             LegalParameter.valid_from <= as_of_date,
             LegalParameter.review_status.in_(["verified", "proposed"]),
         )

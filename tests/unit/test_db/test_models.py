@@ -6,7 +6,8 @@ Tests that do NOT require a live database:
 - Alembic env.py imports models correctly
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-94: legal_module table, case_run_area
+# module binding, no area CHECK.
 
 from __future__ import annotations
 
@@ -37,9 +38,9 @@ def _check_constraints(table: type[models.Base]) -> list[CheckConstraint]:
 # ---------------------------------------------------------------------------
 
 
-def test_exactly_eight_tables() -> None:
+def test_table_count() -> None:
     tables = models.Base.metadata.tables
-    assert len(tables) == 14, f"Expected 14 tables, got {len(tables)}: {list(tables)}"
+    assert len(tables) == 15, f"Expected 15 tables, got {len(tables)}: {list(tables)}"
 
 
 def test_expected_table_names() -> None:
@@ -58,6 +59,7 @@ def test_expected_table_names() -> None:
         "conversation_document",
         "intake_session",
         "case_run_area",
+        "legal_module",
     }
     actual = set(models.Base.metadata.tables.keys())
     assert actual == expected, f"Missing: {expected - actual}; Extra: {actual - expected}"
@@ -332,3 +334,58 @@ class TestEvidenceBinding:
         assert "idx_binding_unique" in idx_names
         unique_idxs = [idx for idx in models.EvidenceBinding.__table__.indexes if idx.unique]
         assert any(idx.name == "idx_binding_unique" for idx in unique_idxs)
+
+
+# ---------------------------------------------------------------------------
+# 9. WP-94: CaseRunArea module binding + LegalModule
+# ---------------------------------------------------------------------------
+
+
+class TestCaseRunArea:
+    TABLE = models.CaseRunArea
+
+    def test_module_binding_columns(self) -> None:
+        cols = self.TABLE.__table__.columns
+        assert {"legal_area", "module_id", "module_version"} <= set(cols.keys())
+        assert cols["module_id"].nullable  # NULL = core procedural key
+        assert cols["module_version"].nullable  # NULL = written before WP-94
+
+    def test_module_id_fk_restrict(self) -> None:
+        fks = [fk for fk in self.TABLE.__table__.foreign_keys if fk.parent.name == "module_id"]
+        assert len(fks) == 1
+        assert fks[0].column.table.name == "legal_module"
+        assert fks[0].ondelete == "RESTRICT"
+        assert fks[0].constraint.name == "fk_case_run_area_module_id"
+
+    def test_no_closed_area_check(self) -> None:
+        names = {c.name for c in _check_constraints(self.TABLE)}
+        assert "ck_case_run_area_legal_area" not in names
+
+    def test_area_constants_removed(self) -> None:
+        assert not hasattr(models, "LEGAL_AREA_ALLOWED")
+        assert not hasattr(models, "LEGAL_AREA_TIER")
+
+
+class TestLegalModule:
+    TABLE = models.LegalModule
+
+    def test_primary_key(self) -> None:
+        assert _primary_keys(self.TABLE) == ["id"]
+
+    def test_columns(self) -> None:
+        expected = {"id", "version", "tier", "manifest_sha256", "installed_at", "enabled"}
+        assert _column_names(self.TABLE) == expected
+
+    def test_tier_check_mirrors_manifest_schema(self) -> None:
+        import json
+
+        from app.modules import SCHEMA_PATH
+
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        assert tuple(schema["properties"]["tier"]["enum"]) == models.MODULE_TIER_ALLOWED
+        names = {c.name for c in _check_constraints(self.TABLE)}
+        assert "ck_legal_module_tier" in names
+
+
+def test_legal_parameter_domain_has_no_server_default() -> None:
+    assert models.LegalParameter.__table__.columns["domain"].server_default is None

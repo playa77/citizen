@@ -2,9 +2,12 @@
 # `areas` is keyed by area key (module id or a legacy alias it owns, D-038):
 # `keywords` drive the keyword fallback of the intake interview,
 # `synonyms` map free-text LLM answers back onto the area key.
+# `order` ranks the area key in the global area-key order (WP-94: replaces
+# the former LEGAL_AREA_ALLOWED tuple; unique across all owners).
 # Extracted verbatim from the v2.0.0 hard-coded tables in
 # app/services/intake.py and app/api/routes/presets.py.
 
 areas:
-  andere: {}
+  andere:
+    order: 100
 catch_all: true

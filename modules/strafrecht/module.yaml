@@ -4,10 +4,10 @@
 # (intake routing, corpus mapping) — no deadline specs,
 # no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
 
 id: strafrecht
-version: 0.1.0
+version: 0.1.1
 core_api: ">=3.0,<4.0"
 title:
   de: "Strafrecht"

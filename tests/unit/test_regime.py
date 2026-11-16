@@ -9,7 +9,8 @@ Tests the pure deterministic functions in ``modules/sozialrecht/regime.py``
 Also validates goldset scenarios for GS-004, GS-005, GS-006, GS-008.
 """
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: regime provider moved into the module.
+# Semantic Version: 0.1.2 | 2026-11-16 — WP-94: cache key uses the module-id domain.
+# 0.1.1 | 2026-11-16 — WP-93: regime provider moved into the module.
 
 from __future__ import annotations
 
@@ -350,7 +351,7 @@ class TestParamWithRegimeFilter:
         from app.services import parameter_store as ps
 
         ps._parameter_cache = {
-            ("test.param", "sgb2"): [
+            ("test.param", "sozialrecht"): [  # domain = DEFAULT_MODULE (WP-94)
                 {
                     "value_numeric": 502.0,
                     "value_json": None,

@@ -9,15 +9,17 @@ the core services that consume them.
 Area keys and ownership
 -----------------------
 An *area key* is a value of ``legal_areas`` / ``case_run_area.legal_area``.
-Until WP-94 replaces the CHECK constraint with a ``legal_module`` FK, the
-ordered key set is ``app.db.models.LEGAL_AREA_ALLOWED`` — the DB still
-enforces exactly that set, so the area tables must offer exactly it. Each
-key has exactly one owner:
+Since WP-94 the key set is data: every ``areas`` row of an installed
+module's ``intake.yaml`` (and of the core procedural library) declares one
+key and its ``order``; keys are served in ascending ``order`` (replaces the
+former ``LEGAL_AREA_ALLOWED`` tuple and its DB CHECK, D-057). Each key has
+exactly one owner, and only the owner may declare it:
 
 * the installed module whose ``id`` equals the key, or
 * the installed module that lists the key in ``legacy_aliases`` (D-038:
   ``schenkungsrecht`` → ``erbrecht``; the key stays a distinct stored value
-  until WP-94), or
+  in ``case_run_area.legal_area``, its module is recorded in ``module_id``,
+  D-057), or
 * the core procedural library (``app/modules/procedural/``; D-038 folds
   ``verwaltungsrecht`` into the core instead of making it a module).
 
@@ -27,14 +29,15 @@ every area key in every deployment mode.
 
 Ordering rules (behaviour-preserving, pinned by tests):
 
-* per-area tables follow ``LEGAL_AREA_ALLOWED`` order;
+* per-area tables follow the declared ``order`` (v2.0.0 order preserved);
 * modules are ordered by the first area key they own;
 * the preset keyword fallback lists the default module's entries **last**
   (the default preset is the fallback and wins only on a strictly higher
   score — the v2.0.0 tie-break).
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-94: area-key set and order read from
+# module/procedural intake data (`order`); LEGAL_AREA_ALLOWED removed.
 
 from __future__ import annotations
 
@@ -89,19 +92,49 @@ class AreaTables:
     module_profiles: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
-def _legal_area_keys() -> tuple[str, ...]:
-    # WP-94 replaces this DB-bound table with the registry/legal_module rows.
-    from app.db.models import LEGAL_AREA_ALLOWED
-
-    return tuple(LEGAL_AREA_ALLOWED)
-
-
 def _procedural_section(name: str) -> dict[str, Any]:
     path = PROCEDURAL_DIR / f"{name}.yaml"
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ModuleManifestError(f"procedural library file {path} is not a mapping")
     return data
+
+
+def _declared_area_keys(
+    modules: dict[str, ModuleManifest], procedural_intake: dict[str, Any]
+) -> tuple[tuple[str, ...], dict[str, str]]:
+    """Area keys declared by the intake files, sorted by ``order``.
+
+    Returns the ordered keys and key → declaring owner id. A key declared
+    twice, a missing/non-integer ``order`` or a duplicate ``order`` value is a
+    content error (the order is behaviour: it drives table and prompt order).
+    """
+    declared: dict[str, tuple[int, str]] = {}
+    sources: list[tuple[str, dict[str, Any]]] = [(PROCEDURAL_OWNER, procedural_intake)]
+    for module_id, manifest in modules.items():
+        data = load_section(manifest, "intake")
+        if data is None:
+            continue
+        if not isinstance(data, dict):
+            raise ModuleManifestError(f"module {module_id!r}: intake file is not a mapping")
+        sources.append((module_id, data))
+    for owner_id, data in sources:
+        for key, entry in (data.get("areas") or {}).items():
+            if key in declared:
+                raise ModuleManifestError(
+                    f"area key {key!r} declared by both {declared[key][1]!r} and {owner_id!r}"
+                )
+            rank = (entry or {}).get("order")
+            if not isinstance(rank, int) or isinstance(rank, bool):
+                raise ModuleManifestError(
+                    f"{owner_id}: area key {key!r} needs an integer `order` in its intake row"
+                )
+            declared[key] = (rank, owner_id)
+    ranks = [rank for rank, _ in declared.values()]
+    if len(set(ranks)) != len(ranks):
+        raise ModuleManifestError("duplicate area-key `order` values across intake files")
+    keys = tuple(sorted(declared, key=lambda k: declared[k][0]))
+    return keys, {key: owner_id for key, (_, owner_id) in declared.items()}
 
 
 def _resolve_owners(
@@ -150,9 +183,16 @@ def _area_entry(section: dict[str, Any], key: str, owner_id: str, name: str) -> 
 def build_area_tables(modules_dir: Path, default_module: str) -> AreaTables:
     """Assemble the area tables from the modules installed under *modules_dir*."""
     modules = discover_modules(modules_dir)
-    keys = _legal_area_keys()
-    procedural_keys = set((_procedural_section("intake").get("areas") or {}).keys())
+    procedural_intake = _procedural_section("intake")
+    keys, declared_by = _declared_area_keys(modules, procedural_intake)
+    procedural_keys = set((procedural_intake.get("areas") or {}).keys())
     owner = _resolve_owners(keys, modules, procedural_keys)
+    for key in keys:
+        if declared_by[key] != owner[key]:
+            raise ModuleManifestError(
+                f"area key {key!r} is declared by {declared_by[key]!r} "
+                f"but owned by {owner[key]!r}"
+            )
     if default_module not in modules:
         raise ModuleManifestError(f"DEFAULT_MODULE {default_module!r} is not installed")
 
