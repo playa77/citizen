@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 2.0.0 · **Stand:** 2026-08-25
+**Version:** 3.0.0 · **Stand:** 2026-11-16
 
 **Autor:** www.github.com/playa77
 
@@ -11,7 +11,8 @@ Projektstatement sowie die Compliance-/KI-VO-Klassifizierung des Projekts in
 einer einzigen deutschsprachigen Fassung zusammen (englische Fassung:
 [DISCLAIMER_EN.md](DISCLAIMER_EN.md)). Es ersetzt die früheren eigenständigen
 Dokumente `DISCLAIMER_DE.md` (v1.1.0), `STATEMENT.md` (v1.0.0) und
-`COMPLIANCE.md` (v1.1.0).
+`COMPLIANCE.md` (v1.1.0). Teil D enthält seit Fassung 3.0.0 die
+Ergänzungen der Rechtsgebiets-Module.
 
 Es enthält rechtliche Hinweise und Haftungsausschlüsse. Es ersetzt oder ändert
 die anwendbaren Open-Source-Lizenzbedingungen nicht, sofern dies nicht
@@ -34,23 +35,31 @@ Vorschriften.
 
 ### Was ist
 
-Citizen ist heute ein Prototyp: eine Analyse-Pipeline, die deutsche
-Sozialrechts-Bescheide einliest, jede Aussage an den Gesetzestext bindet,
-Berechnungen deterministisch nachrechnet und Fristen auf den Tag genau
-bestimmt. Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
+Citizen ist heute ein Prototyp: ein rechtsgebietsneutraler Kern mit
+Rechtsgebiets-Modulen. Das erste und bislang einzige ausgereifte Modul,
+Sozialrecht, liest deutsche Sozialrechts-Bescheide ein, bindet jede Aussage an
+den Gesetzestext, rechnet Berechnungen deterministisch nach und bestimmt
+Fristen auf den Tag genau. Weitere Rechtsgebiete — Arbeits-, Erb-, Familien-,
+Miet-, Straf- und Vertragsrecht — liegen als experimentelle Module vor: Sie
+ordnen Anliegen zu und beziehen die passenden Rechtsquellen ein, berechnen
+aber noch keine Fristen und keine Beträge (Teil D). Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
 an dem jede Änderung gemessen wird. Es gibt bekannte Grenzen, und sie stehen
 im Repo statt unter dem Teppich. Das ist der ehrliche Ist-Zustand:
 funktionierend, ungeschliffen, messbar — und noch kein Produkt.
 
 ### Was sein soll
 
-Ein Mensch hält einen Bescheid in der Hand, von dem seine Existenz abhängt,
-und bekommt innerhalb von Minuten vier Antworten: **Was steht da drin? Stimmt
-das? Bis wann muss ich reagieren? Was mache ich jetzt?** — nachvollziehbar
-belegt, auf den Cent nachgerechnet, auf den Tag terminiert, in verständlicher
-Sprache. Kostenlos. Quelloffen. Ohne dass seine Daten Europa verlassen.
-Und dasselbe Werkzeug liegt in jeder Sozialberatungsstelle und macht aus einer
-Dreiviertelstunde Erstprüfung zehn Minuten mit Paragraphenbeleg.
+Ein Mensch hält ein Schreiben in der Hand, von dem viel abhängt — einen
+Bescheid, eine Kündigung, einen Strafbefehl — und bekommt innerhalb von
+Minuten vier Antworten: **Was steht da drin? Stimmt das? Bis wann muss ich
+reagieren? Was mache ich jetzt?** — nachvollziehbar belegt, auf den Cent
+nachgerechnet, auf den Tag terminiert, in verständlicher Sprache. Und er
+kommt vorbereitet zum Termin bei Anwältin, Anwalt oder Beratungsstelle: mit
+geordnetem Sachverhalt, den Fristen, den Unterlagen und den richtigen Fragen.
+Citizen ersetzt diese Beratung nicht, es macht sie wirksamer. Kostenlos.
+Quelloffen. Ohne dass seine Daten Europa verlassen. Und dasselbe Werkzeug
+liegt in jeder Beratungsstelle und macht aus einer Dreiviertelstunde
+Erstprüfung zehn Minuten mit Paragraphenbeleg.
 
 ### Warum
 
@@ -90,6 +99,13 @@ Angriff auf die Verwaltung — sie sind die Reparatur ihres Korrektivs. Eine
 Verwaltung, deren Fehler zuverlässig gefunden werden, wird besser. Davon
 profitieren am Ende beide Seiten des Schreibtischs.
 
+Das Sozialrecht ist der Ausgangspunkt, nicht die Grenze. Dieselbe Asymmetrie —
+ein formalisiertes Gegenüber, eine kurze Frist, ein Mensch ohne Fachwissen —
+besteht im Mietrecht, im Arbeitsrecht, im Familienrecht und im
+Strafverfahren. Deshalb wächst Citizen modular: Jedes Rechtsgebiet kommt als
+eigenes Modul mit eigener Version, eigenem Golden Set und ausdrücklich
+erklärten Grenzen hinzu und gilt erst nach Prüfung als ausgereift.
+
 ### Grundsätze
 
 **Nachrechenbarkeit statt Vertrauen.** Was deterministisch geht — Fristen,
@@ -103,6 +119,10 @@ Rechtsfragen werden als unsicher gekennzeichnet, nicht weggeglättet.
 **Die Daten bleiben beim Menschen.** Pseudonymisierung vor jeder Verarbeitung,
 Inferenz ausschließlich in Europa unter Auftragsverarbeitung, lokale
 Datenhaltung. Behauptet wird nur, was technisch erzwungen ist.
+
+**Vorbereitung statt Vertretung.** Citizen hilft Menschen in ihren eigenen
+Rechtsangelegenheiten und bei der Vorbereitung auf eine Beratung. Es vertritt
+niemanden und berät niemanden in fremden Angelegenheiten.
 
 **Der Mensch entscheidet.** Citizen informiert, belegt, rechnet nach und
 liefert Bausteine. Bewertet, entschieden und unterschrieben wird von Menschen —
@@ -118,7 +138,11 @@ Keine Rechtsberatung — Rechtsinformation und Selbsthilfe. Kein Startup — es
 gibt nichts an Menschen in Existenznot zu verdienen, und es wird hier auch
 nicht versucht. Keine Kampfansage an Jobcenter-Mitarbeitende — die meisten
 arbeiten unter Bedingungen, die Fehler erzeugen; dieses Werkzeug richtet sich
-gegen Fehler, nicht gegen Menschen.
+gegen Fehler, nicht gegen Menschen. Keine Kanzleisoftware — Abrechnung,
+Akten- oder Mandantenverwaltung gibt es nicht und wird es nicht geben (D-034).
+Und kein Werkzeug der anderen Seite: Citizen ist nicht dazu bestimmt, von
+Behörden, Gerichten, Strafverfolgungs- oder Migrationsbehörden oder in deren
+Auftrag eingesetzt zu werden (D-035).
 
 ### Einladung
 
@@ -436,7 +460,9 @@ Gefahr nutzen.
 Die Software ist als API implementiert. Analysen und andere geschützte
 Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
-`X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`);
+`X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
+entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
+`v3.0.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -472,6 +498,11 @@ Gegenstand sind die Software Citizen und ihre erzeugten Ausgaben
 werden die Offenlegung der KI-Autorschaft des Quellcodes (WP-63, geplant) —
 der rechtliche Hinweis an Nutzer ist Teil B desselben Dokuments.
 
+Die Einordnung gilt für den Kern und für jedes aktivierte Rechtsgebiets-Modul;
+gebietsspezifische Grenzen ergänzt Teil D. Welche Module eine Ausgabe erzeugt
+haben, weist deren maschinenlesbare Provenienz-Kennzeichnung aus
+(`citizen-provenance-v1.1`, Feld `modules`).
+
 ### C.2 Schnellantwort: Pflichten je Modus
 
 Die Einordnung hängt an **einem einzigen Schalter**: `DEPLOYMENT_MODE`
@@ -491,9 +522,9 @@ dokumentarisch (immer relevant, aber keine Handlungspflicht)
 | Anbieter/Einsetzer-Bestimmung | Art. 3(3)/(4) KI-VO | – | – | A | dieser Teil (WP-60), D-019 |
 | Entwicklungsphasen-Posture einhalten | Art. 2(8) KI-VO | A | – | – | WP-62 (Zugriffskontrolle, Synthetik-Guard, DEV-INSTANCE.md) |
 | FOSS-Note: MIT befreit **nicht** von Art. 50 | Art. 2(12) KI-VO | D | D | D | dieser Teil (WP-60) |
-| Zweckbestimmung: antragstellerseitig, nicht behördenseitig | Annex III Nr. 5 Bst. a KI-VO | A | A | A | WP-61 (Self-Assessment, Purpose-Drift-Lint), D-020 |
-| KI-Interaktionshinweis an jede natürliche Person | Art. 50(1) KI-VO | – | – | **A** | WP-64 |
-| Maschinenlesbare Kennzeichnung aller KI-Ausgaben | Art. 50(2) KI-VO | – | – | **A** (Frist: **2026-12-02**, falls bis dahin `provider`) | WP-65 |
+| Zweckbestimmung: bürgerseitig in eigener Angelegenheit; nicht seitens Behörden, Gerichten, Strafverfolgungs- oder Migrationsbehörden | Anhang III Nr. 5 Bst. a, Nr. 6, Nr. 7, Nr. 8 Bst. a KI-VO | A | A | A | WP-61/WP-96 (Self-Assessment, Purpose-Drift-Lint mit Modul-Deny-Phrasen), D-020, D-035 |
+| KI-Interaktionshinweis an jede natürliche Person | Art. 50(1) KI-VO | – | – | **A** | D-032 (`GET /api/v1/meta/disclosure`, eingebettet in jede KI-Ausgabe) |
+| Maschinenlesbare Kennzeichnung aller KI-Ausgaben | Art. 50(2) KI-VO | – | – | **A** (Frist: **2026-12-02**, falls bis dahin `provider`) | D-032; `citizen-provenance-v1.1` mit Modulangabe auf allen KI-Ausgabeflächen (WP-96, D-059) |
 | Offenlegung bei veröffentlichtem Text (öffentliches Interesse) | Art. 50(4) KI-VO | – | – | – (nicht ausgelöst: Aktionsdokumente sind individuelle Korrespondenz, keine Veröffentlichung) | WP-65 (Begründung im Marker-Spez) |
 | RDG-Einzelfallgrenze (strukturell, per Pipeline erzwungen) | § 2/§ 6/§ 8 RDG | – | – | A | WP-67, D-021 |
 | DSGVO: DPIA (Art. 35) + AVV-Kette (Art. 28) | DSGVO | – (nur synthetische Daten) | – (eigene Daten) | **A** (vor dem ersten echten Fall) | WP-68 |
@@ -573,62 +604,91 @@ bleibt anwendbar. Die Lizenz ändert deshalb nichts daran, dass im Modus
 maschinenlesbare Kennzeichnung). Im Modus `dev`/`self` greift Art. 50 nicht,
 weil **kein Bereitstellen an Dritte** vorliegt — nicht wegen der Lizenz.
 
-#### C.4.4 Selbstbewertung: Keine Hochrisiko-Einstufung (Anhang III Nr. 5 Bst. a)
+#### C.4.4 Selbstbewertung: Keine Hochrisiko-Einstufung (Anhang III Nr. 5 Bst. a, Nr. 6, Nr. 7, Nr. 8 Bst. a)
 
 **Ergebnis.** Citizen ist **kein Hochrisiko-KI-System** im Sinne des Anhangs
-III Nr. 5 Bst. a KI-VO — bei der hier deklarierten Zweckbestimmung (D-020)
-und unter den in diesem Abschnitt dokumentierten Schutzvorkehrungen gegen
-Zweckbestimmungs-Abdrift.
+III KI-VO — insbesondere nicht nach Nr. 5 Bst. a (Sozialleistungen), Nr. 6
+(Strafverfolgung), Nr. 7 (Migration, Asyl und Grenzkontrolle) und Nr. 8
+Bst. a (Rechtspflege) — bei der hier deklarierten Zweckbestimmung (D-035,
+Erweiterung von D-020) und unter den in diesem Abschnitt dokumentierten
+Schutzvorkehrungen gegen Zweckbestimmungs-Abdrift. Die Einordnung gilt für
+jedes Rechtsgebiets-Modul.
 
-**Erfassungsbereich des Tatbestands.** Anhang III Nr. 5 Bst. a erfasst
-KI-Systeme, die von Behörden oder in deren Auftrag zur **Bewertung der
-Anspruchsberechtigung** von natürlichen Personen zu Sozialleistungen und
-Sozialdiensten eingesetzt werden. Tatbestandsmerkmal ist die behördenseitige
-Verwendung zur Leistungsentscheidung.
+**Erfassungsbereich der Tatbestände.** Alle vier Tatbestände knüpfen an die
+Verwendung auf der Seite der entscheidenden, ermittelnden oder
+rechtsprechenden Stelle an:
 
-**Deklarierte Zweckbestimmung (D-020).** Die Zweckbestimmung von Citizen ist
-**antragstellerseitige Selbsthilfe und Beratungsassistenz**: das System
-unterstützt die betroffene Person selbst oder deren Beratende dabei, einen
-Bescheid zu verstehen, zu prüfen und zu reagieren. Es ist ausdrücklich
-**nicht** dazu bestimmt, von einer Behörde oder in deren Auftrag zur
-Bewertung der Anspruchsberechtigung eingesetzt zu werden.
+- **Nr. 5 Bst. a:** KI-Systeme, die von Behörden oder in deren Auftrag zur
+  **Bewertung der Anspruchsberechtigung** natürlicher Personen zu
+  Sozialleistungen und Sozialdiensten eingesetzt werden.
+- **Nr. 6:** KI-Systeme, die von Strafverfolgungsbehörden oder in deren
+  Auftrag eingesetzt werden, etwa zur Bewertung von Beweismitteln oder zur
+  Risikobewertung natürlicher Personen.
+- **Nr. 7:** KI-Systeme, die von den zuständigen Behörden in den Bereichen
+  Migration, Asyl und Grenzkontrolle oder in deren Auftrag eingesetzt werden.
+- **Nr. 8 Bst. a:** KI-Systeme, die von einer Justizbehörde oder in deren
+  Auftrag zur Ermittlung und Auslegung von Sachverhalten und Rechtsvorschriften
+  und zur Anwendung des Rechts auf konkrete Sachverhalte eingesetzt werden.
 
-**Warum der Tatbestand nicht erfüllt ist.**
+**Deklarierte Zweckbestimmung (D-035).** Die Zweckbestimmung von Citizen ist
+**bürgerseitige Selbsthilfe und Terminvorbereitung natürlicher Personen in
+ihren eigenen Rechtsangelegenheiten**, über die aktivierten
+Rechtsgebiets-Module hinweg, sowie **Assistenz für Beratungsstellen** im
+Rahmen ihrer eigenen RDG-Befugnis. Das System unterstützt die betroffene
+Person selbst oder deren Beratende dabei, ein Schreiben zu verstehen, zu
+prüfen, darauf zu reagieren und einen Beratungstermin vorzubereiten. Es ist
+ausdrücklich **nicht** dazu bestimmt, von einer Behörde, einem Gericht, einer
+Strafverfolgungs- oder Migrationsbehörde oder in deren Auftrag eingesetzt zu
+werden, um natürliche Personen zu bewerten, über sie zu entscheiden oder
+Maßnahmen gegen sie durchzusetzen.
 
-1. **Keine behördenseitige Bestimmung:** Weder das Produkt noch seine
-   Dokumentation beschreibt Citizen als behördenseitiges Werkzeug. Die
-   Zweckbestimmung ist in README, Teil A dieses Dokuments und dem
-   Rechtshinweis verankert.
+**Warum die Tatbestände nicht erfüllt sind.**
+
+1. **Keine Bestimmung für die entscheidende Stelle:** Weder das Produkt noch
+   seine Dokumentation noch ein Modul beschreibt Citizen als Werkzeug einer
+   Behörde, eines Gerichts oder einer Strafverfolgungs- oder
+   Migrationsbehörde. Die Zweckbestimmung ist in README, Teil A dieses
+   Dokuments, dem Rechtshinweis und in jedem Modul-Manifest
+   (`scope.own_matter_only`) verankert.
 2. **Kein Entscheidungssystem:** Citizen erzeugt Rechtsinformation und
    Bausteine, die der menschlichen Adjudikation bedürfen (D-021); es trifft
-   keine Entscheidung über Anspruchsberechtigung und wird nicht dazu
-   bereitgestellt, eine solche zu treffen.
+   keine Entscheidung über natürliche Personen und wird nicht dazu
+   bereitgestellt, eine solche zu treffen oder vorzubereiten.
 3. **Bereitstellungsform:** Selbst im Modus `provider` wird die Software
-   Betroffenen und Beratungsstellen bereitgestellt — nicht Behörden zur
-   Leistungsbewertung.
+   Betroffenen und Beratungsstellen bereitgestellt — nicht Stellen, die über
+   Leistungen, Strafverfolgung, Aufenthalt oder Rechtsstreitigkeiten
+   entscheiden.
 4. **Klassifizierung nach Zweckbestimmung:** Die KI-VO stellt für die
    Hochrisiko-Einordnung auf die Zweckbestimmung ab. Solange diese
-   antragstellerseitig bleibt, greift der Tatbestand des Anhangs III Nr. 5
-   Bst. a nicht.
+   bürgerseitig bleibt, greifen die Tatbestände nicht.
 
 **Drift-Schutz (Guardrails).** Damit diese Bewertung trägt:
 
-- **D-020** verpflichtet auf die antragstellerseitige Zweckbestimmung und
-  verbietet behördenseitige Beschreibungen in der Dokumentation.
-- **`scripts/check_purpose_drift.py`** (WP-61) scannt die nutzernahen
-  Markdown-Dokumente des Projekts auf behördenseitige Formulierungen
-  (konfigurierbare Deny-Phrase-Liste) und lässt die CI bei Treffern
-  fehlschlagen. Der Lint ist die technische Durchsetzung der Zweckbestimmung
-  gegen Abdrift.
+- **D-020/D-035** verpflichten auf die bürgerseitige Zweckbestimmung und
+  verbieten in Dokumentation und Texten jede Beschreibung als Werkzeug einer
+  Behörde, eines Gerichts, einer Strafverfolgungs- oder Migrationsbehörde.
+- **`scripts/check_purpose_drift.py`** (WP-61, erweitert durch WP-96) scannt
+  README, `DISCLAIMER_*.md`, `ARCHITECTURE.md`, `docs/*.md` sowie die
+  Texte (`copy/`) und Ergänzungen (`DISCLAIMER_ADDENDUM.md`) jedes Moduls auf
+  Formulierungen aus Sicht der entscheidenden Stelle. Neben der
+  Standardliste gelten die Deny-Phrasen, die jedes Modul in seinem Manifest
+  erklärt (z. B. Strafrecht: Strafverfolgungs-Framing, Anhang III Nr. 6) —
+  für den gesamten Scan-Umfang. Bei Treffern schlägt die CI fehl; bewusste
+  Zitate brauchen einen sichtbaren Ausnahme-Marker in derselben Zeile.
+- **Modul-Stufen:** Im Modus `provider` sind standardmäßig nur geprüfte
+  Module (`verified`) aktiviert (D-037); experimentelle Module erst nach
+  ausdrücklicher Freigabe.
 - **Änderungsmanagement:** Veränderungen an Zweckbestimmung, Zielgruppe oder
-  Bereitstellungsform erfordern eine Fassungsänderung dieses Dokuments
-  (Abschnitt C.7) und eine erneute Prüfung dieser Selbstbewertung.
+  Bereitstellungsform sowie jedes neue Modul und jede geänderte
+  Modul-Ergänzung erfordern eine Fassungsänderung dieses Dokuments
+  (Abschnitt C.7, Teil D) und eine erneute Prüfung dieser Selbstbewertung.
 
 **Bedingung.** Diese Bewertung ist konditional: Sie gilt nur für die hier
-deklarierte Zweckbestimmung. Wird Citizen künftig als behördenseitiges Werkzeug
-beschrieben oder Behörden zur Leistungsbewertung bereitgestellt, ist die
-Einstufung neu zu prüfen — die Pflichten für Hochrisiko-KI-Systeme (Kapitel
-III KI-VO) würden ausgelöst.
+deklarierte Zweckbestimmung. Wird Citizen oder eines seiner Module künftig
+als Werkzeug einer Behörde, eines Gerichts, einer Strafverfolgungs- oder
+Migrationsbehörde beschrieben oder diesen bereitgestellt, ist die Einstufung
+neu zu prüfen — die Pflichten für Hochrisiko-KI-Systeme (Kapitel III KI-VO)
+würden ausgelöst.
 
 ### C.5 Fristen und Auslöse-Ereignisse
 
@@ -645,7 +705,10 @@ III KI-VO) würden ausgelöst.
 Die DSGVO ist für den Betrieb das am stärksten unterschätzte Regime.
 Bescheide von Leistungsberechtigten enthalten regelmäßig **besondere
 Kategorien** personenbezogener Daten (Art. 9 DSGVO: Gesundheit, Behinderung);
-die Betroffenen sind verletzliche Personen. Daraus folgt:
+die Betroffenen sind verletzliche Personen. Je nach Rechtsgebiet kommen
+weitere Kategorien hinzu (z. B. Art. 10 DSGVO, Daten über Straftaten, im
+Strafrecht); die Module erklären sie im Manifest
+(`compliance.special_regimes`) und in Teil D. Daraus folgt:
 
 - **`provider`:** Eine **Datenschutz-Folgenabschätzung (DPIA, Art. 35)** ist
   sehr wahrscheinlich verpflichtend; eine **AVV-Kette** (Art. 28) muss vor
@@ -674,30 +737,155 @@ Angelegenheit** (§ 2 RDG). Die Projektposition (D-021):
 - Für den Einsatz in Beratungsstellen wird der Rahmen des § 6/§ 8 RDG
   (unentgeltliche Rechtsdienstleistung / anerkannte Beratungsstellen)
   dokumentiert (WP-67).
+- Jedes Modul ist auf die **eigene Angelegenheit** der Person beschränkt
+  (`scope.own_matter_only` im Modul-Manifest, D-035); Unterstützung in
+  fremden Angelegenheiten leisten ausschließlich Beratungsstellen im Rahmen
+  ihrer eigenen RDG-Befugnis.
 
 ### C.7 Gültigkeit und Änderungsdienst
 
-- Dieser Teil ist Teil der Roadmap v2.0.0 (WP-60/WP-61) und mit den
-  Entscheidungen D-019, D-020 und D-022 (sowie, in seinem Work Package,
-  D-021) im Entscheidungs-Ledger verankert.
+- Dieser Teil stammt aus Roadmap v2.0.0 (WP-60/WP-61) und wurde mit
+  Roadmap v3.0.0 (WP-96) für den modularen Aufbau neu gefasst. Er ist mit den
+  Entscheidungen D-019, D-020, D-022, D-035 und D-059 (sowie D-021) im
+  Entscheidungs-Ledger verankert.
 - Änderungen an Zweckbestimmung, Bereitstellungsform oder Zielgruppe
   erfordern eine Überprüfung und Fassungsänderung dieses Dokuments
   (semantische Versionierung).
 - Offene Rechtsfragen, die sich technisch nicht schließen lassen, sind in
-  Roadmap v2.0.0 §8 gesammelt.
+  Roadmap v2.0.0 §8 gesammelt; Roadmap v3.0.0 führt die verbleibenden
+  Compliance-Lücken (§ 2).
 
 #### Referenzen
 
 - `docs/roadmap-v2.0.0.md` — Phasen P6–P8, Pflichten-Matrix (§5)
-- `DECISIONS.md` — D-019, D-020, D-021, D-022
+- `docs/roadmap-v3.0.0.md` — Phase P9, WP-96 (Compliance für Module)
+- `ARCHITECTURE.md` — § 7 (Compliance-Architektur je Modul)
+- `DECISIONS.md` — D-019, D-020, D-021, D-022, D-035, D-037, D-059
+- `modules/*/DISCLAIMER_ADDENDUM.md` — Quellen der Modul-Ergänzungen (Teil D)
 - `README.md` — Abschnitt „Rechtlicher Status"
 - `devdocs/DEV-INSTANCE.md` — Dev-Instanz-Betriebsführung (Art. 2(8))
-- `scripts/check_purpose_drift.py` — Purpose-Drift-Lint (WP-61)
+- `scripts/check_purpose_drift.py` — Purpose-Drift-Lint (WP-61/WP-96)
+
+---
+
+## Teil D — Modul-Ergänzungen
+
+### D.1 Grundregeln
+
+Citizen besteht aus einem Kern und Rechtsgebiets-Modulen. Die Teile A bis C
+gelten für jedes Modul. Dieser Teil ergänzt sie um die gebietsspezifischen
+Grenzen, die ein Modul in seiner Datei `DISCLAIMER_ADDENDUM.md` erklärt; die
+Ergänzungen sind hier wörtlich übernommen. Für das gesamte Dokument
+einschließlich aller Ergänzungen gilt **eine** Fassungsnummer: Ändert sich
+eine Ergänzung oder kommt ein Modul hinzu, ändert sich die Fassung dieses
+Dokuments und damit die per `X-Disclaimer-Ack` zu bestätigende Fassung.
+
+- **Stufen.** `verified`: geprüftes Modul mit deterministischen Engines und
+  einem Golden Set, an dem jede Änderung gemessen wird. `experimental`: Modul
+  ohne Fristen-Engine, ohne Berechnungen und ohne Golden Set; seine Ausgaben
+  sind allgemeine, KI-erzeugte Rechtsinformation, deren Qualität nicht
+  gemessen wird. Experimentelle Module sind im Modus `provider`
+  standardmäßig nicht aktiviert (D-037).
+- **Geltungsbereich.** Jedes Modul erklärt Umfang und Ausschlüsse in seinem
+  Manifest (`scope`), abrufbar über `GET /api/v1/modules/{module_id}`.
+  Welche Module eine Ausgabe erzeugt haben, weist deren
+  Provenienz-Kennzeichnung aus.
+- **Fristen und Beträge** stammen ausschließlich aus deterministischen
+  Engines auf versionierten Parametern eines Moduls, nie aus dem
+  Sprachmodell. Ein Modul ohne solche Engines berechnet weder Fristen noch
+  Beträge.
+
+### D.2 Sozialrecht (`sozialrecht`, Stufe `verified`)
+
+**Geltungsbereich.** Das Modul behandelt Bürgergeld/Grundsicherung für
+Arbeitsuchende (SGB II), das Sozialverwaltungsverfahren (SGB X) und das
+sozialgerichtliche Verfahren (SGG). Nicht erfasst sind insbesondere die
+Rentenversicherung (SGB VI) und die Krankenversicherung (SGB V); zu anderen
+Sozialleistungen liefert das Modul keine geprüften Ergebnisse.
+
+**Fristen.** Widerspruchsfrist (§ 84 SGG), Bekanntgabefiktion (§ 37 Abs. 2
+SGB X), Fristende an Wochenenden und Feiertagen (§ 64 Abs. 3 SGG) und
+Jahresfrist bei fehlender oder fehlerhafter Rechtsbehelfsbelehrung (§ 66
+Abs. 2 SGG) berechnet eine deterministische Fristen-Engine aus den
+versionierten Fristspezifikationen des Moduls — nie das Sprachmodell. Die
+Berechnung beruht auf den eingegebenen Daten und der gesetzlichen
+Bekanntgabefiktion; ist der Bescheid tatsächlich später oder gar nicht
+zugegangen oder ist das Datum unsicher, kann die Frist abweichen. Im Zweifel
+vor dem frühesten in Betracht kommenden Fristende handeln.
+
+**Beträge.** Nachberechnungen (Regelbedarfe, Freibeträge nach § 11b SGB II,
+Vermögensfreibeträge) rechnet das deterministische Regelwerk des Moduls auf
+versionierten Rechtsparametern mit Gültigkeitszeiträumen. Welcher
+Parameterstand verwendet wurde, weist die maschinenlesbare
+Provenienz-Kennzeichnung jeder Ausgabe aus (`modules[].parameter_set`);
+spätere Gesetzesänderungen sind darin nicht berücksichtigt.
+
+**Entwürfe.** Widerspruch, Widerspruch unter Jahresfrist, Überprüfungsantrag
+(§ 44 SGB X) und Akteneinsichtsantrag (§ 25 SGB X) sind Bausteine: nicht
+geprüfte Rechtsbehauptungen erscheinen als `[BITTE PRÜFEN]`; die Person
+prüft, ergänzt und unterzeichnet selbst.
+
+**Besondere Daten.** Leistungsbescheide enthalten häufig Gesundheits- oder
+Behinderungsangaben (Art. 9 DSGVO). Das Modul ist für die eigene
+Angelegenheit der Person bestimmt; für die Verarbeitung gelten B.4 und C.6.1.
+
+**Beratung.** Eine verbindliche Prüfung des Einzelfalls leisten unabhängige
+Sozialberatungsstellen, Sozialverbände sowie Fachanwältinnen und
+Fachanwälte für Sozialrecht; bei geringem Einkommen kommen Beratungshilfe
+und Prozesskostenhilfe in Betracht.
+
+### D.3 Strafrecht (`strafrecht`, Stufe `experimental`)
+
+**Status.** Experimentelles Modul (Stufe `experimental`): keine
+Fristen-Engine, keine Berechnungen, kein Golden Set. Ausgaben sind
+ausschließlich allgemeine, KI-erzeugte Rechtsinformation zur eigenen
+Angelegenheit der betroffenen Person (beschuldigte, angeklagte oder verletzte
+Person).
+
+**Kurze Fristen.** Im Strafverfahren laufen teils sehr kurze Fristen, die
+das Modul nicht berechnet — etwa zwei Wochen für den Einspruch gegen einen
+Strafbefehl (§ 410 Abs. 1 StPO) und eine Woche für Berufung oder Revision
+(§ 314 Abs. 1, § 341 Abs. 1 StPO). Wer ein Schreiben von Polizei,
+Staatsanwaltschaft oder Gericht erhalten hat, sollte unverzüglich
+anwaltlichen Rat einholen; in Fällen notwendiger Verteidigung (§ 140 StPO)
+wird eine Pflichtverteidigung bestellt, die auch beantragt werden kann.
+
+**Zweckbindung.** Das Modul ist kein Werkzeug der Strafverfolgung (Anhang III
+Nr. 6 KI-VO): Es ist nicht dazu bestimmt, von Polizei, Staatsanwaltschaft
+oder Gerichten oder in deren Auftrag eingesetzt zu werden.
+
+**Besondere Daten.** Angaben zu Straftaten und strafrechtlichen
+Verurteilungen unterliegen Art. 10 DSGVO; für die Verarbeitung gelten B.4
+und C.6.1.
+
+### D.4 Weitere experimentelle Module
+
+Für die Module `arbeitsrecht`, `erbrecht` (einschließlich des Altschlüssels
+`schenkungsrecht`), `familienrecht`, `mietrecht`, `vertragsrecht` und
+`andere` (Auffangbereich) gelten D.1 und die Teile A bis C ohne
+gebietsspezifische Ergänzung. Sie berechnen weder Fristen noch Beträge; wer
+eine Frist zu wahren hat, lässt sie anwaltlich oder durch eine
+Beratungsstelle prüfen. Das allgemeine Verwaltungsverfahren
+(`verwaltungsrecht`) ist kein eigenes Modul, sondern Teil der
+Verfahrensbibliothek des Kerns.
 
 ---
 
 ## Änderungshistorie
 
+- **3.0.0 (2026-11-16):** Erweiterte Zweckbestimmung (D-035) für den
+  modularen Aufbau (Kern + Rechtsgebiets-Module): Teil A (Statement) und
+  Teil C (Compliance) neu gefasst — bürgerseitige Selbsthilfe und
+  Terminvorbereitung in eigenen Rechtsangelegenheiten über alle aktivierten
+  Module; Selbstbewertung C.4.4 auf Anhang III Nr. 6, Nr. 7 und Nr. 8 Bst. a
+  KI-VO erweitert; Drift-Schutz um Modul-Deny-Phrasen und den erweiterten
+  Scan-Umfang ergänzt; Umsetzungsstand Art. 50 nachgetragen (Provenienz
+  v1.1 mit Modulangabe auf allen KI-Ausgabeflächen); RDG-Beschränkung auf
+  die eigene Angelegenheit je Modul. Neuer Teil D (Modul-Ergänzungen:
+  Grundregeln, Sozialrecht, Strafrecht, weitere experimentelle Module).
+  B.12: Fassungsnummer der Kenntnisnahme entspricht der Dokumentfassung
+  (`v3.0.0`). Major-Fassung, weil sich die Zweckbestimmung ändert; erneute
+  Bestätigung erforderlich.
 - **2.0.0 (2026-08-25):** Zusammenführung der bisher eigenständigen Dokumente
   `DISCLAIMER_DE.md` (v1.1.0), `STATEMENT.md` (v1.0.0) und `COMPLIANCE.md`
   (v1.1.0) in eine einzige Fassung (Teil A Statement, Teil B Rechtlicher

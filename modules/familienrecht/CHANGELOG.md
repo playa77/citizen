@@ -2,6 +2,13 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 0.2.0 — 2026-11-16 (WP-96)
+
+- `compliance/deny-phrases.json`: youth-welfare-office and family-court
+  framing, DE/EN — read by the purpose-drift lint for the whole scan set.
+- Manifest `compliance` section. MINOR: new declared artefact; no behaviour
+  change.
+
 ## 0.1.1 — 2026-11-16 (WP-94)
 
 - `intake.yaml`: every area row declares `order`, its rank in the global

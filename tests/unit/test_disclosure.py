@@ -5,6 +5,9 @@ Covers the guarded invariants G-50-A..G-50-G from DECISIONS.md:
 - GET /api/v1/meta/version includes disclosure_version
 - analyze SSE terminal event embeds disclosure + provenance (error events do not)
 - conversation chat done event embeds both objects
+- WP-96 (D-059): provenance v1.1 ``modules`` list; the conversation
+  first-message pipeline terminal event and the case-chat done event embed
+  both objects (C-4 closed)
 - POST /api/v1/documents/generate embeds provenance (and no disclosure)
 - build_disclosure_and_provenance validity and never-raise fallback behavior
 - Pydantic serialization round-trips and openapi.json reflection
@@ -16,7 +19,9 @@ them; an autouse fixture disposes the engine after every test so no pooled
 connection can ever be handed to a later test's fresh loop.
 """
 
-# Semantic Version: 1.0.0
+# Semantic Version: 1.1.0 | 2026-11-16 — WP-96: provenance v1.1 (`modules`),
+# C-4 surfaces (first-message pipeline terminal event, case-chat done).
+# 1.0.0 | 2026-08-25 — D-032 initial.
 
 from __future__ import annotations
 
@@ -43,6 +48,7 @@ from app.services.disclosure import (
     DISCLOSURE_VERSION,
     PROVENANCE_SPEC_VERSION,
     DisclosureInfo,
+    ModuleProvenance,
     ProvenanceMarker,
     build_disclosure_and_provenance,
 )
@@ -106,10 +112,18 @@ async def drain_background_tasks(timeout: float = 10.0) -> None:
         await asyncio.wait(pending, timeout=timeout)
 
 
+#: The default module's provenance entry (DEFAULT_MODULE = sozialrecht).
+DEFAULT_MODULE_ENTRY_KEYS = {"id", "version", "parameter_set"}
+
+
 def assert_valid_provenance(provenance: Any) -> None:
-    """Assert the Art. 50(2) marker shape and field types (all strings)."""
+    """Assert the Art. 50(2) marker shape (v1.1) and field types.
+
+    The six v1.0 fields stay non-empty strings; v1.1 adds ``modules``, a
+    list of ``{id, version, parameter_set}`` entries.
+    """
     assert isinstance(provenance, dict)
-    expected_keys = {
+    v10_keys = {
         "spec_version",
         "generator",
         "app_version",
@@ -117,10 +131,15 @@ def assert_valid_provenance(provenance: Any) -> None:
         "timestamp_utc",
         "deployment_mode",
     }
-    assert set(provenance.keys()) == expected_keys
-    for value in provenance.values():
-        assert isinstance(value, str)
-    assert provenance["spec_version"] == PROVENANCE_SPEC_VERSION
+    assert set(provenance.keys()) == v10_keys | {"modules"}
+    for key in v10_keys:
+        assert isinstance(provenance[key], str)
+    assert isinstance(provenance["modules"], list)
+    for entry in provenance["modules"]:
+        assert set(entry.keys()) == DEFAULT_MODULE_ENTRY_KEYS
+        assert isinstance(entry["id"], str) and isinstance(entry["version"], str)
+        assert entry["parameter_set"] is None or isinstance(entry["parameter_set"], str)
+    assert provenance["spec_version"] == PROVENANCE_SPEC_VERSION == "citizen-provenance-v1.1"
     assert provenance["generator"] == "citizen"
     # ISO 8601 UTC timestamp, parseable and explicitly UTC.
     parsed = datetime.fromisoformat(provenance["timestamp_utc"].replace("Z", "+00:00"))
@@ -248,6 +267,52 @@ class TestAnalyzeTerminalEvent:
         assert final["provenance"]["model_profile"] == settings.INFERENCE_PROFILE
         assert final["provenance"]["deployment_mode"] == settings.DEPLOYMENT_MODE
         assert final["provenance"]["app_version"] == get_app_version()
+        # No legal_areas → the request ran with DEFAULT_MODULE (v1.1).
+        assert [m["id"] for m in final["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+
+    @patch("app.api.routes.analyze.run_pipeline")
+    async def test_terminal_event_names_the_requested_modules(
+        self, mock_run_pipeline: MagicMock, client: httpx.AsyncClient
+    ) -> None:
+        """Provenance v1.1 lists the request's modules in request order;
+        a legacy alias names its owning module; procedural keys add none."""
+
+        async def mock_generator(state: Any):
+            yield make_sse({"stage": "normalization", "status": "complete", "payload": {}})
+            state.final_output = {"sachverhalt": "Sachverhalt."}
+
+        mock_run_pipeline.side_effect = lambda state: mock_generator(state)
+        with patch(
+            "app.api.routes.analyze.check_preflight",
+            AsyncMock(
+                return_value={
+                    "is_ready": True,
+                    "areas": {},
+                    "missing_source_types": [],
+                    "ready_source_types": [],
+                }
+            ),
+        ):
+            async with client.stream(
+                "POST",
+                "/api/v1/analyze",
+                json={
+                    "text": "Testbescheid.",
+                    "legal_areas": ["schenkungsrecht", "verwaltungsrecht", "sozialrecht"],
+                },
+                headers=DISCLAIMER_HEADERS,
+            ) as response:
+                assert response.status_code == 200, await response.aread()
+                events = await consume_sse(response)
+
+        await drain_background_tasks()
+
+        final = next(e for e in events if "final_output" in e)
+        assert_valid_provenance(final["provenance"])
+        modules = final["provenance"]["modules"]
+        assert [m["id"] for m in modules] == ["erbrecht", "sozialrecht"]
+        # Stub module without parameters → no parameter set.
+        assert modules[0]["parameter_set"] is None
 
     @patch("app.api.routes.analyze.run_pipeline")
     async def test_error_event_carries_neither_object(
@@ -308,6 +373,86 @@ class TestChatDoneEvent:
 
         assert_valid_disclosure(done["disclosure"])
         assert_valid_provenance(done["provenance"])
+        assert [m["id"] for m in done["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+
+
+# -------------------------------------------------------------------
+# WP-96 / C-4 — first-message pipeline terminal event, case-chat done
+# -------------------------------------------------------------------
+
+
+class TestCoverageGapSurfaces:
+    """The two surfaces D-032 left uncovered now carry both objects (D-059)."""
+
+    async def test_first_message_pipeline_terminal_event(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services import chat_reasoning
+
+        async def fake_pipeline(state: Any):
+            yield make_sse({"stage": "normalization", "status": "complete", "payload": {}})
+            state.final_output = {"sachverhalt": "Sachverhalt.", "ergebnis": "Ergebnis."}
+
+        monkeypatch.setattr(chat_reasoning, "run_pipeline", fake_pipeline)
+
+        events = [
+            json.loads(e[6:].strip())
+            async for e in chat_reasoning.run_first_message_pipeline(["Bescheidtext."])
+        ]
+        terminal = events[-1]
+        # Existing keys unchanged; the two Art. 50 objects are additive.
+        assert terminal["sections"] == ["sachverhalt", "ergebnis"]
+        assert terminal["final_output"]["ergebnis"] == "Ergebnis."
+        assert_valid_disclosure(terminal["disclosure"])
+        assert_valid_provenance(terminal["provenance"])
+        assert [m["id"] for m in terminal["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+        # Stage events stay free of both objects.
+        assert all("provenance" not in e for e in events[:-1])
+
+    async def test_case_chat_done_event(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.services import case_chat
+
+        mock_client = MagicMock()
+        mock_client.chat_completion = AsyncMock(return_value="Antwort zum Fall.")
+        monkeypatch.setattr(case_chat, "get_shared_client", lambda: mock_client)
+
+        events = [
+            json.loads(e[6:].strip())
+            async for e in case_chat.generate_case_chat_response(
+                messages=[{"role": "user", "content": "Stimmt die Frist?"}],
+                pipeline_output={"ergebnis": "Ergebnis."},
+                case_id="case-1",
+                legal_areas=["mietrecht"],
+            )
+        ]
+        dones = [e for e in events if e.get("type") == "done"]
+        assert len(dones) == 1
+        done = dones[0]
+        assert done["case_id"] == "case-1"
+        assert done["full_response"] == "Antwort zum Fall."
+        assert_valid_disclosure(done["disclosure"])
+        assert_valid_provenance(done["provenance"])
+        assert [m["id"] for m in done["provenance"]["modules"]] == ["mietrecht"]
+        # Token events carry neither object.
+        assert all("disclosure" not in e for e in events if e.get("type") == "token")
+
+    async def test_case_chat_error_event_carries_neither_object(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services import case_chat
+
+        mock_client = MagicMock()
+        mock_client.chat_completion = AsyncMock(side_effect=RuntimeError("LLM down"))
+        monkeypatch.setattr(case_chat, "get_shared_client", lambda: mock_client)
+
+        events = [
+            json.loads(e[6:].strip())
+            async for e in case_chat.generate_case_chat_response(
+                messages=[{"role": "user", "content": "?"}],
+                pipeline_output={},
+            )
+        ]
+        assert events == [{"error": "case_chat_llm_failed", "detail": "LLM down"}]
 
 
 # -------------------------------------------------------------------
@@ -363,6 +508,9 @@ class TestDocumentsGenerateProvenance:
         _, expected_provenance = build_disclosure_and_provenance(settings)
         assert body["provenance"] == expected_provenance.model_dump(mode="json")
 
+        # Drafts render from the default module's templates (v1.1).
+        assert [m["id"] for m in body["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+
         # Deliberately NO disclosure field on documents (see D-032).
         assert "disclosure" not in body
 
@@ -414,6 +562,49 @@ class TestBuildDisclosureAndProvenance:
         assert provenance.deployment_mode == "unknown"
         assert provenance.spec_version == PROVENANCE_SPEC_VERSION
 
+    def test_modules_fallback_when_a_module_entry_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def boom(module_id: str) -> tuple[str, str, str | None]:
+            raise RuntimeError("parameter file unreadable")
+
+        monkeypatch.setattr("app.modules.runtime.module_provenance", boom)
+        _, provenance = build_disclosure_and_provenance(settings, ["sozialrecht"])
+        # The id stays diagnostic; undeterminable fields degrade to "unknown".
+        assert provenance.modules == [
+            ModuleProvenance(id="sozialrecht", version="unknown", parameter_set="unknown")
+        ]
+
+    def test_modules_fallback_when_resolution_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def boom(legal_areas: Any) -> list[str]:
+            raise RuntimeError("area tables unavailable")
+
+        monkeypatch.setattr("app.modules.runtime.provenance_modules", boom)
+        _, provenance = build_disclosure_and_provenance(settings)
+        # A sentinel entry, not [] — [] means "procedural library only".
+        assert provenance.modules == [
+            ModuleProvenance(id="unknown", version="unknown", parameter_set="unknown")
+        ]
+
+    def test_procedural_only_request_names_no_module(self) -> None:
+        _, provenance = build_disclosure_and_provenance(settings, ["verwaltungsrecht"])
+        assert provenance.modules == []
+
+    def test_parameter_set_is_module_version_plus_latest_valid_from(self) -> None:
+        from app.modules.parameters import load_parameter_rows
+        from app.modules.runtime import get_manifest
+
+        manifest = get_manifest("sozialrecht")
+        latest = max(row.valid_from for row in load_parameter_rows(manifest))
+        _, provenance = build_disclosure_and_provenance(settings, ["sozialrecht"])
+        assert provenance.modules == [
+            ModuleProvenance(
+                id="sozialrecht",
+                version=manifest.version,
+                parameter_set=f"{manifest.version}+{latest.isoformat()}",
+            )
+        ]
+
 
 # -------------------------------------------------------------------
 # G-50-G — serialization and OpenAPI reflection
@@ -441,6 +632,12 @@ class TestModelSerialization:
             model_profile="eu-avv",
             timestamp_utc=FROZEN_UTC_NOW,
             deployment_mode="dev",
+            modules=[
+                ModuleProvenance(
+                    id="sozialrecht", version="1.0.0", parameter_set="1.0.0+2026-01-01"
+                ),
+                ModuleProvenance(id="mietrecht", version="0.1.1", parameter_set=None),
+            ],
         )
         parsed = json.loads(model.model_dump_json())
         assert parsed == model.model_dump(mode="json")

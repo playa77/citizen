@@ -8,6 +8,10 @@ Targeted re-evaluation re-runs specific pipeline stages with user input as
 additional context, updating only affected sections.
 """
 
+# Semantic Version: 1.1.0 | 2026-11-16 — WP-96: the case-chat "done" event
+# embeds Art. 50 disclosure + provenance (C-4 closed, D-059); new
+# ``legal_areas`` keyword names the case's recorded area keys.
+
 from __future__ import annotations
 
 import json
@@ -18,6 +22,7 @@ from typing import Any
 from app.core.config import settings
 from app.core.pipeline import PipelineState, StageExecutionError, execute_stage
 from app.core.router import get_shared_client
+from app.services.disclosure import build_disclosure_and_provenance
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -136,6 +141,7 @@ async def generate_case_chat_response(
     adjudications: dict[str, Any] | None = None,
     claims: list[dict[str, Any]] | None = None,
     case_id: str | None = None,
+    legal_areas: list[str] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Generate a chat response grounded in completed pipeline results.
 
@@ -160,6 +166,10 @@ async def generate_case_chat_response(
         Optional list of claims generated during the pipeline.
     case_id :
         Optional identifier for logging.
+    legal_areas :
+        Area keys recorded for the case (``case_run_area``); they select the
+        modules named in the provenance marker. ``None``/empty → the case ran
+        with ``DEFAULT_MODULE``.
     """
     client = get_shared_client()
 
@@ -231,11 +241,16 @@ async def generate_case_chat_response(
         }
         yield f"data: {json.dumps(token_payload, ensure_ascii=False)}\n\n"
 
-    # Final event signalling completion.
+    # Final event signalling completion. Art. 50(1)/(2) (WP-96, closes the
+    # D-032 coverage gap C-4): the reply is AI-generated text, so the done
+    # event carries disclosure + provenance like the conversation chat.
+    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings, legal_areas)
     done_payload = {
         "type": "done",
         "case_id": case_id,
         "full_response": response_text,
+        "disclosure": disclosure_info.model_dump(mode="json"),
+        "provenance": provenance_marker.model_dump(mode="json"),
     }
     yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
 

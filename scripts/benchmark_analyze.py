@@ -11,6 +11,8 @@ Usage:
     python scripts/benchmark_analyze.py [--base-url http://localhost:8000]
 """
 
+# Revision: 2026-11-16 — WP-96: default X-Disclaimer-Ack v3.0.0 (DISCLAIMER 3.0.0).
+
 from __future__ import annotations
 
 import argparse
@@ -178,7 +180,7 @@ async def _stream_sse(
 
 async def run_benchmark(
     base_url: str = "http://localhost:8000",
-    disclaimer_version: str = "v0.1.0",
+    disclaimer_version: str = "v3.0.0",
     text: str | None = None,
 ) -> dict[str, float]:
     """Run the benchmark and return timing dictionary."""
@@ -277,8 +279,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--disclaimer-version",
-        default="v0.1.0",
-        help="Disclaimer version header value (default: v0.1.0)",
+        default="v3.0.0",
+        help="Disclaimer version header value (default: v3.0.0)",
     )
     parser.add_argument(
         "--input-file",

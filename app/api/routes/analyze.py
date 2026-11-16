@@ -37,7 +37,9 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.6.0 | 2026-11-16 — WP-95: legal_areas validated against the
+# Semantic Version: 0.7.0 | 2026-11-16 — WP-96: terminal-event provenance names
+# the request's modules (citizen-provenance-v1.1).
+# 0.6.0 | 2026-11-16 — WP-95: legal_areas validated against the
 # registry (422 MODULE_UNKNOWN / MODULE_NOT_ENABLED); terminal event carries
 # resolved_modules when legal_areas is non-empty; body accepts a JSON list for
 # legal_areas (the documented shape — previously rejected by a dict[str, str]
@@ -476,7 +478,10 @@ async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # 
             # the machine-readable provenance marker. Both are derived from
             # in-memory state; deliberately absent from error events (those
             # carry no AI-generated text).
-            disclosure_info, provenance_marker = build_disclosure_and_provenance(settings)
+            # Provenance v1.1 (WP-96) names the modules this request ran with.
+            disclosure_info, provenance_marker = build_disclosure_and_provenance(
+                settings, legal_areas
+            )
             final_payload["disclosure"] = disclosure_info.model_dump(mode="json")
             final_payload["provenance"] = provenance_marker.model_dump(mode="json")
             yield _sse_format(final_payload)

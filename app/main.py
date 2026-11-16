@@ -1,4 +1,6 @@
-# Semantic Version: 0.7.0 | 2026-11-16 — WP-95: /modules router; startup builds the
+# Semantic Version: 0.8.0 | 2026-11-16 — WP-96: startup warms the provenance
+# module cache (parameter-set ids of the enabled modules).
+# 0.7.0 | 2026-11-16 — WP-95: /modules router; startup builds the
 # process-wide registry used by request validation (runtime.module_registry).
 # 0.6.0 | 2026-11-16 — WP-94: startup syncs the legal_module table
 # from the registry after migrations.
@@ -75,7 +77,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         # WP-93: module content (area tables, typed code extension points).
         from app.modules.areas import area_tables
-        from app.modules.runtime import calculators_for, regime_providers_for
+        from app.modules.runtime import (
+            calculators_for,
+            module_provenance,
+            regime_providers_for,
+        )
 
         _tables = area_tables()
         _enabled = sorted(_registry.enabled)
@@ -85,6 +91,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             len(_tables.presets),
             len(calculators_for(_enabled)),
             len(regime_providers_for(_enabled)),
+        )
+        # WP-96: warm the provenance cache (parameter-set ids) so no request
+        # pays the parameter-file read; an unreadable parameter file of an
+        # enabled module refuses startup like an invalid manifest does.
+        logger.info(
+            "Provenance modules: %s",
+            ", ".join(
+                f"{mid}@{version} (parameter_set={pset})"
+                for mid, version, pset in (module_provenance(m) for m in _enabled)
+            ),
         )
     except Exception as exc:
         logger.critical("Refusing to start: module registry validation failed — %s", exc)

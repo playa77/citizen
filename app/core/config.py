@@ -1,4 +1,6 @@
-# Semantic Version: 0.4.1 | 2026-11-16 — WP-93: GOLDSET_PATH default points into
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
+# v0.1.0 → v3.0.0 (aligned with DISCLAIMER_DE/EN.md 3.0.0).
+# 0.4.1 | 2026-11-16 — WP-93: GOLDSET_PATH default points into
 # modules/sozialrecht/goldset/ (goldsets moved with the module).
 # 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE and
 # ENABLED_MODULES settings added for the module registry.
@@ -118,7 +120,9 @@ class Settings(BaseSettings):
     CACHE_TTL_SEC: int = 86400
     LOG_LEVEL: str = "INFO"
     ENABLE_PROGRESS_STREAM: bool = True  # Whether to stream model output during analysis progress
-    DISCLAIMER_VERSION: str = "v0.1.0"
+    # Ack version = "v" + DISCLAIMER_DE/EN.md document version (WP-96, D-059);
+    # bump together with the documents, never on its own.
+    DISCLAIMER_VERSION: str = "v3.0.0"
     PSEUDONYMIZATION_ENABLED: bool = True  # WP-30 — pseudonymize PII before LLM calls
     # WP-42 — OCR quality gate
     OCR_QUALITY_ENABLED: bool = True

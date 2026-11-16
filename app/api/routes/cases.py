@@ -12,7 +12,9 @@ Endpoints:
     GET    /api/v1/cases/{case_id}/export    Export case data
 """
 
-# Semantic Version: 0.2.0 | 2026-08-25 — D-032 follow-up fix: legal_areas query
+# Semantic Version: 0.3.0 | 2026-11-16 — WP-96: case chat passes the case's
+# recorded area keys to the chat service (provenance v1.1 modules).
+# 0.2.0 | 2026-08-25 — D-032 follow-up fix: legal_areas query
 # in get_case_endpoint moved back inside its session block; it previously ran
 # against the closed session and leaked a pooled connection until GC.
 
@@ -300,6 +302,15 @@ async def case_chat_endpoint(
         for section_key, adj in section_adjs.items():
             adjudications[f"section:{section_key}"] = adj
 
+        # Area keys recorded for the case (primary first) — they select the
+        # modules named in the chat's provenance marker (WP-96).
+        areas_res = await db.execute(
+            select(CaseRunArea)
+            .where(CaseRunArea.case_run_id == case.id)
+            .order_by(CaseRunArea.is_primary.desc(), CaseRunArea.legal_area)
+        )
+        case_legal_areas = [a.legal_area for a in areas_res.scalars().all()]
+
         # Save the user message to chat_history.
         user_msg = {"role": "user", "content": content.strip(), "timestamp": time.time()}
         if "messages" not in chat_history:
@@ -322,6 +333,7 @@ async def case_chat_endpoint(
                 adjudications=adjudications,
                 claims=claims_data,
                 case_id=str(case_id),
+                legal_areas=case_legal_areas,
             ):
                 yield event
                 if event.startswith("data: "):
