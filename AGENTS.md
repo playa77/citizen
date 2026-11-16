@@ -43,7 +43,7 @@ One backend everywhere — server, Docker, CI, and all tests: PostgreSQL 16 + pg
 - Legal/compliance copy lives in the merged `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` (v2.0.0: statement + legal notice + AI Act classification in one document per language). The former `STATEMENT.md`, `COMPLIANCE.md`, `COMPLIANCE-EN.md` are gone — do not re-create them; link to the disclaimer sections instead. Note: `DISCLAIMER_*.md` is NOT in the lint's default target list (coverage gap logged in DECISIONS.md).
 - Corpus/mutating endpoints require `X-Disclaimer-Ack` matching `DISCLAIMER_VERSION` (`app/middleware/disclaimer.py`).
 
-## Project Conventions
+## Project Specifics
 
 - Settings: pydantic-settings in `app/core/config.py`; env loading via `.env`. LLM routing through versioned profiles in `config/inference_profiles.yaml` (`INFERENCE_PROFILE`, default `eu-avv`); egress guard blocks non-approved endpoints.
 - Timeout chain must stay ordered (D-017): nginx proxy timeout > `PIPELINE_TIMEOUT_SEC` > sum of per-stage timeouts. Per-call hard limits use `asyncio.wait_for` in `app/core/router.py` because httpx read timeouts never fire on streaming responses.
