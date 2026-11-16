@@ -6,9 +6,16 @@ Endpoints:
     GET  /api/v1/intake/{id}          Get current state
     POST /api/v1/intake/{id}/restart  Abandon & reset
     POST /api/v1/intake/{id}/confirm  Force-finalise
+
+Every session response carries ``resolved_modules`` (WP-95): one entry per
+determined area key (primary first, then secondary) naming the owning
+module, its version, whether the key is a legacy alias and whether the
+module is enabled — ``[]`` while no area is determined yet.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-95: resolved_modules on every session
+# response (additive key).
+# 0.3.0
 
 from __future__ import annotations
 
@@ -20,6 +27,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, status
 
 from app.db.session import async_session_factory
+from app.modules.runtime import resolved_modules
 from app.services.intake import (
     IntakeError,
     IntakeTurnLimitReached,
@@ -37,6 +45,13 @@ router = APIRouter()
 
 def _err(msg: str, code: int = status.HTTP_400_BAD_REQUEST) -> HTTPException:
     return HTTPException(status_code=code, detail=msg)
+
+
+def _with_modules(session: dict[str, Any]) -> dict[str, Any]:
+    """Add ``resolved_modules`` for the session's determined area keys."""
+    keys = [session["primary_area"]] if session.get("primary_area") else []
+    keys += [k for k in session.get("secondary_areas") or [] if k not in keys]
+    return {**session, "resolved_modules": resolved_modules(keys)}
 
 
 @router.post("/intake/start")
@@ -57,11 +72,13 @@ async def post_start_intake(
 
     async with async_session_factory() as db:
         try:
-            return await start_intake(
-                db,
-                session_id=session_id,
-                initial_text=initial_text,
-                max_turns=max_turns,
+            return _with_modules(
+                await start_intake(
+                    db,
+                    session_id=session_id,
+                    initial_text=initial_text,
+                    max_turns=max_turns,
+                )
             )
         except IntakeError as exc:
             raise _err(f"Intake failed: {exc}") from exc
@@ -82,10 +99,12 @@ async def post_continue_intake(
 
     async with async_session_factory() as db:
         try:
-            return await continue_intake(
-                db,
-                intake_id=intake_id,
-                user_message=message,
+            return _with_modules(
+                await continue_intake(
+                    db,
+                    intake_id=intake_id,
+                    user_message=message,
+                )
             )
         except IntakeTurnLimitReached as exc:
             raise _err(str(exc), code=status.HTTP_409_CONFLICT) from exc
@@ -100,7 +119,7 @@ async def get_intake_endpoint(intake_id: UUID) -> dict[str, Any]:
         result = await get_intake(db, intake_id)
         if result is None:
             raise _err("Intake not found", code=status.HTTP_404_NOT_FOUND)
-        return result
+        return _with_modules(result)
 
 
 @router.post("/intake/{intake_id}/restart")
@@ -108,7 +127,7 @@ async def post_restart_intake(intake_id: UUID) -> dict[str, Any]:
     """Abandon the current intake and reset it."""
     async with async_session_factory() as db:
         try:
-            return await restart_intake(db, intake_id=intake_id)
+            return _with_modules(await restart_intake(db, intake_id=intake_id))
         except IntakeError as exc:
             raise _err(f"Intake restart failed: {exc}") from exc
 
@@ -118,6 +137,6 @@ async def post_confirm_intake(intake_id: UUID) -> dict[str, Any]:
     """Force-finalise the intake, returning the IntakeResult."""
     async with async_session_factory() as db:
         try:
-            return await finalize_intake(db, intake_id=intake_id)
+            return _with_modules(await finalize_intake(db, intake_id=intake_id))
         except IntakeError as exc:
             raise _err(f"Intake confirm failed: {exc}") from exc

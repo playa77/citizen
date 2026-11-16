@@ -34,8 +34,13 @@ Machine-readable OpenAPI description is served by the app itself:
 - **API version:** path-based (`/api/v1/...`). Breaking changes introduce a new
   prefix (`/api/v2`); v1 remains served during any transition.
 - **Application version:** `GET /api/v1/meta/version` →
-  `{"api_version": "2.0.0", "disclaimer_version": "v0.1.0"}`. The package
+  `{"api_version": "2.0.0", "disclaimer_version": "v0.1.0", "disclosure_version": "1.0",
+  "modules": {"sozialrecht": "1.0.0", …}}`. The package
   version is also embedded in the OpenAPI title and `/health`.
+- **Module versions:** each legal-area module is versioned on its own (semver
+  in its manifest); `GET /api/v1/modules` and the `modules` key of
+  `meta/version` report them. Within `/api/v1` all changes are additive
+  (D-039): new keys may appear in responses, existing keys keep their shape.
 - **Disclaimer version:** independent of the app version. Clients must fetch it
   via `GET /api/v1/meta/disclaimer/version` and echo it in `X-Disclaimer-Ack`.
 
@@ -87,8 +92,9 @@ shape; application errors use `HTTPException` with a string or structured
 // Application error — simple form (400/403/404/409/415/500)
 {"detail": "Case not found"}
 
-// Application error — structured form (used by analyze/corpus/guards)
+// Application error — structured form (used by analyze/corpus/guards/modules)
 {"detail": {"error": "corpus_not_ready", "message": "...", "areas": {...}}}
+{"detail": {"error": "MODULE_NOT_ENABLED", "message": "...", "legal_areas": ["mietrecht"], "action": "..."}}
 ```
 
 The disclaimer middleware uses a bare object (not wrapped in `"detail"`):
@@ -107,10 +113,13 @@ The disclaimer middleware uses a bare object (not wrapped in `"detail"`):
 | 403 | all `/api/v1` (middleware) | missing/mismatched `X-Disclaimer-Ack` |
 | 403 | upload routes on dev instances | missing/invalid `X-Document-Tag` (`synthetic_data_only`) |
 | 404 | cases, conversations, corpus jobs, goldset, intake, eval reports | unknown resource id |
+| 404 | `/modules/{module_id}*` | `MODULE_UNKNOWN` — no installed module has this id; `goldset_not_declared` — the module ships no goldset |
 | 409 | `POST /analyze` | `corpus_not_ready` — a selected legal area has no corpus chunks |
 | 409 | intake `message` | interview turn limit reached |
 | 415 | `POST /ingest` | unsupported MIME type (allowed: PDF, JPG, PNG, TXT, HTML, EML) |
-| 422 | everywhere | FastAPI request-validation failure |
+| 422 | `POST /analyze` | `MODULE_UNKNOWN` — a `legal_areas` value no installed module (or the core procedural library) serves |
+| 422 | `POST /analyze` | `MODULE_NOT_ENABLED` — a `legal_areas` value whose module is installed but not enabled in this deployment (`enabled: false` in `GET /modules`) |
+| 422 | everywhere | FastAPI request-validation failure (`detail` is a list, not an object) |
 | 500 | anywhere | unrecoverable internal error; detail string present |
 
 SSE streams signal errors **inside the stream** as a final
@@ -173,7 +182,9 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 ```
 
 - `text` (required, non-empty): the normalized input document.
-- `legal_areas` (optional): array or comma-separated string. Values drawn from
+- `legal_areas` (optional): JSON array or comma-separated string (the array
+  form is accepted since WP-95; before, only the string form passed request
+  validation). Values drawn from
   the area keys of the installed modules (e.g. `sozialrecht`, `erbrecht`,
   `schenkungsrecht`, `familienrecht`, `andere`; since WP-94 the key set is
   module data, no longer a DB enum — the stored case records each key's
@@ -188,6 +199,11 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
   `calculations_found` and a summary stating that no deterministic calculation
   check is available (previously the SGB II check ran for every area). Payload
   shape unchanged.
+  Every value is validated before anything runs (WP-95): unknown →
+  `422 MODULE_UNKNOWN`, module installed but not enabled →
+  `422 MODULE_NOT_ENABLED` (see §5.2; `GET /api/v1/modules` lists ids and
+  enablement). Since WP-95 an unknown value no longer surfaces as
+  `409 corpus_not_ready`.
 - `intake_session_id` (optional): UUID linking a preceding intake interview.
 
 **Event stream** — each event is a line pair `data: {json}\n\n`:
@@ -205,7 +221,7 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 | `generation` | `running` → `complete` | `final_output` sections |
 | `adversarial_review` | `running` → `complete` | counter-analysis |
 | `calculation_check` | `running` → `complete` | arithmetic verification |
-| *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>", "disclosure": {...}, "provenance": {...}}` |
+| *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>", "disclosure": {...}, "provenance": {...}, "resolved_modules": [...]}` — `resolved_modules` only when the request carried a non-empty `legal_areas` |
 
 The final summary event embeds two Art. 50 (VO (EU) 2024/1689) objects:
 `disclosure` (`{version, must_display_before: "results", texts: {de, en}}`) —
@@ -214,6 +230,21 @@ presenting any AI-generated result — and `provenance`
 (`{spec_version: "citizen-provenance-v1.0", generator: "citizen", app_version,
 model_profile, timestamp_utc, deployment_mode}`). Both are always present;
 error events carry neither.
+
+`resolved_modules` (WP-95) has one entry per requested `legal_areas` value,
+in request order:
+
+```json
+[{"legal_area": "schenkungsrecht", "module_id": "erbrecht", "module_version": "0.1.1",
+  "legacy_alias": true, "enabled": true},
+ {"legal_area": "verwaltungsrecht", "module_id": null, "module_version": null,
+  "legacy_alias": false, "enabled": true}]
+```
+
+`module_id: null` marks a key served by the core procedural library (no
+module). The same entry shape appears on intake and preset responses (§8.2,
+§8.8), where `enabled: false` warns that `/analyze` would answer
+`422 MODULE_NOT_ENABLED` for that key.
 
 Terminal error event instead of the summary:
 
@@ -242,7 +273,8 @@ data: {"session_id":"…","sections":["sachverhalt","…"],"final_output":{…},
 ```
 
 **Errors before streaming starts:** `400` (missing/empty `text`),
-`404` (unknown `intake_session_id`), `409` structured body:
+`404` (unknown `intake_session_id`), `422` `MODULE_UNKNOWN` /
+`MODULE_NOT_ENABLED` (structured body, §5.1), `409` structured body:
 
 ```json
 {"detail": {"error": "corpus_not_ready", "legal_areas": ["erbrecht"],
@@ -322,6 +354,10 @@ max_turns must be 2–12. Returns the created session (see GET below):
 Body `{"message": "..."}` → updated session state; when the LLM decides the
 interview is complete, state becomes `done` and the payload carries the
 extracted `intake_result`. Errors: `400`, `409` (turn limit).
+
+Every intake session response (start, message, get, restart, confirm) also
+carries `resolved_modules` (WP-95; entry shape in §7.1) for the determined
+`primary_area` and `secondary_areas` — `[]` while no area is determined.
 
 #### `GET /api/v1/intake/{intake_id}` — current session or `404`.
 #### `POST /api/v1/intake/{intake_id}/restart` — abandon & reset.
@@ -502,7 +538,7 @@ Errors: `400` (missing/invalid `case_run_id`, unknown `doc_type`), `404`.
 
 ### 8.7 Goldsets & evaluation (Prüfstand)
 
-#### `GET /api/v1/goldset` — manifest + summarized case list (no document texts).
+#### `GET /api/v1/goldset` — manifest + summarized case list (no document texts). Serves the goldset at `GOLDSET_PATH` (default: Sozialrecht v0.1.0) and stays the Sozialrecht alias until `/api/v2`; module goldsets: `GET /api/v1/modules/{module_id}/goldset` (§8.10).
 #### `GET /api/v1/goldset/{case_id}` — full case incl. input document text, expected findings, citations, calculation, traps. `404` unknown id.
 #### `POST /api/v1/goldset/{case_id}/analyze` — SSE stream, identical contract to `POST /api/v1/analyze`, using the goldset case's stored input text. Nothing is persisted (no CaseRun).
 
@@ -531,12 +567,14 @@ characters, `404` unknown, `500` corrupt file.
 ```
 #### `GET /api/v1/presets/{preset_id}` — single preset; `404` unknown.
 #### `POST /api/v1/presets/suggest` — body `{"text": "<case description>"}` →
-`{"preset_id": "...", "primary_area": "sozialrecht", "secondary_areas": []}`
+`{"preset_id": "...", "primary_area": "sozialrecht", "secondary_areas": [], "resolved_modules": [...]}`
 (LLM-assisted with deterministic fallback). `400` empty text.
 #### `POST /api/v1/presets/apply` — body
 `{"preset_id": "...", "session_id": "...", "initial_text": "..."}` →
-`{"preset_id", "preset_name", "legal_areas", "primary_area", "enriched_text"}`.
-`400` missing preset_id; `404` unknown preset.
+`{"preset_id", "preset_name", "legal_areas", "primary_area", "enriched_text", "resolved_modules"}`.
+`400` missing preset_id; `404` unknown preset. `resolved_modules` (WP-95,
+shape in §7.1) covers the preset's `legal_areas` (or the primary area when
+the preset lists none).
 
 ### 8.9 Meta
 
@@ -548,10 +586,90 @@ header.
 | `GET /api/v1/meta/disclaimer/version` *(no ack needed)* | `{"version": "v0.1.0"}` |
 | `GET /api/v1/meta/disclaimer/text` | `{"text": "<HTML disclaimer>", "version": "v0.1.0"}` |
 | `GET /api/v1/meta/disclosure` | `{"version": "1.0", "must_display_before": "results", "texts": {"de": "Diese Analyse wurde von einem KI-System erstellt …", "en": "This analysis was produced by an AI system …"}}` — Art. 50(1) notification; cacheable, does not vary by deployment mode |
-| `GET /api/v1/meta/version` | `{"api_version": "2.0.0", "disclaimer_version": "v0.1.0", "disclosure_version": "1.0"}` |
+| `GET /api/v1/meta/version` | `{"api_version": "2.0.0", "disclaimer_version": "v0.1.0", "disclosure_version": "1.0", "modules": {"andere": "0.1.1", …, "sozialrecht": "1.0.0"}}` — `modules` (WP-95) maps every **enabled** module id to its version, sorted by id |
 | `GET /api/v1/meta/legal-timestamp` | `{"parameter_freshness": "2026-07-01", "corpus_freshness": "2026-08-01"}` (either may be `null`) |
 | `GET /api/v1/meta/active-profile` | `{"profile": "eu-avv", "label": "...", "avv_status": "...", "pseudonymization": true}` |
 | `GET /api/v1/meta/deployment-mode` | `{"mode": "dev", "synthetic_data_only": true, "dev": true, "dev_banner": "…" \| null}` |
+
+### 8.10 Modules (legal-area catalog)
+
+Read-only catalog of the installed legal-area modules (WP-95). Module data
+comes from the filesystem and is always served; the database-backed fields
+`corpus` and `installed_at` are `null` when the database is unreachable.
+Enablement follows `ENABLED_MODULES`, else the tier rule of the deployment
+mode (`dev`/`self`: `experimental` + `verified`; `provider`: `verified` only).
+
+#### `GET /api/v1/modules`
+
+```json
+{"default_module": "sozialrecht",
+ "modules": [
+   {"id": "sozialrecht", "version": "1.0.0", "tier": "verified",
+    "enabled": true, "is_default": true,
+    "title": {"de": "Sozialrecht", "en": "Social-benefits law"},
+    "area_keys": ["sozialrecht"],
+    "corpus": {"chunk_count": 1234, "source_types": ["sgb2", "sgbx", "…"],
+               "present_source_types": ["sgb2", "…"], "missing_source_types": [],
+               "is_ready": true},
+    "installed_at": "2026-11-16T10:00:00+00:00"}]}
+```
+
+- Order: modules in the order of the area keys they own (default module
+  first today).
+- `area_keys`: the `legal_areas` values this module serves (its id plus
+  legacy aliases, e.g. `erbrecht` → `["erbrecht", "schenkungsrecht"]`).
+- `corpus`: readiness over the union of the area keys' corpus source types —
+  same semantics as the `/analyze` pre-flight (`is_ready` is `false` when the
+  module expects no source type, e.g. the catch-all).
+- `installed_at`: when the running manifest was first synced into the
+  database; `null` when no synced row describes the running manifest.
+
+#### `GET /api/v1/modules/{module_id}`
+
+The summary fields above plus the public manifest parts:
+
+```json
+{"id": "sozialrecht", "…": "…",
+ "core_api": ">=3.0,<4.0",
+ "scope": {"summary_de": "…", "own_matter_only": true, "out_of_scope": ["…"]},
+ "legacy_aliases": [],
+ "capabilities": {"deadlines": true, "calculators": true, "regime_provider": true,
+                  "document_templates": true, "goldset": true, "dossier": false},
+ "parameter_domain": "sozialrecht",
+ "deadlines": [{"id": "widerspruch_sgg_84", "label_de": "Widerspruchsfrist",
+                "trigger": "bekanntgabe", "duration": {"days": 0, "months": 1, "years": 0},
+                "basis": "§ 84 Abs. 1 SGG", "fristbeginn_basis": "…",
+                "bekanntgabe_fiction": "sgbx_37_2", "rollover": "sgg_64_3",
+                "missing_rechtsbehelfsbelehrung": {"duration": {"days": 0, "months": 0, "years": 1},
+                                                   "basis": "§ 66 Abs. 2 SGG"},
+                "severity": "critical", "applies_when": {"document_type": "verwaltungsakt"}}],
+ "document_types": [{"id": "widerspruch", "title": "Widerspruch"}],
+ "dossier_checklist": null,
+ "compliance": null}
+```
+
+File paths and code references of the manifest are not served (only the
+`capabilities` flags). `dossier_checklist` stays `null` until modules ship
+dossier data (roadmap P10). `compliance` is `null` unless the manifest
+declares one (`special_regimes`, `referral`). `404` `MODULE_UNKNOWN` for an
+id that is not installed; disabled modules are served (with
+`"enabled": false`).
+
+#### `GET /api/v1/modules/{module_id}/goldset`
+
+The goldset declared by the module manifest, same `goldset`/`cases` shape as
+`GET /api/v1/goldset`, plus the module and its evaluation gate:
+
+```json
+{"module_id": "sozialrecht", "module_version": "1.0.0",
+ "gate": {"rule": "zero_regression", "baseline_report": "eval/results/….json"},
+ "goldset": {"id": "…", "version": "0.2.0", "…": "…"},
+ "cases": [{"id": "GS-001", "…": "…"}]}
+```
+
+May serve a newer goldset version than `/api/v1/goldset` (which follows
+`GOLDSET_PATH`). `404` `MODULE_UNKNOWN`, `404` `goldset_not_declared`, `500`
+unreadable goldset file.
 
 ---
 
@@ -565,12 +683,14 @@ header.
    delivered with each AI-generated payload (Art. 50(2)).
 4. On `DEPLOYMENT_MODE=dev` (check `meta/deployment-mode`), add
    `X-Document-Tag: synthetic` to every upload.
-5. For analysis: `POST /analyze` (or conversation first-message) and consume
+5. Optional: `GET /api/v1/modules` to offer only enabled modules as
+   `legal_areas`; handle `422 MODULE_UNKNOWN` / `MODULE_NOT_ENABLED`.
+6. For analysis: `POST /analyze` (or conversation first-message) and consume
    the SSE stream; tolerate `running`/`complete` pairs per stage and a terminal
    `final_output` summary event; handle `{"error": ...}` terminal events.
-6. For corpus setup: check `corpus/health`; if unhealthy trigger
+7. For corpus setup: check `corpus/health`; if unhealthy trigger
    `corpus/update` and poll `corpus/status/{job_id}`.
-7. Treat any unexpected disconnect mid-SSE as a failed run and re-submit.
+8. Treat any unexpected disconnect mid-SSE as a failed run and re-submit.
 
 ---
 

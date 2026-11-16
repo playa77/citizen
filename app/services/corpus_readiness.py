@@ -13,7 +13,9 @@ WP-93: the area → source-type mapping is module data
 (``areas.<key>.source_types`` in ``modules/<id>/corpus.yaml``).
 """
 
-# Semantic Version: 0.4.0
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-95: chunk_counts_by_source_type() and
+# source_type_status() shared with GET /modules (module corpus readiness).
+# 0.4.0
 
 from __future__ import annotations
 
@@ -33,6 +35,38 @@ logger = logging.getLogger(__name__)
 # from the owning modules' corpus scopes (``app.modules.areas``). This is
 # the source of truth for "is this area loadable?".
 AREA_TO_SOURCE_TYPES: dict[str, tuple[str, ...]] = dict(area_tables().source_types)
+
+
+async def chunk_counts_by_source_type(session: AsyncSession) -> dict[str, int]:
+    """Chunk count per ``source_type`` over active sources (one query)."""
+    rows = await session.execute(
+        select(
+            LegalSource.source_type,
+            func.count(LegalChunk.id).label("chunk_count"),
+        )
+        .outerjoin(LegalChunk, LegalChunk.source_id == LegalSource.id)
+        .where(LegalSource.is_active.is_(True))
+        .group_by(LegalSource.source_type)
+    )
+    return {row.source_type: int(row.chunk_count) for row in rows.all()}
+
+
+def source_type_status(source_types: tuple[str, ...], by_source: dict[str, int]) -> dict[str, Any]:
+    """Readiness of a set of expected *source_types* given chunk counts.
+
+    Ready means: at least one source type is expected and every expected
+    source type has chunks (an empty expectation, e.g. the catch-all area,
+    is never ready).
+    """
+    present = tuple(st for st in source_types if by_source.get(st, 0) > 0)
+    missing = tuple(st for st in source_types if by_source.get(st, 0) == 0)
+    return {
+        "chunk_count": sum(by_source.get(st, 0) for st in source_types),
+        "source_types": list(source_types),
+        "present_source_types": list(present),
+        "missing_source_types": list(missing),
+        "is_ready": bool(source_types) and not missing,
+    }
 
 
 async def get_area_status(
@@ -58,34 +92,11 @@ async def get_area_status(
     if not legal_areas:
         return {}
 
-    # Aggregate chunk counts grouped by source_type in a single query.
-    rows = await session.execute(
-        select(
-            LegalSource.source_type,
-            func.count(LegalChunk.id).label("chunk_count"),
-        )
-        .outerjoin(LegalChunk, LegalChunk.source_id == LegalSource.id)
-        .where(LegalSource.is_active.is_(True))
-        .group_by(LegalSource.source_type)
-    )
-    by_source: dict[str, int] = {row.source_type: int(row.chunk_count) for row in rows.all()}
-
-    result: dict[str, dict[str, Any]] = {}
-    for area in legal_areas:
-        source_types = AREA_TO_SOURCE_TYPES.get(area, ())
-        chunk_count = sum(by_source.get(st, 0) for st in source_types)
-        present_sources = tuple(st for st in source_types if by_source.get(st, 0) > 0)
-        missing_sources = tuple(st for st in source_types if by_source.get(st, 0) == 0)
-        is_ready = bool(source_types) and len(missing_sources) == 0
-
-        result[area] = {
-            "chunk_count": chunk_count,
-            "source_types": list(source_types),
-            "present_source_types": list(present_sources),
-            "missing_source_types": list(missing_sources),
-            "is_ready": is_ready,
-        }
-    return result
+    by_source = await chunk_counts_by_source_type(session)
+    return {
+        area: source_type_status(AREA_TO_SOURCE_TYPES.get(area, ()), by_source)
+        for area in legal_areas
+    }
 
 
 async def check_preflight(

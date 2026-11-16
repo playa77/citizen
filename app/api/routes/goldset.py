@@ -13,7 +13,9 @@ Goldset path and version are controlled by configuration (GOLDSET_PATH in
 settings), so version changes require no code changes.
 """
 
-# Semantic Version: 1.0.1 | 2026-11-16 — WP-93: demo analysis uses DEFAULT_MODULE
+# Semantic Version: 1.1.0 | 2026-11-16 — WP-95: load_goldset_file() and
+# goldset_listing() shared with GET /modules/{module_id}/goldset; responses unchanged.
+# 1.0.1 | 2026-11-16 — WP-93: demo analysis uses DEFAULT_MODULE
 # from the module tables (same value, no literal).
 # 1.0.0 | 2026-07-12
 
@@ -179,8 +181,11 @@ _goldset_cache: dict[str, tuple[float, Any]] = {}
 def _load_goldset_cached() -> Any:
     """Load the goldset from the configured path, with file-mtime caching."""
     settings = _get_settings()
-    path = Path(settings.GOLDSET_PATH)
+    return load_goldset_file(Path(settings.GOLDSET_PATH))
 
+
+def load_goldset_file(path: Path) -> Any:
+    """Load the goldset at *path*, with file-mtime caching."""
     if not path.exists():
         raise FileNotFoundError(f"Goldset file not found: {path}")
 
@@ -347,6 +352,11 @@ async def get_goldset() -> dict[str, Any]:
             detail=f"Goldset konnte nicht geladen werden: {exc}",
         ) from exc
 
+    return goldset_listing(doc)
+
+
+def goldset_listing(doc: Any) -> dict[str, Any]:
+    """Manifest + summarized case list of a loaded goldset (no YAML, no texts)."""
     g = doc.goldset
     return {
         "goldset": {

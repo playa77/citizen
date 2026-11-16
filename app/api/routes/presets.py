@@ -9,9 +9,16 @@ Endpoints:
 WP-93: the preset catalog, the keyword fallback table and the fallback
 preset are module data (``modules/<id>/intake.yaml``) assembled by
 ``app.modules.areas``; the catch-all area replaces the hard-coded literal.
+
+WP-95: ``suggest`` and ``apply`` responses carry ``resolved_modules`` (one
+entry per area key of the suggestion / preset, primary first) so a client
+can see the owning module, legacy-alias mapping and enablement before it
+calls ``/analyze``.
 """
 
-# Semantic Version: 0.4.0
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-95: resolved_modules on suggest/apply
+# (additive key).
+# 0.4.0
 
 from __future__ import annotations
 
@@ -23,6 +30,7 @@ from fastapi import APIRouter, Body, HTTPException, status
 
 from app.core.router import OpenRouterClient
 from app.modules.areas import area_tables
+from app.modules.runtime import resolved_modules
 from app.services.presets import get_preset, list_presets
 
 logger = logging.getLogger(__name__)
@@ -148,7 +156,9 @@ async def post_suggest_preset(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="'text' must be non-empty.",
         )
-    return await _call_llm_suggest(text)
+    suggestion = await _call_llm_suggest(text)
+    keys = [suggestion["primary_area"], *suggestion["secondary_areas"]]
+    return {**suggestion, "resolved_modules": resolved_modules(keys)}
 
 
 @router.post("/presets/apply")
@@ -175,12 +185,13 @@ async def post_apply_preset(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Preset '{preset_id}' not found.",
         )
+    legal_areas = list(preset["legal_areas"])
+    primary_area = legal_areas[0] if legal_areas else area_tables().catch_all
     return {
         "preset_id": preset_id,
         "preset_name": preset["name"],
-        "legal_areas": list(preset["legal_areas"]),
-        "primary_area": (
-            preset["legal_areas"][0] if preset["legal_areas"] else area_tables().catch_all
-        ),
+        "legal_areas": legal_areas,
+        "primary_area": primary_area,
         "enriched_text": initial_text,  # callers can post-process as needed
+        "resolved_modules": resolved_modules(legal_areas or [primary_area]),
     }
