@@ -1,6 +1,6 @@
 # Dev-Instanz — Betriebsdokumentation (Art. 2(8) KI-VO)
 
-**Version:** 1.1.0 · **Stand:** 2026-08-25
+**Version:** 1.1.1 · **Stand:** 2026-11-16 (WP-93: Goldset-Pfad)
 **Zugehöriges Work Package:** WP-62 (Roadmap v2.0.0)
 **Rechtsgrundlage:** Art. 2(8) VO (EU) 2024/1689 (Entwicklungsphasen-Freistellung)
 
@@ -66,7 +66,7 @@ technisch durchgesetzt:
   abgelehnt (`check_synthetic_data_request()`; an `/api/v1/ingest`, den
   Chat-Dokument-Uploads und der Konversations-Erstellung mit Datei).
 
-**Was zählt als synthetisch:** Goldset-Fälle (`eval/goldsets/`),
+**Was zählt als synthetisch:** Goldset-Fälle (`modules/*/goldset/`),
 generierte Testdokumente, jede vom Autor ausdrücklich als Testdatensatz
 markierte Datei. Echte Bescheide, echte Anträge oder echte
 Behördenkorrespondenz gehören **nicht** auf diese Instanz; für die

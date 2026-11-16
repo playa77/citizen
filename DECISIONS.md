@@ -773,3 +773,125 @@ LLM's issue phrasings share no §-reference formats with the goldset's
 Tier-1 matcher) — recorded as-is: the report's role is the zero-regression
 reference for WP-97, and its absolute levels are flagged for the WP-97
 gate discussion.
+
+### D-051 R1 — 2026-11-16 — WP-93 scope, sequencing and acceptance (Extract Sozialrecht)
+**Decision:** WP-93 lands **before** WP-94 (roadmap order lists WP-94 first).
+Scope: every row of `ARCHITECTURE.md` § 8 that does not touch the database —
+prompts, intake routing, presets, corpus scope + BGB § tags, parameters
+(generic loader), calculators (rules engine, extraction/explanation prompts,
+parameter fetch), regime provider, document templates, goldsets — moves into
+`modules/sozialrecht/`; the nine other legacy keys become seven `experimental`
+stub modules plus the core procedural library (D-038). DB-bound items stay for
+WP-94 and are the only area-id literals left in core code:
+`LEGAL_AREA_ALLOWED`/`LEGAL_AREA_TIER` + CHECK (`app/db/models.py`), the
+`sgb2` parameter domain, plus the registry alias table and `DEFAULT_MODULE`/
+`GOLDSET_PATH` defaults (`app/core/config.py`). Behaviour constraint: zero
+change for requests without `legal_areas` and for every moved surface, except
+D-054. Acceptance checks: (1) `tests/unit/test_wp93_golden.py` — 36 digests
+(prompt sets for 13 area combinations, intake/preset prompts and tables,
+keyword fallbacks, synonyms, source mapping, BGB § tags 1–2399, regime
+banners, calculation prompts, generator selection, 3,600 rendered draft
+variants) equal a baseline produced from the pre-WP-93 tree (aae2888);
+(2) full suite, ruff, mypy strict, purpose-drift lint green apart from the
+two pre-existing `test_pseudonymization` negative-control failures (spaCy
+model behaviour, failing identically on aae2888); (3) the WP-93 exit
+criterion as an AST test (`test_core_code_names_no_area_ids_outside_registry_tables`).
+**Rejected:** (a) Waiting for WP-94 — the extraction is independent of the
+schema change, and doing WP-94 first would rewrite `sgb2 → sozialrecht`
+before the loader that owns the domain exists. (b) Moving `LEGAL_AREA_ALLOWED`
+now — it backs the live CHECK constraint; the area tables must offer exactly
+the set the database accepts until the FK replaces it.
+**Rationale:** Bounded, verifiable refactor; the golden turns "zero behaviour
+change" from a claim into a pinned test.
+
+### D-052 R1 — 2026-11-16 — Module code loading and SDK surface (WP-93)
+**Decision:** Module code is imported from `modules/<id>/<file>.py` as
+`citizen_modules.<id>.<file>` (`app/modules/content.py`), so relative imports
+inside a module work and module files cannot shadow core or third-party
+names. Manifest paths must exist and stay inside the module directory —
+discovery refuses otherwise (closes the D-042 deferral). Two manifest keys
+are added to `manifest.schema.json` (core_api 3.0, unreleased):
+`prompts` and `document_templates`. `app.modules.sdk` 0.2.0 exports
+`Calculator`, `RegimeProvider`, `ParameterSource`, `ParameterLookup`;
+`Calculator` carries, beyond § 2.4's sketch, `summarise_extraction`,
+`cross_check` and `referral_hint`, because the v2.0.0 harness hard-coded
+exactly those SGB II specifics. `SDK_VERSION` stays "3.0" (additive within
+an unreleased contract).
+**Rejected:** (a) Making `modules/` an importable top-level package — a
+generic name on `sys.path` collides easily and would let module code be
+imported around the registry. (b) Protocol base classes — frozen dataclasses
+of callables keep module code free of core inheritance.
+**Rationale:** Smallest typed surface that carries the existing Sozialrecht
+code unchanged in behaviour; the import lint still bounds module code to
+`app.modules.sdk`.
+
+### D-053 R1 — 2026-11-16 — Area tables reassembled from module data (WP-93)
+**Decision:** `app/modules/areas.py` rebuilds the v2.0.0 area-keyed tables
+from module files in the v2.0.0 order: keys in `LEGAL_AREA_ALLOWED` order;
+each key has exactly one owner (module id, a module's `legacy_aliases`, or
+the core procedural library `app/modules/procedural/` for
+`verwaltungsrecht`, D-038); the catch-all is the key whose module sets
+`catch_all: true` (`andere`); the preset keyword fallback lists the default
+module's rows last and its `fallback_preset` is the initial best (v2.0.0
+tie-break); `familienrecht` inherits the `erbrecht` prompt profile (as in
+v2.0.0); `schenkungsrecht` keeps its own intake/corpus rows inside the
+`erbrecht` files and stays a distinct stored value until WP-94. Tables are
+built from **installed** modules regardless of enablement.
+**Rejected:** (a) Building from the enabled set — in `provider` mode the
+intake enum would shrink below what v2.0.0 served while the DB CHECK still
+accepts every key; request-time enablement errors are WP-95's job
+(`MODULE_NOT_ENABLED`). (b) Resolving `schenkungsrecht → erbrecht` at intake
+time — changes stored `case_run_area` values before WP-94 migrates them.
+**Rationale:** Preserves every observable ordering/tie-break (pinned by the
+golden) while removing the tables from core code.
+
+### D-054 R2 — 2026-11-16 — Engines follow the request's modules (WP-93 behaviour change)
+**Decision:** The calculation check and the legal-regime banner run the
+calculators/regime providers of the modules the request resolves to
+(`app.modules.runtime.request_modules`; empty `legal_areas` →
+`DEFAULT_MODULE`). Only `sozialrecht` ships them. Consequence: a request whose
+areas resolve only to stub modules or the procedural library (e.g.
+`["erbrecht"]`, `["verwaltungsrecht"]`) no longer runs the SGB II calculation
+check or receives the SGB II reform banner in its stage prompts;
+`calculation_check` returns an empty result with the summary "keine
+deterministische Berechnungsprüfung verfügbar". Requests without
+`legal_areas`, or including `sozialrecht`, are unchanged. Documented in
+`API_DOCUMENTATION.md` (payload shape unchanged).
+**Rejected:** Always running the default module's engines — would preserve
+v2.0.0 output for Erbrecht/Mietrecht cases, but that output was SGB II
+arithmetic and an SGB II regime banner applied to non-SGB-II documents, i.e.
+a defect, and contradicts the roadmap's "stub modules … no engines".
+**Rationale:** "Every euro from a deterministic engine" only holds if the
+engine belongs to the matter's area of law. R2: reversible by a manifest
+change, but it changes observable output for non-default areas.
+
+### D-055 R1 — 2026-11-16 — Parameters as module data, generic seed loader (WP-93)
+**Decision:** The 27 SGB II rows move verbatim to
+`modules/sozialrecht/parameters/sgb2.yaml` (incl. the D-050 sentinel); each
+row carries a `basis` citation for reviewers that is documentation only (not
+stored — `source_quote` is reserved for verbatim norm quotes).
+`scripts/seed_module_parameters.py` (version `2026-11-16.1`) replaces
+`scripts/seed_legal_parameters.py`: validates every declared file
+(`app/modules/parameters.py`), upserts on (key, domain, valid_from), offers
+`--module` and `--dry-run`, exits 1 on invalid data and 2 on DB errors. The
+manifest keeps `parameters.domain: sgb2` until WP-94 rewrites stored domains.
+The audit snapshot formerly built by `parameter_store.build_legal_snapshot`
+(hard-coded SGB II keys) is built by the module calculator.
+**Rejected:** Keeping a per-module Python seed script — the loader is the
+generic piece § 3.4 asks for; module authors ship data only.
+**Rationale:** Verified against a local pg16 database: first run 23 created /
+4 updated, second run 27 unchanged.
+
+### D-056 R1 — 2026-11-16 — Goldsets move into the module (WP-93)
+**Decision:** `eval/goldsets/goldset-v0.1.0.yaml` and `-v0.2.0.yaml` move to
+`modules/sozialrecht/goldset/` (`git mv`, content unchanged); the manifest
+declares v0.2.0 with gate `zero_regression` against the WP-90 baseline
+report. `GOLDSET_PATH` defaults to the new v0.1.0 path (the
+`/api/v1/goldset*` alias keeps serving v0.1.0, ARCHITECTURE.md § 5).
+**Deployment note:** an `.env` that sets the old `GOLDSET_PATH` must be
+updated. The committed WP-90 baseline report keeps its recorded historical
+path; report comparison does not depend on it.
+**Rejected:** Moving only v0.2.0 (the roadmap's wording) — v0.1.0 is the
+served API goldset; splitting one module's goldsets across two trees would
+leave `eval/` area-coupled.
+**Rationale:** Per-module goldsets (§ 6.3) start with the module that has one.

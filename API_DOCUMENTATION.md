@@ -177,6 +177,15 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
   the legal-area enum (e.g. `sozialrecht`, `erbrecht`, `schenkungsrecht`,
   `familienrecht`, `andere`). Triggers per-area retrieval and area-specific
   prompts.
+  Each value resolves to the module that owns it (legacy key
+  `schenkungsrecht` → module `erbrecht`, `verwaltungsrecht` → core procedural
+  library; empty → the default module `sozialrecht`). The `calculation_check`
+  stage and the legal-regime banner run the **resolved modules'** calculators
+  and regime providers: only `sozialrecht` ships them (since WP-93). A request
+  whose areas resolve to no such module gets `calculation_check` with an empty
+  `calculations_found` and a summary stating that no deterministic calculation
+  check is available (previously the SGB II check ran for every area). Payload
+  shape unchanged.
 - `intake_session_id` (optional): UUID linking a preceding intake interview.
 
 **Event stream** — each event is a line pair `data: {json}\n\n`:

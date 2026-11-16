@@ -316,13 +316,19 @@ citizen/
 │   ├── core/                             # config, pipeline (SSE), router
 │   ├── db/                               # 14 ORM-Modelle, Session, Vektor-Backend
 │   ├── middleware/                       # Disclaimer-Durchsetzung, Noindex-Header
-│   ├── services/                         # 24 Servicemodule, u.a.:
-│   │                                     #  fristen, rules_engine, regime,
-│   │                                     #  parameter_store, pseudonymization,
+│   ├── fristen/                          # Fristen-Kern (Kalender, Fiktionen, Spec-Evaluator)
+│   ├── modules/                          # Modul-Registry, SDK, Inhalts-Loader,
+│   │                                     #  Bereichstabellen, Verfahrensbibliothek
+│   ├── services/                         # 22 Kern-Servicemodule, u.a.:
+│   │                                     #  calculation (Harness), parameter_store,
+│   │                                     #  prompts (Stufen-Templates), pseudonymization,
 │   │                                     #  inference_profiles, verification,
 │   │                                     #  document_generators, retrieval
 │   └── utils/                            # image, pdf, text, tokens
-├── eval/                                 # Goldsets, Eval-Harness, Reports
+├── modules/                              # Rechtsgebiets-Module: sozialrecht (Standard,
+│                                         #  verified: Fristen, Rechner, Parameter, Vorlagen,
+│                                         #  Goldsets) + 7 Stub-Module (experimental)
+├── eval/                                 # Eval-Harness, Reports
 ├── tests/                                # 37 Testdateien (~12.600 Zeilen)
 ├── docs/                                 # Roadmap v3.0.0 (aktuell), Modul-Katalog,
 │                                         #  Roadmap v2.0.0 (abgelöst; von
@@ -350,7 +356,7 @@ citizen/
 | **Retrieval** | `RETRIEVAL_MODE` | `per_question` | Embedding-Strategie (`per_question` / `combined`) |
 | | `TOP_K_RETRIEVAL` | `10` | Max. Chunks je Anfrage |
 | **Korpus** | `CORPUS_SOURCES` | `["sgb2", "sgbx"]` | Standardquellen (zur Laufzeit änderbar) |
-| | `GOLDSET_PATH` | `eval/goldsets/goldset-v0.1.0.yaml` | Goldset der Prüfstand-API |
+| | `GOLDSET_PATH` | `modules/sozialrecht/goldset/goldset-v0.1.0.yaml` | Goldset der Prüfstand-API |
 | **Rate-Limit** | `RATE_LIMIT_REQUESTS` / `_WINDOW` | `0` / `60` | In-Memory-Limiter existiert, ist aber nicht eingebunden (`0` = deaktiviert) |
 | **OCR** | `ENABLE_OCR_LLM_SYNTHESIS` | `False` | LLM-Synthese der Dual-OCR-Ergebnisse |
 
@@ -367,9 +373,9 @@ alembic upgrade head
 pytest tests/integration/ -v
 
 # Eval gegen das Goldset (echte Pipeline; DB + API-Schlüssel nötig)
-python -m eval.runner eval/goldsets/goldset-v0.2.0.yaml --save
+python -m eval.runner modules/sozialrecht/goldset/goldset-v0.2.0.yaml --save
 # mit Regressions-Gate gegen einen Baseline-Report (Exit 1 bei Verschlechterung):
-python -m eval.runner eval/goldsets/goldset-v0.2.0.yaml \
+python -m eval.runner modules/sozialrecht/goldset/goldset-v0.2.0.yaml \
   --baseline eval/results/<baseline>.json --save
 
 # Codequalität (CI-Umfang)

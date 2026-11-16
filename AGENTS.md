@@ -4,11 +4,11 @@ Guidance for coding agents. Authoritative sources: `DECISIONS.md` (append-only d
 
 ## What this is
 
-API-only FastAPI service analyzing German social-law benefit notices (SGB II/X): evidence-bound LLM pipeline + deterministic engines (deadlines `services/fristen.py`, benefit math `services/rules_engine.py`) + Postgres audit storage. The REST API under `/api/v1` is the only external interface; contract documented in `API_DOCUMENTATION.md` (D-025). No web UI, no GUI client in this repo.
+API-only FastAPI service analyzing German social-law benefit notices (SGB II/X): evidence-bound LLM pipeline + deterministic engines (deadlines: Fristen core `app/fristen/` evaluating module specs such as `modules/sozialrecht/fristen.yaml`; benefit math: `modules/sozialrecht/rules_engine.py` behind the calculator SDK) + Postgres audit storage. The REST API under `/api/v1` is the only external interface; contract documented in `API_DOCUMENTATION.md` (D-025). No web UI, no GUI client in this repo.
 
-**Direction (2026-11-16, D-034…D-041):** free public path — MIT, non-commercial, citizen-side preparation assistant (not a lawyer tool). The code is being restructured into a domain-neutral core plus legal-area modules; Sozialrecht becomes `modules/sozialrecht` and stays the default (`DEFAULT_MODULE`). Ten further modules are queued (`docs/module-catalog.md`). **As of today the code is still the v2.0.0 single-area layout** — `ARCHITECTURE.md` § 8 lists every area-coupled file and its target. Rules for new work:
+**Direction (2026-11-16, D-034…D-041):** free public path — MIT, non-commercial, citizen-side preparation assistant (not a lawyer tool). The code is being restructured into a domain-neutral core plus legal-area modules; Sozialrecht becomes `modules/sozialrecht` and stays the default (`DEFAULT_MODULE`). Ten further modules are queued (`docs/module-catalog.md`). **Status (WP-91…93 done):** module registry/SDK (`app/modules/`), Fristen core (`app/fristen/`) and the Sozialrecht extraction are in place — area knowledge lives in `modules/<id>/` (Sozialrecht + 7 `experimental` stubs; `verwaltungsrecht` in the core procedural library `app/modules/procedural/`). Still pending: WP-94 (DB: `legal_module`, area CHECK, `sgb2` domain), WP-95 (`/modules*` API). `ARCHITECTURE.md` § 8 tracks the remaining couplings. Rules for new work:
 
-- Do not add new area-specific logic to core services (`app/services/*`, `app/core/*`); it belongs in a module (or, until roadmap WP-91/WP-93 land, in a clearly marked spot listed in `ARCHITECTURE.md` § 8).
+- Do not add new area-specific logic to core services (`app/services/*`, `app/core/*`); it belongs in a module (data first; code only behind `app.modules.sdk`, enforced by `app.modules.lint` and `tests/unit/test_modules_content.py`).
 - Deadlines and amounts come only from deterministic engines on versioned parameters, never from LLM output.
 - `/api/v1` changes are additive only (D-039); update `API_DOCUMENTATION.md` in the same change.
 - Never embed AGPL/GPL code (e.g. gettsim) — sidecars only (D-041). No Kanzlei features (D-034).
@@ -27,9 +27,9 @@ System deps for OCR runtime/tests: `tesseract-ocr` + `tesseract-ocr-deu`. One-ti
 
 - Tests are PostgreSQL-only (D-024): unit tests run production SQL via testcontainers; a pre-set `DATABASE_URL` overrides the container. SQLite URLs are rejected.
 - `API_DOCUMENTATION.md` is guarded: `tests/unit/test_api_documentation.py` fails when routes drift from the doc.
-- Single test: `pytest tests/unit/test_fristen.py::<name>`. pytest `asyncio_mode = "auto"` — async tests need no marker.
-- Eval harness: `python -m eval.runner eval/goldsets/goldset-v0.2.0.yaml [--case GS-xxx] [--baseline <report>] [--save]` — runs the real pipeline against live DB + LLM API; exit 1 if regression gate fails; `--save` writes versioned reports to `eval/results/`. There is no `citizen-eval` command despite older docs saying so.
-- Maintenance scripts: `scripts/seed_legal_parameters.py` (legal_parameter seeding), `scripts/benchmark_analyze.py --base-url <url>` (pipeline timings against a *running* instance).
+- Single test: `pytest tests/unit/test_fristen.py::<name>`. Module code is imported as `citizen_modules.<id>.<file>` (preloaded by `tests/conftest.py`); behaviour identity of the WP-93 extraction is pinned by `tests/unit/test_wp93_golden.py`. pytest `asyncio_mode = "auto"` — async tests need no marker.
+- Eval harness: `python -m eval.runner modules/sozialrecht/goldset/goldset-v0.2.0.yaml [--case GS-xxx] [--baseline <report>] [--save]` — runs the real pipeline against live DB + LLM API; exit 1 if regression gate fails; `--save` writes versioned reports to `eval/results/`. There is no `citizen-eval` command despite older docs saying so.
+- Maintenance scripts: `python -m scripts.seed_module_parameters [--module <id>] [--dry-run]` (legal_parameter seeding from `modules/*/parameters/*.yaml`), `scripts/benchmark_analyze.py --base-url <url>` (pipeline timings against a *running* instance).
 - Docker stack: `docker compose up -d --build` **requires a `.env` file** (`env_file:` fails without one), then migrations inside the container (`docker compose exec citizen-app alembic upgrade head`).
 
 ## Database: PostgreSQL-only (resolved D-024)
