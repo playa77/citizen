@@ -20,7 +20,7 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile, status
@@ -83,7 +83,7 @@ async def _persist_audit_safely(audit_record: AuditRecord) -> None:
 async def create_conversation_endpoint(
     request: Request,
     title: str | None = Form(None),
-    file: UploadFile | None = File(None),
+    file: Annotated[UploadFile | None, File()] = None,
 ) -> dict[str, Any]:
     """Create a new conversation, optionally with an initial document."""
     # WP-62: Dev-instance synthetic-data guard for document uploads.
@@ -205,8 +205,8 @@ async def send_message_endpoint(
         await add_message(db, conversation_id=conversation_id, role="user", content=content.strip())
         await db.commit()
 
-        session_id = str(uuid.uuid4())
-        start = time.monotonic()
+        str(uuid.uuid4())
+        time.monotonic()
 
     # ── Define the SSE generator ───────────────────────────────────────
     async def event_generator() -> AsyncGenerator[str, None]:
@@ -297,7 +297,7 @@ async def send_message_endpoint(
 async def add_document_endpoint(
     request: Request,
     conversation_id: UUID,
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File(...)],
 ) -> dict[str, Any]:
     """Upload and attach a document to a conversation."""
     # WP-62: Dev-instance synthetic-data guard for document uploads.

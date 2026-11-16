@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     # PostgreSQL + pgvector is the only supported backend (D-024).
     DATABASE_URL: str = "postgresql+asyncpg://citizen:citizen@localhost:5432/citizen"
     OPENROUTER_API_KEY: str
-    EMBEDDING_API_KEY: str = ""  # separate key for embedding calls (falls back to OPENROUTER_API_KEY)
+    # Separate key for embedding calls (falls back to OPENROUTER_API_KEY).
+    EMBEDDING_API_KEY: str = ""
     EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1/embeddings"
     PRIMARY_MODEL: str = "deepseek/deepseek-v4-pro"
     FALLBACK_MODEL_1: str = "deepseek/deepseek-v4-flash"
@@ -63,19 +64,19 @@ class Settings(BaseSettings):
         0.65  # Cosine distance = 1 - cosine similarity. 0.65 means similarity ≥ 0.35.
     )
     MAX_COSINE_DISTANCE_STRICT: float = 0.85
-    RETRIEVAL_MODE: str = "per_question"  # "combined" or "per_question" — per_question embeds each question separately, producing better legal-semantic queries
+    # "combined" or "per_question" — per_question embeds each question
+    # separately, producing better legal-semantic queries.
+    RETRIEVAL_MODE: str = "per_question"
     RETRIEVAL_KEYWORD_FALLBACK: bool = True
     TOP_K_KEYWORD: int = 5
     CORPUS_SOURCES: list[str] = ["sgb2", "sgbx"]
-    CORPUS_INGESTION_TIMEOUT_SEC: int = (
-        1800  # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased for large corpora)
-    )
-    EMBEDDING_BATCH_SIZE: int = (
-        64  # Number of texts per batch embedding request (OpenRouter batch API; OpenAI limit is 2048)
-    )
-    EMBEDDING_BATCH_CONCURRENCY: int = (
-        4  # Max simultaneous batch embedding requests
-    )
+    # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased
+    # for large corpora).
+    CORPUS_INGESTION_TIMEOUT_SEC: int = 1800
+    # Number of texts per batch embedding request (OpenRouter batch API;
+    # OpenAI limit is 2048).
+    EMBEDDING_BATCH_SIZE: int = 64
+    EMBEDDING_BATCH_CONCURRENCY: int = 4  # Max simultaneous batch embedding requests
     # --- Timeout budget -------------------------------------------------------
     # The chain must satisfy: sum(per-call) < PIPELINE_TIMEOUT < nginx timeout.
     #

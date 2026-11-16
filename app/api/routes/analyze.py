@@ -65,6 +65,18 @@ from app.services.corpus_readiness import check_preflight
 from app.services.disclosure import build_disclosure_and_provenance
 from app.utils.text import normalize_text
 
+# Strong references to scheduled audit-persist tasks (RUF006): the event
+# loop may garbage-collect a task with no reference before it completes,
+# silently losing the audit record.
+_audit_tasks: set[asyncio.Task[None]] = set()
+
+
+def _schedule_audit_persist(audit_record: AuditRecord) -> None:
+    task = asyncio.create_task(_persist_audit_safely(audit_record))
+    _audit_tasks.add(task)
+    task.add_done_callback(_audit_tasks.discard)
+
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -460,7 +472,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
                 },
                 legal_snapshot=None,
             )
-            asyncio.create_task(_persist_audit_safely(failed_audit))
+            _schedule_audit_persist(failed_audit)
             return
 
         # Schedule audit persistence in the background after streaming completes.
@@ -480,7 +492,7 @@ async def analyze(payload: dict[str, str] = Body(...)) -> StreamingResponse:  # 
             disclaimer_ack=disclaimer_ack_entry,
             legal_snapshot=legal_snapshot,
         )
-        asyncio.create_task(_persist_audit_safely(audit_record))
+        _schedule_audit_persist(audit_record)
 
     return StreamingResponse(
         event_generator(),

@@ -103,7 +103,7 @@ def cross_check_extraction(extraction: dict[str, Any], document_text: str) -> li
     values = extraction.get("extracted_values") or {}
 
     for field_name, value in values.items():
-        if value is None or not isinstance(value, (int, float)):
+        if value is None or not isinstance(value, int | float):
             continue
         # Check if the numeric value appears in the document text
         # Try common formats: "563.00", "563,00", "563", "563.0"

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Body, HTTPException, status
@@ -188,7 +188,7 @@ def _extract_case_metadata(
 
 @router.post("/documents/generate")
 async def generate_document_endpoint(
-    body: dict[str, Any] = Body(...),
+    body: Annotated[dict[str, Any], Body(...)],
 ) -> dict[str, Any]:
     """Generate an action document from a completed case run.
 
@@ -219,11 +219,11 @@ async def generate_document_endpoint(
 
     try:
         case_run_id = UUID(case_run_id_str)
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Ungültige case_run_id: {case_run_id_str!r}",
-        )
+        ) from exc
 
     if doc_type and doc_type not in (
         "widerspruch",

@@ -9,6 +9,7 @@ for every outbound LLM/embedding call.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import json
 import logging
 import time
@@ -267,7 +268,8 @@ class OpenRouterClient:
                     prompt_chars = sum(len(m.get("content", "")) for m in messages)
                     response_chars = len(content)
                     logger.info(
-                        "chat_completion OK (model=%s, attempt=%d/%d, elapsed=%.2fs, prompt_chars=%d, response_chars=%d)",
+                        "chat_completion OK (model=%s, attempt=%d/%d, elapsed=%.2fs, "
+                        "prompt_chars=%d, response_chars=%d)",
                         current_model,
                         attempt,
                         effective_max_retries,
@@ -282,7 +284,8 @@ class OpenRouterClient:
                     if isinstance(exc, httpx.HTTPStatusError):
                         fail_reason = f"HTTP {exc.response.status_code}"
                     logger.warning(
-                        "chat_completion FAILED (model=%s, attempt=%d/%d, elapsed=%.2fs, reason=%s): %s",
+                        "chat_completion FAILED (model=%s, attempt=%d/%d, "
+                        "elapsed=%.2fs, reason=%s): %s",
                         current_model,
                         attempt,
                         effective_max_retries,
@@ -296,7 +299,8 @@ class OpenRouterClient:
                 except (KeyError, IndexError) as exc:
                     fail_elapsed = time.monotonic() - req_start
                     logger.warning(
-                        "Malformed API response (model=%s, attempt=%d/%d, elapsed=%.2fs, reason=malformed_response): %s",
+                        "Malformed API response (model=%s, attempt=%d/%d, "
+                        "elapsed=%.2fs, reason=malformed_response): %s",
                         current_model,
                         attempt,
                         effective_max_retries,
@@ -361,7 +365,8 @@ class OpenRouterClient:
                     }
                     _egress_check(_API_URL, payload)
                     logger.info(
-                        "chat_completion_stream → streaming (model=%s, attempt=%d/%d, msg_chars=%d)",
+                        "chat_completion_stream → streaming "
+                        "(model=%s, attempt=%d/%d, msg_chars=%d)",
                         current_model,
                         attempt,
                         effective_max_retries,
@@ -412,7 +417,8 @@ class OpenRouterClient:
 
                     req_elapsed = time.monotonic() - req_start
                     logger.info(
-                        "chat_completion_stream OK (model=%s, attempt=%d/%d, elapsed=%.2fs, tokens=%d)",
+                        "chat_completion_stream OK (model=%s, attempt=%d/%d, "
+                        "elapsed=%.2fs, tokens=%d)",
                         current_model,
                         attempt,
                         effective_max_retries,
@@ -427,7 +433,8 @@ class OpenRouterClient:
                     if isinstance(exc, httpx.HTTPStatusError):
                         fail_reason = f"HTTP {exc.response.status_code}"
                     logger.warning(
-                        "chat_completion_stream FAILED (model=%s, attempt=%d/%d, elapsed=%.2fs, reason=%s): %s",
+                        "chat_completion_stream FAILED (model=%s, attempt=%d/%d, "
+                        "elapsed=%.2fs, reason=%s): %s",
                         current_model,
                         attempt,
                         effective_max_retries,
@@ -501,7 +508,8 @@ class OpenRouterClient:
                 )
                 fail_elapsed = time.monotonic() - req_start
                 logger.error(
-                    "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=api_error): %s | body=%s",
+                    "get_embedding FAILED (model=%s, elapsed=%.2fs, "
+                    "reason=api_error): %s | body=%s",
                     model_name,
                     fail_elapsed,
                     err_msg,
@@ -543,7 +551,8 @@ class OpenRouterClient:
             except Exception:
                 response_preview = "<unavailable>"
             logger.error(
-                "get_embedding FAILED (model=%s, elapsed=%.2fs, reason=malformed_response): %s | body=%s",
+                "get_embedding FAILED (model=%s, elapsed=%.2fs, "
+                "reason=malformed_response): %s | body=%s",
                 model_name,
                 fail_elapsed,
                 exc,
@@ -608,7 +617,8 @@ class OpenRouterClient:
                     else str(err_detail)
                 )
                 logger.error(
-                    "embed_batch_api FAILED (model=%s, elapsed=%.2fs, reason=api_error): %s | body=%s",
+                    "embed_batch_api FAILED (model=%s, elapsed=%.2fs, "
+                    "reason=api_error): %s | body=%s",
                     model_name,
                     req_elapsed,
                     err_msg,
@@ -662,7 +672,8 @@ class OpenRouterClient:
             except Exception:
                 response_preview = "<unavailable>"
             logger.error(
-                "embed_batch_api FAILED (model=%s, elapsed=%.2fs, reason=malformed_response): %s | body=%s",
+                "embed_batch_api FAILED (model=%s, elapsed=%.2fs, "
+                "reason=malformed_response): %s | body=%s",
                 model_name,
                 fail_elapsed,
                 exc,
@@ -748,8 +759,6 @@ class OpenRouterClient:
 # ---------------------------------------------------------------------------
 # Shared client factory + contextvars (WP-00.5 / D-8)
 # ---------------------------------------------------------------------------
-
-import contextvars
 
 _shared_client: OpenRouterClient | None = None
 _case_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("case_id", default=None)

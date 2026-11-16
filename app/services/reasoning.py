@@ -524,7 +524,8 @@ async def adversarial_review(
 
     logger.info(
         "generate_grounded_answer: starting (input=%d chars, %d issues, "
-        "%d questions, %d chunks, budget: max_input=%d max_chunks=%d max_chunk_chars=%d, model=%s, timeout=%.1fs)",
+        "%d questions, %d chunks, budget: max_input=%d max_chunks=%d "
+        "max_chunk_chars=%d, model=%s, timeout=%.1fs)",
         len(normalized_text),
         len(issues),
         len(questions),
@@ -1036,7 +1037,10 @@ async def verify_claims(
         for i, c in enumerate(claims)
     )
 
-    user_content = f"Claims to verify:\n{claims_text}\n\nSource chunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
+    user_content = (
+        f"Claims to verify:\n{claims_text}\n\n"
+        f"Source chunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS]}"
+    )
 
     messages = [
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
@@ -1053,7 +1057,10 @@ async def verify_claims(
                 {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
                 {
                     "role": "user",
-                    "content": f"Claims:\n{claims_text[:_s.MAX_CHUNK_CONTEXT_CHARS // 3]}\n\nChunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS // 3]}",
+                    "content": (
+                        f"Claims:\n{claims_text[:_s.MAX_CHUNK_CONTEXT_CHARS // 3]}\n\n"
+                        f"Chunks:\n{chunk_text[:_s.MAX_CHUNK_CONTEXT_CHARS // 3]}"
+                    ),
                 },
             ],
             temperature=0.0,

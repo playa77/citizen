@@ -24,6 +24,7 @@ Rules implemented:
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -264,10 +265,7 @@ def compute_freibetrag(
         base_allowance = param_overrides.get("freibetrag_base_allowance", 100.0)
         child_upper = param_overrides.get("freibetrag_child_upper_limit", 1500.0)
 
-        if has_minor_child:
-            upper_limit = child_upper
-        else:
-            upper_limit = 1200.0
+        upper_limit = child_upper if has_minor_child else 1200.0
 
         total = base_allowance
         applied: list[dict[str, Any]] = []
@@ -899,10 +897,7 @@ def _discrepancy_result(
     diff = round((computed_value or 0.0) - (authority_value or 0.0), 2)
     discrepancy = abs(diff) >= 0.02
 
-    if discrepancy:
-        direction = "zulasten" if diff > 0 else "zugunsten"
-    else:
-        direction = "keine"
+    direction = ("zulasten" if diff > 0 else "zugunsten") if discrepancy else "keine"
 
     commentary = commentary_template.format(
         computed=f"{computed_value:.2f}",
@@ -997,10 +992,8 @@ def process_extraction(
     period_year = None
     p_raw = _get("period_year")
     if p_raw is not None:
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             period_year = int(p_raw)
-        except (TypeError, ValueError):
-            pass
 
     rb_result = compute_regelbedarf(period_year, person_type, param_overrides=param_overrides)
     rb_authority = _num("extracted_values.regelbedarf_authority")
@@ -1316,7 +1309,9 @@ def process_extraction(
                 "computed_values": {
                     "deterministic_result": None,
                     "computation_detail": (
-                        f"{'Additionsfehler gefunden' if af_result['additionsfehler_found'] else 'Keine Additionsfehler'}"
+                        "Additionsfehler gefunden"
+                        if af_result["additionsfehler_found"]
+                        else "Keine Additionsfehler"
                     ),
                 },
                 "correct_calculation": "",

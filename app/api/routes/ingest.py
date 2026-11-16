@@ -72,7 +72,10 @@ async def ingest(request: Request, file: UploadFile = File(...)) -> dict[str, st
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported media type: {file.content_type}. Allowed: PDF, JPG, PNG, TXT, HTML, EML",
+            detail=(
+                f"Unsupported media type: {file.content_type}. "
+                "Allowed: PDF, JPG, PNG, TXT, HTML, EML"
+            ),
         )
 
     try:
