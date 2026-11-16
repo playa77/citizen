@@ -1,6 +1,6 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.0.0 | 2026-11-16 -->
+<!-- Version: 1.0.1 | 2026-11-16 — M0 status row: module 1.2.0 (D-063). 1.0.0 | 2026-11-16 -->
 <!-- Companion to ARCHITECTURE.md (module contract) and docs/roadmap-v3.0.0.md
      (phase P13 delivers modules M1–M10). Decisions: D-036 (Sozialrecht =
      module + default), D-038 (queue of ten further modules). -->
@@ -28,7 +28,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 
 | # | Module id | Title | Status | Queue rationale (necessity hypothesis — to be revised by user-need evidence, roadmap OQ-4) |
 |---|---|---|---|---|
-| M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · default** | module 1 since core 3.0.0 (WP-97); module version 1.1.0 |
+| M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · default** | module 1 since core 3.0.0 (WP-97); module version 1.2.0 (core 3.1.0, D-063) |
 | M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | planned | largest clientele overlap with M0; existential (Kontopfändung); 2-week deadlines; Pfändungstabelle is pure deterministic math |
 | M2 | `mietrecht` | Wohnraummietrecht | planned (legacy key experimental) | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | planned (legacy key experimental) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |

@@ -1282,3 +1282,77 @@ state, so the warn-only metric moves are not evidence of improvement, only the
 deterministic gate is. Claim density is restored but no longer matches 3.0.0's
 smaller, more selective claim set — a follow-up may revisit P-04 once the
 spread is known.
+
+### D-063 R2 — 2026-11-16 — WP-97 follow-up: pseudonymization fixes, core 3.1.0, `sozialrecht` 1.2.0
+**Scope and acceptance (recorded before the change, AGENTS.md):** fix the
+defects the WP-97 run report left open (I-07 authority over-redaction, I-08
+combined-run failure, open item 3 gate semantics, open item 4 residual
+couplings) plus any defect found while verifying those fixes; correct the run
+report. Acceptance: unit + integration green **in one combined invocation**,
+pseudonymization tests green with and without the spaCy model, ruff/format/
+mypy/purpose-drift green, and — because the pseudonymizer changes LLM input —
+goldset PII metrics measured old vs new without LLM calls: no case may leak,
+PII recall must not fall. Out of scope: live eval runs (no operator-provided
+key in this session, AGENTS.md live-test rules).
+**Decision:**
+(a) **I-07 root cause and fix.** `_AUTHORITY_PATTERNS` are case-sensitive
+but all three call sites matched them against lower-cased text, so the
+exemption never fired. Matching now uses the original casing; an NER ORG
+entity is exempt when it overlaps an authority span in the text (spaCy often
+tags only "Jobcenter"), a PER entity only when it is itself an authority name
+(overlap would let "Jobcenter Müller" leak a surname).
+(b) **Further pseudonymization defects found while measuring (a)**, all fixed
+in `pseudonymization.py` 0.1.1, each pinned by a test: same-pattern structured
+IDs replaced with stale offsets (second IBAN/phone leaked); BG-Nummer form
+`12345BG0012345` undetected; phone `0176/12345678` undetected (with month
+periods `01/2026` explicitly excluded); signature surnames leaked (final
+consistency pass over mapped values); later detectors cut into placeholders
+(`[[[[PERSON_3]]]]`, placeholder names in the mapping); street matches crossed
+lines and overshooting matches were discarded instead of trimmed; salutation
+names crossed lines and swallowed the next salutation; form labels tagged ORG
+were redacted. Goldset v0.2.0 (spaCy installed, no LLM): cases with PII in
+the LLM input **4/12 → 0/12**; eval PII recall 0.990 → 1.000, precision
+0.327 → 0.663, over-redaction 0 → 0. `eval/metrics.py` 1.3.0 fixes a false
+miss in PII recall (span past the shortened text counted as missed) — the
+old pseudonymizer's 0.083 leakage understated its real leakage because its
+mapping held values like "Okonkwo\n\nFrau" that never matched the text.
+(c) **Gate consequence.** The LLM input changes in 11 of 12 goldset cases, so
+the committed reports (B0′ `55ec1f2`, release `60c4afd`) no longer describe
+what the pipeline sends. They stay as P9 evidence; the next gate must first
+produce a reference at this tree (`eval.runner --module sozialrecht --save`)
+and compare later candidates against it. The manifest's
+`goldset.gate.baseline_report` carries that note.
+(d) **I-08:** `tests/integration/conftest.py` 1.1.0 adds a module-scoped
+autouse pool reset (`sync_engine.dispose(close=False)`) so module-scoped
+fixtures never inherit connections bound to another event loop. Combined
+`pytest tests/unit tests/integration` is green; separate invocations stay as
+CI runs them.
+(e) **Gate semantics (open item 3):** `regression_gate` 1.2.0 labels a
+missing sourced quote rate "undefined (no sourced claims)". Pass/fail
+behaviour unchanged (the metric is warn-only).
+(f) **Residual couplings (open item 4):** `CORPUS_SOURCES` defaults to unset
+and resolves to the `DEFAULT_MODULE`'s `corpus.yaml` `default_ingest_sources`
+(`sozialrecht`: `sgb2`, `sgbx` — effective list unchanged, pinned by
+`tests/unit/test_corpus_default_sources.py`). `ENABLE_CALCULATION_CHECK` is
+not an area coupling: calculation already runs per module through declared
+calculators (WP-93); the setting remains a domain-neutral operator switch.
+(g) **Versions:** core **3.1.0** (MINOR: new optional module corpus key;
+everything else is PATCH-level fixes); `sozialrecht` **1.2.0** (new corpus
+key). No disclaimer change (addenda untouched), no migration, `/api/v1`
+shapes unchanged.
+**Rejected:** (1) Making the two I-07 negative controls model-aware instead
+of fixing the code — the controls were right, the exemption was dead code.
+(2) Leaving I-07 for a later package because it changes eval inputs — the
+alternative is knowingly shipping PII leaks (four goldset cases) to keep a
+baseline comparable. (3) Keeping the address-level authority check as dead
+code — fixing it alone produced a new leak (letterhead street kept, second
+occurrence mapped), so it was fixed together with trimming and the
+consistency pass. (4) A per-module calculation toggle — duplicates the
+calculator declaration without a use case.
+**Rationale:** The pseudonymization gate is a privacy control; a measured
+leak outranks baseline comparability. The comparability cost is bounded and
+explicit: one fresh reference run before the next gate.
+**Open:** the fresh reference run (c) and the A1–A5 measurement arms both
+need an operator-provided API key. spaCy NER still tags some common nouns as
+persons/companies ("Anzurechnendes", "OCR-Fehler") — over-redaction, not
+leakage; no deterministic fix without a stop list.

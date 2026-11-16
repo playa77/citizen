@@ -2,6 +2,16 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 1.2.0 — 2026-11-16 — released with core 3.1.0 (D-063)
+
+- `corpus.yaml`: new `default_ingest_sources: [sgb2, sgbx]` — the sources a
+  fresh deployment ingests when `CORPUS_SOURCES` is unset and no runtime
+  selection exists. Moved out of the core config default; effective ingest
+  list unchanged.
+- Manifest note: `goldset.gate.baseline_report` predates core 3.1.0's
+  pseudonymization fixes (different LLM inputs in 11/12 goldset cases); the
+  next gate re-establishes the reference first.
+
 ## 1.1.0 — 2026-11-16 — released with core 3.0.0 (WP-97)
 
 First published version. The roadmap named 1.0.0, but D-060's prompt-profile

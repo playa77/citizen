@@ -1,6 +1,8 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.5 | 2026-11-16 — prompt set 3.0.0: § 2.4 RegimeProvider
+<!-- Version: 3.0.0-draft.6 | 2026-11-16 — § 3.3 `default_ingest_sources`; § 8 residual
+     couplings closed (D-063).
+     3.0.0-draft.5 | 2026-11-16 — prompt set 3.0.0: § 2.4 RegimeProvider
      reference_period, profile result_categories (D-060).
      3.0.0-draft.4 | 2026-11-16 — WP-96: § 5 provenance v1.1 as built,
      § 6.3 disclaimer/provenance rows, § 7 lint + Part D as built.
@@ -98,7 +100,7 @@ always loaded at tier `community` at most.
 ```
 modules/sozialrecht/
 ├── module.yaml               # manifest (§ 2.2) — the only required file
-├── corpus.yaml               # corpus scope: source types + § ranges
+├── corpus.yaml               # corpus scope: source types + § ranges (+ default ingest sources)
 ├── parameters/               # versioned legal parameters (YAML, with source quotes)
 │   └── 2026.yaml
 ├── fristen.yaml              # deadline specs (§ 2.3)
@@ -455,7 +457,7 @@ Every place where v2.0.0 code is area-specific, and where it goes:
 | `app/db/models.py` `LEGAL_AREA_ALLOWED`, `LEGAL_AREA_TIER`, CHECK `ck_case_run_area_legal_area` | closed area list + tiers in code/DB | registry + `legal_module` table (§ 4) | done (WP-94, D-057): key set/order from module `intake.yaml` `order`; `case_run_area.module_id` FK + `module_version` |
 | `app/services/corpus_readiness.py` `AREA_TO_SOURCE_TYPES` | area → source types | module `corpus.yaml` | done (WP-93) |
 | `app/services/corpus.py` `CORPUS_SOURCE_METADATA`, § range → area tagging | SGB-centric source list, BGB range tagging | core source catalog + module corpus scopes | done (WP-93): tags = module `chunk_tags`; source catalog stays core |
-| `app/core/config.py` `CORPUS_SOURCES=["sgb2","sgbx"]`, `ENABLE_CALCULATION_CHECK` | Sozialrecht defaults | `DEFAULT_MODULE`, `ENABLED_MODULES`; calculation toggle per module | partly: calculators per module (WP-93); global toggle + default ingest sources remain |
+| `app/core/config.py` `CORPUS_SOURCES=["sgb2","sgbx"]`, `ENABLE_CALCULATION_CHECK` | Sozialrecht defaults | `DEFAULT_MODULE`, `ENABLED_MODULES`; calculation toggle per module | done (D-063): `CORPUS_SOURCES` defaults to unset → the `DEFAULT_MODULE`'s `corpus.yaml` `default_ingest_sources`; calculation runs per module through its declared calculators (WP-93), `ENABLE_CALCULATION_CHECK` is a domain-neutral operator kill switch, not an area coupling |
 | `app/services/prompts.py` area profiles + prompt sets | per-area prompts in one file | `modules/*/prompts/` | done (WP-93) |
 | `app/services/intake.py` area keyword maps and question sets | hard-coded routing | `modules/*/intake.yaml` | done (WP-93) |
 | `app/services/presets.py`, `app/api/routes/presets.py` | preset list + keyword scorer, fallback `sozialrecht-allgemein` | presets declared by modules; fallback = `DEFAULT_MODULE` | done (WP-93) |
@@ -483,8 +485,10 @@ for requests that do not name a module.
 1.1.0/1.2.0 eval code — the WP-90 report is not comparable, D-061) with zero
 deterministic regressions; the no-module transport contract is pinned by
 `tests/integration/test_analyze_transcript.py` (byte-identical to the pre-P9
-tree apart from the documented provenance v1.1 delta). Residual couplings:
-`CORPUS_SOURCES` default and the global `ENABLE_CALCULATION_CHECK` toggle.
+tree apart from the documented provenance v1.1 delta). Residual couplings
+listed at the gate (`CORPUS_SOURCES` default, global `ENABLE_CALCULATION_CHECK`)
+were closed by D-063: the first moved into module data, the second is
+reclassified as a domain-neutral operator switch.
 
 ---
 

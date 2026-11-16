@@ -36,8 +36,8 @@ Machine-readable OpenAPI description is served by the app itself:
 - **API version:** path-based (`/api/v1/...`). Breaking changes introduce a new
   prefix (`/api/v2`); v1 remains served during any transition.
 - **Application version:** `GET /api/v1/meta/version` →
-  `{"api_version": "3.0.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
-  "modules": {"sozialrecht": "1.1.0", …}}`. The package
+  `{"api_version": "3.1.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
+  "modules": {"sozialrecht": "1.2.0", …}}`. The package
   version is also embedded in the OpenAPI title and `/health`.
 - **Module versions:** each legal-area module is versioned on its own (semver
   in its manifest); `GET /api/v1/modules` and the `modules` key of
@@ -243,7 +243,7 @@ order, each `{id, version, parameter_set}`:
 |---|---|---|
 | `id` | string | module id (a legacy alias such as `schenkungsrecht` names its owning module `erbrecht`) |
 | `version` | string | module semver at generation time |
-| `parameter_set` | string \| null | pinned legal-parameter set: `"<module version>+<latest valid_from>"`, e.g. `"1.1.0+2026-01-01"`; `null` for a module without parameters |
+| `parameter_set` | string \| null | pinned legal-parameter set: `"<module version>+<latest valid_from>"`, e.g. `"1.2.0+2026-01-01"`; `null` for a module without parameters |
 
 Resolution follows the engines: no/empty `legal_areas` → `[DEFAULT_MODULE]`;
 keys served by the core procedural library (`verwaltungsrecht`) add no
@@ -291,7 +291,7 @@ data: {"stage":"classification","status":"complete","payload":{"issues":["SGB II
 
 data: {"stage":"generation","status":"complete","payload":{"final_output":{"sachverhalt":"...","ergebnis":"..."}}}
 
-data: {"session_id":"…","sections":["sachverhalt","…"],"final_output":{…},"case_run_id":"…","disclosure":{"version":"1.0",…},"provenance":{"spec_version":"citizen-provenance-v1.1",…,"modules":[{"id":"sozialrecht","version":"1.1.0","parameter_set":"1.1.0+2026-01-01"}]}}
+data: {"session_id":"…","sections":["sachverhalt","…"],"final_output":{…},"case_run_id":"…","disclosure":{"version":"1.0",…},"provenance":{"spec_version":"citizen-provenance-v1.1",…,"modules":[{"id":"sozialrecht","version":"1.2.0","parameter_set":"1.2.0+2026-01-01"}]}}
 ```
 
 **Errors before streaming starts:** `400` (missing/empty `text`),
@@ -559,10 +559,10 @@ user-data slots. `404` unknown case_run.
             "needs_review": false}],
  "generation_metadata": {"selected_by": "auto", "frist_am": "2026-09-14"},
  "provenance": {"spec_version": "citizen-provenance-v1.1", "generator": "citizen",
-                "app_version": "3.0.0", "model_profile": "eu-avv",
+                "app_version": "3.1.0", "model_profile": "eu-avv",
                 "timestamp_utc": "2026-08-07T14:23:00Z", "deployment_mode": "dev",
-                "modules": [{"id": "sozialrecht", "version": "1.1.0",
-                             "parameter_set": "1.1.0+2026-01-01"}]}}
+                "modules": [{"id": "sozialrecht", "version": "1.2.0",
+                             "parameter_set": "1.2.0+2026-01-01"}]}}
 ```
 
 `provenance` is the Art. 50(2) machine-readable marker (§7.1); its `modules`
@@ -626,7 +626,7 @@ header.
 | `GET /api/v1/meta/disclaimer/version` *(no ack needed)* | `{"version": "v3.0.0"}` — `"v"` + version of `DISCLAIMER_DE.md`/`DISCLAIMER_EN.md` (3.0.0 since WP-96; was `v0.1.0`). A bump requires every client to re-acknowledge |
 | `GET /api/v1/meta/disclaimer/text` | `{"text": "<HTML disclaimer>", "version": "v3.0.0"}` |
 | `GET /api/v1/meta/disclosure` | `{"version": "1.0", "must_display_before": "results", "texts": {"de": "Diese Analyse wurde von einem KI-System erstellt …", "en": "This analysis was produced by an AI system …"}}` — Art. 50(1) notification; cacheable, does not vary by deployment mode |
-| `GET /api/v1/meta/version` | `{"api_version": "3.0.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0", "modules": {"andere": "0.1.1", …, "sozialrecht": "1.1.0"}}` — `modules` (WP-95) maps every **enabled** module id to its version, sorted by id |
+| `GET /api/v1/meta/version` | `{"api_version": "3.1.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0", "modules": {"andere": "0.1.1", …, "sozialrecht": "1.2.0"}}` — `modules` (WP-95) maps every **enabled** module id to its version, sorted by id |
 | `GET /api/v1/meta/legal-timestamp` | `{"parameter_freshness": "2026-07-01", "corpus_freshness": "2026-08-01"}` (either may be `null`) |
 | `GET /api/v1/meta/active-profile` | `{"profile": "eu-avv", "label": "...", "avv_status": "...", "pseudonymization": true}` |
 | `GET /api/v1/meta/deployment-mode` | `{"mode": "dev", "synthetic_data_only": true, "dev": true, "dev_banner": "…" \| null}` |
@@ -644,7 +644,7 @@ mode (`dev`/`self`: `experimental` + `verified`; `provider`: `verified` only).
 ```json
 {"default_module": "sozialrecht",
  "modules": [
-   {"id": "sozialrecht", "version": "1.1.0", "tier": "verified",
+   {"id": "sozialrecht", "version": "1.2.0", "tier": "verified",
     "enabled": true, "is_default": true,
     "title": {"de": "Sozialrecht", "en": "Social-benefits law"},
     "area_keys": ["sozialrecht"],
@@ -701,7 +701,7 @@ The goldset declared by the module manifest, same `goldset`/`cases` shape as
 `GET /api/v1/goldset`, plus the module and its evaluation gate:
 
 ```json
-{"module_id": "sozialrecht", "module_version": "1.1.0",
+{"module_id": "sozialrecht", "module_version": "1.2.0",
  "gate": {"rule": "zero_regression", "baseline_report": "eval/results/….json"},
  "goldset": {"id": "…", "version": "0.2.0", "…": "…"},
  "cases": [{"id": "GS-001", "…": "…"}]}
