@@ -1,6 +1,7 @@
 """Unit tests for intertemporal law selection (WP-24).
 
-Tests the pure deterministic functions in ``app.services.regime``:
+Tests the pure deterministic functions in ``modules/sozialrecht/regime.py``
+(``citizen_modules.sozialrecht.regime``, WP-93):
   - :func:`legal_regime` — date → regime tag
   - :func:`regime_for_period_range` — date range → regime segments
   - :func:`regime_banner` — tag → German banner string
@@ -8,7 +9,7 @@ Tests the pure deterministic functions in ``app.services.regime``:
 Also validates goldset scenarios for GS-004, GS-005, GS-006, GS-008.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: regime provider moved into the module.
 
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from datetime import date
 
 import pytest
 
-from app.services.regime import (
+from citizen_modules.sozialrecht.regime import (
     REGIME_2023,
     REGIME_2025,
     REGIME_2026,

@@ -1,0 +1,22 @@
+# Familienrecht — stub module (WP-93, D-038).
+#
+# Tier `experimental`: carries the v2.0.0 behaviour of the legacy area key
+# (intake routing, corpus mapping, prompt profile) — no deadline specs,
+# no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
+
+# Semantic Version: 0.1.0
+
+id: familienrecht
+version: 0.1.0
+core_api: ">=3.0,<4.0"
+title:
+  de: "Familienrecht"
+  en: "Family law"
+tier: experimental
+scope:
+  summary_de: "Unterhalt, Scheidungsfolgen, Sorge- und Umgangsrecht (BGB Buch 4)"
+  own_matter_only: true
+corpus: corpus.yaml
+intake: intake.yaml
+prompts: prompts/profile.yaml
+legacy_aliases: []

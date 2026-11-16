@@ -1,8 +1,10 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.1 | 2026-11-16 -->
-<!-- Status: TARGET architecture. The code base is still v2.0.0 (single-area,
-     Sozialrecht hard-wired). Every "target" statement below is delivered by
+<!-- Version: 3.0.0-draft.2 | 2026-11-16 — WP-93: § 2.1/2.2 layout + manifest keys as
+     built (prompts, document_templates), § 8 status column. -->
+<!-- Status: TARGET architecture, partly delivered: WP-91 (registry/SDK),
+     WP-92 (Fristen core) and WP-93 (Sozialrecht extraction) are in the code;
+     § 8 marks what remains (WP-94 data model, WP-95 API). Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
 <!-- Canonical package version: pyproject.toml (stays 2.0.0 until P9 exit). -->
@@ -94,8 +96,9 @@ modules/sozialrecht/
 │   └── 2026.yaml
 ├── fristen.yaml              # deadline specs (§ 2.3)
 ├── calculators.py            # optional: Calculator implementations (§ 2.4)
-├── prompts/                  # per-stage prompt profile (classification … claim construction)
-├── documents/                # action-draft templates + slot definitions
+├── rules_engine.py, regime.py  # further module code, imported relatively (sozialrecht)
+├── prompts/profile.yaml      # stage prompt profile (persona, statutes, terms) or {inherit: <id>}
+├── documents/templates.yaml  # action-draft templates, slot definitions, generator selection
 ├── intake.yaml               # intake-interview schema (questions, routing keywords)
 ├── dossier.yaml              # document checklist + lawyer-question list (§ 3.7)
 ├── copy/                     # plain-language layer: de/, de-LS/ (Leichte Sprache), en/, …
@@ -124,6 +127,8 @@ fristen: fristen.yaml
 calculators: calculators:CALCULATORS        # optional
 documents: [widerspruch, widerspruch_jahresfrist, ueberpruefungsantrag_44, akteneinsicht_25]
 intake: intake.yaml
+prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
 dossier: dossier.yaml
 regimes: { provider: calculators:REGIMES }  # optional intertemporal regimes (e.g. 2026-07-01 reform)
 goldset: { path: goldset/goldset-v0.2.0.yaml, gate: { finding_recall: 0.85, hallucination_rate_max: 0.02 } }
@@ -416,21 +421,27 @@ declared layer:
 
 Every place where v2.0.0 code is area-specific, and where it goes:
 
-| As-is location | Area coupling | Target |
-|---|---|---|
-| `app/db/models.py` `LEGAL_AREA_ALLOWED`, `LEGAL_AREA_TIER`, CHECK `ck_case_run_area_legal_area` | closed area list + tiers in code/DB | registry + `legal_module` table (§ 4) |
-| `app/services/corpus_readiness.py` `AREA_TO_SOURCE_TYPES` | area → source types | module `corpus.yaml` |
-| `app/services/corpus.py` `CORPUS_SOURCE_METADATA`, § range → area tagging | SGB-centric source list, BGB range tagging | core source catalog + module corpus scopes |
-| `app/core/config.py` `CORPUS_SOURCES=["sgb2","sgbx"]`, `ENABLE_CALCULATION_CHECK` | Sozialrecht defaults | `DEFAULT_MODULE`, `ENABLED_MODULES`; calculation toggle per module |
-| `app/services/prompts.py` area profiles + prompt sets | per-area prompts in one file | `modules/*/prompts/` |
-| `app/services/intake.py` area keyword maps and question sets | hard-coded routing | `modules/*/intake.yaml` |
-| `app/services/presets.py`, `app/api/routes/presets.py` | preset list + keyword scorer, fallback `sozialrecht-allgemein` | presets declared by modules; fallback = `DEFAULT_MODULE` |
-| `app/services/fristen.py` | generic calendar + SGB X/SGG rules mixed | Fristen core + `modules/sozialrecht/fristen.yaml` |
-| `app/services/rules_engine.py`, `app/services/calculation.py` | SGB II math, Regelbedarf tables, extraction prompt | `modules/sozialrecht/calculators.py` + parameters; generic extraction/explanation harness stays in core |
-| `app/services/regime.py` | SGB II reform 2026-07-01 | `RegimeProvider` in the Sozialrecht module |
-| `app/services/document_generators.py` | Widerspruch/§ 44/§ 25 templates | renderer in core, templates in module |
-| `app/api/routes/goldset.py`, `eval/` | goldset assumed Sozialrecht | per-module goldsets; `eval.runner --module` |
-| `scripts/seed_legal_parameters.py`, `legal_parameter.domain='sgb2'` | SGB II seeding | generic module parameter loader |
+| As-is location (v2.0.0) | Area coupling | Target | Status |
+|---|---|---|---|
+| `app/db/models.py` `LEGAL_AREA_ALLOWED`, `LEGAL_AREA_TIER`, CHECK `ck_case_run_area_legal_area` | closed area list + tiers in code/DB | registry + `legal_module` table (§ 4) | **open → WP-94**; until then `LEGAL_AREA_ALLOWED` is the ordered area-key table read by `app/modules/areas.py` |
+| `app/services/corpus_readiness.py` `AREA_TO_SOURCE_TYPES` | area → source types | module `corpus.yaml` | done (WP-93) |
+| `app/services/corpus.py` `CORPUS_SOURCE_METADATA`, § range → area tagging | SGB-centric source list, BGB range tagging | core source catalog + module corpus scopes | done (WP-93): tags = module `chunk_tags`; source catalog stays core |
+| `app/core/config.py` `CORPUS_SOURCES=["sgb2","sgbx"]`, `ENABLE_CALCULATION_CHECK` | Sozialrecht defaults | `DEFAULT_MODULE`, `ENABLED_MODULES`; calculation toggle per module | partly: calculators per module (WP-93); global toggle + default ingest sources remain |
+| `app/services/prompts.py` area profiles + prompt sets | per-area prompts in one file | `modules/*/prompts/` | done (WP-93) |
+| `app/services/intake.py` area keyword maps and question sets | hard-coded routing | `modules/*/intake.yaml` | done (WP-93) |
+| `app/services/presets.py`, `app/api/routes/presets.py` | preset list + keyword scorer, fallback `sozialrecht-allgemein` | presets declared by modules; fallback = `DEFAULT_MODULE` | done (WP-93) |
+| `app/services/fristen.py` | generic calendar + SGB X/SGG rules mixed | Fristen core + `modules/sozialrecht/fristen.yaml` | done (WP-92; shim removed WP-93) |
+| `app/services/rules_engine.py`, `app/services/calculation.py` | SGB II math, Regelbedarf tables, extraction prompt | `modules/sozialrecht/calculators.py` + parameters; generic extraction/explanation harness stays in core | done (WP-93) |
+| `app/services/regime.py` | SGB II reform 2026-07-01 | `RegimeProvider` in the Sozialrecht module | done (WP-93) |
+| `app/services/document_generators.py` | Widerspruch/§ 44/§ 25 templates | renderer in core, templates in module | done (WP-93) |
+| `app/api/routes/goldset.py`, `eval/` | goldset assumed Sozialrecht | per-module goldsets; `eval.runner --module` | partly: goldsets in `modules/sozialrecht/goldset/`; `--module` and `/modules/{id}/goldset` → WP-95 |
+| `scripts/seed_legal_parameters.py`, `legal_parameter.domain='sgb2'` | SGB II seeding | generic module parameter loader | loader done (WP-93, `scripts/seed_module_parameters.py`); `sgb2 → sozialrecht` domain rewrite → WP-94 |
+
+Legacy area keys (D-038) after WP-93: `schenkungsrecht` is declared by the
+`erbrecht` stub (distinct stored value until WP-94); `verwaltungsrecht` is
+served by the core procedural library `app/modules/procedural/`; `andere`
+is the engine-less catch-all stub. All stubs are tier `experimental` and
+carry only their v2.0.0 intake/corpus/prompt data.
 
 **Refactor invariant (P9 gate):** after extraction, the Sozialrecht goldset
 eval must show **zero regression** against the last v2.0.0 baseline report,

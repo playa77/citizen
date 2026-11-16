@@ -1,3 +1,69 @@
+## 2026-11-16 — P9 WP-93: Sozialrecht extracted into `modules/sozialrecht` (D-051…D-056)
+
+Every non-DB area coupling listed in `ARCHITECTURE.md` § 8 left the core.
+Behaviour is unchanged for requests without `legal_areas` and for every
+moved surface — pinned by a golden built from the pre-WP-93 tree — with one
+recorded exception (D-054). Package version stays 2.0.0 (core 3.0.0 is cut at
+WP-97); module `sozialrecht` 1.0.0 (unreleased), stub modules 0.1.0.
+No migrations; `/api/v1` routes unchanged.
+
+### Added
+
+- `modules/sozialrecht/`: `corpus.yaml`, `intake.yaml` (keywords, synonyms,
+  preset + fallback), `prompts/profile.yaml`, `parameters/sgb2.yaml` (27 rows),
+  `calculators.py` (SGB II `Calculator`), `rules_engine.py` and `regime.py`
+  (moved with history), `documents/templates.yaml` (four drafts, slots,
+  selection table), `goldset/` (v0.1.0, v0.2.0), `CHANGELOG.md`.
+- Stub modules at tier `experimental` (D-038): `erbrecht` (owns legacy key
+  `schenkungsrecht`), `familienrecht` (inherits the Erbrecht prompt profile as
+  in v2.0.0), `mietrecht`, `arbeitsrecht`, `vertragsrecht`, `strafrecht`,
+  `andere` (catch-all) — intake/corpus/prompt data only, no engines.
+- Core procedural library `app/modules/procedural/` serving `verwaltungsrecht`.
+- `app/modules/`: `content.py` (declared-file validation, code import as
+  `citizen_modules.<id>.<file>`), `areas.py` (area tables in v2.0.0 order),
+  `runtime.py` (request → modules; calculators, regime providers, templates,
+  deadline specs), `parameters.py` (parameter files → rows); SDK 0.2.0
+  (`Calculator`, `RegimeProvider`, `ParameterSource`); manifest keys
+  `prompts`, `document_templates`.
+- `scripts/seed_module_parameters.py` (`--module`, `--dry-run`).
+- Tests: `test_wp93_golden.py` (36 digests vs. the v2.0.0 baseline incl.
+  3,600 rendered draft variants), `test_modules_content.py` (ownership,
+  stubs, loader safety, runtime, parameters, WP-93 exit criterion as an AST
+  check).
+
+### Changed
+
+- Core services read module data/code: `prompts.py` 2.0.0 (`DEFAULT_PROMPTS`
+  replaces `SOCIALRECHT_PROMPTS`; `ERBRECHT_PROMPTS`/`REGISTRY` removed),
+  `intake.py`, `presets.py` + route, `corpus_readiness.py`, `corpus.py`
+  (chunk tags), `calculation.py` (generic harness), `document_generators.py`
+  (generic renderer), `pipeline.py`, `documents` route, `goldset` route,
+  `eval/metrics.py`.
+- **Behaviour (D-054):** the calculation check and the regime banner run only
+  for the request's modules; requests resolving solely to stubs/procedural
+  library no longer receive the SGB II check/banner (documented in
+  `API_DOCUMENTATION.md`).
+- Startup also builds the area tables and loads enabled modules'
+  calculators/regime providers (broken module content refuses startup).
+- `GOLDSET_PATH` default → `modules/sozialrecht/goldset/goldset-v0.1.0.yaml`
+  (**update `.env` overrides**); eval runner path likewise.
+
+### Removed
+
+- `app/services/fristen.py` (WP-92 shim, D-046), `app/services/rules_engine.py`,
+  `app/services/regime.py` (moved), `scripts/seed_legal_parameters.py`
+  (replaced), `parameter_store.build_legal_snapshot` (moved into the module
+  calculator), `eval/goldsets/` (moved).
+
+### Not done here (handover)
+
+- WP-94: `LEGAL_AREA_ALLOWED`/`LEGAL_AREA_TIER` + CHECK, `legal_module`
+  table, `sgb2 → sozialrecht` parameter domain.
+- WP-95: `/modules*` routes, `MODULE_NOT_ENABLED`/`MODULE_UNKNOWN`,
+  `eval.runner --module`.
+- Not verified here: CI's Python 3.11 job and the live goldset eval
+  (needs an LLM API key; zero-regression gate is WP-97).
+
 ## 2026-11-16 — P9 first batch: module contract, registry, Fristen split (WP-90/91/92; D-042…D-047)
 
 WP-90 ratifies D-021 (RDG single-case invariant, carry-over C-1) in

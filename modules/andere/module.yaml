@@ -1,0 +1,24 @@
+# Andere Rechtsgebiete — stub module (WP-93, D-038).
+#
+# Tier `experimental`: carries the v2.0.0 behaviour of the legacy area key
+# (intake routing, corpus mapping) — no deadline specs,
+# no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
+#
+# Engine-less catch-all (D-038): the intake interview falls back to this
+# area when nothing else matches (`catch_all: true` in intake.yaml).
+
+# Semantic Version: 0.1.0
+
+id: andere
+version: 0.1.0
+core_api: ">=3.0,<4.0"
+title:
+  de: "Andere Rechtsgebiete"
+  en: "Other areas of law"
+tier: experimental
+scope:
+  summary_de: "Auffangbereich für Anliegen ohne eigenes Modul; keine Engines, keine Belegquellen"
+  own_matter_only: true
+corpus: corpus.yaml
+intake: intake.yaml
+legacy_aliases: []

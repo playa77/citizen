@@ -13,7 +13,9 @@ Goldset path and version are controlled by configuration (GOLDSET_PATH in
 settings), so version changes require no code changes.
 """
 
-# Semantic Version: 1.0.0 | 2026-07-12
+# Semantic Version: 1.0.1 | 2026-11-16 — WP-93: demo analysis uses DEFAULT_MODULE
+# from the module tables (same value, no literal).
+# 1.0.0 | 2026-07-12
 
 from __future__ import annotations
 
@@ -450,10 +452,14 @@ async def analyze_goldset_case(case_id: str) -> StreamingResponse:
     input_text = normalize_text(raw_text)
     session_id = str(uuid.uuid4())
 
-    # Goldset cases are all sozialrecht — set legal_areas accordingly.
+    # /api/v1/goldset* is the DEFAULT_MODULE goldset alias (ARCHITECTURE.md
+    # § 5); its cases run with that module explicitly (WP-93: id from the
+    # module tables instead of a literal).
+    from app.modules.areas import area_tables
+
     state = PipelineState(
         input_text=input_text,
-        legal_areas=["sozialrecht"],
+        legal_areas=[area_tables().default_module],
     )
 
     logger.info(

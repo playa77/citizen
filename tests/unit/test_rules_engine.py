@@ -1,6 +1,7 @@
 """Unit tests for the deterministic SGB II rules engine.
 
-Covers every function in ``app.services.rules_engine`` with no mocking
+Covers every function in ``modules/sozialrecht/rules_engine.py`` (imported as
+``citizen_modules.sozialrecht.rules_engine``, WP-93) with no mocking
 required — all calculations are pure and local.
 
 Extended in WP-23 with tests for Bedarf assembly, full reconciliation,
@@ -8,13 +9,13 @@ Additionsfehler detection, multi-month aggregation, and regime-aware
 Freibetrag brackets.
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.2.1 | 2026-11-16 — WP-93: engine moved into the module.
 
 from __future__ import annotations
 
 import pytest
 
-from app.services.rules_engine import (
+from citizen_modules.sozialrecht.rules_engine import (
     ReconciliationLineItem,
     aggregate_months,
     check_arithmetic,
@@ -91,7 +92,7 @@ class TestComputeRegelbedarf:
 
     def test_no_data_at_all(self, monkeypatch) -> None:
         """If the table is empty, returns an error."""
-        import app.services.rules_engine as mod
+        import citizen_modules.sozialrecht.rules_engine as mod
         monkeypatch.setattr(mod, "_REGELBEDARF_TABLE", {})
         result = compute_regelbedarf(2025, "alleinstehend")
         assert result["value"] is None

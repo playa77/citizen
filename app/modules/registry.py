@@ -15,7 +15,8 @@ enabled manifest or a ``DEFAULT_MODULE`` outside the enabled set raises and
 therefore refuses startup.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-93: discovery also refuses manifests
+# declaring missing or out-of-directory files (D-042 deferral closed).
 
 from __future__ import annotations
 
@@ -128,7 +129,7 @@ def _parse_manifest(module_dir: Path, modules_dir: Path) -> ModuleManifest:
     _validate_manifest(raw, manifest_path)
 
     title = raw["title"]
-    return ModuleManifest(
+    manifest = ModuleManifest(
         id=raw["id"],
         version=raw["version"],
         core_api=raw["core_api"],
@@ -138,6 +139,12 @@ def _parse_manifest(module_dir: Path, modules_dir: Path) -> ModuleManifest:
         raw=raw,
         path=module_dir,
     )
+    # WP-93: every file the manifest declares must exist inside the module
+    # directory (structural validation deferred from WP-91, D-042).
+    from app.modules.content import assert_declared_files_exist
+
+    assert_declared_files_exist(manifest)
+    return manifest
 
 
 # ---------------------------------------------------------------------------

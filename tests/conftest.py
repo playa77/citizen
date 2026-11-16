@@ -93,6 +93,22 @@ os.environ.setdefault("CITIZEN_SYNTHETIC_DATA_ONLY", "true")
 os.environ.setdefault("DEFAULT_MODULE", "sozialrecht")
 
 
+def _preload_module_code() -> None:
+    """WP-93: module code lives in ``modules/<id>/*.py`` and is imported by
+    the core as ``citizen_modules.<id>.<file>`` (app.modules.content). Preload
+    it so module tests can use plain ``from citizen_modules.sozialrecht.<file>
+    import ...`` statements."""
+    from app.modules.content import import_module_file
+    from app.modules.registry import default_modules_root, discover_modules
+
+    for manifest in discover_modules(default_modules_root()).values():
+        for py_file in sorted(manifest.path.glob("*.py")):
+            import_module_file(manifest, py_file.stem)
+
+
+_preload_module_code()
+
+
 def pytest_sessionfinish(session: object, exitstatus: object) -> None:
     """Stop the auto-started container after the session ends."""
     if _TEST_CONTAINER is not None:

@@ -3,7 +3,7 @@
   "$id": "https://citizen.dev/schemas/module-manifest-3.0.json",
   "x-core-api": "3.0",
   "title": "Citizen module manifest",
-  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.0. The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version. Structural fields (corpus, parameters, fristen, documents, intake, dossier, goldset, compliance) are optional at core_api 3.0 because modules may ship as manifest-only packages (WP-91) before their content lands (WP-92/WP-93); validation that declared files exist is deferred to WP-93 with the files themselves.",
+  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.0. The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
   "type": "object",
   "required": ["id", "version", "core_api", "title", "tier"],
   "additionalProperties": false,
@@ -81,9 +81,20 @@
       "type": "array",
       "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}
     },
+    "document_templates": {
+      "type": "string",
+      "pattern": "\\.yaml$",
+      "description": "Action-draft templates, slot definitions and generator selection rules rendered by the core document renderer."
+    },
     "intake": {
       "type": "string",
-      "pattern": "\\.yaml$"
+      "pattern": "\\.yaml$",
+      "description": "Intake tables keyed by area key (routing keywords, synonyms), catch-all flag, presets."
+    },
+    "prompts": {
+      "type": "string",
+      "pattern": "\\.yaml$",
+      "description": "Stage prompt profile (persona, statutes, terminology anchors) or {inherit: <module_id>}; applies to every area key the module owns (id + legacy_aliases)."
     },
     "dossier": {
       "type": "string",

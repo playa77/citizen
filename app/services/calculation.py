@@ -1,241 +1,57 @@
-"""Calculation verification service: three-phase numerical audit of SGB II documents.
+"""Calculation verification harness: three-phase numerical audit (module calculators).
 
 Architecture (trustworthiness split):
     1. LLM **extracts** structured monetary data from the document text.
-    2. **Deterministic rules engine** (:mod:`app.services.rules_engine`) computes
-       correct values and flags discrepancies.
+    2. A **deterministic module calculator** computes correct values and
+       flags discrepancies.
     3. LLM **explains** the findings in natural language and suggests actions.
 
-This replaces the earlier approach where a single LLM call performed extraction,
-calculation, AND explanation inside a single ``_CALCULATION_SYSTEM`` prompt.
+WP-93: everything area-specific — extraction schema and prompts, parameter
+keys, the rules engine, the referral wording — is module code behind the
+typed ``app.modules.sdk.Calculator`` interface (e.g.
+``modules/sozialrecht/calculators.py``). This file is the generic harness:
+LLM calls with retry, parameter-store access, result assembly. The request's
+modules (``app.modules.runtime.request_modules``) decide which calculators
+run; a request whose modules ship none gets an empty result.
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from app.core.router import get_shared_client
+from app.modules.sdk import Calculator, ParameterLookup
 from app.services.reasoning import (
     _STRICT_SUFFIX,
     JSONParseError,
     _parse_json_response,
 )
-from app.services.rules_engine import process_extraction
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Pydantic extraction schema (single source of truth)
-# ---------------------------------------------------------------------------
 
+class _StoreParameterSource:
+    """``sdk.ParameterSource`` bound to one DB session and parameter domain."""
 
-class ExtractionValues(BaseModel):
-    """LLM-extracted monetary values from an SGB II document."""
+    def __init__(self, session: Any, domain: str) -> None:
+        self._session = session
+        self._domain = domain
 
-    regelbedarf_authority: float | None = Field(
-        None, description="Vom Jobcenter angesetzter Regelbedarf in EUR"
-    )
-    regelbedarf_stufe: int | None = Field(
-        None, description="Angewendete Regelbedarfsstufe (1 oder 2)"
-    )
-    brutto_einkommen: float | None = Field(None, description="Monatliches Bruttoeinkommen in EUR")
-    netto_einkommen: float | None = Field(None, description="Monatliches Nettoeinkommen in EUR")
-    freibetrag_authority: float | None = Field(
-        None, description="Vom Jobcenter angesetzter Freibetrag in EUR"
-    )
-    aufrechnung_authority: float | None = Field(
-        None, description="Vom Jobcenter angesetzte monatliche Aufrechnung in EUR"
-    )
-    aufrechnung_regelbedarf_used: float | None = Field(
-        None,
-        description="Der für die Aufrechnung zugrunde gelegte Regelbedarf in EUR",
-    )
-    kdu_unterkunft: float | None = Field(None, description="Kaltmiete in EUR")
-    kdu_heizung: float | None = Field(None, description="Heizkosten in EUR")
-    kdu_nebenkosten: float | None = Field(None, description="Nebenkosten in EUR")
-    kdu_gesamt_authority: float | None = Field(
-        None, description="Von der Behörde angegebener KdU-Gesamtbetrag in EUR"
-    )
-    anrechenbares_einkommen_authority: float | None = Field(
-        None,
-        description="Von der Behörde als anrechenbar angesetztes Einkommen in EUR",
-    )
-    auszahlungsbetrag_authority: float | None = Field(
-        None,
-        description="Von der Behörde festgesetzter Auszahlungsbetrag in EUR",
-    )
-    sanktion_authority: float | None = Field(None, description="Sanktionsbetrag in EUR")
-    mehrbedarf_authority: float | None = Field(None, description="Mehrbedarf in EUR")
-    unterhaltszahlung: float | None = Field(None, description="Unterhaltszahlung in EUR")
-    kindergeld: float | None = Field(None, description="Kindergeld in EUR")
+    async def numeric(self, key: str, as_of: date) -> ParameterLookup:
+        from app.services.parameter_store import get_parameter_numeric
 
+        return await get_parameter_numeric(self._session, key, as_of, domain=self._domain)
 
-class ExtractionResult(BaseModel):
-    """Full structured extraction from an SGB II document."""
+    async def json(self, key: str, as_of: date) -> ParameterLookup:
+        from app.services.parameter_store import get_parameter_json
 
-    person_type: str | None = Field(None, description="alleinstehend | partner | alleinerziehend")
-    has_minor_child: bool | None = Field(
-        None, description="Minderjähriges Kind in der Bedarfsgemeinschaft"
-    )
-    period_year: int | None = Field(None, description="Jahr des Leistungszeitraums")
-    extracted_values: ExtractionValues = Field(
-        default_factory=ExtractionValues,  # type: ignore[arg-type]
-    )
-    authority_calculation_text: str = Field(
-        "", description="Wie das Jobcenter die Berechnung beschreibt"
-    )
-    extraction_notes: str = Field("", description="Unsicherheiten oder fehlende Angaben")
-
-
-def cross_check_extraction(extraction: dict[str, Any], document_text: str) -> list[str]:
-    """Verify that extracted numbers appear in the document text.
-
-    Returns a list of warnings for values not found in the document.
-    """
-    warnings: list[str] = []
-    values = extraction.get("extracted_values") or {}
-
-    for field_name, value in values.items():
-        if value is None or not isinstance(value, int | float):
-            continue
-        # Check if the numeric value appears in the document text
-        # Try common formats: "563.00", "563,00", "563", "563.0"
-        candidates = [
-            f"{value:.2f}",
-            f"{value:.2f}".replace(".", ","),
-            str(int(value)) if value == int(value) else None,
-            f"{value:.1f}".replace(".", ","),
-        ]
-        found = any(c and c in document_text for c in candidates if c is not None)
-        if not found:
-            warnings.append(
-                f"Extrahierter Wert '{field_name}' = {value} konnte nicht "
-                f"im Dokumenttext gefunden werden. Wert könnte falsch extrahiert sein."
-            )
-
-    return warnings
-
-
-# (Shared client helpers are in app.core.router via get_shared_client()/close_client())
-
-
-# ---------------------------------------------------------------------------
-# Phase 1: Extraction system prompt
-# ---------------------------------------------------------------------------
-
-_EXTRACTION_SYSTEM = (
-    "Du bist ein präziser Datenextraktor für deutsche Sozialrechtsdokumente "
-    "(SGB II / Bürgergeld).\n\n"
-    "Dir wird der Text eines behördlichen Dokuments vorgelegt (z. B. "
-    "Jobcenter-Bescheid).\n\n"
-    "Deine Aufgabe: Extrahiere strukturierte Daten aus dem Dokument — "
-    "ausschließlich die im Dokument genannten Werte. **Berechne nichts.** "
-    "Führe keine Additionen, Multiplikationen oder Prozentrechnungen durch.\n\n"
-    "Regeln:\n"
-    "- **Extrahiere ausschließlich Werte, die explizit im Dokument genannt "
-    "werden.**\n"
-    "- Setze jeden numerischen Wert, der nicht explizit im Dokument genannt "
-    "wird, auf ``null``.\n"
-    "- Setze jeden Wert, der nicht explizit mit einer Zahl genannt wird, auf "
-    "null. Auch wenn du ihn erschließen oder ableiten könntest.\n"
-    "- Wenn ein Wert unsicher ist oder interpretiert werden muss, setze ihn "
-    "auf ``null`` und vermerke die Unsicherheit in ``extraction_notes``.\n"
-    "- Wenn du unsicher bist, ob ein Wert korrekt ist, setze ihn auf null.\n"
-    "- Erfinde keine Zahlen, Personentypen, Zeiträume oder Haushaltsdaten.\n"
-    "- Verwende Punkt als Dezimaltrenner in JSON-Zahlenwerten.\n"
-    "- Alle Textfelder auf Deutsch.\n\n"
-    "Das JSON-Schema unten entspricht dem Pydantic-Modell. "
-    "Halte dich exakt an diese Struktur.\n"
-    "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
-    "{\n"
-    '  "person_type": "alleinstehend" | "partner" | "alleinerziehend" | null,\n'
-    '  "has_minor_child": true | false | null,\n'
-    '  "period_year": 2025 | null,\n'
-    '  "extracted_values": {\n'
-    '    "regelbedarf_authority": 563.00 | null,\n'
-    '    "regelbedarf_stufe": 1 | 2 | null,\n'
-    '    "brutto_einkommen": 1200.00 | null,\n'
-    '    "netto_einkommen": 950.00 | null,\n'
-    '    "freibetrag_authority": 184.00 | null,\n'
-    '    "aufrechnung_authority": 28.15 | null,\n'
-    '    "aufrechnung_regelbedarf_used": 563.00 | null,\n'
-    '    "kdu_unterkunft": 540.00 | null,\n'
-    '    "kdu_heizung": 80.00 | null,\n'
-    '    "kdu_nebenkosten": null,\n'
-    '    "kdu_gesamt_authority": 620.00 | null,\n'
-    '    "anrechenbares_einkommen_authority": 900.00 | null,\n'
-    '    "auszahlungsbetrag_authority": 500.00 | null,\n'
-    '    "sanktion_authority": null,\n'
-    '    "mehrbedarf_authority": null,\n'
-    '    "unterhaltszahlung": null,\n'
-    '    "kindergeld": null\n'
-    "  },\n"
-    '  "authority_calculation_text": "Freitext: Wie das Jobcenter die '
-    'Berechnung beschreibt (im Dokument genannter Text)",\n'
-    '  "extraction_notes": "Freitext: Unsicherheiten oder fehlende Angaben"\n'
-    "}\n\n"
-    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
-    "zusätzlichen Schlüssel."
-)
-
-
-# ---------------------------------------------------------------------------
-# Phase 3: Explanation system prompt
-# ---------------------------------------------------------------------------
-
-_EXPLANATION_SYSTEM = (
-    "Du bist ein sorgfältiger Erklärer für sozialrechtliche Berechnungen "
-    "(SGB II / Bürgergeld).\n\n"
-    "Dir werden vorgelegt:\n"
-    "1. Der Text des Originaldokuments (Jobcenter-Bescheid o. Ä.).\n"
-    "2. Extrahierte Werte aus dem Dokument (von einem Extraktor ermittelt).\n"
-    "3. Berechnungsergebnisse einer deterministischen Prüf-Engine, "
-    "die bereits erkannt hat, bei welchen Posten eine Abweichung "
-    "zwischen Behördenangabe und gesetzlichem Sollwert vorliegt.\n\n"
-    "Deine Aufgabe:\n"
-    "- Erkläre in verständlichem Deutsch, was die Prüf-Engine gefunden hat.\n"
-    "- Wenn Abweichungen vorliegen: Erkläre, warum die Behördenberechnung "
-    "möglicherweise falsch ist und woran der Fehler liegen könnte.\n"
-    "- Nenne, was die betroffene Person bei der Behörde erfragen oder "
-    "beanstanden kann.\n"
-    "- Formuliere eine Gesamtbewertung (summary) und eine konkrete "
-    "Handlungsempfehlung (recommended_action).\n\n"
-    "Wichtige Regeln:\n"
-    "- **Die von der Prüf-Engine berechneten Werte sind die autoritativen "
-    "Zahlen.** Du darfst sie nicht in Frage stellen oder neu berechnen.\n"
-    "- Verwende die von der Engine vorgegebene discrepancy_direction und "
-    "den discrepancy_amount_eur unverändert.\n"
-    "- Wenn die Engine keine Abweichung festgestellt hat, bestätige das, "
-    "weise aber darauf hin, dass nur die prüfbaren Posten kontrolliert "
-    "wurden.\n"
-    "- Wenn Daten fehlen und die Engine deshalb nichts prüfen konnte, "
-    "erkläre, welche Angaben für eine vollständige Prüfung fehlen.\n"
-    "- Erfinde keine Paragraphen, Rechtsprechung oder Tatsachen.\n"
-    "- Alle Texte auf Deutsch.\n\n"
-    "Gib NUR ein JSON-Objekt mit folgender Struktur zurück:\n"
-    "{\n"
-    '  "enriched_calculations": [\n'
-    "    {\n"
-    '      "index": 0,\n'
-    '      "commentary": "Erläuterung auf Deutsch"\n'
-    "    }\n"
-    "  ],\n"
-    '  "overall_assessment": {\n'
-    '    "summary": "Gesamteindruck zu den Berechnungen",\n'
-    '    "recommended_action": "Was der Nutzer tun sollte '
-    '(z. B. Widerspruch einlegen, Behörde um Aufschlüsselung bitten)"\n'
-    "  }\n"
-    "}\n\n"
-    "Kein Prosatext außerhalb des JSON. Keine Markdown-Fences. Keine "
-    "zusätzlichen Schlüssel."
-)
+        return await get_parameter_json(self._session, key, as_of, domain=self._domain)
 
 
 # ---------------------------------------------------------------------------
@@ -248,13 +64,14 @@ async def check_calculations(
     *,
     claims: list[dict[str, Any]] | None = None,
     sections: dict[str, str] | None = None,
+    module_ids: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Verify all monetary calculations in *normalized_text* against SGB II rules.
+    """Verify all monetary calculations in *normalized_text* with module calculators.
 
-    Three-phase architecture:
+    Three-phase architecture (per calculator):
         1. LLM extracts structured monetary data from the document.
-        2. Deterministic rules engine computes correct values and flags
-           discrepancies.
+        2. The module's deterministic calculator computes correct values
+           and flags discrepancies.
         3. LLM explains the findings in natural language.
 
     Parameters
@@ -265,14 +82,20 @@ async def check_calculations(
         Optional list of claims from the reasoning pipeline.
     sections :
         Optional output sections from the reasoning pipeline.
+    module_ids :
+        Modules the request runs with (``app.modules.runtime.request_modules``);
+        ``None`` → the default module (v2.0.0 behaviour for callers that name
+        no module); ``[]`` → no calculator runs.
 
     Returns
     -------
     dict[str, Any]
-        A dict with keys ``calculations_found`` and ``overall_assessment``,
-        matching the format expected by the pipeline and frontend.
+        A dict with keys ``calculations_found`` and ``overall_assessment``
+        (plus ``legal_snapshot``), matching the format expected by the
+        pipeline and frontend.
     """
     from app.core.config import settings as s
+    from app.modules.runtime import calculators_for, request_modules
 
     # ── Early return when calculation check is disabled ──────────────
     if not s.ENABLE_CALCULATION_CHECK:
@@ -282,14 +105,26 @@ async def check_calculations(
             "Zum Aktivieren ENABLE_CALCULATION_CHECK=True setzen."
         )
 
+    # ``[]`` is a resolved request with no module (e.g. procedural library
+    # only) and must not fall back to the default module (D-054).
+    resolved_modules = module_ids if module_ids is not None else request_modules(None)
+    calculators = calculators_for(resolved_modules)
+    if not calculators:
+        logger.info("check_calculations: no calculator for modules %s", resolved_modules)
+        return _empty_result(
+            "Für die Rechtsgebiete dieses Falls ist keine deterministische "
+            "Berechnungsprüfung verfügbar."
+        )
+
     calculation_model = s.CALCULATION_MODEL or s.PRIMARY_MODEL
     calculation_timeout = s.CALCULATION_TIMEOUT_SEC
 
     logger.info(
-        "check_calculations: starting (input=%d chars, model=%s, timeout=%.1fs)",
+        "check_calculations: starting (input=%d chars, model=%s, timeout=%.1fs, calculators=%s)",
         len(normalized_text),
         calculation_model,
         calculation_timeout,
+        [f"{mid}:{calc.id}" for mid, calc in calculators],
     )
 
     client = get_shared_client()
@@ -315,6 +150,34 @@ async def check_calculations(
 
     user_content = "\n".join(user_parts)
 
+    results = [
+        await _run_calculator(
+            module_id,
+            calculator,
+            client,
+            user_content,
+            model=calculation_model,
+            timeout=calculation_timeout,
+        )
+        for module_id, calculator in calculators
+    ]
+    if len(results) == 1:
+        return results[0]
+    return _merge_results(results)
+
+
+async def _run_calculator(
+    module_id: str,
+    calculator: Calculator,
+    client: Any,
+    user_content: str,
+    *,
+    model: str,
+    timeout: float,
+) -> dict[str, Any]:
+    """Run extraction → deterministic engine → explanation for one calculator."""
+    from app.modules.runtime import parameter_domain
+
     # ==================================================================
     # Phase 1: Extraction
     # ==================================================================
@@ -324,8 +187,9 @@ async def check_calculations(
     extraction = await _llm_extract(
         client,
         user_content,
-        model=calculation_model,
-        timeout=calculation_timeout,
+        model=model,
+        timeout=timeout,
+        calculator=calculator,
     )
 
     if extraction is None:
@@ -336,56 +200,26 @@ async def check_calculations(
         )
 
     # ==================================================================
-    # Phase 2: Deterministic rules engine
+    # Phase 2: Deterministic module calculator
     # ==================================================================
 
     logger.info("check_calculations: phase 2 — running deterministic rules engine")
 
-    # ── Fetch legal parameters from the DB ───────────────────────────
-    from datetime import date as dt_date
-
-    from app.services.parameter_store import (
-        build_legal_snapshot,
-        get_parameter_json,
-        get_parameter_numeric,
-    )
-
-    period_year_val = extraction.get("period_year")
-    try:
-        period_year_int = int(period_year_val) if period_year_val else 2025
-    except (TypeError, ValueError):
-        period_year_int = 2025
+    # ── Fetch legal parameters from the store (module domain) ────────
+    from app.db.session import get_session_factory
 
     param_overrides: dict[str, Any] = {}
     legal_snapshot: dict[str, Any] | None = None
-    from app.db.session import get_session_factory
+    domain = parameter_domain(module_id)
 
     session_factory = get_session_factory()
     try:
+        if domain is None:
+            raise LookupError(f"module {module_id!r} declares no parameter domain")
         async with session_factory() as db_session:
-            as_of = dt_date(period_year_int, 7, 1)  # mid-year
-
-            # Fetch Regelbedarf parameters
-            rbs1 = await get_parameter_numeric(db_session, "sgb2.regelbedarf.rbs1", as_of)
-            rbs2 = await get_parameter_numeric(db_session, "sgb2.regelbedarf.rbs2", as_of)
-            param_overrides["rbs1"] = rbs1
-            param_overrides["rbs2"] = rbs2
-
-            # Fetch Freibetrag brackets from the DB (if available)
-            brackets = await get_parameter_json(
-                db_session, "sgb2.einkommen.erwerbstaetigenfreibetrag.band", as_of
+            param_overrides, legal_snapshot = await calculator.load_parameters(
+                extraction, _StoreParameterSource(db_session, domain)
             )
-            if brackets["value"] is not None:
-                param_overrides["freibetrag_brackets"] = brackets["value"].get("bands", [])
-                param_overrides["freibetrag_base_allowance"] = float(
-                    brackets["value"].get("base_allowance", 100.0)
-                )
-                param_overrides["freibetrag_child_upper_limit"] = float(
-                    brackets["value"].get("minor_child_upper", 1500.0)
-                )
-
-            # Build the legal snapshot for audit trail
-            legal_snapshot = await build_legal_snapshot(db_session, year=period_year_int)
     except Exception as exc:
         logger.warning(
             "Failed to fetch legal parameters from DB: %s. Using hardcoded fallbacks.",
@@ -394,7 +228,7 @@ async def check_calculations(
         param_overrides = {}
         legal_snapshot = None
 
-    calculations = process_extraction(extraction, param_overrides=param_overrides)
+    calculations = calculator.process(extraction, param_overrides)
 
     logger.info(
         "check_calculations: engine produced %d calculation entries",
@@ -412,20 +246,23 @@ async def check_calculations(
         user_content,
         calculations,
         extraction,
-        model=calculation_model,
-        timeout=calculation_timeout,
+        model=model,
+        timeout=timeout,
+        calculator=calculator,
     )
 
     # ── Merge explanation into calculations ──────────────────────────
     validated_calculations = _merge_explanations(calculations, explanation)
 
     # ── Build overall assessment ─────────────────────────────────────
-    overall_assessment = _build_overall_assessment(validated_calculations, explanation)
+    overall_assessment = _build_overall_assessment(
+        validated_calculations, explanation, referral_hint=calculator.referral_hint
+    )
 
     logger.info(
         "check_calculations: complete (model=%s, %d calculations found, "
         "%d discrepancies, total_amount=%.2f EUR)",
-        calculation_model,
+        model,
         len(validated_calculations),
         overall_assessment["total_discrepancies"],
         overall_assessment["total_amount_eur"],
@@ -435,6 +272,35 @@ async def check_calculations(
         "calculations_found": validated_calculations,
         "overall_assessment": overall_assessment,
         "legal_snapshot": legal_snapshot if legal_snapshot else None,
+    }
+
+
+def _merge_results(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Combine several calculators' results (multi-module case).
+
+    Totals are recomputed from the merged entries (deterministic); the
+    textual summaries and actions are concatenated in calculator order.
+    """
+    calculations = [c for r in results for c in r.get("calculations_found", [])]
+    explanation = {
+        "overall_assessment": {
+            "summary": " ".join(
+                r["overall_assessment"]["summary"]
+                for r in results
+                if r["overall_assessment"].get("summary")
+            ),
+            "recommended_action": " ".join(
+                r["overall_assessment"]["recommended_action"]
+                for r in results
+                if r["overall_assessment"].get("recommended_action")
+            ),
+        }
+    }
+    snapshots = [r["legal_snapshot"] for r in results if r.get("legal_snapshot")]
+    return {
+        "calculations_found": calculations,
+        "overall_assessment": _build_overall_assessment(calculations, explanation),
+        "legal_snapshot": {"calculators": snapshots} if snapshots else None,
     }
 
 
@@ -449,20 +315,23 @@ async def _llm_extract(
     *,
     model: str,
     timeout: float,
+    calculator: Calculator,
 ) -> dict[str, Any] | None:
     """Call the extraction LLM and return parsed JSON, or ``None`` on failure."""
     from app.core.config import settings as s
 
+    extraction_system = calculator.extraction_prompt
+
     messages = [
-        {"role": "system", "content": _EXTRACTION_SYSTEM + _STRICT_SUFFIX},
+        {"role": "system", "content": extraction_system + _STRICT_SUFFIX},
         {"role": "user", "content": user_content},
     ]
 
     logger.info(
         "_llm_extract: prompt ~%d chars (user=%d, system=%d)",
-        len(user_content) + len(_EXTRACTION_SYSTEM) + len(_STRICT_SUFFIX),
+        len(user_content) + len(extraction_system) + len(_STRICT_SUFFIX),
         len(user_content),
-        len(_EXTRACTION_SYSTEM) + len(_STRICT_SUFFIX),
+        len(extraction_system) + len(_STRICT_SUFFIX),
     )
 
     try:
@@ -477,7 +346,7 @@ async def _llm_extract(
     except JSONParseError:
         logger.warning("JSON parse error in extraction, retrying with stricter prompt")
         messages_minimal = [
-            {"role": "system", "content": _EXTRACTION_SYSTEM + _STRICT_SUFFIX},
+            {"role": "system", "content": extraction_system + _STRICT_SUFFIX},
             {"role": "user", "content": user_content[: s.MAX_FINAL_INPUT_CHARS]},
         ]
         try:
@@ -504,7 +373,7 @@ async def _llm_extract(
     document_text = user_content
     if document_text.startswith("## DOKUMENT\n"):
         document_text = document_text[len("## DOKUMENT\n") :]
-    cross_check_warnings = cross_check_extraction(result, document_text)
+    cross_check_warnings = calculator.cross_check(result, document_text)
     for warning in cross_check_warnings:
         logger.warning("cross_check: %s", warning)
 
@@ -524,6 +393,7 @@ async def _llm_explain(
     *,
     model: str,
     timeout: float,
+    calculator: Calculator,
 ) -> dict[str, Any] | None:
     """Call the explanation LLM to enrich engine output with natural language.
 
@@ -540,16 +410,11 @@ async def _llm_explain(
     )
 
     extraction_summary = json.dumps(
-        {
-            "person_type": extraction.get("person_type"),
-            "period_year": extraction.get("period_year"),
-            "has_minor_child": extraction.get("has_minor_child"),
-            "authority_calculation_text": extraction.get("authority_calculation_text", ""),
-            "extraction_notes": extraction.get("extraction_notes", ""),
-        },
+        calculator.summarise_extraction(extraction),
         ensure_ascii=False,
         indent=2,
     )
+    explanation_system = calculator.explanation_prompt
 
     explanation_user = (
         f"{document_content}\n\n"
@@ -558,15 +423,15 @@ async def _llm_explain(
     )
 
     messages = [
-        {"role": "system", "content": _EXPLANATION_SYSTEM + _STRICT_SUFFIX},
+        {"role": "system", "content": explanation_system + _STRICT_SUFFIX},
         {"role": "user", "content": explanation_user},
     ]
 
     logger.info(
         "_llm_explain: prompt ~%d chars (user=%d, system=%d)",
-        len(explanation_user) + len(_EXPLANATION_SYSTEM) + len(_STRICT_SUFFIX),
+        len(explanation_user) + len(explanation_system) + len(_STRICT_SUFFIX),
         len(explanation_user),
-        len(_EXPLANATION_SYSTEM) + len(_STRICT_SUFFIX),
+        len(explanation_system) + len(_STRICT_SUFFIX),
     )
 
     try:
@@ -681,6 +546,8 @@ def _merge_explanations(
 def _build_overall_assessment(
     calculations: list[dict[str, Any]],
     explanation: dict[str, Any] | None,
+    *,
+    referral_hint: str = "",
 ) -> dict[str, Any]:
     """Build the ``overall_assessment`` dict from the engine + LLM results."""
     # Compute totals from the engine output (deterministic, not LLM-derived).
@@ -739,10 +606,7 @@ def _build_overall_assessment(
             )
 
     if not recommended_action and total_discrepancies > 0:
-        recommended_action = (
-            "Bitte lassen Sie die Berechnung von einer Fachstelle "
-            "oder einem Rechtsanwalt für Sozialrecht überprüfen."
-        )
+        recommended_action = referral_hint
 
     return {
         "total_discrepancies": total_discrepancies,

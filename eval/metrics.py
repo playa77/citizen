@@ -1,4 +1,7 @@
-# Version: 1.0.0 | 2026-07-12
+# Version: 1.1.0 | 2026-11-16 — WP-93: Frist metric evaluates the goldset
+# module's deadline spec through the Fristen core (shim app.services.fristen
+# removed).
+# 1.0.0 | 2026-07-12
 """Pure metric computation functions for goldset evaluation.
 
 All functions are deterministic — no LLM or DB calls. They take extracted
@@ -9,13 +12,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from app.services.fristen import compute_widerspruchsfrist
+from app.fristen.evaluator import FristInput
+from app.modules.runtime import compute_deadline
 from eval.extractors import extract_norm_references
 from eval.goldset_loader import (
     Citation,
     GoldsetCase,
     LegalIssue,
 )
+
+#: Module and deadline spec the goldset's ``widerspruchsfrist`` expectations
+#: refer to (goldset v0.2.0 is the sozialrecht module goldset).
+GOLDSET_MODULE = "sozialrecht"
+WIDERSPRUCH_SPEC = "widerspruch_sgg_84"
 
 if TYPE_CHECKING:
     from app.services.pseudonymization import PiiMapping
@@ -220,7 +229,7 @@ def compute_frist_exact_match(
 ) -> float | None:
     """Run the deterministic Fristen engine against a goldset case's expected Frist.
 
-    Compares ``compute_widerspruchsfrist()`` output against
+    Compares the module deadline spec ``WIDERSPRUCH_SPEC`` (Fristen core) against
     ``case.expected.widerspruchsfrist.frist_ende``.
 
     Returns ``1.0`` for exact match, ``0.0`` for mismatch, or ``None`` if
@@ -249,11 +258,15 @@ def compute_frist_exact_match(
     if extra.get("rbb_fehlerhaft") or extra.get("massgebliche_frist") == "jahresfrist_66_2_sgg":
         rbb_status = "fehlerhaft"
 
-    result = compute_widerspruchsfrist(
-        bescheid_datum=bescheid_datum,
-        aufgabe_zur_post=aufgabe,
-        rbb_status=rbb_status,  # type: ignore[arg-type]
-        ist_verwaltungsakt=ist_va,
+    result = compute_deadline(
+        GOLDSET_MODULE,
+        WIDERSPRUCH_SPEC,
+        FristInput(
+            bescheid_datum=bescheid_datum,
+            aufgabe_zur_post=aufgabe,
+            rbb_status=rbb_status,
+            ist_verwaltungsakt=ist_va,
+        ),
     )
 
     # Compare

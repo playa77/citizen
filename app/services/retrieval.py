@@ -12,7 +12,9 @@ Given a list of legal questions, this module:
 7. Returns a list of rich dictionaries.
 """
 
-# Semantic Version: 0.3.0 | 2026-08-25 — PostgreSQL-only doc/comment updates (D-024).
+# Semantic Version: 0.3.1 | 2026-11-16 — WP-93: area examples in docstrings made
+# module-neutral (area → source types come from module corpus scopes).
+# 0.3.0 | 2026-08-25 — PostgreSQL-only doc/comment updates (D-024).
 
 from __future__ import annotations
 
@@ -79,10 +81,9 @@ async def retrieve_chunks_for_areas(
     Parameters
     ----------
     legal_areas :
-        One or more legal_area keys (e.g. ``["erbrecht",
-        "familienrecht"]``). Areas with no mapped source_types (e.g.
-        ``"andere"``) are still represented in the result dict with an
-        empty list.
+        One or more area keys (module ids or legacy aliases). Areas with no
+        mapped source_types (e.g. the catch-all area) are still represented
+        in the result dict with an empty list.
     issues, questions, normalized_text :
         The standard pipeline inputs used to build the combined query.
     client :
@@ -185,8 +186,8 @@ async def retrieve_chunks_combined_filtered(
     """Like :func:`retrieve_chunks_combined` but filtered to *source_types*.
 
     Filters via ``LegalSource.source_type IN (...)`` so multi-area
-    retrieval can ask only for BGB chunks for the familienrecht area,
-    for example.
+    retrieval can restrict one area to its module's corpus scope (e.g.
+    only BGB chunks).
     """
     if not issues and not questions:
         return []

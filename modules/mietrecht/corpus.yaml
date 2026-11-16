@@ -1,0 +1,9 @@
+# Corpus scope of module `mietrecht` (WP-93; ARCHITECTURE.md § 3.3).
+# `areas.<key>.source_types`: corpus source types that satisfy the area
+# (pre-flight readiness + per-area retrieval filter).
+# Extracted verbatim from v2.0.0 app/services/corpus_readiness.py.
+
+areas:
+  mietrecht:
+    source_types:
+    - bgb

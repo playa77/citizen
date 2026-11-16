@@ -1,0 +1,26 @@
+# Erbrecht — stub module (WP-93, D-038).
+#
+# Tier `experimental`: carries the v2.0.0 behaviour of the legacy area key
+# (intake routing, corpus mapping, prompt profile) — no deadline specs,
+# no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
+#
+# Owns the legacy key `schenkungsrecht` (D-038). Until WP-94 drops the
+# area CHECK constraint, `schenkungsrecht` stays a distinct stored area value
+# with its own intake/corpus rows in this module's files.
+
+# Semantic Version: 0.1.0
+
+id: erbrecht
+version: 0.1.0
+core_api: ">=3.0,<4.0"
+title:
+  de: "Erbrecht"
+  en: "Inheritance law"
+tier: experimental
+scope:
+  summary_de: "Erbfolge, Testament, Pflichtteil, Erbschein, Erbschaftsteuer (BGB Buch 5, ErbStG, HöfeO)"
+  own_matter_only: true
+corpus: corpus.yaml
+intake: intake.yaml
+prompts: prompts/profile.yaml
+legacy_aliases: [schenkungsrecht]

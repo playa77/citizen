@@ -13,7 +13,7 @@ refactor that don't require a live DB or a real LLM call:
   closed-enum legal_areas
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.3.1 | 2026-11-16 — WP-93: prompt constants derived from get_prompts.
 
 from __future__ import annotations
 
@@ -29,7 +29,11 @@ from app.services.corpus_readiness import (
     check_preflight,
     get_area_status,
 )
-from app.services.prompts import ERBRECHT_PROMPTS, SOCIALRECHT_PROMPTS, get_prompts
+from app.services.prompts import DEFAULT_PROMPTS, get_prompts
+
+# WP-93: profiles are module data; derive the former constants.
+SOCIALRECHT_PROMPTS = DEFAULT_PROMPTS
+ERBRECHT_PROMPTS = get_prompts(["erbrecht"])
 
 
 # ---------------------------------------------------------------------------

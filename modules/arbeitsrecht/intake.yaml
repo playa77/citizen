@@ -1,0 +1,19 @@
+# Intake tables of module `arbeitsrecht` (WP-93; ARCHITECTURE.md § 3.8).
+# `areas` is keyed by area key (module id or a legacy alias it owns, D-038):
+# `keywords` drive the keyword fallback of the intake interview,
+# `synonyms` map free-text LLM answers back onto the area key.
+# Extracted verbatim from the v2.0.0 hard-coded tables in
+# app/services/intake.py and app/api/routes/presets.py.
+
+areas:
+  arbeitsrecht:
+    keywords:
+    - arbeitgeber
+    - kündigung arbeit
+    - abfindung
+    - arbeitsvertrag
+    - betriebsrat
+    - kündigungsschutz
+    - abmahnung
+    - lohn
+    - gehalt

@@ -15,7 +15,8 @@ Each stage yields an SSE-formatted event:
 
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-93: regime banner, default §-lookup
+# sources and calculators come from the request's modules (app.modules.runtime).
 
 from __future__ import annotations
 
@@ -98,9 +99,9 @@ class PipelineState:
     final_output: dict[str, str] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     stream_output_lines: list[str] = field(default_factory=list)
-    # legal_areas: list of legal_area keys (e.g. ["sozialrecht"] or
-    # ["erbrecht", "familienrecht"]) selected for this case. When empty
-    # the pipeline behaves exactly as before — fully backward compatible.
+    # legal_areas: list of area keys (module ids or legacy aliases) selected
+    # for this case. When empty the pipeline runs with DEFAULT_MODULE — the
+    # v2.0.0 single-area behaviour, fully backward compatible.
     legal_areas: list[str] = field(default_factory=list)
     # intake_session_id: optional reference to the IntakeSession that
     # produced the legal_areas + enriched input_text. Persisted on
@@ -155,10 +156,13 @@ def _populate_regime_banner(state: PipelineState) -> None:
     """
     from datetime import date as _dt
 
-    from app.services.regime import legal_regime, regime_banner
+    from app.modules.runtime import regime_banner_for, request_modules
 
-    regime = legal_regime(_dt.today())
-    state.legal_regime_banner = regime_banner(regime)
+    # WP-93: the regime provider is module code (ARCHITECTURE.md § 2.4);
+    # modules without one (stubs) leave the banner empty.
+    regime, state.legal_regime_banner = regime_banner_for(
+        request_modules(state.legal_areas), _dt.today()
+    )
     logger.info(
         "Regime banner set: regime=%s banner_len=%d",
         regime,
@@ -659,9 +663,12 @@ async def _stage_retrieval(state: PipelineState) -> None:
     # Extract norm references from the document text and merge with vector
     # results (dedup by chunk_id, keeping vector result on collision).
     if state.normalized_text:
+        from app.modules.areas import area_tables
+
+        # Default-module corpus scope (``norm_reference_source_types``, WP-93).
         norm_chunks = await retrieve_chunks_by_norm_reference(
             state.normalized_text,
-            source_types=("sgb2", "sgbx", "sgg", "sgb3", "sgb12"),
+            source_types=area_tables().norm_reference_source_types,
         )
         if norm_chunks:
             seen: set[str] = {c["chunk_id"] for c in state.retrieved_chunks}
@@ -800,16 +807,18 @@ async def _stage_generation(state: PipelineState) -> None:
 
 
 async def _stage_calculation_check(state: PipelineState) -> None:
-    """Stage 9 — verify all monetary calculations in the document against SGB II rules.
+    """Stage 9 — verify monetary calculations with the request's module calculators.
 
     Uses a specialised calculation-checking model to extract and verify every
-    monetary computation (freibeträge, aufrechnungen, etc.) in the document.
+    monetary computation in the document; the deterministic math comes from
+    the calculators of the modules the request resolves to (WP-93).
     The result is injected into ``state.final_output`` under the
     ``berechnungspruefung`` key so the frontend can display it alongside the
     other output sections.
 
     Gracefully skips if the LLM call fails so the pipeline can continue.
     """
+    from app.modules.runtime import request_modules
     from app.services.calculation import check_calculations
 
     # Build claims and sections for context.
@@ -821,6 +830,7 @@ async def _stage_calculation_check(state: PipelineState) -> None:
             state.normalized_text,
             claims=claims_for_check,
             sections=sections_for_check,
+            module_ids=request_modules(state.legal_areas),
         )
         state.calculation_result = result
 

@@ -1,0 +1,24 @@
+# Corpus scope of module `erbrecht` (WP-93; ARCHITECTURE.md § 3.3).
+# `areas.<key>.source_types`: corpus source types that satisfy the area
+# (pre-flight readiness + per-area retrieval filter).
+# Extracted verbatim from v2.0.0 app/services/corpus_readiness.py.
+
+areas:
+  erbrecht:
+    source_types:
+    - bgb
+    - erbstg
+    - hoefev
+  schenkungsrecht:
+    source_types:
+    - bgb
+    - erbstg
+chunk_tags:
+- source_type: bgb
+  from: 1922
+  to: 2385
+  area: erbrecht
+- source_type: bgb
+  from: 516
+  to: 534
+  area: schenkungsrecht

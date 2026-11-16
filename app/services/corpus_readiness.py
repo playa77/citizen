@@ -1,16 +1,19 @@
 """Per-area corpus readiness check.
 
-A case covering ``["erbrecht", "familienrecht"]`` can only run if at
-least one ``legal_chunk`` exists for each of those areas. This module
+A case covering several area keys can only run if at least one
+``legal_chunk`` exists for each of those areas. This module
 queries the DB and returns a per-area status so the API can answer:
 
   "If I start the pipeline with these areas, will I get evidence?"
 
 Used by ``analyze.py`` to gate the run with HTTP 409 and a list of
 missing sources the user can fix.
+
+WP-93: the area → source-type mapping is module data
+(``areas.<key>.source_types`` in ``modules/<id>/corpus.yaml``).
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0
 
 from __future__ import annotations
 
@@ -21,35 +24,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import LegalChunk, LegalSource
+from app.modules.areas import area_tables
 
 logger = logging.getLogger(__name__)
 
 
-# Map a high-level legal_area to the corpus source_types that satisfy it.
-# This is the source of truth for "is this area loadable?".
-AREA_TO_SOURCE_TYPES: dict[str, tuple[str, ...]] = {
-    "sozialrecht": (
-        "sgb1",
-        "sgb2",
-        "sgb3",
-        "sgb9",
-        "sgb12",
-        "sgbx",
-        "weisung",
-        "bsg",
-        "vwvfg",
-        "sgg",
-    ),
-    "erbrecht": ("bgb", "erbstg", "hoefev"),
-    "schenkungsrecht": ("bgb", "erbstg"),
-    "familienrecht": ("bgb",),
-    "mietrecht": ("bgb",),
-    "arbeitsrecht": ("bgb",),
-    "vertragsrecht": ("bgb",),
-    "verwaltungsrecht": ("vwvfg", "sgbx"),
-    "strafrecht": (),
-    "andere": (),
-}
+# Map an area key to the corpus source_types that satisfy it — assembled
+# from the owning modules' corpus scopes (``app.modules.areas``). This is
+# the source of truth for "is this area loadable?".
+AREA_TO_SOURCE_TYPES: dict[str, tuple[str, ...]] = dict(area_tables().source_types)
 
 
 async def get_area_status(
@@ -63,14 +46,14 @@ async def get_area_status(
     session :
         An open async DB session.
     legal_areas :
-        A list of legal_area keys (e.g. ``["sozialrecht", "erbrecht"]``).
+        A list of area keys (module ids or legacy aliases).
 
     Returns
     -------
     dict[str, dict[str, Any]]
         Mapping ``legal_area → {chunk_count, source_types, is_ready,
         missing_source_types}``. Areas with zero expected source types
-        (e.g. ``"andere"``) are reported as ``is_ready=False``.
+        (e.g. the catch-all area) are reported as ``is_ready=False``.
     """
     if not legal_areas:
         return {}

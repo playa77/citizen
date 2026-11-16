@@ -18,9 +18,14 @@ Rules implemented:
     - Bedarf-vs-Einkommen reconciliation (full Anspruchsberechnung)
     - Additionsfehler detection (deterministic arithmetic audit)
     - Multi-month aggregation
+
+Module code of ``sozialrecht`` (WP-93: moved from
+``app/services/rules_engine.py`` unchanged in behaviour). Wrapped as an
+``app.modules.sdk.Calculator`` in ``calculators.py``; the core reaches it
+only through the calculation harness (``app.services.calculation``).
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 

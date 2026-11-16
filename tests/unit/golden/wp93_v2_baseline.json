@@ -1,0 +1,336 @@
+{
+ "_meta": {
+  "generated": "2026-11-16",
+  "source_tree": "v2.0.0 layout, commit aae2888 (pre-WP-93)"
+ },
+ "calc:explanation_prompt": "35d0353fa8669d94c825251206c6285dbdaa7f78115698ded79408a7bedb1009",
+ "calc:extraction_prompt": "75c8533d416ee8aa99a3cfe13fce1b32bf82862d3d6bd04e7e11ded729855eaf",
+ "calc:referral_hint": "Bitte lassen Sie die Berechnung von einer Fachstelle oder einem Rechtsanwalt für Sozialrecht überprüfen.",
+ "corpus:area_source_types": {
+  "andere": [],
+  "arbeitsrecht": [
+   "bgb"
+  ],
+  "erbrecht": [
+   "bgb",
+   "erbstg",
+   "hoefev"
+  ],
+  "familienrecht": [
+   "bgb"
+  ],
+  "mietrecht": [
+   "bgb"
+  ],
+  "schenkungsrecht": [
+   "bgb",
+   "erbstg"
+  ],
+  "sozialrecht": [
+   "sgb1",
+   "sgb2",
+   "sgb3",
+   "sgb9",
+   "sgb12",
+   "sgbx",
+   "weisung",
+   "bsg",
+   "vwvfg",
+   "sgg"
+  ],
+  "strafrecht": [],
+  "vertragsrecht": [
+   "bgb"
+  ],
+  "verwaltungsrecht": [
+   "vwvfg",
+   "sgbx"
+  ]
+ },
+ "corpus:bgb_tag_digest": "34ddb9eb0aaa9be889cd8b3c0ad8331e95c2e6576dcbb315cb30a03356ad0580",
+ "corpus:bgb_tag_none": [
+  null,
+  null
+ ],
+ "documents:count": 3600,
+ "documents:digest": "79139dc7347cdb45bdaa890cda0ce4b8ae7581c164be774033f0bf5f2e6f42ab",
+ "documents:sample": {
+  "akteneinsichtsantrag_25|jahr|dataclass|mixed|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|jahr|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|kein_va|dataclass|mixed|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|kein_va|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|monat|dataclass|mixed|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|monat|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|none|dataclass|mixed|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "akteneinsichtsantrag_25|none|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
+  "gibt_es_nicht|jahr|dataclass|mixed|full|all": "4fbdc3b19fc9c5f6e7a5cc75a1ee8a4961553a03f5fcb889c1484e2f9a437a09",
+  "gibt_es_nicht|jahr|empty|unverified|full|all": "4aaf6aa07de75edd97cb55e0e845b508d513eef1588e916ebec6282fd23d840f",
+  "gibt_es_nicht|kein_va|dataclass|mixed|full|all": "44df5b1d829a65966d0e241b504825791de5c2906c33de36afd0bebbdde5dd49",
+  "gibt_es_nicht|kein_va|empty|unverified|full|all": "51bbe7008ac9fe0df4e3cd2f9c88c2482b5e98660fae6e0e9c7f0b3b85df2548",
+  "gibt_es_nicht|monat|dataclass|mixed|full|all": "66ccbdb0546344b01ccbd4666d9b5279fd39eb64fd5fce717a1edcf7c8e907bc",
+  "gibt_es_nicht|monat|empty|unverified|full|all": "0e1ee8cad5cd3bc5460df71a27f9d0debbca0c15443b45d69e2758b92410cac5",
+  "gibt_es_nicht|none|dataclass|mixed|full|all": "07648d72ad1de8a06bf42f9c2ddc5a1acf5530f82024d9e83609e9d8a9c9cdf8",
+  "gibt_es_nicht|none|empty|unverified|full|all": "bf57ca02fb04f9ae3621fcbceefba21f3f447e297749f1d885e1dd72c7c87dc8",
+  "ueberpruefungsantrag_44|jahr|dataclass|mixed|full|all": "d39be1959f57eeebf8c8494a64c953b75f50ee97e6e548ba57da2ab356c92f8b",
+  "ueberpruefungsantrag_44|jahr|empty|unverified|full|all": "20f854d1ac7e26a8abc0d28121752e51b5d269c6df1fec2e270badc630464c1e",
+  "ueberpruefungsantrag_44|kein_va|dataclass|mixed|full|all": "fa4cc94458b77b0e2407a6f4692983d5a48ed31dcb89959d1aafc222161df501",
+  "ueberpruefungsantrag_44|kein_va|empty|unverified|full|all": "49b229dee696c99cdaa7a3be9177ff6c51fdba8a855ab626ec78138c1b37364c",
+  "ueberpruefungsantrag_44|monat|dataclass|mixed|full|all": "ea527fd44cb22a6017a958383fea09fd2f185426249f9269d97dbbc47e06b1d7",
+  "ueberpruefungsantrag_44|monat|empty|unverified|full|all": "38fbc5906995ba30cc8ef89857cd59dc37cbb7b4b99705241c3b65f3bf340568",
+  "ueberpruefungsantrag_44|none|dataclass|mixed|full|all": "a8f8787841fc98a05462e2ed25d4c67a6bc1adea8a2d57a158e4311dc99f2f84",
+  "ueberpruefungsantrag_44|none|empty|unverified|full|all": "296a687a7b8e863b30d2bb168b8cead1d480eb1164939e5f63d782ddf927502a",
+  "widerspruch_jahresfrist|jahr|dataclass|mixed|full|all": "49643074410859ccebb7ac4e018047e9bcdf0f0121bdac69b00534f0e96e2278",
+  "widerspruch_jahresfrist|jahr|empty|unverified|full|all": "d23e39874ddfe1eabb18d25d8443111aaa18af881558c60ce13ff4c9f0ed5a0c",
+  "widerspruch_jahresfrist|kein_va|dataclass|mixed|full|all": "4d306547a21fefc5ab597d30db4612082282f6402bc028333d06cb60dfb1aa33",
+  "widerspruch_jahresfrist|kein_va|empty|unverified|full|all": "ce80145b836a5be8df41c06f1c3e52b840233f0c3be8772351deff1fe8520856",
+  "widerspruch_jahresfrist|monat|dataclass|mixed|full|all": "3fa2f86f929b25f5ddcc21334548a7ad2479d73a0a86ed0c7355c4b18e5fd80c",
+  "widerspruch_jahresfrist|monat|empty|unverified|full|all": "c0050c200ebbd74e7303f48fc9f62fbb5501f9a8e3bada1b81620b7724465a46",
+  "widerspruch_jahresfrist|none|dataclass|mixed|full|all": "fca3ad2e49d8033d3818115e9bf0ad83338752aedd867c71f618dc786ec49163",
+  "widerspruch_jahresfrist|none|empty|unverified|full|all": "b160c99ed7425cc6c58ffe66b7f6154ca0a0fddafda5dd85bcd3e65d54bd353e",
+  "widerspruch|jahr|dataclass|mixed|full|all": "aa44af1d21cf1b676a5a15b162ac086e708876553ffcb132443fff24c1293f82",
+  "widerspruch|jahr|empty|unverified|full|all": "69ae69b04231fbec0e81ae5c2972aa459fcec161c39d2af94928cd40a5b7d1ff",
+  "widerspruch|kein_va|dataclass|mixed|full|all": "581dd53a5258e6e8a4d8b796f636aa11ad1ab02ed22c8192d3a65897711af30c",
+  "widerspruch|kein_va|empty|unverified|full|all": "c0cef16eeaf1cd78dda7581348396f86c0b4f13e44dbfad4427139f4726c7906",
+  "widerspruch|monat|dataclass|mixed|full|all": "3f079e9ce4060640df33bd35b6315f57f2d97d14df560e1e80de248a69422bcd",
+  "widerspruch|monat|empty|unverified|full|all": "ef9d9433cfb02dc1477455e7a39882951389d3b4eb5cc6939421f234145d407b",
+  "widerspruch|none|dataclass|mixed|full|all": "c38430b4e529637d21ae96f921d5b0bedf94b1fb0f1bcf74cd0685963c233708",
+  "widerspruch|none|empty|unverified|full|all": "372ba50e2c6708d34166809e55e0d05f190dd76d372c632b663fed1c53d09f24"
+ },
+ "documents:select": {
+  "kein_va": "akteneinsichtsantrag_25",
+  "lapsed_jahr": "widerspruch_jahresfrist",
+  "lapsed_monat": "ueberpruefungsantrag_44",
+  "none": "akteneinsichtsantrag_25",
+  "open_jahr": "widerspruch_jahresfrist",
+  "open_monat": "widerspruch"
+ },
+ "intake:enum": [
+  "sozialrecht",
+  "erbrecht",
+  "schenkungsrecht",
+  "familienrecht",
+  "mietrecht",
+  "arbeitsrecht",
+  "vertragsrecht",
+  "verwaltungsrecht",
+  "strafrecht",
+  "andere"
+ ],
+ "intake:fallback": [
+  [
+   "andere",
+   []
+  ],
+  [
+   "andere",
+   []
+  ],
+  [
+   "sozialrecht",
+   []
+  ],
+  [
+   "erbrecht",
+   []
+  ],
+  [
+   "schenkungsrecht",
+   []
+  ],
+  [
+   "familienrecht",
+   []
+  ],
+  [
+   "mietrecht",
+   []
+  ],
+  [
+   "arbeitsrecht",
+   []
+  ],
+  [
+   "vertragsrecht",
+   []
+  ],
+  [
+   "verwaltungsrecht",
+   []
+  ],
+  [
+   "strafrecht",
+   []
+  ],
+  [
+   "sozialrecht",
+   [
+    "erbrecht"
+   ]
+  ],
+  [
+   "erbrecht",
+   []
+  ],
+  [
+   "andere",
+   []
+  ]
+ ],
+ "intake:keyword_order": [
+  "sozialrecht",
+  "erbrecht",
+  "schenkungsrecht",
+  "familienrecht",
+  "mietrecht",
+  "arbeitsrecht",
+  "vertragsrecht",
+  "verwaltungsrecht",
+  "strafrecht"
+ ],
+ "intake:keywords": "e8a6871cae46e6062b2f3926e2132c47a20ac5d509f03f4294569a044986743c",
+ "intake:normalise": [
+  null,
+  null,
+  "sozialrecht",
+  "erbrecht",
+  "sozialrecht",
+  "sozialrecht",
+  "erbrecht",
+  "schenkungsrecht",
+  "familienrecht",
+  "familienrecht",
+  "erbrecht",
+  "verwaltungsrecht",
+  "andere",
+  null
+ ],
+ "intake:strict_suffix": "bd8f5df14d30773754e17bbf7592327eb81b00b4a1a0ad156b8d89512b71eaeb",
+ "intake:system": "d3d77450a2fcd72d20818b3859a708746e92e09956fbddc3ce65e83b0eb529b7",
+ "presets:keyword_fallback": [
+  [
+   "erbe-mit-testament",
+   "erbrecht"
+  ],
+  [
+   "erbe-mit-familie",
+   "erbrecht"
+  ],
+  [
+   "schenkung-zu-lebzeiten",
+   "schenkungsrecht"
+  ],
+  [
+   "hofesuebergabe",
+   "erbrecht"
+  ],
+  [
+   "sozialrecht-allgemein",
+   "sozialrecht"
+  ]
+ ],
+ "presets:keyword_suggest": [
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "erbe-mit-testament",
+   "primary_area": "erbrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "schenkung-zu-lebzeiten",
+   "primary_area": "schenkungsrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "erbe-mit-familie",
+   "primary_area": "erbrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "erbe-mit-testament",
+   "primary_area": "erbrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "hofesuebergabe",
+   "primary_area": "erbrecht",
+   "secondary_areas": []
+  },
+  {
+   "preset_id": "sozialrecht-allgemein",
+   "primary_area": "sozialrecht",
+   "secondary_areas": []
+  }
+ ],
+ "presets:list": "29e17b7206832f777e61b8308a2c3733be35d61e8ca128fedb66024832a16662",
+ "presets:suggest_system": "3d586dbe4a27ced7bfb21bac6b076a813b5948539698fdc4fe543c3889babe59",
+ "prompts:<empty>": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
+ "prompts:andere": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
+ "prompts:erbrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
+ "prompts:erbrecht+familienrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
+ "prompts:erbrecht+sozialrecht": "759fde2e2dda57c7545d2106179f01a01c5e2b965ac869fdc60211cc643c414c",
+ "prompts:familienrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
+ "prompts:familienrecht+sozialrecht+schenkungsrecht": "759fde2e2dda57c7545d2106179f01a01c5e2b965ac869fdc60211cc643c414c",
+ "prompts:mietrecht": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
+ "prompts:mietrecht+erbrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
+ "prompts:schenkungsrecht": "b7840b0f669d9d3596ac5a5459067f92400fbf1d642830d6afea2da28b9dd42f",
+ "prompts:sozialrecht": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
+ "prompts:sozialrecht+erbrecht": "2c32d158574cee6d8c0e12bf60055226117be6ffb2386e12844bb6fe7449a1ad",
+ "prompts:unknown-area": "344cdd43e7ae27d282245e68b670410d3d557041656c59f3fcfed7285f282e38",
+ "regime:banners": {
+  "2022-01-01": [
+   "a.F._vor_2023",
+   "13edb2b5e88ab5ef9b3a75f42243e6538fbdcd01ec47204b0a098d6253986e4f"
+  ],
+  "2023-07-01": [
+   "a.F._2023",
+   "908e58d92b9f79f2c8c04da0ae3bb7f9521e3bc1e024ef61fddb5e0ffa139cb0"
+  ],
+  "2025-06-01": [
+   "a.F._2025",
+   "eb26cda45af83299b4dea4290ef73cc35be8d8b73b1cdb236d6ea26a79d4af32"
+  ],
+  "2026-07-01": [
+   "n.F._2026",
+   "0a770a9adb0b2c58faef782e16bb699a720c7965cdf2afb01390a5fc70bf4993"
+  ]
+ }
+}

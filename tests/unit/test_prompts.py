@@ -15,18 +15,16 @@ Covers
   that lived in ``app.services.reasoning`` before the multi-area refactor.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-93: profiles are module data; the
+# former core constants are derived here from the public API (byte-identity
+# with v2.0.0 is pinned separately in test_wp93_golden.py).
 
 from __future__ import annotations
 
 import pytest
 
-from app.services.prompts import (
-    ERBRECHT_PROMPTS,
-    REGISTRY,
-    SOCIALRECHT_PROMPTS,
-    get_prompts,
-)
+from app.modules.areas import area_tables
+from app.services.prompts import DEFAULT_PROMPTS, get_prompts
 from app.services.reasoning import (
     _ADVERSARIAL_REVIEW_SYSTEM,
     _CLAIM_CONSTRUCTION_SYSTEM,
@@ -37,6 +35,12 @@ from app.services.reasoning import (
     _TRIAGE_SYSTEM,
     _VERIFICATION_SYSTEM,
 )
+
+# WP-93: area profiles live in modules/*/prompts/profile.yaml. The names the
+# v1.x tests used are derived from the public API.
+SOCIALRECHT_PROMPTS = DEFAULT_PROMPTS
+ERBRECHT_PROMPTS = get_prompts(["erbrecht"])
+REGISTRY = {area: get_prompts([area]) for area in area_tables().prompt_profiles}
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +108,7 @@ class TestGetPromptsDispatch:
         assert result == ERBRECHT_PROMPTS
 
     def test_unknown_area_falls_back_to_socialrecht(self) -> None:
-        result = get_prompts(["mietrecht"])  # not in REGISTRY yet
+        result = get_prompts(["mietrecht"])  # stub module without a profile
         assert result == SOCIALRECHT_PROMPTS
 
     def test_garbage_value_falls_back_to_socialrecht(self) -> None:

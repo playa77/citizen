@@ -12,7 +12,7 @@ Tests cover:
 - Pseudonymization reinjection roundtrip
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-93: imports re-pointed to module code.
 
 from __future__ import annotations
 
@@ -33,8 +33,8 @@ from app.services.document_generators import (
     select_generator,
     validate_slot_claim,
 )
-from app.services.fristen import FristResult, compute_widerspruchsfrist
-from app.services.rules_engine import ReconciliationLineItem
+from citizen_modules.sozialrecht.rules_engine import ReconciliationLineItem
+from tests.unit.sozialrecht_fristen import FristResult, compute_widerspruchsfrist
 
 # ===========================================================================
 # Fixtures

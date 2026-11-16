@@ -15,7 +15,8 @@ Multi-area cases merge profiles into ONE coherent persona with a single
 output-format block, instead of concatenating whole prompts (which
 produced conflicting, duplicated JSON-format instructions in v0.x).
 
-Adding a new legal area = adding one AreaProfile + one REGISTRY entry.
+Adding a new legal area = shipping a module with a ``prompts`` profile
+(``modules/<id>/prompts/profile.yaml``, WP-93); no core change.
 
 Prompt-engineering conventions applied to every stage prompt:
   * XML-tagged sections (<rolle>, <kontext>, <aufgabe>, <regeln>,
@@ -34,7 +35,15 @@ prompt text itself).
 
 Versioning / breaking changes
 -----------------------------
-1.0.0 (this file)
+2.0.0 (WP-93)
+  * BREAKING (internal API): area profiles moved out of the core into
+    module data (``modules/*/prompts/profile.yaml``); ``SOZIALRECHT_PROFILE``,
+    ``ERBRECHT_PROFILE``, ``SOCIALRECHT_PROMPTS``, ``ERBRECHT_PROMPTS`` and
+    ``REGISTRY`` are removed. ``DEFAULT_PROMPTS`` (the ``DEFAULT_MODULE``
+    set) replaces ``SOCIALRECHT_PROMPTS``; ``get_prompts`` is unchanged in
+    signature and output. Prompt *texts* are byte-identical to 1.0.0.
+
+1.0.0
   * BREAKING: retires the v0.x byte-for-byte regression contract
     (``get_prompts([])`` still falls back to the Sozialrecht set, but
     the prompt *contents* are rewritten). The golden-string tests in
@@ -52,7 +61,7 @@ Versioning / breaking changes
   * Last release of the duplicated-constant architecture.
 """
 
-# Semantic Version: 1.0.0
+# Semantic Version: 2.0.0
 
 from __future__ import annotations
 
@@ -106,74 +115,27 @@ class AreaProfile:
     adversary_examples: str
 
 
-SOZIALRECHT_PROFILE = AreaProfile(
-    key="sozialrecht",
-    display_name="deutsches Sozialrecht",
-    statutes="insbesondere SGB I, SGB II, SGB III, SGB IX, SGB X und SGB XII",
-    document_examples=(
-        "eines Jobcenter-Bescheids, einer Anhörung, einer Aufforderung zur "
-        "Mitwirkung, einer Einladung, einer Eingliederungsvereinbarung oder "
-        "eines Schreibens des Sozialamts oder einer anderen Sozialbehörde"
-    ),
-    issue_terms=(
-        "Meldefristverletzung",
-        "Mitwirkungspflicht",
-        "Eingliederungsvereinbarung",
-        "Bewilligungsbescheid",
-        "Aufhebungs- und Erstattungsbescheid",
-        "Kosten der Unterkunft",
-        "Sanktion nach § 31 SGB II",
-        "Anhörung nach § 24 SGB X",
-        "Gesundheitsprüfung",
-    ),
-    formal_examples="Anhörung, Begründung, Frist, Zuständigkeit",
-    material_examples="Anspruch, Sanktion, Mitwirkung, Unterkunftskosten",
-    answerable_with=("deutschem Sozialrecht, insbesondere SGB II, SGB X oder SGB XII"),
-    hierarchy_example="SGB II > § 31 > Abs. 1",
-    adversary_examples="das Jobcenter, das Sozialamt oder eine andere Behörde",
-)
+# Concrete profiles are module data (``modules/<id>/prompts/profile.yaml``,
+# WP-93) and are loaded through the module area tables below.
 
 
-ERBRECHT_PROFILE = AreaProfile(
-    key="erbrecht",
-    display_name="deutsches Erbrecht und Erbschaftsteuerrecht",
-    statutes=(
-        "insbesondere BGB (Erbrecht), ErbStG, Höfeordnung, Schenkungsrecht "
-        "und FamFG für Erbschaftsverfahren"
-    ),
-    document_examples=(
-        "eines Testaments, eines Erbvertrags, eines Erbscheinsantrags, "
-        "eines Finanzamtsbescheids zur Erbschaftsteuer, eines Schreibens "
-        "des Nachlassgerichts oder eines Familienrechtsstreits mit "
-        "erbrechtlichen Bezügen"
-    ),
-    issue_terms=(
-        "gesetzliche Erbfolge",
-        "Testamentsauslegung",
-        "Pflichtteilsanspruch",
-        "Erbquote",
-        "Vorausvermächtnis",
-        "Annahme und Ausschlagung der Erbschaft",
-        "Erbschaftsteuer-Freibetrag",
-        "Steuerklasse",
-        "Bewertung des land- und forstwirtschaftlichen Vermögens",
-        "Höfeordnung",
-        "Hofesübergabe",
-    ),
-    formal_examples="Testamentsform, Eröffnungstermin, Anfechtungsfrist",
-    material_examples=(
-        "Erbquote, Pflichtteil, Freibetrag, Steuerklasse, Bewertung "
-        "landwirtschaftlicher Betriebe"
-    ),
-    answerable_with=(
-        "deutschem Erbrecht, Erbschaftsteuerrecht oder Schenkungsrecht "
-        "(insbesondere BGB, ErbStG, Höfeordnung, FamFG)"
-    ),
-    hierarchy_example="BGB > § 1922",
-    adversary_examples=(
-        "Miterben, Pflichtteilsberechtigte, das Finanzamt oder das " "Nachlassgericht"
-    ),
-)
+def profile_from_mapping(data: dict[str, object]) -> AreaProfile:
+    """Build an :class:`AreaProfile` from a module prompt-profile mapping."""
+    terms = data.get("issue_terms") or ()
+    if not isinstance(terms, list | tuple):
+        raise TypeError("prompt profile 'issue_terms' must be a list")
+    return AreaProfile(
+        key=str(data["key"]),
+        display_name=str(data["display_name"]),
+        statutes=str(data["statutes"]),
+        document_examples=str(data["document_examples"]),
+        issue_terms=tuple(str(t) for t in terms),
+        formal_examples=str(data["formal_examples"]),
+        material_examples=str(data["material_examples"]),
+        answerable_with=str(data["answerable_with"]),
+        hierarchy_example=str(data["hierarchy_example"]),
+        adversary_examples=str(data["adversary_examples"]),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -812,28 +774,37 @@ def _merge_profiles(profiles: list[AreaProfile]) -> AreaProfile:
 
 
 # ---------------------------------------------------------------------------
-# Registry — area → prompts
+# Registry — area key → profile (module data, WP-93)
 # ---------------------------------------------------------------------------
 
-_PROFILE_REGISTRY: dict[str, AreaProfile] = {
-    "sozialrecht": SOZIALRECHT_PROFILE,
-    "erbrecht": ERBRECHT_PROFILE,
-    # Shares the Erbrecht profile (ErbStG / BGB-Schenkung overlap).
-    "schenkungsrecht": ERBRECHT_PROFILE,
-    # Shares the Erbrecht profile because of succession overlap.
-    "familienrecht": ERBRECHT_PROFILE,
-}
 
-SOCIALRECHT_PROMPTS: dict[str, str] = _build_prompt_set(SOZIALRECHT_PROFILE)
-ERBRECHT_PROMPTS: dict[str, str] = _build_prompt_set(ERBRECHT_PROFILE)
+@lru_cache(maxsize=1)
+def _profile_registry() -> dict[str, AreaProfile]:
+    """Area key → profile, from the modules owning each key.
 
-# All areas currently registered (public, kept for API compatibility).
-REGISTRY: dict[str, dict[str, str]] = {
-    "sozialrecht": SOCIALRECHT_PROMPTS,
-    "erbrecht": ERBRECHT_PROMPTS,
-    "schenkungsrecht": ERBRECHT_PROMPTS,
-    "familienrecht": ERBRECHT_PROMPTS,
-}
+    Keys sharing one module profile (a legacy alias, or a stub that
+    inherits another module's profile) map to the *same* object, so the
+    multi-area composer collapses them exactly as v2.0.0 did.
+    """
+    from app.modules.areas import area_tables
+
+    tables = area_tables()
+    by_module: dict[str, AreaProfile] = {
+        module_id: profile_from_mapping(data) for module_id, data in tables.module_profiles.items()
+    }
+    return {key: by_module[str(data["key"])] for key, data in tables.prompt_profiles.items()}
+
+
+def _default_profile() -> AreaProfile:
+    from app.modules.areas import area_tables
+
+    tables = area_tables()
+    return profile_from_mapping(tables.module_profiles[tables.default_module])
+
+
+#: Prompt set of the default module (``DEFAULT_MODULE``, D-036) — the
+#: fallback for requests without (known) legal areas.
+DEFAULT_PROMPTS: dict[str, str] = _build_prompt_set(_default_profile())
 
 
 # ---------------------------------------------------------------------------
@@ -843,21 +814,22 @@ REGISTRY: dict[str, dict[str, str]] = {
 
 @lru_cache(maxsize=32)
 def _cached_multi_area_set(profile_keys: tuple[str, ...]) -> dict[str, str]:
-    profiles = [_PROFILE_REGISTRY[key] for key in profile_keys]
+    registry = _profile_registry()
+    by_key = {prof.key: prof for prof in registry.values()}
+    profiles = [by_key[key] for key in profile_keys]
     return _build_prompt_set(_merge_profiles(profiles))
 
 
-# Public-facing combined-area lookup, used by reasoning.py.
+# Public-facing combined-area lookup, used by the pipeline.
 def get_prompts(legal_areas: list[str] | None = None) -> dict[str, str]:
     """Return the prompt set appropriate for a case covering *legal_areas*.
 
     Parameters
     ----------
     legal_areas :
-        A list of legal-area keys (e.g. ``["sozialrecht"]``,
-        ``["erbrecht", "familienrecht"]``). Unknown / empty values fall
-        back to the Sozialrecht prompt set (default-area behaviour
-        preserved from v0.x; prompt *contents* are v1.x).
+        A list of area keys (module ids or legacy aliases). Unknown / empty
+        values, or areas whose module ships no prompt profile, fall back to
+        the default module's prompt set (``DEFAULT_PROMPTS``).
 
     Returns
     -------
@@ -868,18 +840,19 @@ def get_prompts(legal_areas: list[str] | None = None) -> dict[str, str]:
         ``claim_construction``, ``verification``, ``output``.
     """
     if not legal_areas:
-        return dict(SOCIALRECHT_PROMPTS)
+        return dict(DEFAULT_PROMPTS)
 
-    # Resolve to unique profiles, preserving request order (aliases such
-    # as schenkungsrecht/familienrecht collapse onto their base profile).
+    # Resolve to unique profiles, preserving request order (keys sharing a
+    # module profile collapse onto it).
+    registry = _profile_registry()
     unique_profiles: list[AreaProfile] = []
     for area in legal_areas:
-        profile = _PROFILE_REGISTRY.get(area)
+        profile = registry.get(area)
         if profile is not None and profile not in unique_profiles:
             unique_profiles.append(profile)
 
     if not unique_profiles:
-        return dict(SOCIALRECHT_PROMPTS)
+        return dict(DEFAULT_PROMPTS)
 
     if len(unique_profiles) == 1:
         return dict(_build_prompt_set(unique_profiles[0]))

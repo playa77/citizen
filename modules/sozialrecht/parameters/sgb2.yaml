@@ -1,0 +1,262 @@
+# Versioned legal parameters of module `sozialrecht` (WP-93; ARCHITECTURE.md § 3.4).
+#
+# Seeded into `legal_parameter` by the generic module loader
+# (`python -m scripts.seed_module_parameters`), domain from module.yaml
+# `parameters.domain` (`sgb2` until WP-94 rewrites stored domains to module
+# ids). Rows are upserted on (key, domain, valid_from).
+#
+# Fields: key, value_numeric | value_json | value_text, unit, valid_from,
+# valid_to (open-ended if absent), review_status (verified | proposed),
+# regime, notes (stored); `basis` is the legal citation for reviewers
+# (documentation only, not stored).
+#
+# Extracted verbatim from v2.0.0 scripts/seed_legal_parameters.py
+# (27 rows; D-050: the unbounded § 11b top bracket uses the finite
+# sentinel 10_000_000.0 — JSON/JSONB cannot carry Infinity).
+
+parameters:
+- key: sgb2.regelbedarf.rbs1
+  value_numeric: 563
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs2
+  value_numeric: 506
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs3
+  value_numeric: 451
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs4
+  value_numeric: 451
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs5
+  value_numeric: 471
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs6
+  value_numeric: 390
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs7
+  value_numeric: 357
+  unit: EUR
+  valid_from: 2024-01-01
+  valid_to: 2025-12-31
+  review_status: verified
+  regime: '2024'
+  basis: § 20 SGB II i.d.F. des RBEG 2024 (BGBl. 2023 I Nr. 337)
+- key: sgb2.regelbedarf.rbs1
+  value_numeric: 563
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.regelbedarf.rbs2
+  value_numeric: 506
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.regelbedarf.rbs3
+  value_numeric: 451
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.regelbedarf.rbs4
+  value_numeric: 451
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.regelbedarf.rbs5
+  value_numeric: 471
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.regelbedarf.rbs6
+  value_numeric: 390
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.regelbedarf.rbs7
+  value_numeric: 357
+  unit: EUR
+  valid_from: 2025-01-01
+  valid_to: 2026-12-31
+  review_status: verified
+  regime: '2025'
+  basis: RBEG 2025 (BGBl. 2024 I Nr. 397) — Beträge unverändert gegenüber 2024
+- key: sgb2.par11b.base_deduction
+  value_numeric: 100.0
+  unit: EUR
+  valid_from: 2023-07-01
+  review_status: verified
+  regime: 2023-07_bracket_change
+  basis: § 11b Abs. 2/3 SGB II, Bürgergeld-Gesetz (BGBl. 2023 I Nr. 182), gültig ab 2023-07-01
+- key: sgb2.par11b.income_bracket_1_pct
+  value_json:
+    min_income: 100.01
+    max_income: 520.0
+    deduction_pct: 0
+  unit: PERCENT
+  valid_from: 2023-07-01
+  review_status: verified
+  regime: 2023-07_bracket_change
+  basis: § 11b Abs. 2/3 SGB II, Bürgergeld-Gesetz (BGBl. 2023 I Nr. 182), gültig ab 2023-07-01
+- key: sgb2.par11b.income_bracket_2_pct
+  value_json:
+    min_income: 520.01
+    max_income: 1000.0
+    deduction_pct: 10
+  unit: PERCENT
+  valid_from: 2023-07-01
+  review_status: verified
+  regime: 2023-07_bracket_change
+  basis: § 11b Abs. 2/3 SGB II, Bürgergeld-Gesetz (BGBl. 2023 I Nr. 182), gültig ab 2023-07-01
+- key: sgb2.par11b.income_bracket_3_pct
+  value_json:
+    min_income: 1000.01
+    max_income: 1500.0
+    deduction_pct: 15
+  unit: PERCENT
+  valid_from: 2023-07-01
+  review_status: verified
+  regime: 2023-07_bracket_change
+  basis: § 11b Abs. 2/3 SGB II, Bürgergeld-Gesetz (BGBl. 2023 I Nr. 182), gültig ab 2023-07-01
+- key: sgb2.par11b.income_bracket_4_pct
+  value_json:
+    min_income: 1500.01
+    max_income: 10000000.0
+    deduction_pct: 30
+  unit: PERCENT
+  valid_from: 2023-07-01
+  review_status: verified
+  regime: 2023-07_bracket_change
+  basis: § 11b Abs. 2/3 SGB II, Bürgergeld-Gesetz (BGBl. 2023 I Nr. 182), gültig ab 2023-07-01
+- key: sgb2.vermoegen.karenzzeit
+  value_numeric: 40000.0
+  unit: EUR
+  valid_from: 2011-01-01
+  valid_to: 2022-12-31
+  review_status: verified
+  regime: a.F.
+  basis: § 12 SGB II a.F.
+- key: sgb2.vermoegen.karenzzeit_partner
+  value_numeric: 15000.0
+  unit: EUR
+  valid_from: 2011-01-01
+  valid_to: 2022-12-31
+  review_status: verified
+  regime: a.F.
+  basis: § 12 SGB II a.F.
+- key: sgb2.vermoegen.post_karenzzeit
+  value_numeric: 15000.0
+  unit: EUR
+  valid_from: 2011-01-01
+  valid_to: 2022-12-31
+  review_status: verified
+  regime: a.F.
+  basis: § 12 SGB II a.F.
+- key: sgb2.vermoegen.karenzzeit
+  unit: EUR
+  valid_from: 2026-01-01
+  review_status: proposed
+  regime: n.F.
+  notes: 'OQ-3: verify_against BGBl. 2026 I Nr. 107'
+  basis: 'Bürgergeld-Gesetz 2026 — OQ-3: Werte nicht bestätigt, nicht erfinden'
+- key: sgb2.vermoegen.karenzzeit_partner
+  unit: EUR
+  valid_from: 2026-01-01
+  review_status: proposed
+  regime: n.F.
+  notes: 'OQ-3: verify_against BGBl. 2026 I Nr. 107'
+  basis: 'Bürgergeld-Gesetz 2026 — OQ-3: Werte nicht bestätigt, nicht erfinden'
+- key: sgb2.vermoegen.post_karenzzeit
+  unit: EUR
+  valid_from: 2026-01-01
+  review_status: proposed
+  regime: n.F.
+  notes: 'OQ-3: verify_against BGBl. 2026 I Nr. 107'
+  basis: 'Bürgergeld-Gesetz 2026 — OQ-3: Werte nicht bestätigt, nicht erfinden'
+- key: sgb2.sanktion.minderung_pct
+  value_json:
+    tiers:
+    - offence: meldeversaeumnis
+      pct: 10
+      max_months: 3
+    - offence: pflichtverletzung_erstmalig
+      pct: 30
+      max_months: 3
+    - offence: pflichtverletzung_wiederholt
+      pct: 60
+      max_months: 3
+    - offence: pflichtverletzung_wiederholt_ube
+      pct: 100
+      max_months: 2
+  unit: PERCENT
+  valid_from: 2011-01-01
+  valid_to: 2023-06-30
+  review_status: verified
+  regime: a.F.
+  basis: § 31 ff. SGB II a.F.
+- key: sgb2.sanktion.minderung_pct
+  value_json:
+    tiers:
+    - offence: meldeversaeumnis
+      pct: 10
+      max_months: 1
+    - offence: pflichtverletzung_erstmalig
+      pct: 10
+      max_months: 1
+    - offence: pflichtverletzung_wiederholt
+      pct: 20
+      max_months: 2
+    - offence: pflichtverletzung_wiederholt_ube
+      pct: 30
+      max_months: 2
+  unit: PERCENT
+  valid_from: 2023-07-01
+  review_status: verified
+  regime: n.F.
+  basis: Bürgergeld-Gesetz 2023 (BGBl. 2023 I Nr. 182)

@@ -1,0 +1,48 @@
+# Intake tables of module `sozialrecht` (WP-93; ARCHITECTURE.md § 3.8).
+# `areas` is keyed by area key (module id or a legacy alias it owns, D-038):
+# `keywords` drive the keyword fallback of the intake interview,
+# `synonyms` map free-text LLM answers back onto the area key.
+# Extracted verbatim from the v2.0.0 hard-coded tables in
+# app/services/intake.py and app/api/routes/presets.py.
+
+areas:
+  sozialrecht:
+    keywords:
+    - jobcenter
+    - bürgergeld
+    - sozialamt
+    - sanktion
+    - harzt iv
+    - harzt 2
+    - sgb
+    - sozialhilfe
+    - arbeitslosengeld
+    - kosten der unterkunft
+    - eingliederungsvereinbarung
+    - aufstocker
+    - regelsatz
+    synonyms:
+    - social
+    - sozial
+    - soziales
+    - arbeitslosengeld ii
+presets:
+- id: sozialrecht-allgemein
+  name: Sozialrecht (Bürgergeld / Jobcenter)
+  description: 'Standardfall im SGB II / SGB X: Bürgergeld-Bescheid, Sanktion, Anhörung, Eingliederungsvereinbarung oder Aufhebungs- und Erstattungsbescheid.'
+  legal_areas:
+  - sozialrecht
+  typical_scenarios:
+  - Jobcenter hat meinen Bürgergeld-Bescheid aufgehoben.
+  - Ich habe eine Sanktion nach § 31 SGB II bekommen.
+  - Meine Kosten der Unterkunft wurden nicht anerkannt.
+preset_keyword_fallback:
+- preset: sozialrecht-allgemein
+  primary_area: sozialrecht
+  keywords:
+  - jobcenter
+  - bürgergeld
+  - sanktion
+  - sozialamt
+  - sgb
+fallback_preset: sozialrecht-allgemein
