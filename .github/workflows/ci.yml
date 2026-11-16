@@ -70,7 +70,9 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://citizen:citizen@localhost:5432/citizen_test
           OPENROUTER_API_KEY: ci-dummy-key
-        run: pytest tests/unit/ -v
+        run: |
+          alembic upgrade head
+          pytest tests/unit/ -v
 
       - name: Integration tests
         env:
