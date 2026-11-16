@@ -438,3 +438,137 @@ trail the disclosure work is meant to strengthen.
 **Rationale:** Three-line scoping fix, fully reversible (R1); verified by the
 leak-free test run (`pytest tests/unit/test_disclosure.py` — no SAWarning) and
 the full green suite (854 unit + 37 integration).
+
+---
+
+## Re-founding on the free public path (2026-11-16)
+
+Owner decisions given in conversation on 2026-11-16 (answers to clarifying
+questions): free public path; Sozialrecht becomes a pluggable module and stays
+the default; ten further area modules queued; roadmap v3.0.0 with `/api/v1`
+kept additive; full free-path scope incl. dossier, UI, funding. This sweep is
+**documentation and architecture only** — no production code changed.
+Artefacts: `ARCHITECTURE.md`, `docs/roadmap-v3.0.0.md`,
+`docs/module-catalog.md`.
+
+### D-034 R2 — 2026-11-16 — Free public path
+**Decision:** Citizen follows the free public path (landscape survey
+addendum "05 — free public path", 2026-11-15): the whole project stays MIT and
+free, makes no money, and is not built for lawyers. Product center: a
+client-side preparation assistant that lets a person arrive at a lawyer or
+advice-center appointment with the information the professional needs; the
+central deliverable is the Mandatsvorbereitungs-Dossier.
+**Rejected:** (a) Path 1 — open core plus friction plus paid services;
+(b) Path 2 — clean-room closed commercial product. Both require purpose
+revisions, carry commercial RDG/UWG exposure, and do not serve the declared
+claimant-side purpose as directly.
+**Rationale:** Owner decision. Lowest regulatory friction (own-matter RDG
+posture, FOSS carve-out with Art. 50 already implemented), zero running cost,
+direct social impact; keeps every later option open. Accepted consequence:
+sustainability depends on grants, institutional adopters and bounded
+community contributions, not sales (roadmap v3.0.0 Track G).
+
+### D-035 R2 — 2026-11-16 — Declared purpose widened (amends D-020)
+**Decision:** The intended purpose (Art. 3(12) KI-VO) becomes:
+**citizen-side self-help and appointment preparation for natural persons in
+their own legal matters, across the enabled legal-area modules, plus
+assistance to advice centers acting within their own RDG basis.** The D-020
+prohibition is generalised: no documentation, pitch or UI copy may describe
+Citizen or any module as a tool that an authority, court, law-enforcement or
+migration body (or a contractor acting for one) uses to evaluate, decide on or
+enforce against individuals. Each module adds its own deny phrases (e.g. Annex III(6)
+law enforcement for Strafrecht, Annex III(7) migration for Aufenthaltsrecht).
+**Rejected:** Keeping D-020's SGB-II-only wording and adding areas under it —
+the purpose statement would no longer describe the system, which is exactly
+the unmanaged-classification risk D-020 exists to prevent.
+**Rationale:** Widening breadth is a purpose change and must be declared, not
+drifted into. Takes effect in compliance copy with DISCLAIMER v3.0.0
+(roadmap WP-96); until then the disclaimer pair and `DISCLAIMER_VERSION` stay
+unchanged, and non-Sozialrecht modules remain `experimental`.
+
+### D-036 R2 — 2026-11-16 — Core + module architecture; Sozialrecht default
+**Decision:** Restructure into a domain-neutral core plus legal-area modules
+(contract: `ARCHITECTURE.md` § 2). The existing SGB II/X implementation is
+extracted into `modules/sozialrecht` as the first module and is the default
+via a new setting `DEFAULT_MODULE` (default `sozialrecht`): any request that
+names no module runs exactly as in v2.0.0. Modules are predominantly data and
+content; code only for deterministic calculators through a typed SDK. The
+Fristen engine is split into a generic core (calendar, Bekanntgabe fictions,
+rollover) and per-module deadline specs as data.
+**Rejected:** (a) One fork/deployment per area — multiplies maintenance of the
+compliance core. (b) Keeping area logic in core services behind
+`if area == …` branches — that is the v2.0.0 state that this decision
+dissolves; it does not scale past one verified area.
+**Rationale:** Owner instruction. The hard parts of Citizen (evidence binding,
+quote verification, deterministic engines on versioned parameters, regime
+handling, goldset gating, compliance posture) are already German-law-generic;
+the area knowledge is the variable part and belongs in reviewable packages.
+P9 exit gate: zero goldset regression vs a frozen v2.0.0 baseline.
+
+### D-037 R2 — 2026-11-16 — Module enablement defaults follow DEPLOYMENT_MODE
+**Decision:** If `ENABLED_MODULES` is unset, the enabled set is: in `dev` and
+`self` every installed module of tier `experimental` or `verified`; in
+`provider` only `verified` modules. `community` modules are never enabled
+implicitly. `DEFAULT_MODULE` must be in the enabled set or startup fails.
+**Rejected:** (a) Default `["sozialrecht"]` everywhere — would turn today's
+accepted experimental-area requests into errors in `dev`/`self`, a breaking
+change to `/api/v1`. (b) All installed modules everywhere — would expose
+ungated modules to third parties in `provider` mode, against the duty of care
+for vulnerable users.
+**Rationale:** Re-uses the one auditable switch of D-019 for the one
+question that matters at deployment: are third parties served by an unverified
+module. Preserves current v2.0.0 behaviour in the default `dev` posture.
+
+### D-038 R1 — 2026-11-16 — Module queue and legacy area keys
+**Decision:** Queue ten modules beside Sozialrecht, in this default order:
+M1 `schuldnerrecht`, M2 `mietrecht`, M3 `arbeitsrecht`, M4 `vertragsrecht`
+(Verbraucher-/Vertragsrecht), M5 `verkehrsrecht`, M6 `familienrecht`,
+M7 `aufenthaltsrecht`, M8 `steuerrecht` (ESt natural persons), M9 `erbrecht`,
+M10 `strafrecht` (profiles: `docs/module-catalog.md`). Legacy v2.0.0 keys:
+`schenkungsrecht` → alias of `erbrecht`; `vertragsrecht` → id kept for M4;
+`verwaltungsrecht` → core procedural library, not a module; `andere` →
+engine-less catch-all at `experimental`.
+**Rejected:** Ordering by author interest or by existing experimental code —
+the addendum requires necessity first; the order is a necessity hypothesis
+(clientele overlap with Sozialrecht, existential stakes, deadline shortness,
+deterministic tractability), to be re-ordered by decision when adopter
+evidence arrives (roadmap OQ-4). Aufenthaltsrecht is placed after the
+multilingual UI layer because it cannot serve its clientele without it.
+**Rationale:** Owner selected the area set (proposed set plus Strafrecht);
+module ids reuse existing keys where they exist to avoid data migration.
+
+### D-039 R2 — 2026-11-16 — API stays /api/v1; versioning scheme
+**Decision:** No `/api/v2`. Module support is additive to `/api/v1`:
+`legal_areas` values are module ids, empty → `DEFAULT_MODULE`; new
+`/modules*` and `/cases/{id}/dossier` routes; new error codes
+`MODULE_NOT_ENABLED`, `MODULE_UNKNOWN`; additive response keys only. Core
+package version becomes 3.0.0 at P9 exit (declared-purpose change is a
+major event). Modules carry their own semver with a `core_api` compatibility
+range; parameter sets, goldsets, dossier schema (`citizen-dossier-v1.0`),
+provenance spec (`citizen-provenance-v1.1`, adds module ids/versions) and
+disclaimer are versioned independently (`ARCHITECTURE.md` § 6). Every
+`case_run` records the module versions it ran with.
+**Rejected:** Module-scoped `/api/v2/{module}/…` routes — a breaking change
+with no client benefit while one generic route set serves all modules.
+**Rationale:** Owner decision on versioning; existing clients and the
+G4 doc-parity guard keep working; reproducibility of every date and amount
+requires pinning every input.
+
+### D-040 PENDING — 2026-11-16 — Consumer UI location
+**Status:** Recommended: the consumer UI lives in a separate repository
+(`citizen-web`) that consumes `/api/v1`; D-025 (no UI in this repository)
+stands. Alternative: reverse D-025 and serve a local-first web app from this
+backend. Owner decision required before roadmap WP-120; D-025 was
+owner-instructed and is not reversed by this sweep.
+
+### D-041 R1 — 2026-11-16 — Module licensing and third-party code
+**Decision:** All first-party modules are MIT. Inbound contributions are
+MIT-in = MIT-out with DCO sign-off; no CLA (the CLA requirement belonged to
+the closed-variant paths). AGPL/GPL components (e.g. gettsim for tax/benefit
+math, CourtListener) are never embedded in the core or a module; they may be
+used only as unmodified sidecars behind an API, or replaced by law-derived
+MIT reimplementations.
+**Rejected:** Embedding gettsim in the Steuerrecht module — would make the
+distribution AGPL.
+**Rationale:** Keeps the whole project unambiguously MIT, which is what makes
+module contribution and institutional reuse frictionless.

@@ -1,0 +1,377 @@
+# Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
+
+<!-- Version: 3.0.0 | 2026-11-16 -->
+<!-- Supersedes: roadmap v2.0.0 (P6–P8, WP-60…WP-69) for all NEW work.
+     Roadmap v2.0.0 remains the record of the compliance work it delivered;
+     its open items are carried over in § 2 below. -->
+<!-- Canonical version source: pyproject.toml. Baseline: v2.0.0. -->
+<!-- Phase/WP numbering continues the decade scheme: P9→WP-90s, P10→WP-100s,
+     P11→WP-110s, P12→WP-120s, P13→WP-130s (one WP per module, sub-WPs .1–.9),
+     Track G→WP-140s. Numbering is identity, not order — order is § 10. -->
+<!-- Decisions: D-034 … D-041 (appended to DECISIONS.md on 2026-11-16). -->
+<!-- Architecture: ARCHITECTURE.md · Module scope: docs/module-catalog.md -->
+
+---
+
+## 0. Baseline and Trigger
+
+### 0.1 Baseline (v2.0.0, as shipped)
+
+API-only FastAPI service (D-025) analysing SGB II/X Bescheide: 9-stage
+evidence-bound pipeline, deterministic Fristen and SGB II calculation engines,
+versioned parameter store, intertemporal regime handling, pseudonymization +
+egress guard + inference profiles, goldset v0.2.0 + eval harness with
+regression gate, `DEPLOYMENT_MODE` dev/self/provider (D-019), disclaimer-ack
+gate, Art. 50 disclosure/provenance (D-032), purpose-drift lint (D-020),
+PostgreSQL-only (D-024). Nine further area keys exist as **experimental**
+prompt profiles without engines or goldsets.
+
+### 0.2 Trigger
+
+Owner decision of 2026-11-16 (D-034): Citizen follows the **free public path**
+— MIT, non-commercial, not built for lawyers. The product is a client-side
+preparation assistant: a person arrives at the lawyer or advice-center
+appointment with the information the professional needs to work efficiently.
+Concretely the owner instructed:
+
+1. Redesign the project so the current Sozialrecht implementation is a
+   **pluggable module**, still the **default** when nothing else is configured
+   (D-036).
+2. Queue **ten further areas** of German law that affect citizens as natural
+   persons, each as a full module serving the same API (D-038):
+   Schuldner-, Miet-, Arbeits-, Verbraucher-/Vertrags-, Verkehrs-/Bußgeld-,
+   Familien-, Aufenthalts-, Steuer- (ESt), Erb- und Strafrecht.
+3. Include the full free-path scope: appointment dossier, module platform,
+   polished consumer UI with plain-language layer, funding and governance.
+4. Versioning: this roadmap is v3.0.0; the API stays `/api/v1`, additive only
+   (D-039).
+
+### 0.3 Why this is a re-founding, not a pivot
+
+The v2.0.0 compliance program was designed for exactly this product: the
+declared purpose was already claimant-side self-help (D-020), the endpoint
+already "jede Sozialberatungsstelle". The free path keeps the lowest
+regulatory friction of all evaluated paths (own-matter RDG posture, FOSS
+carve-out of the AI Act with Art. 50 already implemented, no commercial
+UWG/pricing exposure). What changes is **breadth** (eleven areas instead of
+one) and **surface** (dossier + UI). Both change the declared purpose, so
+D-020 is widened by D-035 rather than silently stretched.
+
+### 0.4 Governing principles for every work package
+
+- **Prepares, does not advise.** D-021 invariant in every module.
+- **Every date and every euro comes from a deterministic engine**, never from
+  an LLM guess.
+- **Every correctness surface is goldset-gated** — including plain-language
+  simplification.
+- **Depth before breadth:** module refactor → dossier → module platform → UI
+  → area modules. Breadth without the dossier is feature theatre.
+- **Everything versioned** (ARCHITECTURE.md § 6): core, module, parameter set,
+  goldset, dossier schema, provenance spec, disclaimer.
+
+---
+
+## 1. Decisions (ratified 2026-11-16, see DECISIONS.md)
+
+| ID | Tag | Decision |
+|---|---|---|
+| D-034 | R2 | Free public path: MIT, non-commercial, no Kanzlei features |
+| D-035 | R2 | Declared purpose widened to citizen-side self-help and appointment preparation in own matters across modules (amends D-020) |
+| D-036 | R2 | Core + module architecture; Sozialrecht = first module and `DEFAULT_MODULE` |
+| D-037 | R2 | Module enablement defaults keyed to `DEPLOYMENT_MODE` |
+| D-038 | R1 | Queue of ten modules, order, legacy-key mapping |
+| D-039 | R2 | `/api/v1` stays, additive only; versioning scheme for core/modules/artefacts |
+| D-040 | PENDING | Consumer UI lives in a separate repository (`citizen-web`); D-025 stands for this repo |
+| D-041 | R1 | Licensing: all first-party modules MIT, no CLA; AGPL components (gettsim) only as unmodified sidecars |
+
+---
+
+## 2. Carry-over from roadmap v2.0.0
+
+Open items verified against the repository on 2026-11-16:
+
+| ID | Item | Evidence | Lands in |
+|---|---|---|---|
+| C-1 | D-021 (RDG single-case invariant) is cited as built but was never appended to the ledger — only proposed in roadmap v2.0.0 § 1 | `DECISIONS.md` has no D-021 entry | WP-90 |
+| C-2 | `AI-USAGE.md` (WP-63, D-022) not created | file absent | WP-140 |
+| C-3 | Purpose-drift lint does not scan `DISCLAIMER_*.md`; two default globs match nothing (D-029) | `scripts/check_purpose_drift.py` `DEFAULT_TARGETS` | WP-96 |
+| C-4 | Art. 50(2) coverage gaps: conversation first-message pipeline terminal event and case-chat `done` carry no provenance (D-032) | D-032 sub-decisions | WP-96 |
+| C-5 | Provider go/no-go artefact (WP-69) and DPIA/AVV chain (WP-68) not present as documents | no `PROVIDER-GO-NOGO.md`, no DPIA document | WP-125 (re-scoped for consumer distribution) |
+
+---
+
+## 3. Phase P9 — Module Architecture (Sozialrecht becomes module 1)
+
+**Goal:** the core contains no area-specific knowledge; Sozialrecht runs as
+`modules/sozialrecht` with zero behaviour change. **Release: core 3.0.0,
+`sozialrecht` module 1.0.0.**
+
+### WP-90 — Ratify and document
+- Append C-1 (D-021) to the ledger as a ratification event.
+- Freeze a **v2.0.0 baseline eval report** for goldset v0.2.0 (`--save`);
+  this is the zero-regression reference for the P9 exit gate.
+- Exit: baseline report committed under `eval/results/`; D-021 in ledger.
+
+### WP-91 — Module contract and registry
+- `app/modules/sdk.py` (stable import surface), `manifest.schema.json`,
+  `registry.py` (discover → validate → enable → resolve), settings
+  `DEFAULT_MODULE` (default `sozialrecht`), `ENABLED_MODULES` (default: tier
+  rule of D-037). conftest defaults for both.
+- Module lint: module code imports only `app.modules.sdk`.
+- Exit: registry unit tests; startup refuses an invalid enabled manifest.
+
+### WP-92 — Fristen core split
+- Move calendar, holidays, Bekanntgabe fiction library, rollover library,
+  Rechtsbehelfsbelehrung extension into `app/fristen/`; implement the
+  `fristen.yaml` spec evaluator (ARCHITECTURE.md § 2.3).
+- Express the existing SGB X/SGG rules as `modules/sozialrecht/fristen.yaml`.
+- Exit: every existing `tests/unit/test_fristen.py` case passes through the
+  spec path unchanged; new spec-evaluator tests.
+
+### WP-93 — Extract Sozialrecht
+- Move into `modules/sozialrecht/`: prompts, intake routing, presets,
+  corpus scope, parameters (seed loader replaces
+  `scripts/seed_legal_parameters.py`), calculators (`rules_engine.py`,
+  calculation extraction prompt), regime provider, document templates,
+  goldset v0.2.0. Full list: ARCHITECTURE.md § 8.
+- Remaining nine legacy areas become **stub modules** at tier
+  `experimental` carrying their existing prompt profiles and corpus mapping —
+  behaviour preserved, no engines (`schenkungsrecht` as alias of `erbrecht`,
+  `verwaltungsrecht` folded into the core procedural library, `andere` as
+  catch-all; D-038).
+- Exit: grep of `app/` for area ids returns only registry/alias tables.
+
+### WP-94 — Data model migration
+- Migration `013`: `legal_module` table; `case_run_area.legal_area` FK +
+  `module_version`; drop CHECK `ck_case_run_area_legal_area`;
+  `legal_parameter.domain` `sgb2 → sozialrecht`. Idempotent DDL (D-005/D-027
+  practice), single linear chain.
+- Exit: G2 (single head) green; fresh and upgraded DBs identical.
+
+### WP-95 — API additions (additive)
+- `GET /modules`, `GET /modules/{id}`, `GET /modules/{id}/goldset`; error codes
+  `MODULE_NOT_ENABLED`, `MODULE_UNKNOWN`; `resolved_modules` in responses;
+  `modules` key on `/meta/version`.
+- `API_DOCUMENTATION.md` updated in the same change (G4 parity guard).
+- Exit: route-surface and doc-parity tests green; existing routes unchanged.
+
+### WP-96 — Compliance deltas for modularity
+- Provenance spec `citizen-provenance-v1.1`: `modules[{id, version,
+  parameter_set}]` (additive); close C-4 gaps.
+- Lint: add `DISCLAIMER_*.md`, `ARCHITECTURE.md`, `docs/*.md`,
+  `modules/*/copy/**`, `modules/*/DISCLAIMER_ADDENDUM.md`; per-module deny
+  phrases from manifests; drop dead globs (C-3).
+- `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` v3.0.0: Part A/C rewritten for the
+  widened purpose (D-035), new Part D (module addenda); `DISCLAIMER_VERSION`
+  bump.
+- Exit: lint green over the extended scan set; disclosure tests extended.
+
+### WP-97 — P9 exit gate
+- Goldset v0.2.0 eval **zero regression** vs WP-90 baseline; full suite +
+  ruff + mypy strict + lint green; requests without `legal_areas` behave
+  byte-identically (golden SSE transcripts).
+- Cut core **3.0.0**; `sozialrecht` **1.0.0**; CHANGELOG + D-entry.
+
+---
+
+## 4. Phase P10 — The Appointment Dossier (Mandatsvorbereitung)
+
+**Goal:** the product's central deliverable exists for Sozialrecht and is
+generic for every later module. **Release: core 3.1.0.**
+
+- **WP-100 — Dossier schema.** JSON Schema `citizen-dossier-v1.0` (8 sections,
+  ARCHITECTURE.md § 3.7); storage decision (`case_run.dossier_json` vs table).
+- **WP-101 — Chronology builder.** Sachverhalts-Chronologie from confirmed OCR
+  texts + extracted dates; user confirmation step via API.
+- **WP-102 — Module dossier content.** `dossier.yaml` (Dokumentencheckliste,
+  Fragenliste) for Sozialrecht; generic merge for multi-module cases.
+- **WP-103 — Generator + export.** `POST/GET /cases/{id}/dossier`;
+  print-ready PDF (local rendering, no external service) + JSON; provenance
+  marker embedded in both.
+- **WP-104 — Dossier goldset.** Expected dossier sections per goldset case;
+  metrics: deadline completeness (must be 100 %), checklist recall,
+  chronology accuracy.
+- **Exit:** every goldset case produces a schema-valid dossier; deadline
+  completeness 100 %; owner review of two PDF samples with a practitioner.
+
+---
+
+## 5. Phase P11 — Module Platform
+
+**Goal:** modules can be developed, versioned, updated and contributed
+safely. **Release: core 3.2.0.**
+
+- **WP-110 — Module versioning and errata.** Module semver rules
+  (ARCHITECTURE.md § 6.2), per-module CHANGELOG, errata surfacing on
+  `/modules/{id}`, `case_run.module_version` queries for affected cases.
+- **WP-111 — Signed update channel.** Static signed feeds (GitHub releases)
+  for parameter sets and corpus change notices; signature verification before
+  apply; no telemetry.
+- **WP-112 — Out-of-tree modules.** Entry-point loading at tier `community`;
+  never enabled in `provider` unless explicitly listed.
+- **WP-113 — Corpus automation.** Daily `gii-toc.xml` change detection for
+  gesetze-im-internet sources; RII/OLDA case-law ingestion (free, keyless)
+  for verified modules.
+- **WP-114 — Citation service.** German §/ECLI citation parser + verification
+  (eyecite pattern, BSD-licensed reference, MIT reimplementation).
+- **WP-115 — Module authoring kit.** `scripts/new_module.py` scaffold,
+  manifest validator CLI, `docs/MODULE-AUTHORING.md`, goldset template.
+- **WP-116 — MCP surface (optional).** Read-only MCP server over modules,
+  corpus and deadline catalog for civic-tech integrations.
+- **Exit:** a scaffolded test module passes validation, ships a parameter
+  update via the signed feed, and is visible via `/modules`.
+
+---
+
+## 6. Phase P12 — Consumer UI and Plain-Language Layer
+
+**Goal:** a polished, accessible, local-first guided journey for citizens.
+**Release: `citizen-web` 1.0.0; core 3.3.0 (plain-language API fields).**
+
+- **WP-120 — UI location decision (D-040).** Owner confirms separate
+  repository consuming `/api/v1` (recommended) or reverses D-025.
+- **WP-121 — Guided journey.** Module choice (intake) → upload → OCR confirm →
+  analyse → **Fristen banner (impossible to miss)** → findings in plain
+  language → adjudication → dossier → drafts.
+- **WP-122 — Plain-language layer.** Per finding type and deadline:
+  Bürgersprache DE, Leichte Sprache DE for critical copy, EN; further
+  languages per module need (M7). Served as module `copy/` content; API adds
+  `plain` fields (additive). Language is goldset-gated (OQ-3).
+- **WP-123 — Accessibility.** WCAG 2.1 AA / BITV 2.0 target; screen-reader
+  journey test; no discouraging language (duty-of-care checklist).
+- **WP-124 — Consumer inference default.** Measure local-model runtimes against
+  the goldset (OQ-2); ship the consumer distribution with an `on-prem`
+  profile default if it meets the gate, otherwise documented EU-API option.
+- **WP-125 — Consumer compliance surfaces.** Art. 50 notice in the UI,
+  disclaimer in Bürgersprache, ack flow; privacy profile for B2C distribution;
+  re-scoped C-5 go/no-go checklist for a public release.
+- **Exit:** usability test with ≥ 5 people from the target clientele (via a
+  partner Beratungsstelle) completing the journey on a synthetic Bescheid;
+  accessibility audit passed.
+
+---
+
+## 7. Phase P13 — Area Modules M1–M10
+
+**Goal:** ten further modules reach `verified`, each serving the same API.
+Profiles and statutory anchors: `docs/module-catalog.md`.
+
+Each module is one WP with the same nine sub-WPs:
+
+| Sub-WP | Content |
+|---|---|
+| .1 | Scope & sources: verify statutory anchors (dated), manifest, corpus scope ingested |
+| .2 | Parameters with source quotes + named parameter steward |
+| .3 | Deadline specs + golden date tests |
+| .4 | Calculators (pure, parameter-backed, cent-exact tests) |
+| .5 | Action-draft templates (`[BITTE PRÜFEN]` slots) |
+| .6 | Intake schema + dossier checklist + lawyer-question list |
+| .7 | Plain-language copy (DE Bürgersprache, EN; Leichte Sprache for critical) + review |
+| .8 | Goldset ≥ 15 cases, published eval report, gate thresholds |
+| .9 | Compliance: disclaimer addendum, deny phrases, special regimes; promotion D-entry; module 1.0.0 |
+
+| WP | Module | Notes |
+|---|---|---|
+| WP-130 | M1 `schuldnerrecht` | Pfändungstabelle parameter feed (annual, 1 July) |
+| WP-131 | M2 `mietrecht` | Landesverordnungen sourcing (Kappungsgrenze, Mietpreisbremse) |
+| WP-132 | M3 `arbeitsrecht` | § 4 KSchG banner = `critical` |
+| WP-133 | M4 `vertragsrecht` | EUR-Lex source type for VO 261/2004 |
+| WP-134 | M5 `verkehrsrecht` | builds core OWiG procedure library |
+| WP-135 | M6 `familienrecht` | Düsseldorfer Tabelle reuse terms (OQ-7) |
+| WP-136 | M7 `aufenthaltsrecht` | requires P12 i18n; strongest duty-of-care profile |
+| WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
+| WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
+| WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+Modules may run in parallel once P11 exits (community stewards); the queue
+order is the maintainer's default order. A module that cannot pass its gate
+stays `experimental` — it is never promoted to meet a date.
+
+---
+
+## 8. Track G — Sustainability and Governance (WP-140s; starts immediately)
+
+- **WP-140 — Prototype Fund application.** Window closes **2026-11-30**
+  (14 days from this roadmap). Pitch: local-first, evidence-bound,
+  AI-Act-compliant legal self-help with public eval metrics; phases P9–P10
+  as the funded scope. Also create `AI-USAGE.md` (C-2) — applicants are
+  better served by transparent authorship.
+- **WP-141 — NLnet application.** Deadline **2027-01-03**; check fit with the
+  stricter generative-AI policy (Oct 2026) first (OQ-5).
+- **WP-142 — GOVERNANCE.md + MAINTENANCE.md.** Maintainer, module stewards,
+  parameter-steward duty per module, review rules, bus-factor plan, release
+  cadence.
+- **WP-143 — CONTRIBUTING.md.** Modules are the contribution surface; MIT
+  inbound = outbound, no CLA (D-041); DCO sign-off.
+- **WP-144 — Institutional adopters.** Partner Beratungsstellen /
+  Verbraucherzentralen / Mietervereine / Schuldnerberatungen as validators,
+  plain-language reviewers and goldset case sources (synthetic only).
+- **WP-145 — Public quality evidence.** Publish eval reports per module and
+  release; the goldset is the public quality claim.
+
+---
+
+## 9. Roles
+
+| Role | Responsibility |
+|---|---|
+| Maintainer (Dan) | core, releases, decision ledger, final review |
+| Module steward | one per module: scope, parameters, goldset, copy review routing |
+| Parameter steward | per module: transcribes and dates parameter changes until LegalDocML.de makes them machine-readable |
+| Plain-language reviewer | per module/language; correctness of simplification |
+| Practitioner reviewer | lawyer/advisor sample review of dossiers (not legal advice to the project; quality feedback) |
+
+---
+
+## 10. Sequencing and dates
+
+```
+2026-11 ─ Track G: WP-140 (Prototype Fund, due 2026-11-30)
+        ─ P9  WP-90 → WP-91 → (WP-92 ∥ WP-94) → WP-93 → WP-95 → WP-96 → WP-97  ⇒ core 3.0.0
+2026-12 ─ 2026-12-02: Art. 50(2) transition end — binds only in provider mode
+2027-01 ─ Track G: WP-141 (NLnet, due 2027-01-03)
+        ─ P10 dossier                                                         ⇒ core 3.1.0
+        ─ P11 module platform (WP-115 authoring kit first)                   ⇒ core 3.2.0
+        ─ P12 consumer UI (may start in parallel with P11 after WP-120)     ⇒ citizen-web 1.0.0
+        ─ P13 M1 → M2 → M3 → M4 → M5 → M6 → M7 (needs P12 i18n) → M8 → M9 → M10
+```
+
+No calendar commitments beyond the external deadlines are made here: this is a
+single-maintainer, grant-dependent project, and the gates — not the dates —
+decide promotion. Funding outcomes re-plan P12/P13 capacity by decision entry.
+
+---
+
+## 11. Explicitly out of scope
+
+- Kanzlei features: billing, RVG invoicing, Aktenverwaltung, multi-mandant,
+  SSO (D-034).
+- Monetization, accounts, hosted multi-tenant service.
+- Authority-side use of any module (D-020/D-035); the lint enforces it.
+- Drafting of substantive legal reasoning for court filings (Klagebegründung,
+  Asylvortrag, Verteidigungsschrift) — drafts stay form-level building blocks.
+- Embedding AGPL/GPL code into the MIT core (D-041).
+- Any `/api/v2` (opened only by a dedicated decision).
+
+---
+
+## 12. Open questions
+
+| ID | Question | Owner | Blocks |
+|---|---|---|---|
+| OQ-1 | Prototype Fund: apply in class 03? Which stream (data security / software infrastructure / resilience)? | Dan | WP-140, within days |
+| OQ-2 | Consumer default inference: which local runtime/model passes the goldset gate? | maintainer | WP-124 |
+| OQ-3 | Who reviews plain-language simplifications (Beratungsstellen, legal-informatics students)? | Dan + adopters | WP-122, every .7 |
+| OQ-4 | Module order: confirm the necessity hypothesis with user-need evidence (adopter case statistics) | Dan + adopters | P13 order |
+| OQ-5 | NLnet generative-AI policy fit | Dan | WP-141 |
+| OQ-6 | UI repository location (D-040) | Dan | WP-120 |
+| OQ-7 | Reuse terms of Düsseldorfer Tabelle and Landes-Mietrechtsverordnungen as parameter data | counsel/adopters | WP-131, WP-135 |
+| OQ-8 | Art. 10 DSGVO: may Strafrecht cases ever use external inference, even pseudonymized? | counsel | WP-139 |
+| OQ-9 | StBerG boundary for the Steuerrecht module's advice-center use (currently disabled) | counsel | WP-137 |
+
+---
+
+*Changes to this document follow semantic versioning. This is roadmap v3.0.0;
+it supersedes roadmap v2.0.0 for new work only and does not alter the record of
+completed P0–P8 work. Legal characterisations herein are engineering-planning
+inputs, not legal advice.*

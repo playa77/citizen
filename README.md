@@ -1,4 +1,4 @@
-# Citizen — Bescheid-Prüfung für deutsches Sozialrecht
+# Citizen — Bescheide verstehen, Fristen halten, gut vorbereitet zum Anwaltstermin
 
 ## Rechtsinformation, keine Rechtsberatung — siehe [DISCLAIMER_DE.md](DISCLAIMER_DE.md)
 
@@ -6,17 +6,32 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688.svg)](https://fastapi.tiangolo.com)
 
-Citizen ist eine lokale, evidenzgebundene Analyse-Engine für deutsche
-Rechtsbescheide — mit verifiziertem Schwerpunkt auf dem Sozialrecht
-(Bürgergeld/Grundsicherungsgeld, SGB II/X). Die Software liest eingescannte
-Behördenkorrespondenz ein und beantwortet vier Fragen: **Was steht da drin?
-Stimmt das? Bis wann muss ich reagieren? Was mache ich jetzt?** Jede Aussage
-wird an den Gesetzestext gebunden, jede Berechnung deterministisch
-nachgerechnet, jede Frist auf den Tag genau bestimmt — und die Qualität wird
-gegen ein öffentliches, versioniertes Golden Set gemessen statt behauptet.
+Citizen ist eine freie (MIT), nicht-kommerzielle, lokale und evidenzgebundene
+Analyse-Engine für Menschen, die ein Schreiben in **ihrer eigenen
+Angelegenheit** bekommen haben — einen Bescheid, eine Kündigung, einen
+Mahnbescheid. Die Software liest die Korrespondenz ein und beantwortet vier
+Fragen: **Was steht da drin? Stimmt das? Bis wann muss ich reagieren? Was
+mache ich jetzt?** Jede Aussage wird an den Gesetzestext gebunden, jede
+Berechnung deterministisch nachgerechnet, jede Frist auf den Tag genau
+bestimmt — und die Qualität wird gegen ein öffentliches, versioniertes Golden
+Set gemessen statt behauptet.
+
+Das Ziel: Wer zur Anwältin, zum Anwalt oder zur Beratungsstelle geht, bringt
+dieselbe Informationsqualität mit, mit der dort effizient gearbeitet werden
+kann — als strukturiertes **Mandatsvorbereitungs-Dossier**. Citizen bereitet
+vor; es berät nicht. Entschieden wird von Menschen.
 
 **Warum es dieses Projekt gibt:** [DISCLAIMER_DE.md](DISCLAIMER_DE.md),
 Teil A („Projektstatement")
+
+## Ausrichtung und Stand
+
+| | |
+|---|---|
+| **Weg** | Freier öffentlicher Pfad: MIT, kostenlos, nicht-kommerziell, nicht als Kanzlei-Software gebaut (Entscheidung **D-034**) |
+| **Architektur (Ziel)** | Domänenneutraler Kern + austauschbare **Rechtsgebiets-Module**; Sozialrecht ist Modul 1 und Standard (**D-036**) — siehe [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **Roadmap** | [docs/roadmap-v3.0.0.md](docs/roadmap-v3.0.0.md): Modul-Architektur → Dossier → Modul-Plattform → Bürger-Oberfläche → zehn weitere Module |
+| **Stand des Codes** | v2.0.0: ein verifiziertes Gebiet (Sozialrecht), Logik noch fest verdrahtet; der Umbau zu Modulen ist Phase P9 der Roadmap |
 
 ## Rechtlicher Status
 
@@ -38,23 +53,33 @@ Der jeweils aktive Modus wird über die Einstellung `DEPLOYMENT_MODE` bestimmt
 (Entscheidung **D-019** im [Entscheidungs-Ledger](DECISIONS.md)); im Modus
 `dev` verweigert die Instanz ohne `CITIZEN_SYNTHETIC_DATA_ONLY=true` den Start.
 
-## Rechtsgebiete
+## Rechtsgebiete und Module
 
-| Gebiet | Gesetze | Status |
-|---|---|---|
-| **Sozialrecht** (Bürgergeld / Jobcenter) | SGB I, II, III, IX, X, XII | ✅ **unterstützt** — goldset-verifiziert |
-| **Erbrecht** | BGB (Erbrecht), ErbStG, HöfeO | ⚠️ experimentell |
-| **Schenkungsrecht** | BGB (Schenkung), ErbStG | ⚠️ experimentell |
-| **Familienrecht** | BGB (Familienrecht) | ⚠️ experimentell |
-| **Mietrecht** | BGB (Mietrecht) | ⚠️ experimentell |
-| **Arbeitsrecht** | BGB, KSchG, BUrlG, TVG | ⚠️ experimentell |
-| **Vertragsrecht** | BGB (Schuldrecht) | ⚠️ experimentell |
-| **Verwaltungsrecht** | VwVfG, SGG | ⚠️ experimentell |
-| **Strafrecht** | StGB | ⚠️ experimentell |
-| **Andere** | Auffangkategorie | ⚠️ experimentell |
+Jedes Rechtsgebiet wird ein eigenes, versioniertes Modul (Gesetzeskorpus,
+Parameter, Fristen, Rechenwerke, Entwürfe, Dossier-Checkliste,
+Bürgersprache, Golden Set) hinter derselben API. Ohne weitere Einstellung
+startet Citizen mit dem Modul **Sozialrecht**. Profile und Reihenfolge:
+[docs/module-catalog.md](docs/module-catalog.md).
 
-Experimentelle Gebiete sind funktionsfähig, aber nicht verifiziert; sie sind
-in den API-Ausgaben entsprechend gekennzeichnet.
+| # | Modul | Inhalt | Stand |
+|---|---|---|---|
+| M0 | `sozialrecht` | Bürgergeld/Grundsicherungsgeld (SGB II), SGB X, SGG | ✅ **unterstützt** — goldset-verifiziert, **Standardmodul** |
+| M1 | `schuldnerrecht` | Mahnbescheid, Inkasso, Pfändung, P-Konto, Weg in die Verbraucherinsolvenz | 🗓️ geplant |
+| M2 | `mietrecht` | Mieterhöhung, Betriebskosten, Mängel, Kündigung | ⚠️ experimentell → geplant als Modul |
+| M3 | `arbeitsrecht` | Kündigung (3-Wochen-Frist), Lohn, Urlaub, Zeugnis | ⚠️ experimentell → geplant als Modul |
+| M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht, Widerruf, Gewährleistung, Fluggastrechte | ⚠️ experimentell → geplant als Modul |
+| M5 | `verkehrsrecht` | Bußgeldbescheid, Punkte, Fahrverbot | 🗓️ geplant |
+| M6 | `familienrecht` | Unterhalt, Trennung, Unterhaltsvorschuss | ⚠️ experimentell → geplant als Modul |
+| M7 | `aufenthaltsrecht` | Aufenthaltstitel, Asylverfahren (Fristschutz), Einbürgerung | 🗓️ geplant |
+| M8 | `steuerrecht` | Einkommensteuerbescheid, Einspruch (nur eigene Angelegenheit) | 🗓️ geplant |
+| M9 | `erbrecht` | Erbfolge, Ausschlagung, Pflichtteil, Erbschaft- und Schenkungsteuer | ⚠️ experimentell → geplant als Modul |
+| M10 | `strafrecht` | Beschuldigte und Verletzte: Strafbefehl, Anhörung, Rechte — Verweis auf Verteidigung zuerst | ⚠️ experimentell → geplant als Modul |
+
+Experimentelle Gebiete sind heute funktionsfähig, aber nicht verifiziert
+(nur Prompt-Profile, keine eigenen Fristen- oder Rechenwerke); sie sind in den
+API-Ausgaben entsprechend gekennzeichnet. Die Altschlüssel `schenkungsrecht`,
+`verwaltungsrecht` und `andere` werden beim Umbau auf Module abgebildet
+(D-038).
 
 ## Kernfunktionen
 
@@ -119,6 +144,21 @@ in den API-Ausgaben entsprechend gekennzeichnet.
 * **API-only:** Kein Web-UI, kein GUI-Client in diesem Repository — die
   versionierte REST-API unter `/api/v1` ist die einzige externe Schnittstelle
   (D-025), dokumentiert in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+  Eine Bürger-Oberfläche ist geplant (Roadmap P12); wo sie liegt, ist offen
+  (D-040).
+
+### Geplant (Roadmap v3.0.0 — noch nicht implementiert)
+
+* **Modul-System:** Rechtsgebiete als versionierte Pakete, ein-/ausschaltbar
+  (`DEFAULT_MODULE`, `ENABLED_MODULES`), neue Endpunkte `/api/v1/modules`.
+* **Mandatsvorbereitungs-Dossier:** Chronologie, Dokumenten-Checkliste,
+  Fristen, Rechenergebnisse, belegte Fundstellen, Fragenliste für den Termin,
+  Entwürfe — als druckfertiges PDF und als maschinenlesbares JSON.
+* **Bürgersprache:** verständliche Erklärung je Befund, Leichte Sprache für
+  Fristen, mehrere Sprachen — wie jede andere Ausgabe gegen das Golden Set
+  geprüft.
+* **Signierte Aktualisierungen** für Parameter und Gesetzesstände, ohne
+  Telemetrie und ohne gehosteten Dienst.
 
 ## Architektur
 
@@ -130,6 +170,7 @@ in den API-Ausgaben entsprechend gekennzeichnet.
 | **LLM-Anbindung** | Versionierte Inferenzprofile (`eu-avv` Standard, `extern-openrouter`, `on-prem`-Slot); Modell je Pipeline-Stufe konfigurierbar; Fallback-Kette |
 | **OCR** | pdfplumber → PyMuPDF → Tesseract (deutsch) |
 | **Tooling** | ruff (Format & Lint), mypy (strict), pytest (Unit + Integration) |
+| **Module (Ziel)** | Kern + Rechtsgebiets-Module mit Manifest, versioniert und getrennt vom Kern — siehe [ARCHITECTURE.md](ARCHITECTURE.md) |
 
 ## Datenbankschema (14 Tabellen)
 
@@ -283,12 +324,14 @@ citizen/
 │   └── utils/                            # image, pdf, text, tokens
 ├── eval/                                 # Goldsets, Eval-Harness, Reports
 ├── tests/                                # 37 Testdateien (~12.600 Zeilen)
-├── docs/                                 # Roadmap v2.0.0 (WP-Nummerierung, von
+├── docs/                                 # Roadmap v3.0.0 (aktuell), Modul-Katalog,
+│                                         #  Roadmap v2.0.0 (abgelöst; von
 │                                         #  DISCLAIMER_*.md referenziert)
 ├── devdocs/                              # Betriebsdokumentation (Dev-Instanz)
 ├── scripts/                              # Wartungs-Skripte (Purpose-Drift-Lint,
 │                                         #  Parameter-Seeding, Benchmark)
 ├── API_DOCUMENTATION.md                  # Vollständiger API-Vertrag (D-025)
+├── ARCHITECTURE.md                       # Ziel-Architektur: Kern + Module
 ├── docker-compose.yml
 ├── Dockerfile
 ├── pyproject.toml
