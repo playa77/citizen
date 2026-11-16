@@ -35,6 +35,14 @@ read by every LLM call site (not embedded in the prompt text).
 
 Versioning / breaking changes
 -----------------------------
+3.0.1 (WP-97 gate fix)
+  * P-04 claim rules: the "nicht belegbar" claim is one per response (not one
+    per question) and only for *legal* questions — questions the document
+    itself answers (Angaben, Daten, Fristen, Beträge) need no claim. Claim
+    density restored to 1–3 per legal question (max 12). Raised because the
+    3.0.0 wording turned four of twelve goldset cases into responses that
+    cited nothing at all (WP-97 gate, D-062).
+
 3.0.0 (prompt upgrade, docs/prompt-upgrade-proposal.md)
   * BREAKING (prompt texts): every stage prompt rewritten; shared blocks
     S-01…S-04 rewritten, S-07 (no computation) added; ``STRICT_SUFFIX``
@@ -88,7 +96,7 @@ from typing import Any
 
 #: Version of the prompt set as a whole (every stage, shared block, endpoint
 #: and calculator prompt). Bumped on any change to prompt text.
-PROMPT_SET_VERSION = "3.0.0"
+PROMPT_SET_VERSION = "3.0.1"
 
 
 def prompt_digest(text: str) -> str:
@@ -420,10 +428,11 @@ _CONFIDENCE_RULE = (
 )
 
 _UNSOURCED_CLAIM = (
-    "- Trägt keine Quelle eine Antwort auf eine Frage: genau ein Claim mit claim_text "
-    "„Mit den bereitgestellten Quellen nicht belegbar: <Frage in Kurzform>“, claim_type "
-    '"interpretation", confidence_score 0.2{empty_fields}. Gib nie eine leere Liste '
-    "zurück, wenn Fragen vorliegen.\n"
+    "- Trägt keine Quelle eine Antwort auf eine rechtliche Frage: höchstens ein solcher "
+    "Claim insgesamt (nicht je Frage) mit claim_text „Mit den bereitgestellten Quellen "
+    "nicht belegbar: <Frage in Kurzform>“, claim_type "
+    '"interpretation", confidence_score 0.2{empty_fields}. Fragen, die das Dokument '
+    "selbst beantwortet (Angaben, Daten, Fristen, Beträge), brauchen keinen Claim.\n"
 )
 
 _RESULT_RULE = (
@@ -460,8 +469,8 @@ def _render_grounded_answer(p: _Slots) -> str:
         f"{_NUTZERKONTEXT}\n"
         "</eingaben>\n\n"
         "<aufgabe>\n"
-        "1. claims: Beantworte jede Rechtsfrage mit 1 oder 2 Claims, insgesamt höchstens "
-        "10.\n"
+        "1. claims: Beantworte jede rechtliche Frage mit 1 bis 3 Claims, insgesamt höchstens "
+        "12.\n"
         "2. sections: Schreibe die sieben Abschnitte nur auf Grundlage der Claims und des "
         "Dokuments.\n"
         "Widerspricht eine Abschnittsregel einer Claim-Regel, gilt die Claim-Regel.\n"
