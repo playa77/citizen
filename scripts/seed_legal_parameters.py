@@ -97,7 +97,10 @@ _PARAMETERS: list[tuple] = [
      None, "PERCENT", "sgb2",
      date(2023, 7, 1), None, "verified", "2023-07_bracket_change", None),
     ("sgb2.par11b.income_bracket_4_pct", None,
-     {"min_income": 1500.01, "max_income": float("inf"), "deduction_pct": 30},
+     {"min_income": 1500.01, "max_income": 10_000_000.0, "deduction_pct": 30},
+     # ^ top bracket is unbounded in law; JSON/JSONB cannot carry ±Infinity
+     # (asyncpg rejects the token), so a finite sentinel far above any real
+     # monthly income represents "no upper bound".
      None, "PERCENT", "sgb2",
      date(2023, 7, 1), None, "verified", "2023-07_bracket_change", None),
 

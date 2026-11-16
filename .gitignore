@@ -122,5 +122,10 @@ QWEN.md
 deploy_db.sh
 
 # Eval — goldsets are tracked; results and run outputs are not
-eval/results/
+# Eval results are git-ignored by default; the P9 baseline report is the
+# tracked exception (WP-90 exit criterion: report committed under
+# eval/results/). Negations must come after the ignore rule.
+eval/results/*
+!eval/results/.gitkeep
+!eval/results/20261116T094340Z-e9fb87a.json
 eval/__pycache__/
