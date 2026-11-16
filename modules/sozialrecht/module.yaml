@@ -21,3 +21,4 @@ scope:
     - "Rentenversicherung (SGB VI)"
     - "Krankenversicherung (SGB V)"
 legacy_aliases: []
+fristen: fristen.yaml
