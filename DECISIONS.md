@@ -1004,3 +1004,95 @@ mixes "installed" with "runs here"; `/modules` already answers the former.
 calling `/analyze`, and every accepted request states which module and
 version it ran with. R2: one observable behaviour change (unknown keys
 `409 → 422`) on an error path; reversible in code, no data impact.
+
+### D-059 R2 — 2026-11-16 — WP-96 compliance deltas: provenance v1.1, lint 2.0.0, DISCLAIMER 3.0.0
+**Scope and acceptance (recorded before the change, AGENTS.md):** roadmap
+v3.0.0 WP-96 exactly — provenance `modules[…]` + C-4, lint scan set + module
+deny phrases + C-3, disclaimer v3.0.0 with Part D + `DISCLAIMER_VERSION`
+bump. Constraints: `/api/v1` additive only (D-039); no area logic in core
+services; the Art. 50 helper never raises. Acceptance: purpose-drift lint
+green over the extended scan set, disclosure tests extended to the new
+surfaces and the `modules` list, `API_DOCUMENTATION.md` parity guard green,
+full unit + integration suites, ruff + mypy strict on `app/`.
+**Decision:**
+(a) **Provenance `citizen-provenance-v1.1`** (`app/services/disclosure.py`
+1.1.0): `ProvenanceMarker.modules: list[{id, version, parameter_set}]`, the
+six v1.0 fields unchanged, `spec_version` reads `-v1.1`.
+`build_disclosure_and_provenance(settings, legal_areas=None)` resolves modules
+exactly like the engines (`request_modules`): empty → `DEFAULT_MODULE`, legacy
+alias → owning module, core-procedural keys → none (so a procedural-only
+request yields `[]`). `parameter_set` = `"<module version>+<latest valid_from
+of the module's parameter files>"` (semver build-metadata form of the
+ARCHITECTURE.md § 6.3 definition), `null` without parameters;
+`app.modules.runtime.module_provenance()` computes it once per process and
+startup warms it (an unreadable parameter file of an enabled module now
+refuses startup, like an invalid manifest). Never-raise is kept: a failing
+module entry keeps its id with `"unknown"` fields; unresolvable area keys
+yield one all-`"unknown"` entry — not `[]`, which means "procedural only".
+(b) **C-4 closed:** the conversation first-message pipeline terminal event
+(`run_first_message_pipeline`) and the case-chat `done` event
+(`generate_case_chat_response`) now carry `disclosure` + `provenance`
+(additive keys; error events still carry neither). Case chat names the
+modules of the case's recorded `case_run_area` keys (primary first; none
+recorded → `DEFAULT_MODULE`); documents name the module whose template
+rendered the draft; conversations name `DEFAULT_MODULE` (they take no
+`legal_areas`).
+(c) **Lint 2.0.0** (`scripts/check_purpose_drift.py`, C-3 closed): core scan
+set `README*.md`, `DISCLAIMER_*.md`, `ARCHITECTURE.md`, `docs/*.md` (empty
+pattern → warning); optional module set `modules/*/copy/**`,
+`modules/*/DISCLAIMER_ADDENDUM.md`. The dead globs `STATEMENT.md`,
+`COMPLIANCE*.md` and `docs/pitch*` (all three matched nothing; the roadmap
+counted two) are dropped. Module deny phrases are read from each manifest's
+`compliance.purpose_drift_deny_file` and apply to the **whole** scan set —
+core documents describe every module, so a module's forbidden framing is
+forbidden everywhere; a missing, malformed or out-of-module deny file is an
+operational error (exit 2). A line that must quote deny phrases is exempted
+only by a same-line `purpose-drift: allow` marker, counted in the summary;
+the one use is `docs/roadmap-v2.0.0.md:192`, which quotes the WP-61 list.
+Shipped deny files: `sozialrecht` (benefit-agency framing), `strafrecht`
+(law enforcement, Annex III(6)), `familienrecht` (youth welfare office /
+family court) — 76 phrases in total.
+(d) **DISCLAIMER 3.0.0 (DE/EN):** Part A and Part C rewritten for D-035
+(citizen-side self-help and appointment preparation in the person's own
+matters, across modules; C.4.4 self-assessment extended to Annex III
+points 6, 7 and 8(a); drift safeguards, Art. 50 status, own-matter RDG
+limit per module); new Part D (D.1 ground rules and tiers, D.2
+`sozialrecht`, D.3 `strafrecht`, D.4 remaining experimental stubs). Module
+addenda live in `modules/<id>/DISCLAIMER_ADDENDUM.md` (`## DE`/`## EN`) and
+are copied verbatim — `tests/unit/test_disclaimer_addenda.py` enforces the
+copy, that Part D names every installed module, and version alignment.
+(e) **`DISCLAIMER_VERSION` `v0.1.0` → `v3.0.0`**: the ack version is now
+`"v"` + the disclaimer document version (B.12 states it). The old value was
+never tied to the document (which was already at 2.0.0).
+(f) **Module versions:** `strafrecht` and `familienrecht` 0.1.1 → 0.2.0
+(MINOR: new declared compliance artefacts, no behaviour change);
+`sozialrecht` stays at the unreleased 1.0.0 (entry extended).
+**Behaviour changes (why R2):** every client must re-acknowledge with
+`X-Disclaimer-Ack: v3.0.0` — the old value answers 403, and a deployed
+`.env` that pins `DISCLAIMER_VERSION=v0.1.0` keeps the old version
+(DEPLOYMENT.md notes both). Every analyze terminal event, including requests
+without `legal_areas`, now carries `provenance.spec_version = -v1.1` and
+`modules`; the WP-97 golden SSE transcripts must therefore be recorded on v1.1
+(or normalise `provenance`, which already varies by `timestamp_utc`).
+**Rejected:** (1) Scoping module deny phrases to the module's own files — a
+README or disclaimer sentence framing the core for law enforcement would
+pass. (2) Rewording `docs/roadmap-v2.0.0.md` to avoid the quotation — it is
+the superseded record of WP-61; an audited marker keeps it verbatim.
+(3) Generating Part D from the addenda at build time — the disclaimer must
+stay a readable, reviewable document in the repository; the verbatim test
+gives the same guarantee. (4) Addenda for all seven stubs now — they carry no
+engines; D.4 states their limits once, and an addendum arrives with each
+module's P13 work package (`strafrecht` got one now because its StPO
+deadlines are the shortest and highest-stakes). (5) Keeping `v0.1.0` and
+bumping to `v0.2.0` — preserves an ack-version scheme unrelated to the
+document it acknowledges. (6) Omitting `modules` when it would be the
+default — every marker should state what produced the content.
+**Observed, not changed:** `GET /api/v1/meta/disclaimer/text` still serves a
+short, stale v1-era HTML text (it names "Arbeitsagentur, Sozialamt" as advice
+centers and shows the app version); aligning it with DISCLAIMER 3.0.0 is a
+content change to a served contract and is left for a follow-up decision.
+`API_DOCUMENTATION.md` § 7.2 names `case_chat_failed` as the case-chat error
+code while the service emits `case_chat_llm_failed` — pre-existing, untouched.
+**Rationale:** The widened purpose (D-035) takes effect only with a published
+disclaimer, a lint that covers every module's copy and an AI-output marker
+that names the modules — WP-96 delivers all three and closes C-3/C-4.

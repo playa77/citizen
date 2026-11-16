@@ -1,13 +1,15 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.3 | 2026-11-16 — WP-95: § 5 status (module routes, error
+<!-- Version: 3.0.0-draft.4 | 2026-11-16 — WP-96: § 5 provenance v1.1 as built,
+     § 6.3 disclaimer/provenance rows, § 7 lint + Part D as built.
+     3.0.0-draft.3 | 2026-11-16 — WP-95: § 5 status (module routes, error
      codes, resolved_modules, meta/version modules as built; provenance still open),
      § 8 goldset row done.
      3.0.0-draft.2 | 2026-11-16 — WP-93: § 2.1/2.2 layout + manifest keys as
      built (prompts, document_templates), § 8 status column. -->
 <!-- Status: TARGET architecture, partly delivered: WP-91 (registry/SDK),
-     WP-92 (Fristen core), WP-93 (Sozialrecht extraction), WP-94 (data model)
-     and WP-95 (module API) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
+     WP-92 (Fristen core), WP-93 (Sozialrecht extraction), WP-94 (data model),
+     WP-95 (module API) and WP-96 (compliance deltas) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
 <!-- Canonical package version: pyproject.toml (stays 2.0.0 until P9 exit). -->
@@ -351,7 +353,10 @@ Behavioral rules (D-039):
 `MODULE_NOT_ENABLED` (gating `/analyze`; `/intake` and `/presets` take no
 `legal_areas` input and report `resolved_modules` instead), `resolved_modules`
 and `meta/version.modules` are built; `API_DOCUMENTATION.md` § 8.10 is the
-contract. Provenance `modules[…]` (`citizen-provenance-v1.1`) is WP-96; the
+contract. Provenance `modules[…]` (`citizen-provenance-v1.1`) is built
+(WP-96, D-059): every AI-output surface — analyze terminal event,
+conversation chat `done` and first-message pipeline terminal event, case-chat
+`done`, `GeneratedDocument` — carries it (`API_DOCUMENTATION.md` § 7.1). The
 dossier routes are P10.
 
 No `/api/v2` is planned in roadmap v3.0.0. A v2 is only opened when a
@@ -392,8 +397,8 @@ Each module carries its own semver and `CHANGELOG.md`:
 | parameter set | per module, `parameter_set` id = module version + max `valid_from` |
 | corpus | `Rechtsstand` timestamp per source (exists) |
 | dossier | JSON Schema `citizen-dossier-vMAJOR.MINOR` |
-| provenance | `PROVENANCE_SPEC_VERSION` (`citizen-provenance-v1.1` adds modules) |
-| disclaimer | `DISCLAIMER_VERSION` (bumps whenever any enabled module's addendum changes) |
+| provenance | `PROVENANCE_SPEC_VERSION` (`citizen-provenance-v1.1` adds modules; built WP-96) |
+| disclaimer | `DISCLAIMER_VERSION` = `"v"` + `DISCLAIMER_DE/EN.md` version (`v3.0.0` since WP-96); bumps whenever a module addendum changes or a module is added (guard: `tests/unit/test_disclaimer_addenda.py`) |
 | documents | roadmaps and this file: semver in header comment |
 
 ### 6.4 Audit
@@ -414,10 +419,14 @@ declared layer:
   own RDG basis. Every module states its scope in its manifest; authority-side
   framing is forbidden in all copy.
 - **Purpose-drift lint** scans README, `DISCLAIMER_*.md` (closing the coverage
-  gap logged in D-029) and every module's `copy/` and `DISCLAIMER_ADDENDUM.md`;
-  each module adds its own deny phrases (e.g. Aufenthaltsrecht: authority-side
-  migration framing, Annex III(7); Strafrecht: law-enforcement framing,
-  Annex III(6)).
+  gap logged in D-029), `ARCHITECTURE.md`, `docs/*.md` and every module's
+  `copy/` and `DISCLAIMER_ADDENDUM.md`; each module adds its own deny phrases
+  (e.g. Aufenthaltsrecht: authority-side migration framing, Annex III(7);
+  Strafrecht: law-enforcement framing, Annex III(6)). **Built (WP-96,
+  D-059):** `scripts/check_purpose_drift.py` 2.0.0 reads
+  `compliance.purpose_drift_deny_file` from every installed manifest and
+  applies the phrases to the whole scan set; a deliberate quotation is exempted
+  only by a same-line `purpose-drift: allow` marker, counted in the summary.
 - **RDG invariant** (D-021) is enforced by the core renderer for every module:
   outputs are Rechtsinformation plus building blocks requiring human
   adjudication; drafts carry `[BITTE PRÜFEN]`.
@@ -429,6 +438,9 @@ declared layer:
   (AsylG, StPO).
 - **Disclaimer**: core text stays in `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md`;
   module addenda are compiled into a new Part D. One ack version covers all.
+  **Built (WP-96):** DISCLAIMER 3.0.0 — Part D.1 ground rules, D.2
+  `sozialrecht`, D.3 `strafrecht`, D.4 the remaining experimental stubs; the
+  addendum bodies are copied verbatim (test-enforced).
 
 ---
 

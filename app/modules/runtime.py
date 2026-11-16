@@ -19,7 +19,9 @@ enabled → ``MODULE_NOT_ENABLED``. ``request_modules`` itself stays lenient
 already-validated keys.
 """
 
-# Semantic Version: 0.3.0 | 2026-11-16 — WP-95: module_registry() (process-wide
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-96: module_provenance() /
+# provenance_modules() for the citizen-provenance-v1.1 `modules` list.
+# 0.3.0 | 2026-11-16 — WP-95: module_registry() (process-wide
 # running registry), resolve_request_areas() with MODULE_UNKNOWN /
 # MODULE_NOT_ENABLED, ResolvedArea for the `resolved_modules` response key.
 # 0.2.0 | 2026-11-16 — WP-94: area_module_binding() for the
@@ -212,6 +214,46 @@ def resolve_request_areas(legal_areas: list[str]) -> list[ResolvedArea]:
 
 
 # ---------------------------------------------------------------------------
+# Provenance (WP-96; citizen-provenance-v1.1, ARCHITECTURE.md § 6.3)
+# ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=64)
+def module_provenance(module_id: str) -> tuple[str, str, str | None]:
+    """``(id, version, parameter_set)`` of an installed module, computed once.
+
+    ``parameter_set`` is the pinned-artefact id of ARCHITECTURE.md § 6.3:
+    module version plus the latest ``valid_from`` of the module's parameter
+    files, written as semver build metadata (``"1.0.0+2026-07-01"``). A
+    module that declares no parameters has no parameter set (``None``).
+
+    Reads the module's parameter files on the first call per module only
+    (cached for the process lifetime; module files do not change under a
+    running process). Raises on an unknown module or unreadable parameters —
+    the provenance builder wraps it in its never-raise fallback.
+    """
+    manifest = get_manifest(module_id)
+    from app.modules.parameters import load_parameter_rows
+
+    rows = load_parameter_rows(manifest)
+    parameter_set = None
+    if rows:
+        latest = max(row.valid_from for row in rows)
+        parameter_set = f"{manifest.version}+{latest.isoformat()}"
+    return manifest.id, manifest.version, parameter_set
+
+
+def provenance_modules(legal_areas: Iterable[str] | None) -> list[str]:
+    """Module ids a provenance marker names for a request's area keys.
+
+    Same resolution as the engines use (``request_modules``): empty/absent
+    → ``DEFAULT_MODULE``; keys served by the core procedural library add no
+    module, so a procedural-only request yields ``[]``.
+    """
+    return request_modules(list(legal_areas) if legal_areas else None)
+
+
+# ---------------------------------------------------------------------------
 # Typed code extension points
 # ---------------------------------------------------------------------------
 
@@ -314,8 +356,10 @@ __all__ = [
     "document_templates",
     "get_manifest",
     "installed_modules",
+    "module_provenance",
     "module_registry",
     "parameter_domain",
+    "provenance_modules",
     "regime_banner_for",
     "regime_providers_for",
     "request_modules",

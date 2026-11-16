@@ -42,4 +42,12 @@ goldset:
   gate:
     rule: zero_regression
     baseline_report: eval/results/20261116T094340Z-e9fb87a.json
+# WP-96: compliance declarations (ARCHITECTURE.md § 7). The deny phrases feed
+# scripts/check_purpose_drift.py; the addendum is compiled into
+# DISCLAIMER_DE.md / DISCLAIMER_EN.md Part D.
+compliance:
+  purpose_drift_deny_file: compliance/deny-phrases.json
+  special_regimes:
+    - "DSGVO Art. 9 (Gesundheits-/Behinderungsdaten)"
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
 legacy_aliases: []

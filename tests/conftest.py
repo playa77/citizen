@@ -1,6 +1,8 @@
 """Global pytest fixtures for Citizen test suite."""
 
-# Semantic Version: 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE conftest
+# Semantic Version: 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
+# v3.0.0 (follows the config default).
+# 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE conftest
 # default added; ENABLED_MODULES intentionally left unset (D-037 default).
 
 import contextlib
@@ -78,7 +80,7 @@ _ensure_pg_database_url()
 os.environ.setdefault("OPENROUTER_API_KEY", "sk-or-test-key-000000")
 
 # Set the disclaimer version so integration tests can send the right header.
-os.environ.setdefault("DISCLAIMER_VERSION", "v0.1.0")
+os.environ.setdefault("DISCLAIMER_VERSION", "v3.0.0")
 
 # WP-62: Dev-instance posture. Tests run with the synthetic-data-only flag
 # enabled so the startup assertion in app.main's lifespan passes whenever the

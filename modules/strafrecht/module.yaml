@@ -4,10 +4,12 @@
 # (intake routing, corpus mapping) — no deadline specs,
 # no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-96: compliance declarations
+# (deny phrases, disclaimer addendum, special regime Art. 10 DSGVO).
+# 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
 
 id: strafrecht
-version: 0.1.1
+version: 0.2.0
 core_api: ">=3.0,<4.0"
 title:
   de: "Strafrecht"
@@ -18,4 +20,9 @@ scope:
   own_matter_only: true
 corpus: corpus.yaml
 intake: intake.yaml
+compliance:
+  purpose_drift_deny_file: compliance/deny-phrases.json
+  special_regimes:
+    - "DSGVO Art. 10 (Daten über Straftaten)"
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
 legacy_aliases: []

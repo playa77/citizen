@@ -189,7 +189,7 @@ its declared purpose, and guard the declaration against drift.
 3. Add a documentation-lint check (`scripts/check_purpose_drift.py`, Python)
    that scans `README*.md`, `STATEMENT.md`, `COMPLIANCE*.md`, and any
    `docs/pitch*` for authority-side phrasing (a small configurable
-   deny-phrase list, e.g. "für Jobcenter", "für Behörden", "im Auftrag der
+   deny-phrase list, e.g. "für Jobcenter", "für Behörden", "im Auftrag der <!-- purpose-drift: allow -->
    Verwaltung") and fails CI on a match. Full error handling; verbose
    per-match output with file and line.
 **Deliverables:** Annex III section in `COMPLIANCE.md`, D-020 entry,

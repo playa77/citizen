@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 2.0.0 · **Date:** 2026-08-25
+**Version:** 3.0.0 · **Date:** 2026-11-16
 
 **Author:** www.github.com/playa77
 
@@ -11,7 +11,8 @@ statement, and the project's compliance/AI Act classification into a single
 English-language version (German canonical version:
 [DISCLAIMER_DE.md](DISCLAIMER_DE.md)). It replaces the former standalone
 documents `DISCLAIMER_EN.md` (v1.1.0), `STATEMENT.md` (v1.0.0) and
-`COMPLIANCE-EN.md` (v1.1.0).
+`COMPLIANCE-EN.md` (v1.1.0). Since version 3.0.0, Part D contains the
+addenda of the legal-area modules.
 
 It contains legal notices and disclaimers. It does not replace or modify the
 applicable open-source license terms unless expressly stated.
@@ -32,23 +33,30 @@ the end of this document.
 
 ### What it is
 
-Citizen today is a prototype: an analysis pipeline that reads German social-law
-benefit notices (Bescheide), binds every statement to the statutory text,
-recomputes benefit calculations deterministically, and determines deadlines to
-the exact day. There is a versioned golden set of verified test cases against
+Citizen today is a prototype: a domain-neutral core with legal-area modules.
+The first and so far only mature module, social-benefits law (Sozialrecht),
+reads German social-law benefit notices (Bescheide), binds every statement to
+the statutory text, recomputes benefit calculations deterministically, and
+determines deadlines to the exact day. Further legal areas — employment,
+inheritance, family, tenancy, criminal and contract law — exist as
+experimental modules: they route concerns and draw on the matching legal
+sources, but do not yet compute deadlines or amounts (Part D). There is a versioned golden set of verified test cases against
 which every change is measured. Known limitations exist, and they live in the
 repository rather than under the rug. That is the honest current state:
 working, unpolished, measurable — and not yet a product.
 
 ### What it should be
 
-A person holds a notice their livelihood depends on and, within minutes,
-receives four answers: **What does it say? Is it correct? By when must I
-respond? What do I do now?** — traceably evidenced, recalculated to the cent,
-dated to the day, in plain language. Free of charge. Open source. Without
-their data leaving Europe. And the same tool sits in every social-advice
-center, turning a three-quarter-hour initial review into ten minutes with
-statutory citations.
+A person holds a letter a lot depends on — a benefit notice, a dismissal, a
+penal order — and, within minutes, receives four answers: **What does it say?
+Is it correct? By when must I respond? What do I do now?** — traceably
+evidenced, recalculated to the cent, dated to the day, in plain language. And
+they arrive prepared at their appointment with a lawyer or an advice center:
+with an ordered account of the facts, the deadlines, the documents and the
+right questions. Citizen does not replace that advice; it makes it more
+effective. Free of charge. Open source. Without their data leaving Europe.
+And the same tool sits in every advice center, turning a three-quarter-hour
+initial review into ten minutes with statutory citations.
 
 ### Why
 
@@ -84,6 +92,13 @@ frequent are therefore not an attack on the administration — they are the
 repair of its corrective mechanism. An administration whose errors are
 reliably found improves. In the end, both sides of the desk benefit.
 
+Social law is the starting point, not the boundary. The same asymmetry — a
+formalised counterpart, a short deadline, a person without expert knowledge —
+exists in tenancy law, employment law, family law and criminal proceedings.
+That is why Citizen grows in modules: each legal area is added as a module of
+its own, with its own version, its own golden set and expressly declared
+limits, and counts as mature only after review.
+
 ### Principles
 
 **Recalculability over trust.** Whatever can be deterministic — deadlines,
@@ -98,6 +113,10 @@ uncertain, not smoothed away.
 inference exclusively in Europe under data processing agreements, local data
 storage. Only what is technically enforced is claimed.
 
+**Preparation, not representation.** Citizen helps people in their own legal
+matters and in preparing for advice. It represents no one and advises no one
+in other people's matters.
+
 **The human decides.** Citizen informs, evidences, recomputes, and supplies
 building blocks. Assessment, decision, and signature belong to humans — the
 affected person themselves or advisors authorized to advise.
@@ -111,7 +130,11 @@ subject itself to the same scrutiny.
 Not legal advice — legal information and self-help. Not a startup — there is
 nothing to earn from people in existential need, and none is attempted here.
 Not a declaration of war on Jobcenter staff — most work under conditions that
-produce errors; this tool targets errors, not people.
+produce errors; this tool targets errors, not people. Not law-firm software —
+there is no billing, file or client management, and there will be none
+(D-034). And not a tool of the other side: Citizen is not intended to be used
+by public authorities, courts, law-enforcement or migration bodies, or on
+their behalf (D-035).
 
 ### Invitation
 
@@ -408,7 +431,8 @@ the software at your own risk.
 The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
-`GET /api/v1/meta/disclaimer/version`); after a version change, renewed
+`GET /api/v1/meta/disclaimer/version`; it equals this document's version
+prefixed with `v`, currently `v3.0.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -443,6 +467,11 @@ reports, action-document drafts, chat answers). Not covered here: the
 disclosure of AI authorship of the source code (WP-63, planned) — the legal
 notice to users is Part B of this same document.
 
+The classification applies to the core and to every enabled legal-area
+module; Part D adds area-specific limits. The modules that produced an output
+are named in its machine-readable provenance marker
+(`citizen-provenance-v1.1`, field `modules`).
+
 ### C.2 Quick Answer: Obligations per Mode
 
 The classification hinges on **one single switch**: `DEPLOYMENT_MODE`
@@ -462,9 +491,9 @@ documentary (always relevant, no action duty)
 | Provider/deployer determination | Art. 3(3)/(4) AI Act | – | – | A | this part (WP-60), D-019 |
 | Development-phase posture held | Art. 2(8) AI Act | A | – | – | WP-62 (access control, synthetic-data guard, DEV-INSTANCE.md) |
 | FOSS note: MIT does **not** exempt Art. 50 | Art. 2(12) AI Act | D | D | D | this part (WP-60) |
-| Purpose: claimant-side, not authority-side | Annex III(5)(a) AI Act | A | A | A | WP-61 (self-assessment, purpose-drift lint), D-020 |
-| AI-interaction notice to every natural person | Art. 50(1) AI Act | – | – | **A** | WP-64 |
-| Machine-readable marking of all AI outputs | Art. 50(2) AI Act | – | – | **A** (deadline: **2026-12-02**, only if `provider` by then) | WP-65 |
+| Purpose: citizen-side in the person's own matter; not on the side of public authorities, courts, law-enforcement or migration bodies | Annex III(5)(a), (6), (7), (8)(a) AI Act | A | A | A | WP-61/WP-96 (self-assessment, purpose-drift lint with module deny phrases), D-020, D-035 |
+| AI-interaction notice to every natural person | Art. 50(1) AI Act | – | – | **A** | D-032 (`GET /api/v1/meta/disclosure`, embedded in every AI output) |
+| Machine-readable marking of all AI outputs | Art. 50(2) AI Act | – | – | **A** (deadline: **2026-12-02**, only if `provider` by then) | D-032; `citizen-provenance-v1.1` naming the modules, on every AI output surface (WP-96, D-059) |
 | Disclosure for published text (public interest) | Art. 50(4) AI Act | – | – | – (not triggered: action documents are individual correspondence, not publication) | WP-65 (reasoning recorded in marker spec) |
 | RDG single-case boundary (structural, pipeline-enforced) | § 2/§ 6/§ 8 RDG | – | – | A | WP-67, D-021 |
 | GDPR: DPIA (Art. 35) + AVV chain (Art. 28) | GDPR | – (synthetic data only) | – (own data) | **A** (before the first real case) | WP-68 |
@@ -541,55 +570,83 @@ therefore changes nothing about the fact that the Art. 50 obligations apply in
 `dev`/`self` mode Art. 50 does not apply because there is **no provision to
 third parties** — not because of the licence.
 
-#### C.4.4 Self-Assessment: Not High-Risk (Annex III(5)(a))
+#### C.4.4 Self-Assessment: Not High-Risk (Annex III(5)(a), (6), (7), (8)(a))
 
 **Result.** Citizen is **not a high-risk AI system** within the meaning of
-Annex III(5)(a) AI Act — given the declared intended purpose (D-020) and the
-safeguards against purpose drift documented in this section.
+Annex III AI Act — in particular not under point 5(a) (social benefits),
+point 6 (law enforcement), point 7 (migration, asylum and border control) or
+point 8(a) (administration of justice) — given the declared intended purpose
+(D-035, widening D-020) and the safeguards against purpose drift documented
+in this section. The classification applies to every legal-area module.
 
-**Scope of the trigger.** Annex III(5)(a) covers AI systems used by public
-authorities, or on their behalf, to **evaluate the benefit eligibility** of
-natural persons for social benefits and services. The defining element is
-authority-side use to decide eligibility.
+**Scope of the triggers.** All four triggers attach to use on the side of the
+body that decides, investigates or adjudicates:
 
-**Declared intended purpose (D-020).** Citizen's intended purpose is
-**claimant-side self-help and advisor assistance**: the system helps the data
-subject or their advisors understand, review and respond to a Bescheid. It is
-expressly **not** intended to be used by an authority, or on an authority's
-behalf, to evaluate benefit eligibility.
+- **Point 5(a):** AI systems used by public authorities, or on their behalf,
+  to **evaluate the eligibility** of natural persons for social benefits and
+  services.
+- **Point 6:** AI systems used by law-enforcement authorities, or on their
+  behalf, for example to evaluate evidence or to assess the risk posed by
+  natural persons.
+- **Point 7:** AI systems used by the competent authorities in migration,
+  asylum and border control, or on their behalf.
+- **Point 8(a):** AI systems used by a judicial authority, or on its behalf,
+  to research and interpret facts and the law and to apply the law to a
+  concrete set of facts.
 
-**Why the trigger is not met.**
+**Declared intended purpose (D-035).** Citizen's intended purpose is
+**citizen-side self-help and appointment preparation for natural persons in
+their own legal matters**, across the enabled legal-area modules, plus
+**assistance to advice centers** acting within their own RDG basis. The
+system helps the data subject or their advisors understand, review and
+respond to a letter and prepare an advice appointment. It is expressly
+**not** intended to be used by a public authority, a court, a law-enforcement
+or migration body, or on their behalf, to evaluate natural persons, decide on
+them or enforce measures against them.
 
-1. **No authority-side purpose:** Neither the product nor its documentation
-   describes Citizen as an authority-side tool. The intended purpose is
-   anchored in the README, Part A of this document, and the legal notice.
+**Why the triggers are not met.**
+
+1. **Not intended for the deciding body:** Neither the product nor its
+   documentation nor any module describes Citizen as a tool of a public
+   authority, a court, or a law-enforcement or migration body. The intended
+   purpose is anchored in the README, Part A of this document, the legal
+   notice and every module manifest (`scope.own_matter_only`).
 2. **Not a decision system:** Citizen produces legal information and building
-   blocks requiring human adjudication (D-021); it does not decide benefit
-   eligibility and is not provided for that purpose.
+   blocks requiring human adjudication (D-021); it makes no decision about
+   natural persons and is not provided to make or prepare one.
 3. **Provision model:** Even in `provider` mode the software is made available
-   to claimants and advice centers — not to authorities for eligibility
-   evaluation.
+   to affected persons and advice centers — not to bodies that decide on
+   benefits, prosecution, residence or legal disputes.
 4. **Classification by intended purpose:** The AI Act classifies by intended
-   purpose. As long as the intended purpose remains claimant-side, the
-   Annex III(5)(a) trigger is not met.
+   purpose. As long as the intended purpose remains citizen-side, the triggers
+   are not met.
 
 **Drift safeguards.** For this assessment to hold:
 
-- **D-020** fixes the claimant-side intended purpose and prohibits
-  authority-side descriptions in the documentation.
-- **`scripts/check_purpose_drift.py`** (WP-61) scans the project's
-  user-facing Markdown documents for authority-side phrasing (configurable
-  deny-phrase list) and fails CI on any match. The lint is the technical
-  enforcement of the intended purpose against drift.
+- **D-020/D-035** fix the citizen-side intended purpose and prohibit any
+  description, in documentation or copy, of Citizen as a tool of a public
+  authority, a court, or a law-enforcement or migration body.
+- **`scripts/check_purpose_drift.py`** (WP-61, extended by WP-96) scans the
+  README, `DISCLAIMER_*.md`, `ARCHITECTURE.md`, `docs/*.md` and every
+  module's copy (`copy/`) and addendum (`DISCLAIMER_ADDENDUM.md`) for phrasing
+  from the deciding body's perspective. Besides the default list, the deny
+  phrases each module declares in its manifest apply (e.g. criminal law:
+  law-enforcement framing, Annex III point 6) — across the whole scan set.
+  CI fails on any match; deliberate quotations need a visible same-line
+  exemption marker.
+- **Module tiers:** In `provider` mode only reviewed (`verified`) modules are
+  enabled by default (D-037); experimental modules only after explicit
+  approval.
 - **Change management:** Changes to the intended purpose, target group or
-  provision model require a version change of this document (section C.7) and
-  a re-review of this self-assessment.
+  provision model, as well as every new module and every changed module
+  addendum, require a version change of this document (section C.7, Part D)
+  and a re-review of this self-assessment.
 
 **Condition.** This assessment is conditional: it holds only for the declared
-intended purpose. If Citizen is ever described as an authority-side tool or
-provided to authorities for eligibility evaluation, the classification must be
-re-assessed — the obligations for high-risk AI systems (Chapter III AI Act)
-would apply.
+intended purpose. If Citizen or any of its modules is ever described as a tool
+of a public authority, a court, or a law-enforcement or migration body, or
+provided to such a body, the classification must be re-assessed — the
+obligations for high-risk AI systems (Chapter III AI Act) would apply.
 
 ### C.5 Deadlines and Triggering Events
 
@@ -605,7 +662,10 @@ would apply.
 
 The GDPR is the most underestimated regime for operation. Bescheide of benefit
 claimants routinely contain **special-category data** (Art. 9 GDPR: health,
-disability); the data subjects are vulnerable persons. Consequences:
+disability); the data subjects are vulnerable persons. Depending on the legal
+area, further categories apply (e.g. Art. 10 GDPR, data on criminal offences,
+in criminal law); modules declare them in their manifest
+(`compliance.special_regimes`) and in Part D. Consequences:
 
 - **`provider`:** A **Data Protection Impact Assessment (DPIA, Art. 35)** is
   very likely mandatory; an **AVV chain (Art. 28)** must be in place before
@@ -632,29 +692,147 @@ The project position (D-021):
   (WP-67).
 - For advice-center use, the § 6/§ 8 RDG frame (gratuitous legal services /
   recognized advice centers) is documented (WP-67).
+- Every module is limited to the person's **own matter**
+  (`scope.own_matter_only` in the module manifest, D-035); support in other
+  people's matters is given only by advice centers within their own RDG basis.
 
 ### C.7 Validity and Change Management
 
-- This part originates in Roadmap v2.0.0 (WP-60/WP-61) and is anchored in the
-  decision ledger via decisions D-019, D-020 and D-022 (and, in its work
-  package, D-021).
+- This part originates in Roadmap v2.0.0 (WP-60/WP-61) and was rewritten for
+  the modular architecture in Roadmap v3.0.0 (WP-96). It is anchored in the
+  decision ledger via decisions D-019, D-020, D-022, D-035 and D-059 (and
+  D-021).
 - Changes to the intended purpose, deployment form or target group require a
   review and a version change of this document (semantic versioning).
 - Open legal questions that cannot be closed technically are collected in
-  Roadmap v2.0.0 §8.
+  Roadmap v2.0.0 §8; Roadmap v3.0.0 tracks the remaining compliance gaps
+  (§ 2).
 
 #### References
 
 - `docs/roadmap-v2.0.0.md` — Phases P6–P8, obligation matrix (§5)
-- `DECISIONS.md` — D-019, D-020, D-021, D-022
+- `docs/roadmap-v3.0.0.md` — Phase P9, WP-96 (compliance for modules)
+- `ARCHITECTURE.md` — § 7 (compliance architecture per module)
+- `DECISIONS.md` — D-019, D-020, D-021, D-022, D-035, D-037, D-059
+- `modules/*/DISCLAIMER_ADDENDUM.md` — sources of the module addenda (Part D)
 - `README.md` — section „Rechtlicher Status"
 - `devdocs/DEV-INSTANCE.md` — dev-instance operations manual (Art. 2(8))
-- `scripts/check_purpose_drift.py` — purpose-drift lint (WP-61)
+- `scripts/check_purpose_drift.py` — purpose-drift lint (WP-61/WP-96)
+
+---
+
+## Part D — Module Addenda
+
+### D.1 Ground Rules
+
+Citizen consists of a core and legal-area modules. Parts A to C apply to
+every module. This part adds the area-specific limits a module declares in
+its `DISCLAIMER_ADDENDUM.md` file; the addenda are reproduced here verbatim.
+**One** version number covers the whole document including all addenda: if
+an addendum changes or a module is added, the version of this document —
+and thus the version to acknowledge via `X-Disclaimer-Ack` — changes.
+
+- **Tiers.** `verified`: a reviewed module with deterministic engines and a
+  golden set against which every change is measured. `experimental`: a module
+  without a deadline engine, calculations or golden set; its outputs are
+  general, AI-generated legal information whose quality is not measured.
+  Experimental modules are not enabled by default in `provider` mode (D-037).
+- **Scope.** Every module declares its scope and exclusions in its manifest
+  (`scope`), available via `GET /api/v1/modules/{module_id}`. The modules that
+  produced an output are named in its provenance marker.
+- **Deadlines and amounts** come exclusively from a module's deterministic
+  engines on versioned parameters, never from the language model. A module
+  without such engines computes neither deadlines nor amounts.
+
+### D.2 Social-Benefits Law (`sozialrecht`, tier `verified`)
+
+**Scope.** The module covers basic income support for jobseekers
+(Bürgergeld/Grundsicherung, SGB II), the social administrative procedure
+(SGB X) and social-court procedure (SGG). Pension insurance (SGB VI) and
+health insurance (SGB V) in particular are not covered; for other social
+benefits the module provides no verified results.
+
+**Deadlines.** The objection deadline (§ 84 SGG), the statutory fiction of
+notification (§ 37(2) SGB X), deadline ends on weekends and public holidays
+(§ 64(3) SGG) and the one-year deadline where the notice on legal remedies is
+missing or wrong (§ 66(2) SGG) are computed by a deterministic deadline
+engine from the module's versioned deadline specs — never by the language
+model. The computation relies on the data entered and on the statutory
+notification fiction; if the notice actually arrived later or not at all, or
+the date is uncertain, the deadline may differ. When in doubt, act before the
+earliest possible deadline end.
+
+**Amounts.** Recalculations (standard needs, allowances under § 11b SGB II,
+asset allowances) are computed by the module's deterministic rules engine on
+versioned legal parameters with validity periods. The parameter set used is
+stated in the machine-readable provenance marker of every output
+(`modules[].parameter_set`); later changes in the law are not reflected in it.
+
+**Drafts.** Objection, objection within the one-year deadline, review request
+(§ 44 SGB X) and file-inspection request (§ 25 SGB X) are building blocks:
+unverified legal assertions appear as `[BITTE PRÜFEN]`; the person reviews,
+completes and signs them personally.
+
+**Special categories of data.** Benefit notices often contain health or
+disability information (Art. 9 GDPR). The module is intended for the
+person's own matter; processing is governed by B.4 and C.6.1.
+
+**Advice.** A binding review of the individual case is provided by
+independent social-benefit advice centers, welfare associations and lawyers
+specialised in social law (Fachanwalt für Sozialrecht); people on low incomes
+may be eligible for legal-advice aid (Beratungshilfe) and legal aid
+(Prozesskostenhilfe).
+
+### D.3 Criminal Law (`strafrecht`, tier `experimental`)
+
+**Status.** Experimental module (tier `experimental`): no deadline engine,
+no calculations, no golden set. Outputs are exclusively general, AI-generated
+legal information on the affected person's own matter (accused, defendant or
+injured person).
+
+**Short deadlines.** Criminal proceedings have some very short deadlines that
+the module does not compute — for example two weeks for an objection to a
+penal order (§ 410(1) StPO) and one week for an appeal on fact and law or on
+points of law (§ 314(1), § 341(1) StPO). Anyone who has received a letter
+from the police, the public prosecutor's office or a court should seek legal
+advice without delay; where defence is mandatory (§ 140 StPO), a defence
+counsel is appointed and can also be applied for.
+
+**Purpose limitation.** The module is not a law-enforcement tool (Annex III
+point 6 AI Act): it is not intended to be used by the police, prosecution
+services or courts, or on their behalf.
+
+**Special categories of data.** Data relating to criminal offences and
+convictions is subject to Art. 10 GDPR; processing is governed by B.4 and
+C.6.1.
+
+### D.4 Further Experimental Modules
+
+For the modules `arbeitsrecht` (employment), `erbrecht` (inheritance,
+including the legacy key `schenkungsrecht`), `familienrecht` (family),
+`mietrecht` (tenancy), `vertragsrecht` (contract) and `andere` (catch-all),
+D.1 and Parts A to C apply without an area-specific addendum. They compute
+neither deadlines nor amounts; anyone who has a deadline to meet should have
+it checked by a lawyer or an advice center. The general administrative
+procedure (`verwaltungsrecht`) is not a module of its own but part of the
+core's procedural library.
 
 ---
 
 ## Change History
 
+- **3.0.0 (2026-11-16):** Widened intended purpose (D-035) for the modular
+  architecture (core + legal-area modules): Part A (statement) and Part C
+  (compliance) rewritten — citizen-side self-help and appointment preparation
+  in the person's own legal matters across all enabled modules;
+  self-assessment C.4.4 extended to Annex III points 6, 7 and 8(a) AI Act;
+  drift safeguards extended by module deny phrases and the wider scan set;
+  Art. 50 implementation status recorded (provenance v1.1 naming the modules
+  on every AI output surface); RDG limitation to the person's own matter per
+  module. New Part D (module addenda: ground rules, social-benefits law,
+  criminal law, further experimental modules). B.12: the acknowledgment
+  version equals the document version (`v3.0.0`). Major version because the
+  intended purpose changes; renewed acknowledgment required.
 - **2.0.0 (2026-08-25):** Consolidation of the formerly standalone documents
   `DISCLAIMER_EN.md` (v1.1.0), `STATEMENT.md` (v1.0.0) and `COMPLIANCE-EN.md`
   (v1.1.0) into a single version (Part A statement, Part B legal notice,

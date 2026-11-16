@@ -3,7 +3,7 @@
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 1.0.0 is unreleased until the P9 exit gate (roadmap WP-97).
 
-## 1.0.0 — unreleased (WP-91 → WP-94)
+## 1.0.0 — unreleased (WP-91 → WP-96)
 
 - WP-91: manifest (`module.yaml`), tier `verified`, `DEFAULT_MODULE`.
 - WP-92: deadline specs (`fristen.yaml`: Widerspruchsfrist § 84 SGG with
@@ -27,3 +27,9 @@ Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 - WP-94: `parameters.domain` is the module id `sozialrecht` (migration 013
   rewrote stored `sgb2` rows; parameter keys keep their `sgb2.` prefix);
   `intake.yaml` area row declares `order: 10` (global area-key order, D-057).
+- WP-96: compliance declarations in the manifest —
+  `compliance/deny-phrases.json` (benefit-agency framing, DE/EN; read by the
+  purpose-drift lint), `DISCLAIMER_ADDENDUM.md` (scope, deadlines, amounts,
+  drafts, Art. 9 DSGVO, referral; compiled into DISCLAIMER v3.0.0 Part D.2),
+  special regime Art. 9 DSGVO. Parameter-set id for provenance v1.1:
+  `1.0.0+<latest valid_from>`. No behaviour change.

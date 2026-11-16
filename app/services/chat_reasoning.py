@@ -8,7 +8,9 @@ corpus using the conversation context, then generates a grounded response that
 references any uploaded documents and retrieved legal sources.
 """
 
-# Semantic Version: 1.1.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
+# Semantic Version: 1.2.0 | 2026-11-16 — WP-96: the first-message pipeline
+# terminal event embeds disclosure + provenance too (C-4 closed, D-059).
+# 1.1.0 | 2026-08-25 — Art. 50(1)/(2) EU AI Act (D-032):
 # the chat "done" event embeds disclosure + provenance alongside full_response.
 
 from __future__ import annotations
@@ -90,9 +92,16 @@ async def run_first_message_pipeline(
         yield sse_event
 
     # Yield a compact final event matching the existing analyze endpoint format.
+    # Art. 50(1)/(2) (WP-96, closes the D-032 coverage gap C-4): this terminal
+    # event carries AI-generated text, so it gets the disclosure + provenance
+    # like the analyze terminal event. Conversations name no legal_areas, so
+    # the pipeline (and the marker) run with DEFAULT_MODULE.
+    disclosure_info, provenance_marker = build_disclosure_and_provenance(settings)
     final_payload = {
         "sections": list(state.final_output.keys()),
         "final_output": state.final_output,
+        "disclosure": disclosure_info.model_dump(mode="json"),
+        "provenance": provenance_marker.model_dump(mode="json"),
     }
     yield f"data: {json.dumps(final_payload, ensure_ascii=False)}\n\n"
 

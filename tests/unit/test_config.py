@@ -8,7 +8,8 @@ Acceptance criteria covered:
 - settings singleton loads with valid env.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-16 — WP-96: DISCLAIMER_VERSION v3.0.0.
+# 0.1.0
 
 import re
 
@@ -140,7 +141,7 @@ class TestSettingsValidation:
         assert s.TOP_K_RETRIEVAL == 10
         assert s.MAX_COSINE_DISTANCE == 0.65  # VPS run fixes (2026-07-20)
         assert s.LOG_LEVEL == "INFO"
-        assert s.DISCLAIMER_VERSION == "v0.1.0"
+        assert s.DISCLAIMER_VERSION == "v3.0.0"
 
     @pytest.mark.skip(reason="WP-00.5: CORS_ORIGINS field removed from Settings model")
     def test_cors_origins_parses_json_list(self, tmp_path, _isolate_salt_file, monkeypatch):

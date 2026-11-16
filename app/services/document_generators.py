@@ -22,7 +22,9 @@ fluent invention.
 are generated, slotted into the document, then reinjected post-generation.
 """
 
-# Semantic Version: 0.3.0 | 2026-11-16 — WP-93: templates, slot definitions and
+# Semantic Version: 0.4.0 | 2026-11-16 — WP-96: provenance names the module
+# whose template rendered the draft (citizen-provenance-v1.1).
+# 0.3.0 | 2026-11-16 — WP-93: templates, slot definitions and
 # generator selection moved into module data; this file is the generic
 # renderer (output byte-identical for the sozialrecht drafts).
 # 0.2.0 | 2026-08-25 — Art. 50(2) EU AI Act (D-032):
@@ -500,7 +502,7 @@ def generate_document(
     GeneratedDocument
         The assembled document with rendered text and slot audit trail.
     """
-    _, data = _templates(module_id)
+    resolved_module, data = _templates(module_id)
     user_data = user_data or {}
     absender_name = user_data.get("name") or None
     absender_adresse = user_data.get("adresse") or None
@@ -579,7 +581,8 @@ def generate_document(
     # Art. 50(2) marker (D-032): built through the same shared helper the SSE
     # emitters use, so provenance content stays identical across surfaces for
     # the same request. The helper never raises.
-    _, document_provenance = build_disclosure_and_provenance(settings)
+    # Provenance v1.1 (WP-96): the module whose template rendered the draft.
+    _, document_provenance = build_disclosure_and_provenance(settings, [resolved_module])
 
     return GeneratedDocument(
         document_type=doc_type,

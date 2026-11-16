@@ -239,7 +239,7 @@ docker compose exec citizen-app alembic upgrade head
 #    Hinweis: erfordert bestätigten Disclaimer; Version siehe
 #    GET /api/v1/meta/disclaimer/version
 curl -X POST http://localhost:8000/api/v1/corpus/update \
-  -H "X-Disclaimer-Ack: v0.1.0" \
+  -H "X-Disclaimer-Ack: v3.0.0" \
   -H "Content-Type: application/json" -d '{}'
 
 # 7. API nutzen — geschützte Endpunkte verlangen den Header

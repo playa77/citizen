@@ -4,10 +4,12 @@
 # (intake routing, corpus mapping, prompt profile) — no deadline specs,
 # no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
 
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
+# Semantic Version: 0.2.0 | 2026-11-16 — WP-96: compliance declaration
+# (purpose-drift deny phrases).
+# 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
 
 id: familienrecht
-version: 0.1.1
+version: 0.2.0
 core_api: ">=3.0,<4.0"
 title:
   de: "Familienrecht"
@@ -19,4 +21,6 @@ scope:
 corpus: corpus.yaml
 intake: intake.yaml
 prompts: prompts/profile.yaml
+compliance:
+  purpose_drift_deny_file: compliance/deny-phrases.json
 legacy_aliases: []

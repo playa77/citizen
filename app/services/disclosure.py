@@ -18,17 +18,27 @@ is human-operated. The disclaimer system (``X-Disclaimer-Ack``,
 ``/meta/disclaimer/*``) is separate and covers no-legal-advice framing only —
 it is intentionally untouched here.
 
-Everything in this module is derived from in-memory state: no database call,
-no LLM call, no file I/O. Disclosure texts are canonical constants; a text
-change requires a ``DISCLOSURE_VERSION`` bump and must never happen silently.
+Since ``citizen-provenance-v1.1`` (WP-96) the marker also names the legal-area
+modules that produced the content (``modules[{id, version, parameter_set}]``,
+ARCHITECTURE.md § 5/§ 6.3) — additive to v1.0 — and the two surfaces D-032
+left uncovered (conversation first-message pipeline terminal event, case-chat
+``done``) carry both objects too (C-4 closed, D-059).
+
+No database call, no LLM call. Module entries come from the module registry's
+data; a module's parameter files are read once per process and cached
+(``app.modules.runtime.module_provenance``), and startup warms that cache.
+Disclosure texts are canonical constants; a text change requires a
+``DISCLOSURE_VERSION`` bump and must never happen silently.
 """
 
-# Semantic Version: 1.0.0
+# Semantic Version: 1.1.0 | 2026-11-16 — WP-96: citizen-provenance-v1.1
+# (`modules` list), legal_areas parameter on build_disclosure_and_provenance.
+# 1.0.0 | 2026-08-25 — D-032 initial.
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -42,7 +52,8 @@ logger = logging.getLogger(__name__)
 # wording change — consumers cache this endpoint's payload keyed by version.
 DISCLOSURE_VERSION = "1.0"
 # Marker schema identifier for the provenance object (Art. 50(2)).
-PROVENANCE_SPEC_VERSION = "citizen-provenance-v1.0"
+# v1.1 (WP-96) adds `modules`; every v1.0 field is unchanged.
+PROVENANCE_SPEC_VERSION = "citizen-provenance-v1.1"
 # Generator identifier embedded in every provenance marker.
 DISCLOSURE_GENERATOR = "citizen"
 # Fallback substituted for any provenance field that cannot be determined.
@@ -76,6 +87,19 @@ class DisclosureInfo(BaseModel):
     texts: dict[str, str]
 
 
+class ModuleProvenance(BaseModel):
+    """One legal-area module that produced the content (provenance v1.1).
+
+    ``parameter_set`` pins the module's versioned legal parameters
+    (``"<module version>+<latest valid_from>"``, ARCHITECTURE.md § 6.3);
+    ``None`` for a module without parameters.
+    """
+
+    id: str
+    version: str
+    parameter_set: str | None
+
+
 class ProvenanceMarker(BaseModel):
     """Machine-readable marker for AI-generated output per Art. 50(2) EU AI Act.
 
@@ -93,6 +117,9 @@ class ProvenanceMarker(BaseModel):
     model_profile: str
     timestamp_utc: str
     deployment_mode: str
+    # v1.1: modules in request order; [] when only the core procedural
+    # library served the request (e.g. legal_areas=["verwaltungsrecht"]).
+    modules: list[ModuleProvenance]
 
 
 def _utc_now_iso() -> str:
@@ -127,6 +154,54 @@ def _field_or_fallback(field_name: str, extractor: Callable[[], Any]) -> str:
         return _PROVENANCE_FALLBACK
 
 
+def _modules_or_fallback(legal_areas: Sequence[str] | None) -> list[ModuleProvenance]:
+    """Resolve the provenance ``modules`` list; never raises.
+
+    A module whose entry cannot be built is kept with ``"unknown"`` fields
+    (its id is still diagnostic); if the area keys cannot be resolved at all,
+    a single all-unknown entry is returned rather than ``[]`` — an empty list
+    has a meaning of its own (procedural-only request).
+    """
+    try:
+        from app.modules.runtime import module_provenance, provenance_modules
+
+        module_ids = provenance_modules(legal_areas)
+    except Exception as exc:
+        logger.warning(
+            "Provenance modules unresolvable for %r (%s: %s) — using fallback",
+            legal_areas,
+            type(exc).__name__,
+            exc,
+        )
+        return [
+            ModuleProvenance(
+                id=_PROVENANCE_FALLBACK,
+                version=_PROVENANCE_FALLBACK,
+                parameter_set=_PROVENANCE_FALLBACK,
+            )
+        ]
+    entries: list[ModuleProvenance] = []
+    for module_id in module_ids:
+        try:
+            mid, version, parameter_set = module_provenance(module_id)
+            entries.append(ModuleProvenance(id=mid, version=version, parameter_set=parameter_set))
+        except Exception as exc:
+            logger.warning(
+                "Provenance entry for module %r unavailable (%s: %s) — using fallback",
+                module_id,
+                type(exc).__name__,
+                exc,
+            )
+            entries.append(
+                ModuleProvenance(
+                    id=module_id,
+                    version=_PROVENANCE_FALLBACK,
+                    parameter_set=_PROVENANCE_FALLBACK,
+                )
+            )
+    return entries
+
+
 def build_disclosure() -> DisclosureInfo:
     """Build the Art. 50(1) disclosure object from canonical constants."""
     return DisclosureInfo(
@@ -138,12 +213,14 @@ def build_disclosure() -> DisclosureInfo:
 
 def build_disclosure_and_provenance(
     settings: Settings,
+    legal_areas: Sequence[str] | None = None,
 ) -> tuple[DisclosureInfo, ProvenanceMarker]:
     """Build the Art. 50 disclosure and provenance objects from application state.
 
-    Called once per response that carries AI-generated content. No I/O, no LLM
-    calls; both objects are derived from in-memory state only. This function
-    must not raise: if any field cannot be determined (e.g. app version
+    Called once per response that carries AI-generated content, with the area
+    keys the content was produced for (``None``/empty → ``DEFAULT_MODULE``,
+    the same rule the engines follow). No DB or LLM calls. This function must
+    not raise: if any field cannot be determined (e.g. app version
     unavailable), a safe fallback string is substituted and a warning logged —
     never let a missing provenance field break a response.
     """
@@ -158,5 +235,6 @@ def build_disclosure_and_provenance(
         model_profile=_field_or_fallback("model_profile", lambda: settings.INFERENCE_PROFILE),
         timestamp_utc=_field_or_fallback("timestamp_utc", _utc_now_iso),
         deployment_mode=_field_or_fallback("deployment_mode", lambda: settings.DEPLOYMENT_MODE),
+        modules=_modules_or_fallback(legal_areas),
     )
     return disclosure, provenance
