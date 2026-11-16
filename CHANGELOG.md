@@ -1,3 +1,64 @@
+## 2026-11-16 — P9 WP-95: module API additions (D-058)
+
+Additive `/api/v1` surface for the module registry (ARCHITECTURE.md § 5).
+Package version stays 2.0.0 (core 3.0.0 is cut at WP-97); no module version
+changes; no migrations. Requests without `legal_areas` behave as before.
+
+### Added
+
+- `GET /api/v1/modules`, `GET /api/v1/modules/{module_id}`,
+  `GET /api/v1/modules/{module_id}/goldset` (`app/api/routes/modules.py`
+  1.0.0): installed modules with version, tier, enablement, owned area keys,
+  corpus readiness and `installed_at` (from `legal_module`); public manifest
+  parts, deadline catalog, document types; the manifest-declared goldset with
+  its eval gate. Documented in `API_DOCUMENTATION.md` § 8.10.
+- Error codes `MODULE_UNKNOWN` / `MODULE_NOT_ENABLED` (`422` on
+  `POST /analyze` `legal_areas`; `404 MODULE_UNKNOWN` on `/modules/{id}*`).
+- `resolved_modules` (`{legal_area, module_id, module_version, legacy_alias,
+  enabled}` per area key): `/analyze` terminal event when `legal_areas` is
+  non-empty; every intake session response; `presets/suggest` and
+  `presets/apply`.
+- `GET /api/v1/meta/version` key `modules: {id: version}` (enabled modules).
+- `app.modules.runtime` 0.3.0: `module_registry()` (process-wide running
+  registry, built at startup), `resolve_request_areas()`, `resolved_modules()`.
+- `python -m eval.runner --module <id>` (runner 1.1.0): runs the goldset the
+  module manifest declares; the positional goldset path becomes optional.
+- Tests: `tests/unit/test_modules_api.py`.
+
+### Changed
+
+- `POST /api/v1/analyze`: `legal_areas` as a JSON array is accepted (the
+  documented shape; the body was annotated `dict[str, str]`, so arrays were
+  rejected by request validation — WP-94 handover). An unknown `legal_areas`
+  value now answers `422 MODULE_UNKNOWN` instead of `409 corpus_not_ready`;
+  a value whose module is disabled answers `422 MODULE_NOT_ENABLED` (in
+  `provider` mode that is every `experimental` module).
+- `app/services/corpus_readiness.py` 0.5.0: `chunk_counts_by_source_type()` /
+  `source_type_status()` extracted (shared with `/modules`; same results).
+- `app/api/routes/goldset.py` 1.1.0: `load_goldset_file()` /
+  `goldset_listing()` extracted; `/goldset*` responses unchanged.
+
+### Deployment notes
+
+- Clients in `provider` deployments that send `legal_areas` of experimental
+  modules now receive `422 MODULE_NOT_ENABLED` instead of a run; check
+  `GET /api/v1/modules` (`enabled`) first.
+
+### Not done here (handover)
+
+- Provenance `modules: [{id, version, parameter_set}]`
+  (`citizen-provenance-v1.1`) on the analyze terminal event, chat `done` and
+  `GeneratedDocument` — WP-96 per roadmap (ARCHITECTURE.md § 5 lists it with
+  the API rules).
+- Module errata surfaced via `/modules/{id}` (ARCHITECTURE.md § 6.2) — needs
+  an errata format in module changelogs first; not specified by WP-95.
+- Pre-existing, observed while testing: `tests/integration/test_retrieval.py::
+  TestRetrieveChunks::test_retrieval_returns_chunks_with_metadata` failed once
+  when the integration suite ran right after the unit suite on the same
+  database, then passed in reruns with and without this change.
+- Not verified here: CI's Python 3.11 *test* job (local tests: Python 3.12;
+  `mypy app` strict was run under Python 3.11 and 3.12).
+
 ## 2026-11-16 — P9 WP-94: data model migration (D-057)
 
 Migration `013_legal_module` lands the database half of the core/module split

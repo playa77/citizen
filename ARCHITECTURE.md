@@ -1,10 +1,13 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.2 | 2026-11-16 — WP-93: § 2.1/2.2 layout + manifest keys as
+<!-- Version: 3.0.0-draft.3 | 2026-11-16 — WP-95: § 5 status (module routes, error
+     codes, resolved_modules, meta/version modules as built; provenance still open),
+     § 8 goldset row done.
+     3.0.0-draft.2 | 2026-11-16 — WP-93: § 2.1/2.2 layout + manifest keys as
      built (prompts, document_templates), § 8 status column. -->
 <!-- Status: TARGET architecture, partly delivered: WP-91 (registry/SDK),
-     WP-92 (Fristen core) and WP-93 (Sozialrecht extraction) are in the code;
-     § 8 marks what remains (WP-94 data model, WP-95 API). Every "target" statement below is delivered by
+     WP-92 (Fristen core), WP-93 (Sozialrecht extraction), WP-94 (data model)
+     and WP-95 (module API) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
 <!-- Canonical package version: pyproject.toml (stays 2.0.0 until P9 exit). -->
@@ -344,6 +347,13 @@ Behavioral rules (D-039):
   `modules: [{id, version, parameter_set}]` (provenance spec
   `citizen-provenance-v1.1`, additive).
 
+**Status (WP-95, D-058):** the three `/modules*` routes, `MODULE_UNKNOWN` /
+`MODULE_NOT_ENABLED` (gating `/analyze`; `/intake` and `/presets` take no
+`legal_areas` input and report `resolved_modules` instead), `resolved_modules`
+and `meta/version.modules` are built; `API_DOCUMENTATION.md` § 8.10 is the
+contract. Provenance `modules[…]` (`citizen-provenance-v1.1`) is WP-96; the
+dossier routes are P10.
+
 No `/api/v2` is planned in roadmap v3.0.0. A v2 is only opened when a
 non-additive change becomes unavoidable, and gets its own decision.
 
@@ -439,7 +449,7 @@ Every place where v2.0.0 code is area-specific, and where it goes:
 | `app/services/rules_engine.py`, `app/services/calculation.py` | SGB II math, Regelbedarf tables, extraction prompt | `modules/sozialrecht/calculators.py` + parameters; generic extraction/explanation harness stays in core | done (WP-93) |
 | `app/services/regime.py` | SGB II reform 2026-07-01 | `RegimeProvider` in the Sozialrecht module | done (WP-93) |
 | `app/services/document_generators.py` | Widerspruch/§ 44/§ 25 templates | renderer in core, templates in module | done (WP-93) |
-| `app/api/routes/goldset.py`, `eval/` | goldset assumed Sozialrecht | per-module goldsets; `eval.runner --module` | partly: goldsets in `modules/sozialrecht/goldset/`; `--module` and `/modules/{id}/goldset` → WP-95 |
+| `app/api/routes/goldset.py`, `eval/` | goldset assumed Sozialrecht | per-module goldsets; `eval.runner --module` | done: goldsets in `modules/sozialrecht/goldset/` (WP-93); `eval.runner --module` and `GET /modules/{id}/goldset` (WP-95); `/goldset*` stays the `GOLDSET_PATH` alias until `/api/v2` |
 | `scripts/seed_legal_parameters.py`, `legal_parameter.domain='sgb2'` | SGB II seeding | generic module parameter loader | done: loader (WP-93, `scripts/seed_module_parameters.py`); domain `sgb2 → sozialrecht` (WP-94) |
 
 Legacy area keys (D-038) after WP-94: `schenkungsrecht` is declared by the

@@ -942,3 +942,65 @@ versioned without rewriting what the user selected. R2: schema change with
 a deviation from the written target; reversible by downgrade (which fails
 loudly on post-upgrade keys outside the v2.0.0 list rather than deleting
 audit rows).
+
+### D-058 R2 — 2026-11-16 — WP-95 module API: routes, request gate, resolved_modules
+**Decision:** `/api/v1` gains three read-only routes over the running
+registry (`app/api/routes/modules.py`): `GET /modules` (id, version, tier,
+`enabled`, `is_default`, title, `area_keys`, corpus readiness, `installed_at`),
+`GET /modules/{module_id}` (plus public manifest parts: `core_api`, scope,
+legacy aliases, capability flags, `parameter_domain`, deadline catalog from
+`fristen.yaml`, document types with template titles, `dossier_checklist: null`
+until P10, public compliance facts) and `GET /modules/{module_id}/goldset`
+(the manifest-declared goldset in the `/goldset` listing shape, plus
+`module_id`, `module_version`, `gate`). Sub-decisions:
+(a) **Process-wide registry** `app.modules.runtime.module_registry()`
+(lru-cached `load_registry_from_settings`); startup builds it first, so
+request-time enablement is exactly what startup validated.
+(b) **Request gate on `/analyze` only**: every `legal_areas` value resolves via
+the area tables (module id, legacy alias, core-procedural key); unknown →
+`422 {"detail": {"error": "MODULE_UNKNOWN", "legal_areas": [<all unknown>]}}`,
+else installed-but-disabled → `422 MODULE_NOT_ENABLED` (unknown wins when
+both occur). Checked before the corpus pre-flight — **behaviour change:** an
+unknown key previously surfaced as `409 corpus_not_ready`. `/intake` and
+`/presets` accept no `legal_areas` input (they produce area keys), so they
+are not gated; they *report* `resolved_modules` instead. Core-procedural keys
+(`module_id: null`) are always available. Path-addressed unknown modules are
+`404` with `error: MODULE_UNKNOWN` (REST resource semantics; 422 stays for
+request bodies); disabled modules remain readable via `/modules/{id}`.
+(c) **`resolved_modules`** entry shape `{legal_area, module_id,
+module_version, legacy_alias, enabled}`, one per area key in request order.
+On the `/analyze` terminal event **only when `legal_areas` was non-empty** —
+requests without it stay byte-identical (WP-97 golden-transcript gate); on
+intake session responses and `presets/suggest`/`apply` always (additive key).
+(d) **`meta/version.modules`** = `{id: version}` of the **enabled** modules,
+sorted by id (the set a request can run with; installed-only modules are
+listed by `/modules`).
+(e) **`installed_at`** comes from `legal_module` only when the row's
+`manifest_sha256` matches the running manifest (else `null`); `corpus` and
+`installed_at` are `null` when the DB is unreachable — the catalog is
+filesystem data and stays served.
+(f) `/goldset*` keeps serving `GOLDSET_PATH` (Sozialrecht v0.1.0, D-056);
+`/modules/sozialrecht/goldset` serves the manifest's v0.2.0 — the alias is a
+route alias, not a content alias, until `/api/v2`.
+(g) WP-94 handover items closed here: the `/analyze` body is `dict[str, Any]`,
+so `legal_areas` as a JSON list (the documented shape) is accepted (it was
+rejected with a FastAPI 422 by the former `dict[str, str]` annotation);
+`eval.runner --module <id>` runs the manifest-declared goldset (runner 1.1.0).
+**Acceptance:** `tests/unit/test_api_documentation.py` (G4 parity) green with
+`API_DOCUMENTATION.md` § 8.10 and the §5/§7.1/§8 deltas;
+`tests/unit/test_modules_api.py` pins resolution, both 422 codes (no pipeline
+call), the routes' shapes, no leak of manifest file paths/code refs, the
+enabled-only `meta/version.modules`, absence of `resolved_modules` without
+`legal_areas`, and `eval.runner --module`; WP-93 golden and all other unit and
+integration tests unchanged.
+**Rejected:** (1) Gating `/intake`/`/presets` output by enablement (dropping
+suggestions of disabled modules) — changes suggestion behaviour beyond the
+additive WP; `enabled` in `resolved_modules` lets clients decide. (2) Always
+emitting `resolved_modules` on `/analyze` — breaks the byte-identity gate for
+requests without `legal_areas`. (3) `422` for unknown path ids — a missing
+resource is a 404. (4) Listing all installed modules in `meta/version` —
+mixes "installed" with "runs here"; `/modules` already answers the former.
+**Rationale:** Clients can discover modules and their enablement before
+calling `/analyze`, and every accepted request states which module and
+version it ran with. R2: one observable behaviour change (unknown keys
+`409 → 422`) on an error path; reversible in code, no data impact.
