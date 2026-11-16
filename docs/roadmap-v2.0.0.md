@@ -1,6 +1,13 @@
 # Citizen — Roadmap v2.0.0: Legal Posture, Compliance & Provider Readiness
 
 <!-- Version: 2.0.0 | 2026-08-07 -->
+<!-- STATUS 2026-11-16: SUPERSEDED for new work by docs/roadmap-v3.0.0.md
+     (free public path, module architecture; D-034…D-041). Kept unchanged as
+     the record of P6–P8 and because DISCLAIMER_*.md / DEV-INSTANCE.md cite
+     its WP numbers. Open items carried over: roadmap v3.0.0 § 2 (C-1…C-5). -->
+<!-- §7 below ("no new legal areas", "no UI") was the scope of THIS roadmap;
+     it is lifted for new work by D-036/D-038 (modules) and P12 (UI). -->
+
 <!-- STATUS 2026-08-25: planning document, kept as written. Note that the
      deliverables `COMPLIANCE.md`, `COMPLIANCE-EN.md` and `STATEMENT.md`
      referenced below were later consolidated into DISCLAIMER_DE.md /

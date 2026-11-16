@@ -1,3 +1,60 @@
+## 2026-11-16 — Re-founding on the free public path: module architecture + roadmap v3.0.0 (D-034…D-041)
+
+Decisions: D-034 (free public path), D-035 (purpose widened, amends D-020),
+D-036 (core + modules, Sozialrecht default), D-037 (enablement by
+DEPLOYMENT_MODE), D-038 (module queue + legacy keys), D-039 (API stays
+`/api/v1`; versioning scheme), D-040 (PENDING: UI location), D-041 (module
+licensing). **Documentation and architecture only — no production code,
+configuration, migration or API contract changed.** Package version stays
+2.0.0; core 3.0.0 is cut at roadmap P9 exit.
+
+### Added
+
+- `ARCHITECTURE.md` (3.0.0-draft.1) — target architecture: domain-neutral core
+  + legal-area modules; module contract (manifest, deadline specs as data,
+  typed calculator SDK, tiers), core service responsibilities, data-model
+  deltas, additive `/api/v1` target surface, versioning of core/modules/
+  artefacts, per-module compliance, and the as-is coupling map that is the
+  P9 work list.
+- `docs/roadmap-v3.0.0.md` — P9 module architecture (Sozialrecht → module 1,
+  zero-regression gate), P10 appointment dossier, P11 module platform, P12
+  consumer UI + plain-language layer, P13 modules M1–M10, Track G funding/
+  governance (Prototype Fund 2026-11-30, NLnet 2027-01-03), v2.0.0
+  carry-over items C-1…C-5, open questions OQ-1…OQ-9.
+- `docs/module-catalog.md` (1.0.0) — eleven module profiles (Sozialrecht +
+  Schuldner-, Miet-, Arbeits-, Vertrags-, Verkehrs-, Familien-,
+  Aufenthalts-, Steuer-, Erb-, Strafrecht) with scope, documents, deadline
+  and calculator anchors (marked as hypotheses to verify), drafts, corpus,
+  compliance specifics; module definition of done.
+
+### Changed
+
+- `README.md` — repositioned as citizen-side preparation assistant (free
+  public path); new "Ausrichtung und Stand" table; "Rechtsgebiete" replaced by
+  the module table (current tier + plan); planned features listed separately
+  from shipped ones; architecture and directory sections reference the new
+  documents. Current-state sections (Schnellstart, API, Konfiguration, Tests,
+  Sicherheit) unchanged.
+- `AGENTS.md` — points to the new authoritative documents; direction
+  paragraph and rules for new work (no new area logic in core, additive API,
+  no AGPL embedding); purpose statement updated to D-035.
+- `docs/roadmap-v2.0.0.md` — status banner: superseded for new work by
+  v3.0.0; body unchanged (still cited by `DISCLAIMER_*.md` and
+  `devdocs/DEV-INSTANCE.md`).
+
+### Not changed (deliberately)
+
+- `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` and `DISCLAIMER_VERSION` — the
+  widened purpose (D-035) enters compliance copy with DISCLAIMER v3.0.0 in
+  roadmap WP-96, together with the version bump the ack gate requires.
+- `API_DOCUMENTATION.md` — documents the shipped contract only; target routes
+  live in `ARCHITECTURE.md` § 5 until implemented (G4 parity guard).
+
+### Found during the sweep
+
+- D-021 (RDG single-case invariant) is cited as built but was never appended
+  to `DECISIONS.md` (only proposed in roadmap v2.0.0) → carry-over C-1.
+
 ## 2026-08-25 — Art. 50 EU AI Act disclosure & provenance fields (D-032/D-033)
 
 Decisions: D-032 (R1, disclosure/provenance embedding + invariants G-50-A..G /
