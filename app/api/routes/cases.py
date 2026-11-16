@@ -12,7 +12,9 @@ Endpoints:
     GET    /api/v1/cases/{case_id}/export    Export case data
 """
 
-# Semantic Version: 0.3.0 | 2026-11-16 — WP-96: case chat passes the case's
+# Semantic Version: 0.4.0 | 2026-11-16 — P10: final_output skips the stored
+# calculation result (`calculation_check` log key `result`).
+# 0.3.0 | 2026-11-16 — WP-96: case chat passes the case's
 # recorded area keys to the chat service (provenance v1.1 modules).
 # 0.2.0 | 2026-08-25 — D-032 follow-up fix: legal_areas query
 # in get_case_endpoint moved back inside its session block; it previously ran
@@ -146,7 +148,10 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
                     final_output[f"adversarial_{k}"] = v
             elif sl.stage_name == "calculation_check" and isinstance(sl.output_snapshot, dict):
                 for k, v in sl.output_snapshot.items():
-                    final_output[f"calculation_{k}"] = v
+                    # P10: the stored full result (dossier input) stays out
+                    # of final_output, which keeps its pre-P10 keys.
+                    if k != "result":
+                        final_output[f"calculation_{k}"] = v
 
     # Serialize stages.
     stages = [
@@ -758,7 +763,10 @@ async def export_case_endpoint(
                     final_output[f"adversarial_{k}"] = v
             elif sl.stage_name == "calculation_check" and isinstance(sl.output_snapshot, dict):
                 for k, v in sl.output_snapshot.items():
-                    final_output[f"calculation_{k}"] = v
+                    # P10: the stored full result (dossier input) stays out
+                    # of final_output, which keeps its pre-P10 keys.
+                    if k != "result":
+                        final_output[f"calculation_{k}"] = v
 
     # Serialize stages.
     stages = [

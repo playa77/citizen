@@ -1,0 +1,191 @@
+# Sozialrecht — dossier goldset (WP-104; roadmap P10).
+#
+# Expected appointment-dossier content per case of the base goldset
+# v0.2.0 (input texts are taken from there by case id; nothing is copied).
+# Synthetic only. Evaluated offline — no database, no LLM — by
+#   python -m eval.dossier_eval --module sozialrecht
+#
+# `facts` simulate the person's confirmation step (WP-101): the date of the
+# letter, Aufgabe zur Post, Rechtsbehelfsbelehrung status, whether the
+# letter is a Verwaltungsakt, Bundesland — taken from the base goldset's
+# widerspruchsfrist block where it has one. Expectations were written from
+# the case texts and the law, not from the generator's output; where the
+# generator is known to miss, the expectation keeps the true value (see
+# notes) so the metric reports the miss.
+#
+# Metrics (eval/dossier_eval.py):
+#   deadline_completeness — every expected deadline present with the
+#     expected Fristende (or "kein_verwaltungsakt"); gate: 100 %.
+#   checklist_recall — expected checklist ids ⊆ produced ids.
+#   chronology_accuracy — Jaccard overlap of (date, kind) pairs between the
+#     produced proposals and the expected chronology.
+
+# Semantic Version: 1.0.0 | 2026-11-16 — WP-104 initial.
+
+dossier_goldset:
+  id: dossier-goldset-sozialrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.2.0.yaml
+  base_goldset_version: 0.2.0
+  dossier_schema: citizen-dossier-v1.0
+  module: sozialrecht
+  provenance: synthetic
+
+cases:
+  - id: GS-001
+    facts: {bescheid_datum: "2026-07-06", aufgabe_zur_post: "2026-07-06", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-08-10"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, einkommensnachweise]
+      chronology:
+        - {date: "2026-07-06", kind: document_date}
+        - {date: "2026-06-15", kind: antrag}
+        - {date: "2026-08-01", kind: period_start}
+        - {date: "2027-07-31", kind: period_end}
+
+  - id: GS-002
+    facts: {bescheid_datum: "2026-06-15", aufgabe_zur_post: "2026-06-15", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-07-20"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, einkommensnachweise, fruehere_bescheide]
+      chronology:
+        - {date: "2026-06-15", kind: document_date}
+        - {date: "2025-12-01", kind: period_start}
+        - {date: "2026-05-31", kind: period_end}
+        - {date: "2025-11-24", kind: frueherer_bescheid}
+
+  - id: GS-003
+    facts: {bescheid_datum: "2026-06-08", aufgabe_zur_post: "2026-06-08", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-07-13"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, einkommensnachweise, aenderungsnachweise, fruehere_bescheide]
+      chronology:
+        - {date: "2026-06-08", kind: document_date}
+        - {date: "2025-11-18", kind: frueherer_bescheid}
+        - {date: "2025-12-01", kind: period_start}
+        - {date: "2026-05-31", kind: period_end}
+        - {date: "2026-02-01", kind: mentioned}   # Beginn der Beschäftigung
+
+  - id: GS-004
+    facts: {bescheid_datum: "2026-06-22", aufgabe_zur_post: "2026-06-22", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-07-27"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, vermoegensnachweise, antrag_kopie, fruehere_bescheide]
+      chronology:
+        - {date: "2026-06-22", kind: document_date}
+        - {date: "2025-11-21", kind: frueherer_bescheid}
+        - {date: "2025-11-05", kind: antrag}        # "Antrag vom" wraps onto the date's line
+        - {date: "2025-12-01", kind: period_start}  # stated twice; one entry
+        - {date: "2026-05-31", kind: period_end}
+        - {date: "2026-05-04", kind: mentioned}     # Datenabgleich
+        - {date: "2026-06-30", kind: mentioned}     # Fassung bis 30.06.2026
+        - {date: "2026-05-26", kind: mitteilung}    # Ihr Schreiben (Anhörung)
+
+  - id: GS-005
+    facts: {bescheid_datum: "2026-07-09", aufgabe_zur_post: "2026-07-09", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-08-13"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, termin_unterlagen]
+      chronology:
+        - {date: "2026-07-09", kind: document_date}
+        - {date: "2026-07-07", kind: termin}
+        - {date: "2026-06-24", kind: termin}        # Einladung vom
+
+  - id: GS-006
+    facts: {bescheid_datum: "2026-07-06", aufgabe_zur_post: "2026-07-06", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-08-10"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, termin_unterlagen]
+      chronology:
+        - {date: "2026-07-06", kind: document_date}
+        - {date: "2026-05-12", kind: vereinbarung}
+        - {date: "2026-06-22", kind: mitteilung}    # Erinnerung vom
+
+  - id: GS-007
+    # Kostensenkungsaufforderung: no Verwaltungsakt — the person confirms it
+    # after the appointment-side check; the dossier must say "keine Frist".
+    facts: {bescheid_datum: "2026-06-29", ist_verwaltungsakt: false, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: kein_verwaltungsakt}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, unterkunftsunterlagen]
+      chronology:
+        - {date: "2026-06-29", kind: document_date}
+        - {date: "2026-02-01", kind: mentioned}     # Leistungsbeginn
+        - {date: "2026-12-31", kind: behoerdenfrist}
+
+  - id: GS-008
+    facts: {bescheid_datum: "2026-06-18", aufgabe_zur_post: "2026-06-18", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-07-22"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, vermoegensnachweise, antrag_kopie]
+      chronology:
+        - {date: "2026-06-18", kind: document_date}
+        - {date: "2026-05-04", kind: antrag}
+
+  - id: GS-009
+    facts: {bescheid_datum: "2026-06-29", aufgabe_zur_post: "2026-06-29", rbb_status: korrekt, bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2026-08-03"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, schriftverkehr, vermoegensnachweise]
+      chronology:
+        - {date: "2026-06-29", kind: document_date}
+        # Known miss: "am 12.05.2026 … beantragt" — the cue follows the date.
+        - {date: "2026-05-12", kind: antrag}
+        - {date: "2026-05-26", kind: mitteilung}
+        - {date: "2026-06-16", kind: behoerdenfrist}
+        - {date: "2026-06-10", kind: mentioned}     # Unterlagen eingereicht
+        - {date: "2026-06-01", kind: mentioned}     # Versagung ab
+
+  - id: GS-010
+    facts: {bescheid_datum: "2026-02-09", aufgabe_zur_post: "2026-02-09", rbb_status: fehlerhaft, bundesland: NW}
+    expected:
+      deadlines:
+        # § 66 Abs. 2 SGG: 13.02.2027 is a Saturday → Monday 15.02.2027.
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2027-02-15"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, einkommensnachweise, aenderungsnachweise]
+      chronology:
+        - {date: "2026-02-09", kind: document_date}
+        - {date: "2026-01-12", kind: anhoerung}
+        # Known miss: "die Bewilligung vom" is a former decision, no cue yet.
+        - {date: "2025-10-20", kind: frueherer_bescheid}
+
+  - id: GS-011
+    # The person states the actual receipt (18.02.2025). The Fristen core
+    # takes a stated receipt date as Bekanntgabe — the earlier, conservative
+    # reading, matching the base goldset's expectation 2025-03-18.
+    facts: {bescheid_datum: "2025-02-15", bekanntgabe_tatsaechlich: "2025-02-18", bundesland: NW}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2025-03-18"}
+      # Known miss: the absence ("Termin nicht wahrnehmen", krank) is not
+      # caught by the keywords of termin_unterlagen.
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, termin_unterlagen]
+      chronology:
+        - {date: "2025-02-15", kind: document_date}   # heading "Bescheid vom"
+        - {date: "2025-01-01", kind: antrag}
+        - {date: "1982-11-03", kind: geburtsdatum}
+        - {date: "2025-02-18", kind: zugang}
+        - {date: "2025-01-10", kind: mentioned}        # krank am
+
+  - id: GS-012
+    # Dispatch before 2025-01-01: three-day fiction (§ 37 Abs. 2 SGB X a.F.):
+    # 03.05.2024 (Fri) + 3 = 06.05.2024 (Mon) → Fristende 06.06.2024 (Thu),
+    # Berlin (12053). The base goldset's 2024-06-03 matches neither the three-
+    # nor the four-day rule and is not used here (D-065).
+    facts: {bescheid_datum: "2024-05-03", bundesland: BE}
+    expected:
+      deadlines:
+        - {spec_id: widerspruch_sgg_84, frist_ende: "2024-06-06"}
+      checklist: [bescheid_vollstaendig, zugang_nachweis, ausweis, unterkunftsunterlagen]
+      chronology:
+        - {date: "2024-05-03", kind: document_date}
+        - {date: "1980-05-03", kind: geburtsdatum}

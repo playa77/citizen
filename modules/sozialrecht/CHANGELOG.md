@@ -2,6 +2,16 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 1.3.0 — 2026-11-16 — released with core 3.2.0 (D-064)
+
+- `dossier.yaml` (new, WP-102): document checklist (6 always, 8 by keyword),
+  10 appointment questions (4 always, 6 by keyword), 11 chronology cues,
+  dossier goldset + gate (deadline completeness 1.0, checklist recall ≥ 0.9,
+  chronology accuracy ≥ 0.8).
+- `goldset/dossier-goldset-v1.0.0.yaml` (new, WP-104): expected deadlines,
+  checklist and chronology for the 12 cases of goldset v0.2.0.
+- Manifest declares `dossier: dossier.yaml`.
+
 ## 1.2.0 — 2026-11-16 — released with core 3.1.0 (D-063)
 
 - `corpus.yaml`: new `default_ingest_sources: [sgb2, sgbx]` — the sources a

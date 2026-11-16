@@ -1,0 +1,196 @@
+# Sozialrecht — appointment dossier content (WP-102; ARCHITECTURE.md § 3.7).
+#
+# Data, not code: the core dossier generator (app/dossier/) selects the items
+# below for a case and merges them with other modules' items. Validated
+# against app/dossier/module-dossier.schema.json.
+#
+# Selection: an item without `when` always applies; `when.any_keyword`
+# applies when any keyword occurs (case-insensitive substring) in the case's
+# document texts (both sides NFC-normalized and case-folded — mind plural
+# umlauts: "kontoausz" matches Kontoauszug and Kontoauszüge). Keywords are
+# deliberately broad: a superfluous document on
+# the list costs the person little, a missing one can cost the appointment.
+#
+# Purpose (D-020/D-035): the person prepares their own appointment with a
+# Sozialberatung or a Fachanwältin/Fachanwalt für Sozialrecht. Copy speaks to
+# the person ("Sie"), never from the authority's side.
+
+# Semantic Version: 1.0.0 | 2026-11-16 — WP-102 initial (module 1.3.0).
+
+format: citizen-module-dossier-v1.0
+
+checklist:
+  # ── always ────────────────────────────────────────────────────────────
+  - id: bescheid_vollstaendig
+    label_de: "Das Schreiben, um das es geht — vollständig, mit allen Seiten, Anlagen und Berechnungsbögen"
+    why_de: "Die Beratung braucht den genauen Wortlaut und die Berechnung, nicht nur eine Zusammenfassung."
+    topic: kernunterlagen
+    required: true
+  - id: zugang_nachweis
+    label_de: "Briefumschlag oder eine Notiz, an welchem Tag das Schreiben bei Ihnen ankam"
+    why_de: "Davon hängt ab, wann eine Frist beginnt und endet."
+    topic: fristen
+    required: true
+  - id: fruehere_bescheide
+    label_de: "Frühere Bescheide zum selben Zeitraum (Bewilligungs- und Änderungsbescheide)"
+    why_de: "Änderungen lassen sich nur im Vergleich mit der vorherigen Entscheidung prüfen."
+    topic: kernunterlagen
+    required: false
+  - id: antrag_kopie
+    label_de: "Kopie Ihres Antrags bzw. Weiterbewilligungsantrags und der eingereichten Unterlagen"
+    topic: kernunterlagen
+    required: false
+  - id: schriftverkehr
+    label_de: "Sonstiger Schriftverkehr mit der Behörde (Anhörungen, Aufforderungen, Ihre eigenen Schreiben) — möglichst sortiert nach Datum"
+    topic: kernunterlagen
+    required: false
+  - id: ausweis
+    label_de: "Personalausweis oder anderes Ausweisdokument"
+    topic: allgemein
+    required: true
+    merge_key: ausweis
+  # ── depending on the case ─────────────────────────────────────────────
+  - id: einkommensnachweise
+    label_de: "Lohn- oder Gehaltsabrechnungen und andere Einkommensnachweise für den betroffenen Zeitraum"
+    why_de: "Die Anrechnung von Einkommen lässt sich nur mit den Abrechnungen nachrechnen."
+    topic: einkommen
+    required: true
+    when:
+      any_keyword: [einkommen, lohn, gehalt, erwerbs, freibetrag, "§ 11", abrechnung, minijob, nebenjob]
+  - id: unterkunftsunterlagen
+    label_de: "Mietvertrag, letzte Mieterhöhung, aktuelle Betriebs- und Heizkostenabrechnung"
+    why_de: "Für die Kosten der Unterkunft und Heizung zählt, was tatsächlich vereinbart und abgerechnet ist."
+    topic: unterkunft
+    required: true
+    when:
+      any_keyword: [miete, unterkunft, kdu, heizkosten, heizung, betriebskosten, nebenkosten, kostensenkung, angemessen]
+  - id: aenderungsnachweise
+    label_de: "Nachweise, wann Sie welche Änderung der Behörde mitgeteilt haben (z. B. Eingangsbestätigung, Kopie, Sendebeleg)"
+    why_de: "Bei Rückforderungen kommt es oft darauf an, wann und wie eine Änderung gemeldet wurde."
+    topic: rueckforderung
+    required: true
+    when:
+      any_keyword: [aufhebung, aufgehoben, erstattung, rückforderung, überzahlung, "§ 48", "§ 45", "§ 50"]
+  - id: termin_unterlagen
+    label_de: "Einladungen, Kooperationsplan bzw. Eingliederungsvereinbarung und Nachweise für Ihren Grund (z. B. Arbeitsunfähigkeitsbescheinigung)"
+    why_de: "Ob eine Minderung rechtmäßig ist, hängt oft am Grund für das Fernbleiben und an der Belehrung."
+    topic: minderung
+    required: true
+    when:
+      any_keyword: [minderung, pflichtverletzung, meldeversäumnis, sanktion, "§ 31", "§ 32", einladung, meldetermin, kooperationsplan, eingliederungsvereinbarung]
+  - id: vermoegensnachweise
+    label_de: "Kontoauszüge und Nachweise über Vermögen (Sparverträge, Versicherungen, Fahrzeug)"
+    topic: vermoegen
+    required: true
+    when:
+      any_keyword: [vermögen, schonvermögen, "§ 12", sparbuch, lebensversicherung, kontoausz, fahrzeug, kfz]
+  - id: mehrbedarf_nachweise
+    label_de: "Nachweise für einen Mehrbedarf (z. B. Mutterpass, ärztliches Attest, Nachweis Alleinerziehung)"
+    topic: mehrbedarf
+    required: true
+    when:
+      any_keyword: [mehrbedarf, schwanger, alleinerzieh, ernährung, "§ 21"]
+  - id: haushalt_nachweise
+    label_de: "Nachweise zu den Personen in Ihrem Haushalt (Kindergeld, Unterhalt, Einkommen der Partnerin bzw. des Partners)"
+    topic: haushalt
+    required: false
+    when:
+      any_keyword: [bedarfsgemeinschaft, partner, kindergeld, unterhalt, "kind ", kinder]
+  - id: darlehen_aufrechnung
+    label_de: "Darlehens- oder Aufrechnungsbescheide und Ihre Zahlungsnachweise"
+    topic: rueckforderung
+    required: true
+    when:
+      any_keyword: [aufrechnung, darlehen, "§ 42a", "§ 43", ratenzahlung]
+
+questions:
+  # ── always ────────────────────────────────────────────────────────────
+  - id: frist_bestaetigen
+    text_de: "Bis wann muss ich spätestens reagieren — stimmt die im Dossier berechnete Frist, und reicht ein kurzer schriftlicher Widerspruch, um sie zu wahren?"
+    topic: fristen
+  - id: akteneinsicht
+    text_de: "Ist es sinnvoll, vorher Akteneinsicht zu beantragen (§ 25 SGB X)?"
+    topic: verfahren
+  - id: kosten
+    text_de: "Welche Kosten können auf mich zukommen, und kommen Beratungshilfe oder später Prozesskostenhilfe in Betracht?"
+    topic: kosten
+    merge_key: kosten_beratungshilfe
+  - id: frist_versaeumt
+    text_de: "Falls die Frist schon abgelaufen ist: Kommt ein Überprüfungsantrag nach § 44 SGB X in Betracht?"
+    topic: fristen
+  # ── depending on the case ─────────────────────────────────────────────
+  - id: aufschiebende_wirkung
+    text_de: "Muss ich trotz Widerspruch zunächst mit weniger Geld auskommen, und kann ich dagegen vorläufig etwas tun (§ 86b SGG)?"
+    topic: eilrechtsschutz
+    when:
+      any_keyword: [minderung, aufhebung, aufgehoben, entzug, entzogen, aufrechnung, einstellung, eingestellt, versagung]
+  - id: nachzahlung
+    text_de: "Wie hoch wäre eine mögliche Nachzahlung, und ab welchem Monat?"
+    topic: berechnung
+    when:
+      any_keyword: [berechnung, freibetrag, regelbedarf, anzurechnend, bedarf]
+  - id: unterkunft_angemessen
+    text_de: "Welche Grenze für angemessene Wohnkosten gilt in meiner Kommune, und ist sie nachvollziehbar ermittelt?"
+    topic: unterkunft
+    when:
+      any_keyword: [miete, unterkunft, kdu, heizkosten, kostensenkung, angemessen]
+  - id: rueckforderung_vertrauensschutz
+    text_de: "Muss ich das Geld wirklich zurückzahlen — durfte ich darauf vertrauen, und was gilt bis zur Entscheidung über meinen Widerspruch?"
+    topic: rueckforderung
+    when:
+      any_keyword: [aufhebung, aufgehoben, erstattung, rückforderung, überzahlung]
+  - id: wichtiger_grund
+    text_de: "Reicht mein Grund als wichtiger Grund, und welche Nachweise brauche ich dafür?"
+    topic: minderung
+    when:
+      any_keyword: [minderung, pflichtverletzung, meldeversäumnis, sanktion, "§ 31", "§ 32"]
+  - id: vermoegen_freibetrag
+    text_de: "Welcher Vermögensfreibetrag gilt für mich, und welche Vermögenswerte bleiben unberücksichtigt?"
+    topic: vermoegen
+    when:
+      any_keyword: [vermögen, schonvermögen, "§ 12"]
+
+chronology_cues:
+  # Order matters: the first cue whose phrase occurs in the up to 60
+  # characters before a date (after the previous date, within the paragraph)
+  # names the date. Specific before general.
+  - kind: antrag
+    label_de: "Antrag"
+    before_any: ["antrag vom", "antrag auf", "beantragt am", "antragstellung am"]
+  - kind: frueherer_bescheid
+    label_de: "Früherer Bescheid"
+    before_any: ["bescheid vom", "bescheides vom", "bescheids vom"]
+  - kind: anhoerung
+    label_de: "Anhörung"
+    before_any: ["anhörung vom", "anhörungsschreiben vom", "angehört am"]
+  - kind: termin
+    label_de: "Termin / Einladung"
+    before_any: ["meldetermin", "termin am", "einladung vom", "eingeladen", "vorsprache am"]
+  - kind: vereinbarung
+    label_de: "Kooperationsplan / Eingliederungsvereinbarung"
+    before_any: ["kooperationsplan vom", "eingliederungsvereinbarung vom"]
+  - kind: zugang
+    label_de: "Schreiben erhalten (Ihre Angabe)"
+    before_any: ["kam am", "erhalten am", "zugegangen am", "zugestellt am", "im briefkasten am"]
+  - kind: widerspruch
+    label_de: "Widerspruch"
+    before_any: ["widerspruch vom", "widerspruch am"]
+  - kind: mitteilung
+    label_de: "Schreiben / Mitteilung"
+    before_any: ["schreiben vom", "mitteilung vom", "mitgeteilt am", "e-mail vom", "erinnerung vom"]
+  - kind: zufluss
+    label_de: "Zahlung / Zufluss"
+    before_any: ["zufluss", "überwiesen am", "gutgeschrieben", "ausgezahlt am"]
+  - kind: geburtsdatum
+    label_de: "Geburtsdatum"
+    before_any: ["geboren am", "geb. am", "geburtsdatum"]
+  - kind: behoerdenfrist
+    label_de: "Von der Behörde gesetzte Frist"
+    before_any: ["fristsetzung bis", "frist bis", "bis zum"]
+
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

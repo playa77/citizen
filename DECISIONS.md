@@ -1356,3 +1356,130 @@ explicit: one fresh reference run before the next gate.
 need an operator-provided API key. spaCy NER still tags some common nouns as
 persons/companies ("Anzurechnendes", "OCR-Fehler") — over-redaction, not
 leakage; no deterministic fix without a stop list.
+
+### D-064 R2 — 2026-11-16 — P10 appointment dossier (WP-100…WP-104): storage, schema, content rules, core 3.2.0, `sozialrecht` 1.3.0
+**Scope and acceptance (recorded before the change, AGENTS.md):** implement
+roadmap phase P10 — dossier schema and storage (WP-100), chronology builder
+with a confirmation step via API (WP-101), module dossier content for
+Sozialrecht plus a generic multi-module merge (WP-102), generator with
+`POST/GET /cases/{id}/dossier`, local PDF and JSON export, provenance in both
+(WP-103), dossier goldset with deadline completeness / checklist recall /
+chronology accuracy (WP-104). Acceptance: every goldset case yields a
+schema-valid dossier, deadline completeness 100 %, `/api/v1` additive only
+(D-039) with `API_DOCUMENTATION.md` in the same change, full unit suite +
+ruff/format/mypy strict + purpose-drift green, requests and SSE of
+`/analyze` unchanged.
+**Decision:**
+(a) **Storage (the open WP-100 question, ARCHITECTURE.md § 4):** a separate
+table `case_dossier` (migration `014_case_dossier`), not
+`case_run.dossier_json`. One row per build with `revision` (1, 2, …;
+unique per case), `schema_version`, `dossier_json`, `content_sha256`
+(canonical JSON). The PDF is not stored; it is rendered from the stored JSON.
+The chronology confirmation state lives in `case_run.user_edits["dossier"]`
+(decisions, added events, facts) — it is user input about the case, not a
+build product, and must survive rebuilds.
+(b) **Schema `citizen-dossier-v1.0`** (`app/dossier/citizen-dossier-v1.0.schema.json`,
+`additionalProperties: false` throughout): eight sections in the
+ARCHITECTURE.md § 3.7 order (chronology, document_checklist, deadlines,
+calculations, evidence, questions, drafts, export) plus case header, notice,
+warnings, `disclosure` and `provenance` (`citizen-provenance-v1.1`). Every
+build is validated before it is stored; an invalid build is a 500, never a
+stored document.
+(c) **Deadlines only from the Fristen core**, with explicit input states:
+person-given facts win; a *confirmed* letter date gives `computed`, a merely
+*proposed* one `provisional` (shown, flagged), none `missing_input`. Unset
+facts take the conservative reading and are listed as `assumptions` per
+deadline (RBB correct → shorter deadline; Aufgabe zur Post = letter date →
+earliest Bekanntgabe; treated as Verwaltungsakt → a deadline is shown rather
+than hidden; Fristen-core default Bundesland).
+(d) **Chronology** is deterministic extraction (German date notation, the
+letter-date line, "Bescheid vom" heading lines, periods "… bis …" incl. one
+line wrap) plus module `chronology_cues` (phrase within 60 characters before
+a date, never past the previous date or a paragraph break). Every entry is a
+proposal until the person confirms it; ids are content hashes so decisions
+survive rebuilds. "Bescheid" in the core heading pattern is cross-area German
+administrative vocabulary (Steuer-, Bußgeld-, Mahnbescheid), not Sozialrecht
+logic.
+(e) **Module content** `dossier.yaml` (`citizen-module-dossier-v1.0`,
+validated against `app/dossier/module-dossier.schema.json`; startup refuses
+invalid content of an enabled module): checklist, questions, chronology
+cues, optional dossier goldset + gate. Selection by `when.any_keyword`
+(NFC-normalized, case-folded); multi-module merge in case area order,
+`merge_key` dedupes across modules. Questions also get one generated entry
+per claim the person marked `disputed`.
+(f) **Calculations section = engine fields only** (deterministic result,
+detail, authority value, discrepancy); model commentary stays out. To make
+that possible, `/analyze` now also stores the full calculation result in the
+`calculation_check` stage log (`output_snapshot.result`, without
+`legal_snapshot`) — DB only; the SSE stream and `GET /cases/{id}`
+`final_output` keys are unchanged. Older cases yield `summary_only`.
+(g) **PDF** via PyMuPDF Story (already a dependency; local, no service):
+deadline banner before every section; provenance as footer on every page,
+in PDF metadata, and as embedded `dossier.json` + `provenance.json`.
+(h) **Dossier goldset** `modules/sozialrecht/goldset/dossier-goldset-v1.0.0.yaml`
+references base goldset v0.2.0 by case id (no copied texts); `facts`
+simulate the confirmation step. Expectations were written from the texts,
+not from generator output; three known misses are kept in the expectations
+(GS-009 "am … beantragt", GS-010 "Bewilligung vom", GS-011 absence keywords).
+Offline eval `python -m eval.dossier_eval` (no DB, no LLM, no API key; without
+a configuration the draft annex is skipped and reported). Gate in
+`dossier.yaml`: deadline completeness 1.0, checklist recall ≥ 0.9,
+chronology accuracy (Jaccard of (date, kind)) ≥ 0.8. Result at this tree:
+schema 12/12, deadline completeness 1.000, checklist recall 0.979,
+chronology accuracy 0.935 — pass.
+(i) **Versions:** core **3.2.0** (MINOR: new routes, table, schema). The
+roadmap planned P10 as core 3.1.0, but D-063 already released 3.1.0; P10
+ships as 3.2.0 and the later phases shift one minor (P11 → 3.3.0, P12 →
+3.4.0; roadmap 3.0.1). `sozialrecht` **1.3.0** (MINOR: new dossier content
++ goldset). New artefact versions: dossier schema `citizen-dossier-v1.0`,
+module content format `citizen-module-dossier-v1.0`, dossier goldset 1.0.0,
+eval report format `citizen-dossier-eval-v1.0`. No disclaimer change (no
+addendum touched), no new setting.
+**Rejected:** (1) `case_run.dossier_json` — overwrites what the person
+printed, and `GET /cases` selects full `case_run` rows. (2) Deadlines from
+an unconfirmed date shown as final, or hidden until confirmation — the
+first can mislead, the second hides the most important fact; `provisional`
+with a warning does neither. (3) Asking the model to write the chronology —
+dates feed deadlines; extraction must be deterministic and auditable.
+(4) Copying model calculation commentary into the dossier — the section's
+claim is "regelbasiert". (5) An HTML-to-PDF service or new dependency —
+PyMuPDF already renders locally. (6) Adding dossier expectations into the
+frozen base goldset v0.2.0 — would change a gated artefact; a separate,
+versioned dossier goldset references it instead.
+**Rationale:** The dossier is the product's central deliverable (D-034); its
+value rests on deadlines and amounts being right and on the person seeing
+exactly what is confirmed and what is assumed.
+**Open:** P10 exit criterion "owner review of two PDF samples with a
+practitioner" is a human review and is not done here (sample PDFs can be
+produced with `python -m eval.dossier_eval --pdf-dir … --pdf-case GS-001`).
+The draft annex rarely fills claim slots: `validate_slot_claim` requires
+`user_adjudication.status == "confirmed"`, while `/adjudicate` only writes
+`agreed`/`disputed` — a pre-existing mismatch, left for a separate decision.
+
+### D-065 R2 — 2026-11-16 — § 37 Abs. 2 SGB X fiction is intertemporal (three days before 2025-01-01)
+**Decision:** The Fristen-core fiction `sgbx_37_2` adds **three** days for
+dispatch (Aufgabe zur Post) before 2025-01-01 and four days from then on
+(Art. 33 PostModG changed "dritten" to "vierten" Tag effective 2025-01-01, as
+recorded in goldset v0.2.0's legal baseline and the fiction's own
+docstring). Found by the dossier goldset (D-064): GS-012 (letter of
+03.05.2024) got a deadline one day too late. The WP-93 golden baseline is
+rebaselined for exactly the 8 `jahr` draft variants whose fixture dispatch
+is 10.01.2023 (`_meta.rebaselined` names them); five Fristen unit tests that
+used 2024 dispatch dates for month-end/leap-year arithmetic keep their
+asserted arithmetic with the dispatch date moved one day later.
+**Rejected:** (1) Leaving the four-day rule and recording the GS-012
+expectation as a known miss — a deadline that is one day too late is the
+one error the dossier must not make. (2) Keeping the 2024 test dates and
+changing their expected Bekanntgabe — the tests are about month-end
+arithmetic, not the fiction; the fiction has its own boundary tests now.
+**Rationale:** Deadline correctness outranks golden-file stability; the
+change is confined to dispatch dates before 2025 (all goldset-v0.2.0 Fristen
+cases are 2026 and unchanged).
+**Open (not changed here, needs its own WP with sources and golden date
+tests):** the holiday table in `app/fristen/calendar.py` has errors in both
+directions. Holidays listed that the Land does not observe can push a
+deadline *later* than the law allows (dangerous): NW lists 31.10
+(Reformationstag) and 15.08 (Mariä Himmelfahrt), BW lists 15.08. Missing
+holidays make deadlines earlier (safe but wrong): Allerheiligen (01.11) for
+BY/BW/RP/SL. Easter dates exist only for 2024–2027; other years are clamped
+to the nearest table year's movable holidays.

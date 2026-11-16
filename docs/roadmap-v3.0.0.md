@@ -1,6 +1,9 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.0.0 | 2026-11-16 -->
+<!-- Version: 3.0.1 | 2026-11-16 — release numbers shifted one minor: core 3.1.0
+     went to the WP-97 follow-up (D-063), so P10 ships as 3.2.0, P11 3.3.0, P12 3.4.0
+     (D-064); P10 status added.
+     3.0.0 | 2026-11-16 -->
 <!-- Supersedes: roadmap v2.0.0 (P6–P8, WP-60…WP-69) for all NEW work.
      Roadmap v2.0.0 remains the record of the compliance work it delivered;
      its open items are carried over in § 2 below. -->
@@ -177,7 +180,13 @@ Open items verified against the repository on 2026-11-16:
 ## 4. Phase P10 — The Appointment Dossier (Mandatsvorbereitung)
 
 **Goal:** the product's central deliverable exists for Sozialrecht and is
-generic for every later module. **Release: core 3.1.0.**
+generic for every later module. **Release: core 3.2.0** (planned as 3.1.0;
+see D-064).
+
+**Status (2026-11-16, D-064/D-065):** WP-100…WP-104 built. Exit criteria:
+schema-valid dossier for every goldset case ✓ (12/12), deadline completeness
+100 % ✓ (dossier goldset v1.0.0, `eval/dossier_eval.py`); owner review of two
+PDF samples with a practitioner — **open**.
 
 - **WP-100 — Dossier schema.** JSON Schema `citizen-dossier-v1.0` (8 sections,
   ARCHITECTURE.md § 3.7); storage decision (`case_run.dossier_json` vs table).
@@ -199,7 +208,7 @@ generic for every later module. **Release: core 3.1.0.**
 ## 5. Phase P11 — Module Platform
 
 **Goal:** modules can be developed, versioned, updated and contributed
-safely. **Release: core 3.2.0.**
+safely. **Release: core 3.3.0.**
 
 - **WP-110 — Module versioning and errata.** Module semver rules
   (ARCHITECTURE.md § 6.2), per-module CHANGELOG, errata surfacing on
@@ -226,7 +235,7 @@ safely. **Release: core 3.2.0.**
 ## 6. Phase P12 — Consumer UI and Plain-Language Layer
 
 **Goal:** a polished, accessible, local-first guided journey for citizens.
-**Release: `citizen-web` 1.0.0; core 3.3.0 (plain-language API fields).**
+**Release: `citizen-web` 1.0.0; core 3.4.0 (plain-language API fields).**
 
 - **WP-120 — UI location decision (D-040).** Owner confirms separate
   repository consuming `/api/v1` (recommended) or reverses D-025.
@@ -330,9 +339,9 @@ stays `experimental` — it is never promoted to meet a date.
         ─ P9  WP-90 → WP-91 → (WP-92 ∥ WP-94) → WP-93 → WP-95 → WP-96 → WP-97  ⇒ core 3.0.0
 2026-12 ─ 2026-12-02: Art. 50(2) transition end — binds only in provider mode
 2027-01 ─ Track G: WP-141 (NLnet, due 2027-01-03)
-        ─ P10 dossier                                                         ⇒ core 3.1.0
-        ─ P11 module platform (WP-115 authoring kit first)                   ⇒ core 3.2.0
-        ─ P12 consumer UI (may start in parallel with P11 after WP-120)     ⇒ citizen-web 1.0.0
+        ─ P10 dossier                                                         ⇒ core 3.2.0
+        ─ P11 module platform (WP-115 authoring kit first)                   ⇒ core 3.3.0
+        ─ P12 consumer UI (may start in parallel with P11 after WP-120)     ⇒ citizen-web 1.0.0, core 3.4.0
         ─ P13 M1 → M2 → M3 → M4 → M5 → M6 → M7 (needs P12 i18n) → M8 → M9 → M10
 ```
 
