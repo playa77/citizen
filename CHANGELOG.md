@@ -1,3 +1,70 @@
+## 2026-11-16 — Core 3.1.0: WP-97 follow-up — pseudonymization, test isolation, gate, last coupling (D-063)
+
+Fixes every defect the WP-97 run report left open or that its review turned
+up. `sozialrecht` **1.2.0**. No `/api/v1` shape change; no migration.
+
+### Fixed — pseudonymization gate (`app/services/pseudonymization.py` 0.1.1)
+
+Measured over goldset v0.2.0 inputs with the spaCy model installed (no LLM
+calls): PII leaked in **4 of 12** cases before, **0** after; eval PII recall
+0.990 → **1.000**, precision 0.327 → **0.663**, over-redaction 0 → 0.
+
+- **Authority names redacted as companies (I-07).** The authority patterns are
+  case-sensitive but were matched against lower-cased text, so the exemption
+  never fired: "Jobcenter Essen", "Agentur für Arbeit" became `[[FIRMA_n]]`
+  in 10 of 12 goldset inputs. ORG entities overlapping an authority name are
+  now kept; PER entities only when they *are* an authority name.
+- **Second structured ID leaked.** Same-pattern matches were replaced with
+  stale offsets — a second IBAN or phone number stayed partly in clear text
+  and the text around it was mangled.
+- **BG-Nummer `12345BG0012345` not detected** (only the `//` form was).
+- **Phone numbers `0176/12345678` not detected**; month periods (`01/2026`)
+  are explicitly not phone numbers.
+- **Signature surnames leaked.** A caseworker name seen after "Herr" was not
+  replaced in the bare "Im Auftrag" signature; a final consistency pass now
+  replaces every further occurrence of a mapped value.
+- **Placeholders corrupted by later detectors.** NER tagged `ADRESSE_2`,
+  `ID_2`, `GEBURTSDATUM_4` as persons (`[[[[PERSON_3]]]]`, placeholder names
+  in the mapping); detectors now skip spans overlapping a placeholder.
+- **Street matches crossed lines / were discarded.** The street-name group
+  swallowed salutation and recipient lines into one "address", and a match
+  that overshot into running text was dropped instead of trimmed (the street
+  stayed in clear text); salutation names no longer span lines.
+- Form labels ("BG-Nummer") tagged ORG are no longer redacted.
+
+**Consequence for the eval gate:** the LLM now sees different input in 11 of
+12 goldset cases. The committed gate reports (B0′, `60c4afd`) were produced
+with the old inputs; the next gate must produce a fresh reference at this tree
+first (D-063). Not run here — no operator-provided API key in this session.
+
+### Fixed — tests and eval
+
+- **Combined `pytest tests/unit tests/integration` was red (I-08).** The
+  module-scoped transcript fixture opened its `TestClient` before the
+  function-scoped pool dispose, inheriting connections bound to the unit
+  suite's event loop. `tests/integration/conftest.py` 1.1.0 resets the pool
+  per module. Combined run: 1222 passed, 2 skipped.
+- `eval/regression_gate.py` 1.2.0: a sourced quote rate with no denominator
+  reads "undefined (no sourced claims)", not `None` (report open item 3).
+  First unit tests for the gate (`tests/unit/test_regression_gate.py`).
+- `eval/metrics.py` 1.3.0: PII recall counted a span as missed when the
+  pseudonymized text was shorter than the span offset, even though the value
+  was gone.
+
+### Changed
+
+- `CORPUS_SOURCES` defaults to unset; the ingest default is the
+  `DEFAULT_MODULE`'s new `corpus.yaml` key `default_ingest_sources`
+  (`sozialrecht`: `sgb2`, `sgbx` — unchanged effective list). Closes the last
+  residual coupling in `ARCHITECTURE.md` § 8; `ENABLE_CALCULATION_CHECK` is
+  reclassified as a domain-neutral operator kill switch (calculators are
+  already per module). `.env.example` 0.5.0, README config table.
+- Package **3.1.0** (MINOR: new optional module corpus key); `sozialrecht`
+  **1.2.0**; `API_DOCUMENTATION.md` version examples follow.
+- `docs/wp97-run-report.md` 1.1.0: corrections from its review (combined-run
+  attribution, rescore reproducibility, verdict caveat, stale state, local
+  paths) and a post-merge addendum.
+
 ## 2026-11-16 — Core 3.0.0: P9 exit gate (WP-97, D-062)
 
 P9 is closed. The core carries no area-specific code, Sozialrecht ships as

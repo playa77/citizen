@@ -5,7 +5,10 @@ structure into ``§ → Absatz → Satz`` units, generates metadata, and returns
 normalised :class:`dict` objects ready for embedding and DB insertion.
 """
 
-# Semantic Version: 0.2.0 | 2026-11-16 — WP-93: § range → legal_area chunk tags
+# Semantic Version: 0.3.0 | 2026-11-16 — `default_corpus_sources()`: the
+# ingest default comes from the DEFAULT_MODULE's corpus scope unless
+# CORPUS_SOURCES is set (last residual coupling of ARCHITECTURE.md § 8).
+# 0.2.0 | 2026-11-16 — WP-93: § range → legal_area chunk tags
 # come from module corpus scopes (`chunk_tags`), no hard-coded area table.
 
 from __future__ import annotations
@@ -333,12 +336,28 @@ def save_runtime_sources(sources: list[str]) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def default_corpus_sources(configured: list[str] | None = None) -> list[str]:
+    """The configured ingest default: ``CORPUS_SOURCES`` if set, else the
+    ``default_ingest_sources`` of the ``DEFAULT_MODULE``'s corpus scope.
+
+    *configured* lets callers that read a (patchable) settings object pass
+    their own ``CORPUS_SOURCES``; ``None`` reads the module-level settings.
+    """
+    if configured is None:
+        configured = settings.CORPUS_SOURCES
+    if configured is not None:
+        return list(configured)
+    from app.modules.areas import area_tables
+
+    return list(area_tables().default_ingest_sources)
+
+
 async def get_effective_corpus_sources() -> list[str]:
     """Get the effective list of corpus sources to ingest.
 
-    Prefers runtime configuration (from .corpus_sources.json) over env default.
-    Falls back to ``settings.CORPUS_SOURCES`` if no runtime config exists.
-    Validates that all requested sources are known.
+    Prefers runtime configuration (from .corpus_sources.json) over the
+    configured default (:func:`default_corpus_sources`) and validates that all
+    requested sources are known.
     """
     runtime = load_runtime_sources()
     if runtime is not None:
@@ -346,8 +365,8 @@ async def get_effective_corpus_sources() -> list[str]:
         unknown = set(runtime) - set(CORPUS_SOURCE_METADATA)
         if unknown:
             logger.warning("Ignoring unknown corpus sources from runtime config: %s", unknown)
-        return valid if valid else list(settings.CORPUS_SOURCES)
-    return list(settings.CORPUS_SOURCES)
+        return valid if valid else default_corpus_sources()
+    return default_corpus_sources()
 
 
 # ---------------------------------------------------------------------------

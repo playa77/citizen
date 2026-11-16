@@ -1,15 +1,33 @@
 # WP-97 — P9 exit gate: run report
 
+<!-- Version: 1.1.0 | 2026-11-16 — review corrections (combined-run
+     attribution, rescore reproducibility, verdict caveat, merge state,
+     machine-local paths and account data removed) and § 13 addendum (D-063).
+     1.0.0 | 2026-11-16 — initial report (commit 88d3eb9). -->
+
 **Date:** 2026-11-16
-**Branch:** `p9/wp97-exit-gate` (4 commits on top of `origin/main` `a483be0`)
+**Status:** merged — [playa77/citizen#11](https://github.com/playa77/citizen/pull/11)
+(merge commit `3b9dec4`). Follow-up fixes: § 13 / D-063 (core 3.1.0).
+**Branch:** `p9/wp97-exit-gate` (5 commits on top of `origin/main` `a483be0`:
+the four in § 1 plus `88d3eb9`, this report)
 **Scope:** roadmap v3.0.0 WP-97 — goldset zero regression, full suite + ruff +
 mypy strict + purpose-drift lint green, byte-identical `/analyze` behaviour for
-requests without `legal_areas`, cut core 3.0.0 and `sozialrecht` 1.0.0,
-CHANGELOG + D-entry.
+requests without `legal_areas`, cut core 3.0.0 and `sozialrecht` 1.0.0 (as the
+roadmap names it; released as 1.1.0 — see I-10 and D-062 (e)), CHANGELOG +
+D-entry.
 **Verdict:** gate **PASSED** (zero deterministic regressions against B0′),
 core **3.0.0** and module **1.1.0** cut, records written (D-062). One prompt
 defect was found and fixed on the way (3.0.0 → 3.0.1); two pre-existing test
-failures remain and are documented below.
+defects remained open at the cut (I-07, I-08 — both fixed since, § 13).
+
+**Caveat on the verdict.** Each state was run once (no repetition spread), and
+the gate's strict `quote_verification_rate` is deterministic *given* an output
+but its denominator — the number of claims — is chosen by the model. The 3.0.1
+fix changed the prompt in a way that raises exactly that metric, while issue
+recall and assessment match fell from R1 to R2. "Zero deterministic
+regression" therefore means: no strict-metric drop in this single paired
+comparison; it is not evidence that the release is better than B0′ on the
+LLM-dependent metrics (open item 2).
 
 ---
 
@@ -22,7 +40,8 @@ failures remain and are documented below.
 | `60c4afd` | prompt set 3.0.1 — P-04 claim-rule fix + 13 `prompts:*` golden digests re-baselined |
 | `49eac73` | gate evidence (3 eval reports), D-062, CHANGELOG, ARCHITECTURE § 8, AGENTS.md, prompt inventory 2.0.1, module CHANGELOG, manifest `gate.baseline_report` |
 
-Working tree clean, nothing pushed.
+State at the time of writing: working tree clean, nothing pushed. The branch
+was pushed and merged afterwards (see **Status**).
 
 ---
 
@@ -40,9 +59,10 @@ All steps verified before the next began; no step was assumed.
 | parameters | `python -m scripts.seed_module_parameters` | `0 created, 0 updated, 27 unchanged (27 rows)`; modules ohne Parameter: 0 rows each |
 | corpus | `select count(*) from legal_chunk` | 940 chunks (sgb2 + sgbx) |
 | NER model | `python -m spacy download de_core_news_lg` | `de-core-news-lg 3.8.0`, loads with full pipeline |
-| API key | `GET https://openrouter.ai/api/v1/key` | auth OK, non-free tier, limit $10 |
+| API key | `GET https://openrouter.ai/api/v1/key` | auth OK (operator-provided key, separate from the developer agent's) |
 
-`.env` corrections (backup: `~/.hermes/cache/scratch/env-backup-<timestamp>`):
+`.env` corrections (a timestamped backup was kept in the operator's local
+scratch directory):
 
 | key | old | action | why |
 |---|---|---|---|
@@ -50,8 +70,8 @@ All steps verified before the next began; no step was assumed.
 | `DISCLAIMER_VERSION` | `v0.1.0` | commented out | WP-96 shipped `v3.0.0`; a pinned old value makes every acknowledged request answer 403 (`DEPLOYMENT.md` upgrade step 5) |
 | `EMBEDDING_API_KEY` | `EMBEDDING_API_KEY=# Optional — falls back…` | **left as is** | checked `python-dotenv`: an inline `#` right after `=` parses as an empty value, so the documented fallback to `OPENROUTER_API_KEY` applies. Fragile-looking but correct |
 
-Token cost of the whole session: account usage went **$2.5007 → $3.2986**
-(≈ **$0.80** for one smoke case + 36 full pipeline runs).
+Token cost of the whole session: ≈ **$0.80** for one smoke case + 36 full
+pipeline runs (≈ $0.02 per run).
 
 ---
 
@@ -71,7 +91,7 @@ the worktree via `PYTHONPATH`:
 ```bash
 git worktree add /tmp/citizen-b0p 55ec1f2
 cp .env /tmp/citizen-b0p/.env
-cd /tmp/citizen-b0p && PYTHONPATH=$PWD /home/devops/src/citizen/.venv/bin/python \
+cd /tmp/citizen-b0p && PYTHONPATH=$PWD <repo>/.venv/bin/python \
   -m eval.runner --module sozialrecht --save
 ```
 
@@ -172,7 +192,10 @@ Gate exit code 1. No version was cut at this point.
 Gate exit code 0. The prompt-set difference is reported as a warning by design
 (`eval/regression_gate.py` 1.1.0, CR-09).
 
-Gate runs are cheap and repeatable without LLM calls:
+Gate runs are cheap and repeatable without LLM calls — but **only where the
+raw outputs exist**: `*.outputs.json` is git-ignored (`.gitignore`, "results
+and run outputs are not" tracked), so the rescore command below works on the
+machine that ran the evals, not from a clone:
 
 ```bash
 python -m eval.runner --module sozialrecht \
@@ -180,11 +203,23 @@ python -m eval.runner --module sozialrecht \
   --baseline eval/results/20261116T170321Z-55ec1f2.json
 ```
 
+From a clone, the gate verdicts themselves are reproducible from the committed
+reports (verified in review: identical failures and warnings for R1 and R2):
+
+```bash
+python -c "from eval.runner import _load_report as L; from eval.regression_gate import regression_gate as g; \
+b = L('eval/results/20261116T170321Z-55ec1f2.json'); \
+print(g(L('eval/results/20261116T175355Z-60c4afd.json'), b))"
+```
+
+The § 6 root-cause measurements (claims per case, sourced claims) need the
+raw outputs and cannot be re-derived from the repository.
+
 ---
 
 ## 6. Root cause of the red gate — a prompt defect, not the refactor
 
-Measured from the saved raw outputs (`*.outputs.json`):
+Measured from the saved raw outputs (`*.outputs.json`, local only — see § 5):
 
 | case | B0′ claims / sourced | R1 claims / sourced | R1 "nicht belegbar" claims |
 |---|---|---|---|
@@ -265,11 +300,11 @@ byte-identical.
 |---|---|---|
 | unit tests | `pytest tests/unit/ -q` | **1156 passed, 2 failed, 2 skipped** (66 s) — failures are the pre-existing pseudonymization negative controls, see I-07 |
 | integration tests | `pytest tests/integration/ -q` | **42 passed** (8 s) |
-| combined run | `pytest tests/unit/ tests/integration/ -q` | 1196 passed, **4 failed** — test-harness artefact, see I-08; CI runs the suites separately and so did every accepted run in this report |
+| combined run | `pytest tests/unit/ tests/integration/ -q` | 1196 passed, **4 failed** — 2 × I-07 (spaCy model installed) + 2 × I-08 (`test_analyze_transcript.py`); CI runs the suites separately and so did every accepted run in this report |
 | lint | `ruff check app/` | All checks passed |
 | format | `ruff format --check app/` | 74 files already formatted |
 | types | `mypy app/ --python-version 3.12` | Success, 74 source files (CI's 3.12 invocation) |
-| compliance lint | `python scripts/check_purpose_drift.py` | OK — 12 files, 76 deny phrases |
+| compliance lint | `python scripts/check_purpose_drift.py` | OK — 12 files, 76 deny phrases (13 once this report itself landed in `docs/`) |
 | prompt/golden | `pytest tests/unit/test_wp93_golden.py tests/unit/test_prompt_set_v3.py tests/unit/test_prompts.py tests/unit/test_endpoint_prompts_v3.py` | 92 passed |
 | module surface | `pytest tests/unit/test_modules_{api,sync,content}.py tests/unit/test_disclaimer_addenda.py` | 100 passed |
 
@@ -292,8 +327,8 @@ artefact, **S3** documentation/process defect, **S4** observation.
 | I-04 | S2 | config | every acknowledged request would answer 403 after the WP-96 upgrade | `.env` pinned `DISCLAIMER_VERSION=v0.1.0` while the code ships `v3.0.0`; documented upgrade step was missed | **fixed** (`.env`, local only) |
 | I-05 | S2 | test | `test_default_deployment_mode_is_dev` red on a provisioned dev box, green in CI | the test built `Settings()` which reads the repo `.env` (`CITIZEN_SYNTHETIC_DATA_ONLY=true`) instead of asserting class defaults | **fixed**: `Settings(_env_file=None)` (+ removed a dead import) |
 | I-06 | S3 | eval docs/tooling | first smoke run died with `FileNotFoundError: eval/goldsets/goldset-v0.2.0.yaml` | goldsets moved into `modules/sozialrecht/goldset/` at WP-93; skill + some docs still named the old path | **fixed** in the `citizen-eval-runs` skill; `--module sozialrecht` is the durable form |
-| I-07 | S2 | pseudonymization | `Jobcenter Köln` / `Agentur für Arbeit` redacted as `[[FIRMA_1]]`; 2 tests red with spaCy installed | spaCy NER tags authority names as ORG and the mapper redacts ORG as company; the negative controls assume regex-only detection | **open, pre-existing** — fails identically at `aae2888` (D-051); CI green because it does not install the model. Changing it changes eval inputs, so it was not touched at the exit gate |
-| I-08 | S3 | test harness | combined `pytest tests/unit tests/integration` → 4 failures (`cannot perform operation: another operation is in progress`) | one async engine/connection pool reused across event loops; the route's audit write fails, `case_run_id` drops off the terminal event | **documented** in the transcript test docstring; CI and all accepted runs use separate invocations. Not fixed (pre-existing engine lifecycle) |
+| I-07 | S2 | pseudonymization | `Jobcenter Köln` / `Agentur für Arbeit` redacted as `[[FIRMA_1]]`; 2 tests red with spaCy installed | spaCy NER tags authority names as ORG and the mapper redacts ORG as company; the negative controls assume regex-only detection | **open, pre-existing** at the cut — fails identically at `aae2888` (D-051); CI green because it does not install the model. Changing it changes eval inputs, so it was not touched at the exit gate. **Fixed since (§ 13, D-063)** — the real root cause was a case bug that made the authority exemption dead code |
+| I-08 | S2 (was S3) | test harness | combined `pytest tests/unit tests/integration` → 2 failures, both in the new WP-97 transcript gate (`cannot perform operation: another operation is in progress`) | the module-scoped transcript fixture opens its `TestClient` before the function-scoped pool dispose and inherits connections bound to the unit suite's loop | reclassified S2 in review: the failing tests *are* the new behaviour gate, and plain `pytest` collects both suites. **Fixed since (§ 13, D-063)** — module-scoped pool reset |
 | I-09 | S3 | deployment doc | `DEPLOYMENT.md` listed the migration chain as `… → 012` | migration `013_legal_module` (WP-94) was never added | **fixed** |
 | I-10 | S3 | module docs | module CHANGELOG said 1.0.0 unreleased and had no entry for the D-060 bump to 1.1.0 | version bumped without the changelog | **fixed**: rewritten, 1.1.0 released, 1.0.0 retired unpublished |
 | I-11 | S3 | README/catalogue | "Stand des Codes: v2.0.0 … Umbau zu Modulen ist Phase P9" | stale after P9 landed | **fixed** (README status row, module catalogue M0 row) |
@@ -321,9 +356,11 @@ tests/unit/golden/wp93_v2_baseline.json      (13 prompts:* keys re-baselined)
 
 **Local only (scratch)** — logs, worktrees, the pre-P9 transcript pair, the
 env backup, the golden re-baseline script:
-`~/.hermes/cache/scratch/{b0p-run,head-run,head2-run,gate-head2,smoke-gs001,pytest-*}.log`,
-`citizen-b0p/` and `citizen-aae2888/` worktrees, `transcript-{aae2888,head}.txt`,
-`rebaseline_golden.py`, `env-backup-*`.
+run logs (`b0p-run`, `head-run`, `head2-run`, `gate-head2`, `smoke-gs001`,
+`pytest-*`), the `citizen-b0p/` and `citizen-aae2888/` worktrees,
+`transcript-{aae2888,head}.txt`, `rebaseline_golden.py`, the env backup, and
+the three `*.outputs.json` files. They lived in the operator's local scratch
+directory and are not available from the repository.
 
 ---
 
@@ -332,16 +369,17 @@ env backup, the golden re-baseline script:
 1. **I-07 over-redaction of authority names** — needs a decision: exempt a
    known authority list from ORG redaction (changes what the model sees, so it
    needs a fresh B0′-style reference), or make the two negative controls
-   model-aware.
+   model-aware. *Resolved (§ 13): exemption fixed; fresh reference pending.*
 2. **Measurement plan arms A1–A5** (`docs/prompt-upgrade-proposal.md` § 4) are
    still unrun; B0′ was produced once, without the 3-repetition spread that
    would make the warn-only metric moves evidence.
 3. **`quote_verification_rate_sourced` semantics** — for four cases R1 had no
    sourced claims at all, which the gate compares as `1.0 → None` (an
    undefined value, not a measured zero). A future gate revision may want to
-   distinguish "no denominator" from "0 %".
+   distinguish "no denominator" from "0 %". *Resolved (§ 13): gate 1.2.0.*
 4. Residual couplings recorded in ARCHITECTURE.md § 8: `CORPUS_SOURCES`
-   default and the global `ENABLE_CALCULATION_CHECK` toggle.
+   default and the global `ENABLE_CALCULATION_CHECK` toggle. *Resolved
+   (§ 13).*
 
 ---
 
@@ -372,3 +410,50 @@ python -m eval.runner --module sozialrecht \
 # golden re-baseline (deliberate contract change only)
 UPDATE_GOLDEN=1 pytest tests/integration/test_analyze_transcript.py
 ```
+
+---
+
+## 13. Addendum — review and follow-up fixes (D-063, core 3.1.0)
+
+**Review (read-only, from a fresh clone of `3b9dec4`).** Every number in
+§§ 4.1/4.2 matches the committed reports; the R1 and R2 gate verdicts
+reproduce exactly from the committed reports (§ 5); ruff, format, mypy (3.12
+flag) and the purpose-drift lint are green; unit 1158 passed / 2 skipped
+without the spaCy model (consistent with I-07), integration 42 passed; I-08
+reproduced (2 failures). Corrections made in this revision: I-08 severity and
+attribution, rescore reproducibility (§ 5), verdict caveat, merge state,
+removal of machine-local paths and account data.
+
+**Follow-up fixes** (all pre-existing defects; details in D-063 and CHANGELOG):
+
+| item | fix | evidence |
+|---|---|---|
+| I-07 | authority exemption was dead code (case-sensitive patterns matched against lower-cased text) — fixed; ORG overlapping an authority kept, PER only if it is one | `test_pseudonymization.py` (with and without the spaCy model) |
+| new | 8 further pseudonymization defects found while measuring I-07, incl. **PII leaks**: second IBAN/phone (stale offsets), BG-Nummer `…BG…` form, `0176/…` phones, signature surnames; nested placeholders; line-crossing street and salutation matches | goldset v0.2.0, spaCy installed, no LLM: cases leaking PII **4/12 → 0/12**, PII recall 0.990 → 1.000, precision 0.327 → 0.663 |
+| I-08 | module-scoped pool reset in `tests/integration/conftest.py` | combined `pytest tests/unit tests/integration`: **1222 passed, 2 skipped** |
+| item 3 | gate 1.2.0 labels "undefined (no sourced claims)" | `tests/unit/test_regression_gate.py` (first gate tests) |
+| item 4 | `CORPUS_SOURCES` unset → `DEFAULT_MODULE` `default_ingest_sources`; calculation toggle reclassified as domain-neutral | `tests/unit/test_corpus_default_sources.py` |
+| metric | `eval/metrics.py` 1.3.0: PII recall false miss when the output is shorter than a span offset | GS-011 recall 0.875 → 1.000 with every span redacted |
+
+Gates on the follow-up tree: unit **1180 passed, 2 skipped** (spaCy model
+installed — the former I-07 failures pass), integration **42 passed**,
+combined **1222 passed, 2 skipped**; pseudonymization tests with NER disabled
+55 passed / 2 skipped; `ruff check app/`, `ruff format --check app/`,
+`mypy app/ --python-version 3.12`, `mypy app/` under a Python 3.11
+interpreter and the purpose-drift lint green.
+
+**Consequence for the next gate.** The LLM input differs from the committed
+eval runs in 11 of 12 goldset cases, so B0′ and `60c4afd` no longer describe
+the current pipeline. Before the next gate, run once at the current tree
+with an operator-provided key and use that report as the reference:
+
+```bash
+python -m eval.runner --module sozialrecht --save
+```
+
+Not run in the review session: no operator-provided API key was available,
+and the developer agent's key must not be used for live tests (AGENTS.md).
+
+**Still open:** the fresh reference run above; measurement arms A1–A5 (item
+2); spaCy NER still over-redacts some common nouns as persons/companies
+("Anzurechnendes", "OCR-Fehler") — over-redaction, not leakage.

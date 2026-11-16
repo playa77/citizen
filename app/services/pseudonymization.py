@@ -14,7 +14,31 @@ to log because they contain only [[PLACEHOLDER]] keys and original values.
     ``python -m spacy download de_core_news_lg``
 """
 
-# Semantic Version: 0.1.0 | 2026-07-12 — WP-30 initial implementation
+# Semantic Version: 0.1.1 | 2026-11-16 — I-07 fix: the authority exemption
+# never fired. ``_AUTHORITY_PATTERNS`` are case-sensitive (capitalised nouns,
+# ``[A-ZÄÖÜß]`` city classes) but were matched against lower-cased text, so
+# spaCy ORG hits such as "Jobcenter Köln" / "Agentur für Arbeit" were redacted
+# as [[FIRMA_n]]. Matching now runs on the original casing; an ORG entity is
+# exempt when it overlaps an authority span in the surrounding text (spaCy
+# often tags only part of the name, e.g. "Jobcenter"), a PER entity only when
+# it is itself an authority name.
+# Also: BG-Nummer in the "12345BG0012345" form was not detected (PII leak),
+# and spaCy ORG hits on form labels ("BG-Nummer") were redacted as companies.
+# Detectors running after the first replacements no longer register spans
+# that overlap an existing placeholder (NER tagged "ADRESSE_2"/"ID_2" as
+# persons: nested "[[[[PERSON_3]]]]" and placeholder names in the mapping,
+# which the eval leakage metric reports as a leak). An address match that
+# starts with an authority letterhead ("Jobcenter Essen\nKurfürstenstraße 58")
+# now redacts the street part only, so every occurrence of the street maps to
+# the same placeholder. The street-name group no longer crosses line breaks
+# (it swallowed salutation + recipient lines into one "address"), and phone
+# numbers written "0176/12345678" are detected (was leaked). A street match
+# that overshoots into running text is trimmed, not discarded (was leaked).
+# Salutation names no longer span lines ("Frau Beckmann\n\nHerrn" hid the
+# recipient on the next line from detection). A final consistency pass
+# replaces further occurrences of every mapped value (signature surnames). Structured IDs
+# are replaced right to left (stale offsets leaked the 2nd IBAN/phone).
+# 0.1.0 | 2026-07-12 — WP-30 initial implementation
 
 from __future__ import annotations
 
@@ -417,8 +441,9 @@ _STREET_STOPWORDS: set[str] = {
 def _build_patterns() -> dict[str, re.Pattern[str]]:
     """Compile all regex patterns once and cache them."""
     return {
-        # BG-Nummer: 5 digits // 7 digits (or / or space variants)
-        "bg_nummer": re.compile(r"\b(\d{5})\s*/{1,2}\s*(\d{7})\b"),
+        # BG-Nummer: 5 digits // 7 digits (or / or space variants), or the
+        # current Jobcenter form 5 digits + "BG" + 7 digits (0.1.1).
+        "bg_nummer": re.compile(r"\b(\d{5})\s*(?:/{1,2}|BG)\s*(\d{7})\b"),
         # Aktenzeichen — various German case-number formats
         "aktenzeichen": re.compile(
             r"\b(?:Az\.\s*:?\s*|Gesch\.-?Z\.\s*:?\s*|Aktenzeichen\s*|Gz\.\s*|"
@@ -440,7 +465,11 @@ def _build_patterns() -> dict[str, re.Pattern[str]]:
         ),
         # German phone numbers
         "phone": re.compile(
-            r"\b(?:\+49|0)\d{1,4}[-\s]?\d{1,8}(?:[-\s]?\d{1,8}){0,2}\b",
+            # "0176/12345678": slash after a 2-5 digit area code only, so
+            # periods such as "01/2026" are never read as phone numbers.
+            # First, because alternation takes the first branch that matches.
+            r"\b0\d{2,5}\s?/\s?\d{3,8}(?:[-\s]?\d{1,8})?\b"
+            r"|\b(?:\+49|0)\d{1,4}[-\s]?\d{1,8}(?:[-\s]?\d{1,8}){0,2}\b",
         ),
         # Email addresses
         "email": re.compile(
@@ -459,7 +488,7 @@ def _build_patterns() -> dict[str, re.Pattern[str]]:
         # Street part must start with uppercase (true of all German street
         # names). Suffix list includes both cases for matching.
         "street_address": re.compile(
-            rf"\b([A-ZÄÖÜß][A-ZÄÖÜßa-zäöüß\s.-]*?)\s*("
+            rf"\b([A-ZÄÖÜß][A-ZÄÖÜßa-zäöüß \t.-]*?)[ \t]*("
             rf"{'|'.join(_STREET_SUFFIXES_CASE)})\s*\.?\s*"
             r"(\d+\s*(?:[a-z]|[-\s]?\d+)?)",
             re.UNICODE,
@@ -480,15 +509,17 @@ def _get_patterns() -> dict[str, re.Pattern[str]]:
 # ---------------------------------------------------------------------------
 # Salutation/letterhead heuristics
 # ---------------------------------------------------------------------------
+# The optional second name word must be on the same line: "\s+" let
+# "Frau Beckmann\n\nHerrn" swallow the next salutation (0.1.1).
 _SALUTATION_PATTERNS = [
     re.compile(
-        r"(?:Herr|Frau|Herrn|Fr\.|Hr\.)\s+(?:(?:Dr\.|Prof\.|Prof\.\s*Dr\.)\s+)?([A-ZÄÖÜß][a-zäöüß]+(?:\s+[A-ZÄÖÜß][a-zäöüß]+)?)"
+        r"(?:Herr|Frau|Herrn|Fr\.|Hr\.)\s+(?:(?:Dr\.|Prof\.|Prof\.\s*Dr\.)\s+)?([A-ZÄÖÜß][a-zäöüß]+(?:[^\S\n]+[A-ZÄÖÜß][a-zäöüß]+)?)"
     ),
     re.compile(
-        r"Sehr\s+geehrte[rns]?\s+(?:Herr|Frau)\s+(?:(?:Dr\.|Prof\.|Prof\.\s*Dr\.)\s+)?([A-ZÄÖÜß][a-zäöüß]+(?:\s+[A-ZÄÖÜß][a-zäöüß]+)?)"
+        r"Sehr\s+geehrte[rns]?\s+(?:Herr|Frau)\s+(?:(?:Dr\.|Prof\.|Prof\.\s*Dr\.)\s+)?([A-ZÄÖÜß][a-zäöüß]+(?:[^\S\n]+[A-ZÄÖÜß][a-zäöüß]+)?)"
     ),
     re.compile(
-        r"Liebe[rn]?\s+(?:Herr|Frau)\s+(?:(?:Dr\.|Prof\.|Prof\.\s*Dr\.)\s+)?([A-ZÄÖÜß][a-zäöüß]+(?:\s+[A-ZÄÖÜß][a-zäöüß]+)?)"
+        r"Liebe[rn]?\s+(?:Herr|Frau)\s+(?:(?:Dr\.|Prof\.|Prof\.\s*Dr\.)\s+)?([A-ZÄÖÜß][a-zäöüß]+(?:[^\S\n]+[A-ZÄÖÜß][a-zäöüß]+)?)"
     ),
     re.compile(r"([A-ZÄÖÜß][a-zäöüß]+)\s+wohnhaft\s+in"),
     re.compile(r"([A-ZÄÖÜß][a-zäöüß]+),\s*geboren\s+am"),
@@ -521,6 +552,11 @@ _AUTHORITY_PATTERNS = [
     re.compile(r"\bLandratsamt\b"),
     re.compile(r"\bStadtverwaltung\b"),
 ]
+
+# Form-field labels spaCy sometimes tags as ORG; they carry no PII (0.1.1).
+_FIELD_LABEL_RE = re.compile(
+    r"^(?:BG|Kunden|Versicherungs|Versicherten|Steuer|SV|Renten|Personal)-?[Nn]ummer$"
+)
 
 # ---------------------------------------------------------------------------
 # Names of German cities / Bundesländer / common large cities
@@ -739,6 +775,28 @@ def _get_nlp() -> Any:
     return _NLP
 
 
+def _is_authority(text: str) -> bool:
+    """True when *text* (original casing) contains a known authority name."""
+    return any(auth_pat.search(text) for auth_pat in _AUTHORITY_PATTERNS)
+
+
+def _authority_spans(text: str) -> list[tuple[int, int]]:
+    """Character spans of every authority-name match in *text*."""
+    return [m.span() for auth_pat in _AUTHORITY_PATTERNS for m in auth_pat.finditer(text)]
+
+
+_PLACEHOLDER_RE = re.compile(r"\[\[[A-ZÄÖÜ]+_\d+\]\]")
+
+
+def _placeholder_spans(text: str) -> list[tuple[int, int]]:
+    """Spans of placeholders already written into *text* by earlier steps."""
+    return [m.span() for m in _PLACEHOLDER_RE.finditer(text)]
+
+
+def _overlaps(start: int, end: int, spans: list[tuple[int, int]]) -> bool:
+    return any(start < s_end and s_start < end for s_start, s_end in spans)
+
+
 def _is_city_or_state(token: str) -> bool:
     """Check if a word is a known city or Bundesland name (case-insensitive)."""
     return (
@@ -876,25 +934,40 @@ def _detect_street_addresses(text: str, mapping: PiiMapping) -> list[tuple[int, 
         # Allow single-word prefix like "Am", "Zur", "An" (common German
         # street name prefixes), but reject multi-word context like
         # "und wohne in der".
+        # The lazy street group can run back into preceding context: running
+        # text ("Bitte senden Sie Unterlagen an die Kurfürsten-straße") or an
+        # authority letterhead ("Jobcenter Essen Kurfürstenstraße 58"). Cut the
+        # match after the last context stopword / authority name instead of
+        # discarding it (0.1.1: discarding left the street in clear text), so
+        # every occurrence maps to the same placeholder. Authority names are
+        # not PII. Nothing capitalised left → not an address.
+        start = match.start()
+        street_start = match.start(1)
+        street_end = match.end(1)
+        cuts: list[int] = []
         if len(street_words) >= 3:
-            prefix_words = street_words[:-1]  # All words except the last (street name)
-            stopword_count = sum(1 for w in prefix_words if w in _STREET_STOPWORDS)
-            if stopword_count > 0:
-                # Match includes context words — skip
+            words = list(re.finditer(r"\S+", text[street_start:street_end]))
+            for word in words[:-1]:  # the last word is the street name itself
+                if word.group(0).lower().strip(",.!?;:\"'") in _STREET_STOPWORDS:
+                    cuts.append(street_start + word.end())
+        cuts.extend(
+            street_start + end for _, end in _authority_spans(text[street_start:street_end])
+        )
+        if cuts:
+            start = max(cuts)
+            while start < match.end() and not text[start].isalnum():
+                start += 1
+            if start >= street_end or not text[start].isupper():
                 continue
+            street_part = text[start:street_end].strip()
+            original_address = text[start : match.end()].strip()
 
         # Skip if the street name looks like a known city or authority
         if _is_city_or_state(street_part):
             continue
 
-        # Skip common false positives (e.g. "Amtsgericht" + "Platz")
-        full_text_lower = match.group(0).lower()
-        is_authority = any(auth_pat.search(full_text_lower) for auth_pat in _AUTHORITY_PATTERNS)
-        if is_authority:
-            continue
-
         placeholder = _get_placeholder_for(mapping, "address", original_address)
-        results.append((match.start(), match.end(), placeholder))
+        results.append((start, match.end(), placeholder))
 
     return results
 
@@ -958,9 +1031,12 @@ def _detect_salutation_names(text: str, mapping: PiiMapping) -> list[tuple[int, 
     """
     results: list[tuple[int, int, str]] = []
     seen_spans: set[tuple[int, int]] = set()
+    placeholders = _placeholder_spans(text)
 
     for pattern in _SALUTATION_PATTERNS:
         for match in pattern.finditer(text):
+            if _overlaps(match.start(1), match.end(1), placeholders):
+                continue
             name = match.group(1).strip()
             # Skip if the detected name looks like a city or authority keyword
             if name.lower() in _CITIES:
@@ -989,8 +1065,13 @@ def _detect_ner_names(text: str, mapping: PiiMapping) -> list[tuple[int, int, st
         return results
 
     doc = nlp(text)
+    authority_spans = _authority_spans(text)
+    placeholders = _placeholder_spans(text)
 
     for ent in doc.ents:
+        # Never register a span that cuts into an existing placeholder.
+        if _overlaps(ent.start_char, ent.end_char, placeholders):
+            continue
         if ent.label_ == "PER":
             raw = ent.text.strip()
             if not raw or len(raw) < 2:
@@ -998,10 +1079,9 @@ def _detect_ner_names(text: str, mapping: PiiMapping) -> list[tuple[int, int, st
             # Skip if the entity is a known city, state, or authority
             if _is_city_or_state(raw):
                 continue
-            # Check against authority patterns
-            raw_lower = raw.lower()
-            is_authority = any(auth_pat.search(raw_lower) for auth_pat in _AUTHORITY_PATTERNS)
-            if is_authority:
+            # Persons: only an entity that *is* an authority name is exempt.
+            # Span overlap would let "Jobcenter Müller" leak the surname.
+            if _is_authority(raw):
                 continue
             placeholder = _get_placeholder_for(mapping, "person", raw)
             results.append((ent.start_char, ent.end_char, placeholder, "person"))
@@ -1013,8 +1093,9 @@ def _detect_ner_names(text: str, mapping: PiiMapping) -> list[tuple[int, int, st
             raw_lower = raw.lower()
             if raw_lower in _CITIES or raw_lower in _BUNDESLAENDER:
                 continue
-            is_authority = any(auth_pat.search(raw_lower) for auth_pat in _AUTHORITY_PATTERNS)
-            if is_authority:
+            if _overlaps(ent.start_char, ent.end_char, authority_spans):
+                continue
+            if _FIELD_LABEL_RE.match(raw):
                 continue
             # Skip short orgs that look like initials
             if len(raw) <= 3 and raw.isupper():
@@ -1035,7 +1116,11 @@ def _detect_first_name(text: str, mapping: PiiMapping) -> list[tuple[int, int, s
     # Match capitalized words that could be names (2+ chars, start with uppercase)
     word_pattern = re.compile(r"\b([A-ZÄÖÜß][a-zäöüß]+)\b")
 
+    placeholders = _placeholder_spans(text)
+
     for match in word_pattern.finditer(text):
+        if _overlaps(match.start(), match.end(), placeholders):
+            continue
         word = match.group(1).strip()
         word_lower = word.lower()
 
@@ -1116,14 +1201,21 @@ def pseudonymize(text: str, mapping: PiiMapping | None = None) -> tuple[str, Pii
         if pattern_name not in id_patterns:
             continue
         pattern = id_patterns[pattern_name]
+        # Collect first, then replace right to left: replacing while iterating
+        # finditer() over the pre-replacement string shifted every later match
+        # of the same pattern, mangling the text and leaving the second IBAN or
+        # phone number partly in clear text (fixed in 0.1.1).
+        id_hits: list[tuple[int, int, str]] = []
         for match in pattern.finditer(result):
             raw = match.group(0).strip()
             if pattern_name == "phone":
                 digit_count = sum(1 for c in raw if c.isdigit())
                 if digit_count < 6:
                     continue
-            placeholder = _get_placeholder_for(mapping, "id", raw)
-            result = result[: match.start()] + placeholder + result[match.end() :]
+            # Placeholders are assigned in reading order (deterministic numbering).
+            id_hits.append((match.start(), match.end(), _get_placeholder_for(mapping, "id", raw)))
+        for start, end, placeholder in reversed(id_hits):
+            result = result[:start] + placeholder + result[end:]
 
     # 2. Detect street addresses
     addr_detections = _detect_street_addresses(result, mapping)
@@ -1162,6 +1254,11 @@ def pseudonymize(text: str, mapping: PiiMapping | None = None) -> tuple[str, Pii
             continue
         result = result[:start] + placeholder + result[end:]
 
+    # 7. Consistency pass: a value detected once (e.g. a caseworker's surname
+    # after "Herr" in the letterhead) is replaced wherever else it appears
+    # (the bare "Im Auftrag\nOkonkwo" signature leaked before 0.1.1).
+    result = _replace_remaining_occurrences(result, mapping)
+
     logger.info(
         "Pseudonymization complete: %d persons, %d addresses, " "%d companies, %d IDs mapped",
         mapping.person_counter,
@@ -1171,6 +1268,25 @@ def pseudonymize(text: str, mapping: PiiMapping | None = None) -> tuple[str, Pii
     )
 
     return result, mapping
+
+
+def _replace_remaining_occurrences(text: str, mapping: PiiMapping) -> str:
+    """Replace further whole-word occurrences of already-mapped values.
+
+    Longest values first, so "Thomas Müller" wins over "Müller"; text inside
+    existing placeholders is never touched. Values shorter than 3 characters
+    are skipped (too ambiguous for a blind replace).
+    """
+    for value in sorted(mapping.value_to_placeholder, key=len, reverse=True):
+        if len(value) < 3 or value.startswith("[["):
+            continue
+        placeholder = mapping.value_to_placeholder[value]
+        pattern = re.compile(rf"(?<![\w\[]){re.escape(value)}(?![\w\]])")
+        spans = _placeholder_spans(text)
+        hits = [m.span() for m in pattern.finditer(text) if not _overlaps(*m.span(), spans)]
+        for start, end in reversed(hits):
+            text = text[:start] + placeholder + text[end:]
+    return text
 
 
 def _compute_year_from_date(date_str: str) -> int | None:

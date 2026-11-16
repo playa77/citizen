@@ -7,7 +7,9 @@
 # rules engine, the 2026-07-01 regime provider, the action-draft templates
 # and the goldsets. Behaviour is unchanged for requests that name no module.
 
-# Semantic Version: 1.1.0 | 2026-11-16 — released with core 3.0.0 at the P9
+# Semantic Version: 1.2.0 | 2026-11-16 — corpus.yaml `default_ingest_sources`
+# (sgb2, sgbx): the ingest default moved out of the core config (D-063).
+# 1.1.0 | 2026-11-16 — released with core 3.0.0 at the P9
 # exit gate (WP-97): the version stays 1.1.0 (D-060's prompt-profile bump; 1.0.0
 # was never published), the gate pins zero goldset regression against B0′.
 # 1.1.0 — prompt set 3.0.0: prompt profile (issue_terms with norm anchors,
@@ -16,7 +18,7 @@
 # 1.0.0
 
 id: sozialrecht
-version: 1.1.0
+version: 1.2.0
 core_api: ">=3.0,<4.0"
 title:
   de: "Sozialrecht"
@@ -48,6 +50,10 @@ goldset:
   # was replaced by the B0′ reference (D-061/D-062); this now names the
   # released state, so the next gate compares like-for-like (prompt set
   # 3.0.1, eval 1.1.0/1.2.0).
+  # D-063: core 3.1.0 changed what the pseudonymization gate sends to the LLM
+  # (authority names kept, PII leaks closed) in 11 of 12 goldset inputs. The
+  # report below predates that; the next gate must first produce a fresh
+  # reference at the 3.1.0 tree before comparing a candidate against it.
   gate:
     rule: zero_regression
     baseline_report: eval/results/20261116T175355Z-60c4afd.json

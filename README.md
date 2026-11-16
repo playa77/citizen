@@ -355,7 +355,7 @@ citizen/
 | | `PIPELINE_TIMEOUT_SEC` | `480` | Hartes Pipeline-Timeout (Timeout-Kette D-017) |
 | **Retrieval** | `RETRIEVAL_MODE` | `per_question` | Embedding-Strategie (`per_question` / `combined`) |
 | | `TOP_K_RETRIEVAL` | `10` | Max. Chunks je Anfrage |
-| **Korpus** | `CORPUS_SOURCES` | `["sgb2", "sgbx"]` | Standardquellen (zur Laufzeit änderbar) |
+| **Korpus** | `CORPUS_SOURCES` | ungesetzt → `default_ingest_sources` des `DEFAULT_MODULE` (Sozialrecht: `["sgb2", "sgbx"]`) | Standardquellen (zur Laufzeit änderbar) |
 | | `GOLDSET_PATH` | `modules/sozialrecht/goldset/goldset-v0.1.0.yaml` | Goldset der Prüfstand-API |
 | **Rate-Limit** | `RATE_LIMIT_REQUESTS` / `_WINDOW` | `0` / `60` | In-Memory-Limiter existiert, ist aber nicht eingebunden (`0` = deaktiviert) |
 | **OCR** | `ENABLE_OCR_LLM_SYNTHESIS` | `False` | LLM-Synthese der Dual-OCR-Ergebnisse |

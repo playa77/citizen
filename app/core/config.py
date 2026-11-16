@@ -75,7 +75,10 @@ class Settings(BaseSettings):
     RETRIEVAL_MODE: str = "per_question"
     RETRIEVAL_KEYWORD_FALLBACK: bool = True
     TOP_K_KEYWORD: int = 5
-    CORPUS_SOURCES: list[str] = ["sgb2", "sgbx"]
+    # None = the DEFAULT_MODULE's ``corpus.yaml`` ``default_ingest_sources``
+    # (resolved by ``app.services.corpus.default_corpus_sources``); an explicit
+    # list overrides it. The core carries no area-specific default.
+    CORPUS_SOURCES: list[str] | None = None
     # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased
     # for large corpora).
     CORPUS_INGESTION_TIMEOUT_SEC: int = 1800
