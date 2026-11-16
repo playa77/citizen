@@ -1,4 +1,7 @@
-# Version: 0.1.0
+# Version: 0.2.0 | 2026-11-16 — capability json_mode (CR-03): when true, JSON
+# stages send response_format={"type": "json_object"}. Off until verified
+# against every model of the profile's fallback chain.
+# 0.1.0
 # Citizen inference profiles — YAML + restart only to switch.
 # Each profile defines the model, temperature, host allowlist, and
 # compliance settings for all LLM/embedding calls.
@@ -12,6 +15,9 @@ profiles:
     host_allowlist:
       - "openrouter.ai"
       - "api.openai.com"
+    # per_stage is informational only (F-04): nothing reads it, its keys do not
+    # match the prompt stages, and wiring it would switch models (D-017).
+    # Per-stage temperatures live in app/services/prompts.STAGE_TEMPERATURES.
     per_stage:
       classification:
         model: "deepseek/deepseek-r1"
@@ -34,6 +40,7 @@ profiles:
     capability_manifest:
       streaming: true
       function_calling: false
+      json_mode: false
       vision: false
       max_tokens: 128000
 
@@ -57,6 +64,7 @@ profiles:
     capability_manifest:
       streaming: true
       function_calling: false
+      json_mode: false
       vision: false
       max_tokens: 128000
 
@@ -70,6 +78,7 @@ profiles:
     capability_manifest:
       streaming: false
       function_calling: false
+      json_mode: false
       vision: false
       max_tokens: 4096
     enabled: false

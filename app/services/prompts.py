@@ -93,21 +93,43 @@ def prompt_identity(stage: str, text: str) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Stage metadata — recommended sampling temperatures
+# Stage metadata — sampling temperatures and output caps (CR-04, CR-03)
 # ---------------------------------------------------------------------------
-# Extraction-like stages want near-determinism; drafting stages get a
-# little headroom. Consumed by the LLM router; never sent to the model.
+# Every LLM call site reads its temperature here (until prompt set 3.0.0
+# this table was metadata nobody read and every call ran at 0.1, F-04).
+# Extraction-like stages want near-determinism; verbatim quoting (the
+# grounded answer) stays low; the adversarial review gets headroom to argue
+# both sides. JSON retries always run at 0.0, independently of this table.
 
 STAGE_TEMPERATURES: dict[str, float] = {
     "classification": 0.1,
     "decomposition": 0.2,
-    "triage": 0.2,
-    "grounded_answer": 0.2,
+    "triage": 0.1,
+    "grounded_answer": 0.1,
     "adversarial_review": 0.3,
     "claim_construction": 0.2,
     "verification": 0.1,
     "output": 0.3,
+    "calc_extraction": 0.0,
+    "calc_explanation": 0.1,
+    "chat": 0.1,
+    "case_chat": 0.1,
+    "intake": 0.1,
+    "preset_suggest": 0.1,
+    "ocr_synthesis": 0.1,
 }
+
+
+def stage_temperature(stage: str) -> float:
+    """Sampling temperature for *stage* (``KeyError`` on unknown stages)."""
+    return STAGE_TEMPERATURES[stage]
+
+
+def stage_max_tokens(stage: str) -> int | None:
+    """Output-token cap for *stage* from ``STAGE_MAX_TOKENS``, ``None`` = uncapped."""
+    from app.core.config import settings
+
+    return settings.STAGE_MAX_TOKENS.get(stage)
 
 
 # ---------------------------------------------------------------------------

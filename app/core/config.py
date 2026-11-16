@@ -1,4 +1,6 @@
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
+# Semantic Version: 0.6.0 | 2026-11-16 — CR-03: STAGE_MAX_TOKENS (per-stage
+# output caps, empty by default).
+# 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
 # v0.1.0 → v3.0.0 (aligned with DISCLAIMER_DE/EN.md 3.0.0).
 # 0.4.1 | 2026-11-16 — WP-93: GOLDSET_PATH default points into
 # modules/sozialrecht/goldset/ (goldsets moved with the module).
@@ -108,6 +110,12 @@ class Settings(BaseSettings):
     MAX_FINAL_INPUT_CHARS: int = 5000
     MAX_CHUNK_CONTEXT_CHARS: int = 7000
     MAX_CHUNKS_FOR_FINAL: int = 12
+    # Output-token caps per prompt stage (CR-03), e.g.
+    # {"grounded_answer": 6000, "adversarial_review": 4000}. Empty = no cap
+    # (provider default). Calibrate from the completion_tokens the router logs
+    # per call (p99 x 1.5) before setting; a capped response that stays
+    # truncated after one doubled retry fails the stage instead of being parsed.
+    STAGE_MAX_TOKENS: dict[str, int] = {}
     # Calculation check (WP-014) — specialised model for numeric verification
     ENABLE_CALCULATION_CHECK: bool = True
     CALCULATION_MODEL: str | None = None  # None = use PRIMARY_MODEL
