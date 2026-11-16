@@ -56,7 +56,12 @@ jobs:
         run: ruff format --check app/
 
       - name: Type check (mypy)
-        run: mypy app/
+        # Check against the running interpreter's version: numpy's shipped
+        # stubs use the `type` statement, which mypy refuses when the target
+        # is 3.11 even though the parsing interpreter is 3.12 (job fails on
+        # numpy's stub, not on project code). The 3.11 job keeps the
+        # configured python_version = 3.11.
+        run: mypy app/ ${{ matrix.python-version == '3.12' && '--python-version 3.12' || '' }}
 
       - name: Purpose-drift check (WP-61)
         run: python scripts/check_purpose_drift.py
