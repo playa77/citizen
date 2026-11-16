@@ -118,6 +118,8 @@ class PipelineState:
     # for construction and generation stages (WP-24). Populated during
     # classification/decomposition using the current date.
     legal_regime_banner: str = ""
+    # CR-06: {"regimes", "as_of", "end", "source"} behind the banner (audit).
+    legal_regime_info: dict[str, Any] = field(default_factory=dict)
     # CR-09: identity (stage id, prompt-set version, sha256) of every system
     # prompt sent in this run, keyed by prompt stage; surfaced in stage payloads.
     prompt_ids: dict[str, dict[str, str]] = field(default_factory=dict)
@@ -147,28 +149,26 @@ _STAGES: list[str] = [
 
 
 def _populate_regime_banner(state: PipelineState) -> None:
-    """Set ``state.legal_regime_banner`` based on the current date.
+    """Set ``state.legal_regime_banner`` from the document's reference date.
 
-    This function is called once after classification/triage completes so
-    that all subsequent pipeline stages can inject the regime-awareness
-    banner into their LLM prompts.
-
-    Currently uses ``date.today()`` as the reference date.  Future
-    enhancements may extract the Bescheid date from the normalized text
-    for historical cases.
+    Called once after classification/triage; the block is prepended to the
+    stage prompts in ``_REGIME_STAGES``. CR-06 (F-06): the reference date
+    comes from the request modules' ``RegimeProvider.reference_period``
+    (benefit period or letter date found in the document, no LLM); only when
+    none is found does the current date apply, and the block says so.
     """
     from datetime import date as _dt
 
-    from app.modules.runtime import regime_banner_for, request_modules
+    from app.modules.runtime import regime_block_for, request_modules
 
     # WP-93: the regime provider is module code (ARCHITECTURE.md § 2.4);
     # modules without one (stubs) leave the banner empty.
-    regime, state.legal_regime_banner = regime_banner_for(
-        request_modules(state.legal_areas), _dt.today()
+    state.legal_regime_info, state.legal_regime_banner = regime_block_for(
+        request_modules(state.legal_areas), state.normalized_text, _dt.today()
     )
     logger.info(
-        "Regime banner set: regime=%s banner_len=%d",
-        regime,
+        "Regime block set: %s banner_len=%d",
+        state.legal_regime_info or "no provider",
         len(state.legal_regime_banner),
     )
 
@@ -190,6 +190,10 @@ def _stage_prompt(state: PipelineState, stage: str) -> str:
     from app.services.prompts import get_prompts, prompt_identity
 
     text = get_prompts(state.legal_areas)[stage]
+    if stage in _REGIME_STAGES and not state.legal_regime_info:
+        # Re-evaluation (/cases/{id}/reevaluate) rebuilds the state without
+        # running triage; compute the block here so re-run stages get it too.
+        _populate_regime_banner(state)
     if stage in _REGIME_STAGES and state.legal_regime_banner:
         text = f"{state.legal_regime_banner}\n\n{text}"
     state.prompt_ids[stage] = prompt_identity(stage, text)
@@ -249,6 +253,8 @@ def _stage_payload(
         payload["issue_count"] = len(state.issues)
     elif stage_name == "decomposition":
         payload["questions"] = state.questions
+        if state.legal_regime_info:
+            payload["legal_regime"] = state.legal_regime_info
         payload["question_count"] = len(state.questions)
     elif stage_name == "retrieval":
         payload["chunk_count"] = len(state.retrieved_chunks)

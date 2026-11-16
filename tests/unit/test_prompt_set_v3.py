@@ -152,3 +152,29 @@ async def test_legacy_messages_use_german_headings(monkeypatch: pytest.MonkeyPat
     await reasoning.generate_output([{"claim_text": "c", "claim_type": "interpretation"}])
     assert sent[0].startswith("Rechtsfragen:\n") and "\n\nRechtsquellen:\n" in sent[0]
     assert sent[1].startswith("Geprüfte Claims:\n")
+
+
+def test_regime_block_reaches_answer_and_review_not_triage() -> None:
+    from app.core.pipeline import PipelineState, _stage_prompt
+
+    state = PipelineState(
+        input_text="x",
+        normalized_text="Musterstadt, 03.05.2024\nBescheid",
+        legal_areas=["sozialrecht"],
+    )
+    # No triage ran (re-evaluation path): the block is computed lazily.
+    answer = _stage_prompt(state, "grounded_answer")
+    review = _stage_prompt(state, "adversarial_review")
+    triage = _stage_prompt(state, "triage")
+    assert answer.startswith("<rechtsstand>\nStichtag: 03.05.2024")
+    assert review.startswith("<rechtsstand>")
+    assert not triage.startswith("<rechtsstand>")
+    assert state.legal_regime_info["regimes"] == ["a.F._2023"]
+    assert state.prompt_ids["adversarial_review"]["version"] == "3.0.0"
+
+
+def test_no_regime_block_for_modules_without_provider() -> None:
+    from app.core.pipeline import PipelineState, _stage_prompt
+
+    state = PipelineState(input_text="x", normalized_text="Testament", legal_areas=["erbrecht"])
+    assert _stage_prompt(state, "grounded_answer").startswith("<rolle>")

@@ -22,6 +22,12 @@
      "prompts:unknown-area"
     ],
     "reason": "prompt set 3.0.0: stage prompts P-01…P-08, shared blocks, profile data; calculator prompts P-14/P-15 (D-060)"
+   },
+   {
+    "keys": [
+     "regime:banners"
+    ],
+    "reason": "prompt set 3.0.0: regime banners state segment and dates only (P-16, F-24) (D-060)"
    }
   ]
  },
@@ -340,19 +346,19 @@
  "regime:banners": {
   "2022-01-01": [
    "a.F._vor_2023",
-   "13edb2b5e88ab5ef9b3a75f42243e6538fbdcd01ec47204b0a098d6253986e4f"
+   "c462130ec3e7b87a6fb9f40a04f90a05878650b852c154620f5697a8ca796178"
   ],
   "2023-07-01": [
    "a.F._2023",
-   "908e58d92b9f79f2c8c04da0ae3bb7f9521e3bc1e024ef61fddb5e0ffa139cb0"
+   "901e8967e070144ff67efae7987e439f5342d983e8304a01fe3761105711a113"
   ],
   "2025-06-01": [
    "a.F._2025",
-   "eb26cda45af83299b4dea4290ef73cc35be8d8b73b1cdb236d6ea26a79d4af32"
+   "afff75166468a9a1b65dd277ded95f517adae4e1d2ac333ca413a2f44392006f"
   ],
   "2026-07-01": [
    "n.F._2026",
-   "0a770a9adb0b2c58faef782e16bb699a720c7965cdf2afb01390a5fc70bf4993"
+   "950e3ce88f6730efb372db5cf1f5092b27c0b83a42924afaf096f3a0cddc19f3"
   ]
  }
 }

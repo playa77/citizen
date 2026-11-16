@@ -23,14 +23,18 @@ Usage (inside the module)::
     print(regime_banner(reg))  # → "Achtung: Für diesen Zeitraum gilt …"
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0 | 2026-11-16 — prompt set 3.0.0: banners state segment
+# and dates only (F-24, F-13); reference_period() reads the reference date from
+# the document (CR-06, F-06).
+# 0.2.0
 
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 from typing import Final
 
-from app.modules.sdk import RegimeProvider
+from app.modules.sdk import ReferencePeriod, RegimeProvider
 
 # ---------------------------------------------------------------------------
 # Regime boundary dates
@@ -168,29 +172,31 @@ def regime_banner(regime: str) -> str:
     ValueError
         If *regime* is not a recognised tag.
     """
+    # Prompt set 3.0.0 (P-16, F-24): each banner names the segment and its
+    # dates only. The v2 texts asserted reform content this project could not
+    # verify (and dated the Bürgergeld sanction reform to 01.07.2023 instead of
+    # 01.01.2023); amounts come from the engine, not from the banner. The core
+    # wraps the banner in <rechtsstand> with the reference date and the rule
+    # for choosing the version of the law (app.modules.runtime.regime_block_for).
     _banners: dict[str, str] = {
         REGIME_VOR_2023: (
-            "ACHTUNG RECHTSLAGE: Für diesen Zeitraum gilt die Rechtslage vor dem "
-            "01.07.2023 (alte Fassung, vor Bürgergeld-Gesetz). "
-            "Bitte die bis 30.06.2023 geltenden Sanktionsregeln (§ 31 SGB II a.F.) "
-            "und die alten Freibeträge anwenden."
+            "Rechtsstand-Segment a.F._vor_2023 (Stichtag vor dem 01.07.2023). Das "
+            "Bürgergeld-Gesetz hat das SGB II zum 01.01.2023 und zum 01.07.2023 geändert; "
+            "für Stichtage im ersten Halbjahr 2023 kann daher bereits dessen erste Stufe "
+            "gelten."
         ),
         REGIME_2023: (
-            "ACHTUNG RECHTSLAGE: Für diesen Zeitraum gilt die Rechtslage vom "
-            "01.07.2023 bis 31.12.2024 (a.F., Bürgergeld-Gesetz). "
-            "Bitte die ab 01.07.2023 geltenden Sanktionsregeln und "
-            "Freibeitragsgrenzen nach § 11b SGB II anwenden."
+            "Rechtsstand-Segment a.F._2023 (Stichtag 01.07.2023 bis 31.12.2024): SGB II in der "
+            "Fassung des Bürgergeld-Gesetzes einschließlich der zum 01.07.2023 in Kraft "
+            "getretenen Änderungen."
         ),
         REGIME_2025: (
-            "ACHTUNG RECHTSLAGE: Für diesen Zeitraum gilt die Rechtslage vom "
-            "01.01.2025 bis 30.06.2026 (a.F., Regelbedarfsstufen 2025). "
-            "Bitte die ab 01.01.2025 geltenden Regelbedarfssätze und "
-            "Freibeitragsgrenzen anwenden."
+            "Rechtsstand-Segment a.F._2025 (Stichtag 01.01.2025 bis 30.06.2026): SGB II in der "
+            "in diesem Zeitraum geltenden Fassung."
         ),
         REGIME_2026: (
-            "ACHTUNG RECHTSLAGE: Für diesen Zeitraum gilt die Rechtslage ab "
-            "01.07.2026 (n.F.). Bitte die neuen Altersstufen, die neuen "
-            "Vermögensfreibeträge und die geänderten Sanktionsregeln anwenden."
+            "Rechtsstand-Segment n.F._2026 (Stichtag ab 01.07.2026): SGB II in der ab "
+            "01.07.2026 geltenden Fassung."
         ),
     }
 
@@ -201,6 +207,76 @@ def regime_banner(regime: str) -> str:
     return banner
 
 
+# ---------------------------------------------------------------------------
+# Reference period from the document (CR-06, F-06)
+# ---------------------------------------------------------------------------
+
+_DATE = r"(\d{1,2})\.(\d{1,2})\.(\d{4})"
+_RANGE_SEP = r"\s*(?:bis(?:\s+zum|\s+einschließlich)?|–|-)\s*"
+#: Benefit period introduced by its usual wording in SGB II notices.
+_PERIOD_RE = re.compile(
+    r"(?:Bewilligungszeitraum|Leistungszeitraum|Zeitraum|für\s+die\s+Zeit)"
+    r"\s*(?:vom|von|:)?\s*" + _DATE + _RANGE_SEP + _DATE,
+    re.IGNORECASE,
+)
+#: Any "TT.MM.JJJJ bis TT.MM.JJJJ" range (second choice).
+_RANGE_RE = re.compile(_DATE + _RANGE_SEP + _DATE)
+#: Date of the letter, most specific first: a header line "<Ort>, [den]
+#: TT.MM.JJJJ", then "Datum: …", then "Bescheid vom …". "Schreiben vom …" is
+#: deliberately absent: in notices it usually cites an *earlier* letter.
+_LETTER_DATE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"^[ \t]*[A-ZÄÖÜ][\wÄÖÜäöüß.\- ]{1,40},[ \t]*(?:den[ \t]+)?" + _DATE + r"[ \t]*$", re.M
+    ),
+    re.compile(r"Datum\s*:\s*" + _DATE, re.IGNORECASE),
+    re.compile(r"Bescheid\s+vom\s+" + _DATE, re.IGNORECASE),
+)
+#: Longest plausible benefit period (12 months plus slack); longer ranges are
+#: not a benefit period (e.g. "Bewilligung seit 2019 bis 2026").
+_MAX_PERIOD_DAYS = 400
+
+
+def _to_date(day: str, month: str, year: str) -> date | None:
+    try:
+        value = date(int(year), int(month), int(day))
+    except ValueError:
+        return None
+    return value if 2000 <= value.year <= 2100 else None
+
+
+def _first_range(pattern: re.Pattern[str], text: str) -> tuple[date, date] | None:
+    for match in pattern.finditer(text):
+        start = _to_date(*match.group(1, 2, 3))
+        end = _to_date(*match.group(4, 5, 6))
+        if start and end and 0 < (end - start).days <= _MAX_PERIOD_DAYS:
+            return start, end
+    return None
+
+
+def reference_period(document_text: str) -> ReferencePeriod:
+    """Reference period of an SGB II document, deterministically (no LLM).
+
+    Order: an explicitly introduced benefit period ("Bewilligungszeitraum",
+    "für die Zeit vom … bis …"), then any plausible date range, then the
+    letter date. ``(None, None, "")`` when nothing matches — the core then
+    falls back to the current date and says so in the prompt.
+    """
+    found = _first_range(_PERIOD_RE, document_text)
+    if found:
+        return found[0], found[1], "Beginn des Leistungszeitraums laut Dokument"
+    found = _first_range(_RANGE_RE, document_text)
+    if found:
+        return found[0], found[1], "Beginn des im Dokument genannten Zeitraums"
+    for pattern in _LETTER_DATE_RES:
+        for match in pattern.finditer(document_text):
+            letter = _to_date(*match.group(1, 2, 3))
+            if letter:
+                return letter, None, "Datum des Schreibens laut Dokument"
+    return None, None, ""
+
+
 #: The module's ``RegimeProvider`` (ARCHITECTURE.md § 2.4), declared in
 #: ``module.yaml`` as ``regimes.provider: regime:REGIME_PROVIDER``.
-REGIME_PROVIDER = RegimeProvider(regime_for=legal_regime, banner=regime_banner)
+REGIME_PROVIDER = RegimeProvider(
+    regime_for=legal_regime, banner=regime_banner, reference_period=reference_period
+)

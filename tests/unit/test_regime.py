@@ -9,7 +9,10 @@ Tests the pure deterministic functions in ``modules/sozialrecht/regime.py``
 Also validates goldset scenarios for GS-004, GS-005, GS-006, GS-008.
 """
 
-# Semantic Version: 0.1.2 | 2026-11-16 — WP-94: cache key uses the module-id domain.
+# Semantic Version: 0.2.0 | 2026-11-16 — prompt set 3.0.0: banners state segment
+# and dates only (the removed reform claims are asserted absent);
+# reference_period() tests (CR-06).
+# 0.1.2 | 2026-11-16 — WP-94: cache key uses the module-id domain.
 # 0.1.1 | 2026-11-16 — WP-93: regime provider moved into the module.
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ from citizen_modules.sozialrecht.regime import (
     REGIME_2026,
     REGIME_VOR_2023,
     legal_regime,
+    reference_period,
     regime_banner,
     regime_for_period_range,
     regime_transition_dates,
@@ -225,13 +229,62 @@ class TestRegimeBanner:
         banner = regime_banner(REGIME_2025)
         assert "01.01.2025" in banner
         assert "30.06.2026" in banner
-        assert "Regelbedarf" in banner
+        # Prompt set 3.0.0 (F-24): no unverified claim about new Regelbedarfe.
+        assert "Regelbedarf" not in banner
 
     def test_banner_2026(self) -> None:
         banner = regime_banner(REGIME_2026)
         assert "01.07.2026" in banner
         assert "n.F." in banner
-        assert "Vermögensfreibeträge" in banner
+        # Prompt set 3.0.0 (F-24): reform content is not asserted.
+        assert "Vermögensfreibeträge" not in banner
+
+    def test_banner_vor_2023_names_both_buergergeld_stages(self) -> None:
+        banner = regime_banner(REGIME_VOR_2023)
+        assert "01.01.2023" in banner and "01.07.2023" in banner
+
+    def test_banners_are_constraints_not_instructions_to_apply(self) -> None:
+        for tag in [REGIME_VOR_2023, REGIME_2023, REGIME_2025, REGIME_2026]:
+            banner = regime_banner(tag)
+            assert "anwenden" not in banner and "Freibeitrags" not in banner
+
+
+class TestReferencePeriod:
+    """Reference date from the document text (CR-06, F-06) — synthetic texts."""
+
+    def test_benefit_period_wins(self) -> None:
+        text = "Musterstadt, 06.07.2026\nfür den Zeitraum vom 01.08.2026 bis 31.07.2027 bewilligt"
+        assert reference_period(text) == (
+            date(2026, 8, 1),
+            date(2027, 7, 31),
+            "Beginn des Leistungszeitraums laut Dokument",
+        )
+
+    def test_bare_range(self) -> None:
+        start, end, source = reference_period("Leistungen 01.12.2025 – 31.05.2026 werden aufgehoben")
+        assert (start, end) == (date(2025, 12, 1), date(2026, 5, 31))
+        assert source.startswith("Beginn des im Dokument")
+
+    def test_implausible_range_is_not_a_period(self) -> None:
+        assert reference_period("Bewilligung vom 01.01.2019 bis 31.12.2026") == (None, None, "")
+
+    def test_letter_header_date(self) -> None:
+        text = "Jobcenter Musterstadt\nMusterstadt, den 09.02.2026\nMit Schreiben vom 12.01.2026 …"
+        assert reference_period(text) == (
+            date(2026, 2, 9),
+            None,
+            "Datum des Schreibens laut Dokument",
+        )
+
+    def test_schreiben_vom_alone_is_not_the_letter_date(self) -> None:
+        assert reference_period("Mit Schreiben vom 26.05.2026 wurden Sie aufgefordert") == (
+            None,
+            None,
+            "",
+        )
+
+    def test_invalid_dates_ignored(self) -> None:
+        assert reference_period("Datum: 31.02.2026") == (None, None, "")
 
     def test_unknown_regime_raises(self) -> None:
         with pytest.raises(ValueError, match="Unbekanntes Regime"):

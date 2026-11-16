@@ -27,13 +27,16 @@ module never touches the database or the core's session handling.
 
 Changes
 -------
+0.3.0 (prompt set 3.0.0, CR-06): optional ``RegimeProvider.reference_period``
+— the module reads the reference date from the document, so the regime no
+longer follows the server's clock (F-06). Additive; ``SDK_VERSION`` stays "3.0".
 0.2.0 (WP-93): ``Calculator``, ``RegimeProvider``, ``ParameterSource``,
 ``ParameterLookup``. Additive to an unreleased contract; ``SDK_VERSION``
 stays "3.0" (core 3.0.0 is cut at P9 exit, WP-97).
 0.1.0 (WP-91): ``SDK_VERSION`` only.
 """
 
-# Semantic Version: 0.2.0
+# Semantic Version: 0.3.0
 
 from __future__ import annotations
 
@@ -118,12 +121,26 @@ class Calculator:
     referral_hint: str
 
 
+#: ``(start, end, source)`` of the period a document concerns. ``start`` is
+#: the reference date (``None``: none found), ``end`` the last day of a
+#: period when the document states one, ``source`` a short German label of
+#: where the date came from ("Beginn des Leistungszeitraums laut Dokument").
+ReferencePeriod = tuple[date | None, date | None, str]
+
+
 @dataclass(frozen=True)
 class RegimeProvider:
-    """Intertemporal regime selection of one module (ARCHITECTURE.md § 2.4)."""
+    """Intertemporal regime selection of one module (ARCHITECTURE.md § 2.4).
+
+    ``reference_period`` (optional, sdk 0.3.0) extracts the reference period
+    from the normalized document text deterministically (no LLM); without it,
+    or when it finds no date, the core falls back to the current date and says
+    so in the prompt.
+    """
 
     regime_for: Callable[[date], str]
     banner: Callable[[str], str]
+    reference_period: Callable[[str], ReferencePeriod] | None = None
 
 
 __all__ = [
@@ -133,5 +150,6 @@ __all__ = [
     "ParameterLoader",
     "ParameterLookup",
     "ParameterSource",
+    "ReferencePeriod",
     "RegimeProvider",
 ]
