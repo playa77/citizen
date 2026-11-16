@@ -60,6 +60,10 @@ DATABASE_URL=postgresql+asyncpg://citizen_user:<PASSWORD>@db:5432/citizen_db
 OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
+Leave `DISCLAIMER_VERSION` unset (or equal to the shipped default): it is the
+acknowledgment version of `DISCLAIMER_DE/EN.md` (`v3.0.0` since WP-96), and a
+value pinned in `.env` overrides the default after an upgrade.
+
 ### 3. Create docker-compose.override.yml
 
 Overrides for production — DB credentials, named volume, restart policy:
@@ -166,7 +170,7 @@ docker exec citizen-db-1 psql -U citizen_user -d citizen_db -c "\dt"
 
 # Check disclaimer version
 curl https://workbench.gronowski.cc/api/v1/meta/disclaimer/version
-# → {"version":"v0.1.0"}
+# → {"version":"v3.0.0"}
 
 # Check active profile
 curl https://workbench.gronowski.cc/api/v1/meta/active-profile
@@ -259,6 +263,9 @@ When deploying a new version:
 2. Rebuild the Docker image
 3. If database schema changed, the auto-migration handles it on startup
 4. Verify health endpoint and key API routes
+5. If the release bumps `DISCLAIMER_VERSION` (e.g. WP-96: `v0.1.0` → `v3.0.0`),
+   check that `.env` does not pin the old value; clients must re-acknowledge
+   (`X-Disclaimer-Ack`) — requests with the old version answer 403
 
 ---
 

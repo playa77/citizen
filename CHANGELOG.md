@@ -1,3 +1,65 @@
+## 2026-11-16 — P9 WP-96: compliance deltas for modularity (D-059)
+
+Provenance v1.1, purpose-drift lint 2.0.0 and DISCLAIMER 3.0.0 for the
+modular architecture (roadmap v3.0.0 WP-96; closes carry-overs C-3 and C-4).
+Package version stays 2.0.0 (core 3.0.0 is cut at WP-97); no migrations.
+
+### Breaking for clients
+
+- `DISCLAIMER_VERSION` default `v0.1.0` → **`v3.0.0`** (= `"v"` + the
+  disclaimer document version). Clients must re-acknowledge
+  (`X-Disclaimer-Ack: v3.0.0`); the old value answers 403. A deployed `.env`
+  must not pin the old value (DEPLOYMENT.md).
+
+### Added
+
+- Provenance spec `citizen-provenance-v1.1` (`app/services/disclosure.py`
+  1.1.0): `provenance.modules = [{id, version, parameter_set}]`, additive to
+  v1.0; `parameter_set` = `"<module version>+<latest valid_from>"` or `null`.
+  `build_disclosure_and_provenance(settings, legal_areas=None)`;
+  `app.modules.runtime` 0.4.0 `module_provenance()` / `provenance_modules()`;
+  startup warms the cache (`app/main.py` 0.8.0).
+- Art. 50 objects on the two surfaces D-032 left open (C-4): conversation
+  first-message pipeline terminal event (`chat_reasoning` 1.2.0) and case-chat
+  `done` event (`case_chat` 1.1.0; `cases` route 0.3.0 passes the case's
+  recorded area keys).
+- Module compliance artefacts: `modules/sozialrecht/compliance/deny-phrases.json`
+  + `DISCLAIMER_ADDENDUM.md`; `modules/strafrecht/compliance/deny-phrases.json`
+  + `DISCLAIMER_ADDENDUM.md`; `modules/familienrecht/compliance/deny-phrases.json`;
+  manifest `compliance` sections. Module versions: `strafrecht` and
+  `familienrecht` 0.2.0; `sozialrecht` 1.0.0 (unreleased) entry extended.
+- Tests: `tests/unit/test_disclaimer_addenda.py` (Part D verbatim addenda,
+  every module named, version alignment); `test_disclosure.py` 1.1.0
+  (`modules` list, fallbacks, parameter-set id, C-4 surfaces);
+  `test_purpose_drift.py` 2.0.0 (scan set, module phrases, allow marker,
+  repository lints clean).
+
+### Changed
+
+- `scripts/check_purpose_drift.py` 2.0.0: scans `README*.md`,
+  `DISCLAIMER_*.md`, `ARCHITECTURE.md`, `docs/*.md`, `modules/*/copy/**`,
+  `modules/*/DISCLAIMER_ADDENDUM.md`; dead globs `STATEMENT.md`,
+  `COMPLIANCE*.md`, `docs/pitch*` dropped (C-3); per-module deny phrases from
+  manifests (76 phrases with the shipped modules); same-line
+  `purpose-drift: allow` marker (one use: `docs/roadmap-v2.0.0.md:192`).
+  CLI flags and exit codes unchanged.
+- `DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` 3.0.0: Part A and Part C rewritten
+  for the widened purpose (D-035; Annex III points 6, 7, 8(a) added to the
+  self-assessment); new Part D (module addenda); B.12 ties the ack version to
+  the document version.
+- Every analyze terminal event (with or without `legal_areas`), conversation
+  chat `done` and `GeneratedDocument` now carries `provenance` v1.1.
+- `API_DOCUMENTATION.md`: provenance v1.1 spec (§ 7.1), case-chat and
+  conversation terminal events (§ 7.2, § 8.5), document example (§ 8.6),
+  disclaimer version examples. `ARCHITECTURE.md` draft.4, `AGENTS.md`,
+  `DEPLOYMENT.md`, `README.md`, `.env.example`,
+  `scripts/benchmark_analyze.py` (default ack `v3.0.0`) updated.
+
+### Known gaps (not changed)
+
+- `GET /api/v1/meta/disclaimer/text` still serves the short v1-era HTML text
+  (D-059 "observed").
+
 ## 2026-11-16 — P9 WP-95: module API additions (D-058)
 
 Additive `/api/v1` surface for the module registry (ARCHITECTURE.md § 5).
