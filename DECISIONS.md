@@ -1716,3 +1716,63 @@ fails intermittently on the base tree too (depends on hash-seeded test
 embeddings and database state). (vi) Still open from D-064…D-066: practitioner
 PDF review, `app/fristen/calendar.py` holiday tables, live legal-source runs,
 release key.
+
+### D-069 R2 — 2026-11-17 — LLM analysis quality gate (P14): issue recall, citation precision and assessment match > 90 %; feature freeze
+**Status: Approved 2026-11-17 by the owner.** Plan `docs/quality-plan.md` 1.0.0.
+**Scope and acceptance (recorded before the change, AGENTS.md):** owner
+instruction 2026-11-17: issue recall, citation precision and assessment match
+are the most important values of the project; anything far below target puts
+the project at risk, and everything else is out of scope until they are met.
+Target **> 0.90** each. Plan: `docs/quality-plan.md` (0.1.0 draft → 1.0.0 on
+approval); roadmap v3.1.0 inserts phase P14 (WP-150…WP-155) before P13.
+**Decision:**
+(a) **Gate.** Issue recall, citation precision and assessment match each
+> 0.90, simultaneously, as the **mean over the held-out set** (owner
+decision), averaged over 3 runs of the release tree; errored cases score 0;
+"Einordnung offen" scores as an assessment mismatch. The three metrics become
+**strict** in `eval/regression_gate.py` (warn-only since D-062). Deterministic
+metrics keep their strict gate. A module reaches `verified` only through the
+same gate on its own held-out set.
+(b) **Freeze.** P13 and all new feature work are frozen until the gate
+passes on `sozialrecht` (WP-155). Allowed: security/privacy fixes, defect
+fixes, compliance obligations, P14 work. Track G is the owner's call (OQ-Q3).
+(c) **Instrument first.** The current numbers cannot show whether 90 % is
+reached: on goldset v0.2.0 with `eval/extractors.py` 1.1.0 the recall ceiling
+is 66.4 % (14 of 42 expected issues have no extractable norm; GS-001 and
+GS-007 ceiling 0), the precision ceiling is 83.3 % (GS-011/GS-012 have no
+expected citations), and the assessment scorer ignored negation, let any
+"rechtswidrig" in the reasoning override a "kein Verwaltungsakt" verdict and
+mapped "unzulässig" to `rechtswidrig`. Raw outputs of the committed reports
+were not kept, so they cannot be re-scored. Therefore: structured issue IDs
+from a module issue taxonomy, `required`/`acceptable` citations, a structured
+verdict field, per-case diagnostics and kept outputs; the scorer is validated
+against the professional reviewer (≥ 95 % agreement) and frozen **before**
+tuning.
+(d) **Goldset v1.0.0.** ≥ 90 synthetic cases (60 development, 30 held-out),
+stratified by notice type and label, every case reviewed by an
+owner-appointed professional reviewer (owner: "I will find someone who is a
+professional"). The held-out set is not used for tuning and not read by the
+developer agent.
+(e) **Assessment scorer fixed now** (`eval/extractors.py` 1.2.0,
+`tests/unit/test_eval_assessment.py`): the verdict sentence "Vorläufige
+Einordnung: …" decides; the fallback ignores negated mentions and takes the
+earliest match; "unzulässig" dropped; new labels `rechtmaessig` and
+`einordnung_offen` (real answers that score as mismatch, distinct from
+`None` = not extractable). Assessment values scored by 1.1.0 are not
+comparable; the committed reports cannot be re-scored (no outputs).
+**Rejected:** (1) Keeping the three metrics warn-only — they measure the
+product; a red value must block. (2) Tuning against the current scorer and
+goldset — the ceilings make 90 % unreachable and the scorer errors would be
+optimised into the prompts (prompt set 3.0.0 already wrote "nie verneint"
+into P-04 to work around the substring matcher). (3) An LLM judge for issue
+matching — non-deterministic and itself unvalidated; taxonomy IDs are
+deterministic and also give the person a check list. (4) A lower-bound
+(confidence interval) gate — owner chose the mean. (5) Continuing P13 in
+parallel — every new module would repeat an unproven analysis.
+**Rationale:** The deterministic halves (deadlines, amounts) are at 100 %;
+the language-model analysis — what the person actually reads — is at
+41.5 / 30.3 / 16.7 % and partly unmeasurable. Without a trustworthy
+instrument no improvement claim is possible; without the freeze effort goes
+to surfaces that multiply the problem. R2: reversible by a later decision.
+**Open:** OQ-Q1 reviewer, OQ-Q2 held-out custody, OQ-Q3 Track G during the
+freeze, OQ-Q4 inference budget (`docs/quality-plan.md` § 10).
