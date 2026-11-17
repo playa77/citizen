@@ -36,8 +36,8 @@ Machine-readable OpenAPI description is served by the app itself:
 - **API version:** path-based (`/api/v1/...`). Breaking changes introduce a new
   prefix (`/api/v2`); v1 remains served during any transition.
 - **Application version:** `GET /api/v1/meta/version` →
-  `{"api_version": "3.1.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
-  "modules": {"sozialrecht": "1.2.0", …}}`. The package
+  `{"api_version": "3.2.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
+  "modules": {"sozialrecht": "1.3.0", …}}`. The package
   version is also embedded in the OpenAPI title and `/health`.
 - **Module versions:** each legal-area module is versioned on its own (semver
   in its manifest); `GET /api/v1/modules` and the `modules` key of
@@ -51,7 +51,7 @@ Machine-readable OpenAPI description is served by the app itself:
 | Direction | Types |
 |---|---|
 | Requests | `application/json`; file uploads use `multipart/form-data` |
-| Responses | `application/json`; analysis/chat endpoints return `text/event-stream` (SSE); case export optionally `text/markdown` |
+| Responses | `application/json`; analysis/chat endpoints return `text/event-stream` (SSE); case export optionally `text/markdown`; appointment dossier optionally `application/pdf` (§8.11) |
 | Errors | always `application/json`, shape `{"detail": <string or object>}` |
 
 Character encoding is UTF-8 throughout. All timestamps are ISO 8601 strings
@@ -115,6 +115,8 @@ The disclaimer middleware uses a bare object (not wrapped in `"detail"`):
 | 403 | all `/api/v1` (middleware) | missing/mismatched `X-Disclaimer-Ack` |
 | 403 | upload routes on dev instances | missing/invalid `X-Document-Tag` (`synthetic_data_only`) |
 | 404 | cases, conversations, corpus jobs, goldset, intake, eval reports | unknown resource id |
+| 400 | `PUT /cases/{case_id}/dossier/chronology` | `invalid_chronology_update` — unknown entry id, bad status/date, unknown or invalid fact |
+| 404 | `GET /cases/{case_id}/dossier` | `dossier_not_built` — the case exists but no dossier was built yet |
 | 404 | `/modules/{module_id}*` | `MODULE_UNKNOWN` — no installed module has this id; `goldset_not_declared` — the module ships no goldset |
 | 409 | `POST /analyze` | `corpus_not_ready` — a selected legal area has no corpus chunks |
 | 409 | intake `message` | interview turn limit reached |
@@ -411,6 +413,11 @@ Full case: adds `input_text`, `final_output` (merged generation +
 `adversarial_*` + `calculation_*` keys), `stages[]` (audit log entries),
 `claims[]` each with `evidence_bindings[]` (`chunk_id`, `quote_excerpt`,
 `binding_strength`), `chat_history`, `user_edits`. `404` if unknown.
+Since core 3.2.0 the `calculation_check` stage's `output_snapshot` also holds
+`result` (the module calculators' full result, without `legal_snapshot`) for
+cases analysed from then on; it feeds the dossier (§8.11) and is not copied
+into `final_output`, whose keys are unchanged. `user_edits.dossier` holds the
+dossier confirmation state (§8.11).
 
 #### `DELETE /api/v1/cases/{case_id}` → `{"status": "deleted", "id": "..."}`, `404` if unknown.
 
@@ -674,7 +681,7 @@ The summary fields above plus the public manifest parts:
  "scope": {"summary_de": "…", "own_matter_only": true, "out_of_scope": ["…"]},
  "legacy_aliases": [],
  "capabilities": {"deadlines": true, "calculators": true, "regime_provider": true,
-                  "document_templates": true, "goldset": true, "dossier": false},
+                  "document_templates": true, "goldset": true, "dossier": true},
  "parameter_domain": "sozialrecht",
  "deadlines": [{"id": "widerspruch_sgg_84", "label_de": "Widerspruchsfrist",
                 "trigger": "bekanntgabe", "duration": {"days": 0, "months": 1, "years": 0},
@@ -684,13 +691,20 @@ The summary fields above plus the public manifest parts:
                                                    "basis": "§ 66 Abs. 2 SGG"},
                 "severity": "critical", "applies_when": {"document_type": "verwaltungsakt"}}],
  "document_types": [{"id": "widerspruch", "title": "Widerspruch"}],
- "dossier_checklist": null,
+ "dossier_checklist": {"format": "citizen-module-dossier-v1.0",
+                       "checklist": [{"id": "bescheid_vollstaendig", "label_de": "…",
+                                      "why_de": "…", "topic": "kernunterlagen",
+                                      "required": true}],
+                       "questions": [{"id": "frist_bestaetigen", "text_de": "…",
+                                      "topic": "fristen"}]},
  "compliance": null}
 ```
 
 File paths and code references of the manifest are not served (only the
-`capabilities` flags). `dossier_checklist` stays `null` until modules ship
-dossier data (roadmap P10). `compliance` is `null` unless the manifest
+`capabilities` flags). `dossier_checklist` is the module's `dossier.yaml`
+content — every checklist item and question, each with an optional
+`when: {"any_keyword": [...]}` selection rule (§8.11) — or `null` for a module
+without dossier data. `compliance` is `null` unless the manifest
 declares one (`special_regimes`, `referral`). `404` `MODULE_UNKNOWN` for an
 id that is not installed; disabled modules are served (with
 `"enabled": false`).
@@ -701,7 +715,7 @@ The goldset declared by the module manifest, same `goldset`/`cases` shape as
 `GET /api/v1/goldset`, plus the module and its evaluation gate:
 
 ```json
-{"module_id": "sozialrecht", "module_version": "1.2.0",
+{"module_id": "sozialrecht", "module_version": "1.3.0",
  "gate": {"rule": "zero_regression", "baseline_report": "eval/results/….json"},
  "goldset": {"id": "…", "version": "0.2.0", "…": "…"},
  "cases": [{"id": "GS-001", "…": "…"}]}
@@ -710,6 +724,163 @@ The goldset declared by the module manifest, same `goldset`/`cases` shape as
 May serve a newer goldset version than `/api/v1/goldset` (which follows
 `GOLDSET_PATH`). `404` `MODULE_UNKNOWN`, `404` `goldset_not_declared`, `500`
 unreadable goldset file.
+
+### 8.11 Appointment dossier (Mandatsvorbereitung, roadmap P10)
+
+The dossier is what the person takes to an appointment with an advice
+centre or a lawyer: a chronology of the facts, a checklist of documents to
+bring, the deadline banner, deterministic calculation results, the
+analysis' statements with verified quotes, questions for the appointment,
+and an action draft as annex. JSON validates against the JSON Schema
+`citizen-dossier-v1.0` (`app/dossier/citizen-dossier-v1.0.schema.json`); the
+PDF is rendered locally from the same JSON and embeds it.
+
+**Where the content comes from.** Deadlines come only from the Fristen core
+evaluating the case modules' deadline specs — never from model output.
+The chronology is a deterministic date extraction from the analysed text and
+the documents attached to the case (conversation uploads with this
+`case_run_id`), confirmed by the person. Checklist and questions are module
+data (`dossier.yaml`, selected by keyword). Calculations are the module
+calculators' engine fields only (no model commentary). `evidence` (claims)
+and `drafts` are AI-derived; the dossier therefore carries `disclosure` and
+`provenance` (`citizen-provenance-v1.1`) like every AI-output surface.
+
+#### `GET /api/v1/cases/{case_id}/dossier/chronology`
+
+Every chronology proposal with the person's current decision, plus the
+confirmed facts:
+
+```json
+{"case_id": "<uuid>",
+ "entries": [{"entry_id": "chr-1a2b3c4d5e6f", "date": "2026-07-06",
+              "kind": "document_date", "label_de": "Datum des Schreibens",
+              "status": "proposed",
+              "source": {"document": "case_input", "label": "Analysierter Text",
+                         "line": 2, "excerpt": "Essen, 06.07.2026"},
+              "module_id": null, "note": null}],
+ "facts": {}}
+```
+
+`status` ∈ {`proposed`, `confirmed`, `rejected`, `user_added`}; a corrected
+entry also carries `original_date`. `kind`: core kinds `document_date`,
+`period_start`, `period_end`, `mentioned`, `user_event`, plus module cue
+kinds (Sozialrecht e.g. `antrag`, `termin`, `zugang`). `source.document` is
+`case_input` or `conversation_document:<uuid>`. Entry ids are stable while
+the source text is unchanged. `404` unknown case.
+
+#### `PUT /api/v1/cases/{case_id}/dossier/chronology`
+
+Replaces the whole confirmation state (send everything you want kept):
+
+```json
+{"entries": [{"entry_id": "chr-1a2b3c4d5e6f", "status": "confirmed"},
+             {"entry_id": "chr-…", "status": "confirmed", "date": "2026-07-07",
+              "label_de": "…", "note": "…"},
+             {"entry_id": "chr-…", "status": "rejected"}],
+ "added": [{"date": "2026-07-10", "label_de": "Brief erhalten", "kind": "zugang",
+            "note": "optional"}],
+ "facts": {"bescheid_datum": "2026-07-06", "aufgabe_zur_post": "2026-07-06",
+           "bekanntgabe_tatsaechlich": null, "rbb_status": "korrekt",
+           "ist_verwaltungsakt": true, "bundesland": "NW"}}
+```
+
+All keys optional. `rbb_status` ∈ {`korrekt`, `fehlerhaft`, `fehlt`};
+`bundesland` is a two-letter Land code (`NW`, `BY`, …). Returns the same shape
+as the GET. Stored in `case_run.user_edits.dossier`; other `user_edits` keys
+are kept. `400` `invalid_chronology_update`, `404` unknown case.
+
+**Deadline inputs.** `facts.bescheid_datum` wins; otherwise the confirmed
+`document_date` entry gives a `computed` deadline, an unconfirmed one only a
+`provisional` deadline, none at all `missing_input`. Unset facts take the
+conservative reading and are listed per deadline in `assumptions`
+(Rechtsbehelfsbelehrung correct, Aufgabe zur Post = letter date, treated as a
+Verwaltungsakt, Bundesland = Fristen-core default).
+
+#### `POST /api/v1/cases/{case_id}/dossier?format=json|pdf`
+
+Builds the next revision (1, 2, …) from the current case data and
+confirmation state, stores it, and returns it with `201`.
+
+`format=json` (default):
+
+```json
+{"case_id": "<uuid>", "revision": 2, "schema_version": "citizen-dossier-v1.0",
+ "content_sha256": "<sha256 of the dossier's canonical JSON>",
+ "created_at": "…",
+ "dossier": {
+   "schema_version": "citizen-dossier-v1.0", "revision": 2, "generated_at": "…",
+   "case": {"case_id": "…", "title": "…", "created_at": "…",
+            "legal_areas": ["sozialrecht"],
+            "modules": [{"id": "sozialrecht", "version": "1.3.0", "title_de": "Sozialrecht"}]},
+   "notice": {"de": "…keine Rechtsberatung…", "disclaimer_version": "v3.0.0"},
+   "sections": {
+     "chronology": {"entries": [/* as above, without rejected */],
+                    "counts": {"proposed": 2, "confirmed": 1, "user_added": 1, "rejected": 1}},
+     "document_checklist": {"items": [{"id": "…", "module_id": "sozialrecht",
+                                       "modules": ["sozialrecht"], "label_de": "…",
+                                       "why_de": "…", "topic": "…", "required": true}]},
+     "deadlines": {"facts_used": {"bescheid_datum": "2026-07-06", "…": "…"},
+                   "items": [{"module_id": "sozialrecht", "spec_id": "widerspruch_sgg_84",
+                              "label_de": "Widerspruchsfrist", "severity": "critical",
+                              "basis": "§ 84 Abs. 1 SGG", "status": "computed",
+                              "frist_typ": "monat", "bekanntgabe": "2026-07-10",
+                              "frist_ende": "2026-08-10", "rollover_applied": false,
+                              "oq1_flag": false, "oq1_alternate_ende": null,
+                              "explanation_de": "…", "assumptions": ["…"], "inputs": {}}],
+                   "earliest_frist_ende": "2026-08-10"},
+     "calculations": {"status": "available", "summary": {"total_discrepancies": 1,
+                      "total_amount_eur": 48.0, "direction": "zulasten"},
+                      "items": [{"label": "…", "relevant_rule": "…", "deterministic_result": 338.0,
+                                 "computation_detail": "…", "authority_values": {"authority": 290.0},
+                                 "discrepancy_found": true, "discrepancy_amount_eur": 48.0,
+                                 "discrepancy_direction": "zulasten"}]},
+     "evidence": {"items": [{"claim_id": "…", "claim_text": "…", "claim_type": "fact",
+                             "confidence_score": 0.9, "verification": "exakt",
+                             "user_adjudication": {"status": "disputed"},
+                             "bindings": [{"quote_excerpt": "…", "binding_strength": 0.95,
+                                           "source": "SGB II > § 11b"}]}]},
+     "questions": {"items": [{"id": "…", "module_id": "sozialrecht", "modules": ["sozialrecht"],
+                              "text_de": "…", "topic": "…", "origin": "module"}]},
+     "drafts": {"items": [{"module_id": "sozialrecht", "document_type": "widerspruch",
+                           "title": "…", "rendered_text": "…", "review_slots": 3,
+                           "warnings": ["…"]}]},
+     "export": {"formats": ["json", "pdf"], "pdf_attachments": ["dossier.json", "provenance.json"]}},
+   "warnings": ["…"],
+   "disclosure": {"version": "1.0", "must_display_before": "results", "texts": {"…": "…"}},
+   "provenance": {"spec_version": "citizen-provenance-v1.1", "…": "…"}}}
+```
+
+- Deadline `status` ∈ {`computed`, `provisional`, `not_applicable`,
+  `missing_input`}; `frist_ende` is `null` unless a deadline runs.
+  `not_applicable` with `frist_typ: "kein_va"`: the letter is no
+  Verwaltungsakt (person-confirmed fact).
+- `calculations.status`: `available` (line items), `summary_only` (cases
+  analysed before core 3.2.0: counts only), `none`.
+- `questions[].origin`: `module` or `disputed_claim` (one question per claim
+  the person marked `disputed` via `/adjudicate`).
+- Claim texts and quotes are depseudonymized with the case's PII mapping —
+  the dossier is the person's own document.
+- `drafts`: one draft from the first case module with document templates,
+  chosen by the module's selection table from the critical deadline; unbound
+  slots stay `[BITTE PRÜFEN: …]`.
+- Modules without `dossier.yaml` add no checklist/questions; `warnings`
+  names them.
+
+`format=pdf`: `application/pdf` attachment
+(`dossier_<case_id>_r<revision>.pdf`), print-ready A4, deadline banner first.
+Provenance is in a footer line on every page, in the PDF metadata
+(`keywords` = provenance JSON, `subject` = schema id + case id) and in two
+embedded files: `dossier.json` (the full dossier) and `provenance.json`.
+
+Both formats send headers `X-Dossier-Revision`, `X-Dossier-Sha256`,
+`X-Dossier-Schema`. `404` unknown case; `422` other `format` values.
+
+#### `GET /api/v1/cases/{case_id}/dossier?format=json|pdf`
+
+The last built revision, same shape and headers as the POST, status `200`;
+the PDF is rendered from the stored JSON. `404` unknown case; `404`
+`dossier_not_built` (structured `detail`, with `action`) before the first
+POST. Deleting the case deletes its dossiers.
 
 ---
 
@@ -731,6 +902,9 @@ unreadable goldset file.
 7. For corpus setup: check `corpus/health`; if unhealthy trigger
    `corpus/update` and poll `corpus/status/{job_id}`.
 8. Treat any unexpected disconnect mid-SSE as a failed run and re-submit.
+9. For the appointment dossier: `GET …/dossier/chronology`, let the person
+   confirm/correct entries and facts (`PUT`), then `POST …/dossier` (JSON or
+   PDF). Show `deadlines` first and never hide `provisional`/`missing_input`.
 
 ---
 

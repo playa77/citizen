@@ -55,6 +55,13 @@
      "prompts:unknown-area"
     ],
     "reason": "prompt set 3.0.1: P-04 claim rules \u2014 one 'nicht belegbar' claim per response, document-factual questions need no claim, 1-3 claims per legal question (WP-97 gate, D-062)"
+   },
+   {
+    "keys": [
+     "documents:digest",
+     "documents:sample"
+    ],
+    "reason": "\u00a7 37 Abs. 2 SGB X fiction is intertemporal: three days for dispatch before 2025-01-01 (PostModG) \u2014 the 8 'jahr' draft variants (fixture dispatch 10.01.2023) state Bekanntgabe/Fristende one day earlier (D-065)"
    }
   ]
  },
@@ -62,25 +69,6 @@
  "calc:extraction_prompt": "4670c9a67bbc7a4ab613fe9fcb72321143a486c2c929789b3b920c1caf0c1a0f",
  "calc:referral_hint": "Bitte lassen Sie die Berechnung von einer Fachstelle oder einem Rechtsanwalt f\u00fcr Sozialrecht \u00fcberpr\u00fcfen.",
  "corpus:area_source_types": {
-  "andere": [],
-  "arbeitsrecht": [
-   "bgb"
-  ],
-  "erbrecht": [
-   "bgb",
-   "erbstg",
-   "hoefev"
-  ],
-  "familienrecht": [
-   "bgb"
-  ],
-  "mietrecht": [
-   "bgb"
-  ],
-  "schenkungsrecht": [
-   "bgb",
-   "erbstg"
-  ],
   "sozialrecht": [
    "sgb1",
    "sgb2",
@@ -93,14 +81,33 @@
    "vwvfg",
    "sgg"
   ],
-  "strafrecht": [],
+  "erbrecht": [
+   "bgb",
+   "erbstg",
+   "hoefev"
+  ],
+  "schenkungsrecht": [
+   "bgb",
+   "erbstg"
+  ],
+  "familienrecht": [
+   "bgb"
+  ],
+  "mietrecht": [
+   "bgb"
+  ],
+  "arbeitsrecht": [
+   "bgb"
+  ],
   "vertragsrecht": [
    "bgb"
   ],
   "verwaltungsrecht": [
    "vwvfg",
    "sgbx"
-  ]
+  ],
+  "strafrecht": [],
+  "andere": []
  },
  "corpus:bgb_tag_digest": "34ddb9eb0aaa9be889cd8b3c0ad8331e95c2e6576dcbb315cb30a03356ad0580",
  "corpus:bgb_tag_none": [
@@ -108,7 +115,7 @@
   null
  ],
  "documents:count": 3600,
- "documents:digest": "79139dc7347cdb45bdaa890cda0ce4b8ae7581c164be774033f0bf5f2e6f42ab",
+ "documents:digest": "ca09bc40bf363dbcc3ae9d279c2921d7705cfa1010fa7484b897d3690f782c70",
  "documents:sample": {
   "akteneinsichtsantrag_25|jahr|dataclass|mixed|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
   "akteneinsichtsantrag_25|jahr|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
@@ -118,32 +125,32 @@
   "akteneinsichtsantrag_25|monat|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
   "akteneinsichtsantrag_25|none|dataclass|mixed|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
   "akteneinsichtsantrag_25|none|empty|unverified|full|all": "49f09992c405ce873279e1c2e7d4ce41528fe081060f5da36a3008e455a42d73",
-  "gibt_es_nicht|jahr|dataclass|mixed|full|all": "4fbdc3b19fc9c5f6e7a5cc75a1ee8a4961553a03f5fcb889c1484e2f9a437a09",
-  "gibt_es_nicht|jahr|empty|unverified|full|all": "4aaf6aa07de75edd97cb55e0e845b508d513eef1588e916ebec6282fd23d840f",
+  "gibt_es_nicht|jahr|dataclass|mixed|full|all": "4099315f37df0b60da1e0f7968c222c9e0dd1cab36c597918f3fa6352d1918aa",
+  "gibt_es_nicht|jahr|empty|unverified|full|all": "1463232e789d28bbdfb1233b176b229f06347345595cebcfc4992c9b6e615bed",
   "gibt_es_nicht|kein_va|dataclass|mixed|full|all": "44df5b1d829a65966d0e241b504825791de5c2906c33de36afd0bebbdde5dd49",
   "gibt_es_nicht|kein_va|empty|unverified|full|all": "51bbe7008ac9fe0df4e3cd2f9c88c2482b5e98660fae6e0e9c7f0b3b85df2548",
   "gibt_es_nicht|monat|dataclass|mixed|full|all": "66ccbdb0546344b01ccbd4666d9b5279fd39eb64fd5fce717a1edcf7c8e907bc",
   "gibt_es_nicht|monat|empty|unverified|full|all": "0e1ee8cad5cd3bc5460df71a27f9d0debbca0c15443b45d69e2758b92410cac5",
   "gibt_es_nicht|none|dataclass|mixed|full|all": "07648d72ad1de8a06bf42f9c2ddc5a1acf5530f82024d9e83609e9d8a9c9cdf8",
   "gibt_es_nicht|none|empty|unverified|full|all": "bf57ca02fb04f9ae3621fcbceefba21f3f447e297749f1d885e1dd72c7c87dc8",
-  "ueberpruefungsantrag_44|jahr|dataclass|mixed|full|all": "d39be1959f57eeebf8c8494a64c953b75f50ee97e6e548ba57da2ab356c92f8b",
-  "ueberpruefungsantrag_44|jahr|empty|unverified|full|all": "20f854d1ac7e26a8abc0d28121752e51b5d269c6df1fec2e270badc630464c1e",
+  "ueberpruefungsantrag_44|jahr|dataclass|mixed|full|all": "6af6eae10bc465e9faecaa79be57e4c5b25f70066ae33e2fc3d456600a6302f3",
+  "ueberpruefungsantrag_44|jahr|empty|unverified|full|all": "c6df9f26f15fdf6e712615ff76aac2f6828a0407497a9bbb6c28bf34d38d940b",
   "ueberpruefungsantrag_44|kein_va|dataclass|mixed|full|all": "fa4cc94458b77b0e2407a6f4692983d5a48ed31dcb89959d1aafc222161df501",
   "ueberpruefungsantrag_44|kein_va|empty|unverified|full|all": "49b229dee696c99cdaa7a3be9177ff6c51fdba8a855ab626ec78138c1b37364c",
   "ueberpruefungsantrag_44|monat|dataclass|mixed|full|all": "ea527fd44cb22a6017a958383fea09fd2f185426249f9269d97dbbc47e06b1d7",
   "ueberpruefungsantrag_44|monat|empty|unverified|full|all": "38fbc5906995ba30cc8ef89857cd59dc37cbb7b4b99705241c3b65f3bf340568",
   "ueberpruefungsantrag_44|none|dataclass|mixed|full|all": "a8f8787841fc98a05462e2ed25d4c67a6bc1adea8a2d57a158e4311dc99f2f84",
   "ueberpruefungsantrag_44|none|empty|unverified|full|all": "296a687a7b8e863b30d2bb168b8cead1d480eb1164939e5f63d782ddf927502a",
-  "widerspruch_jahresfrist|jahr|dataclass|mixed|full|all": "49643074410859ccebb7ac4e018047e9bcdf0f0121bdac69b00534f0e96e2278",
-  "widerspruch_jahresfrist|jahr|empty|unverified|full|all": "d23e39874ddfe1eabb18d25d8443111aaa18af881558c60ce13ff4c9f0ed5a0c",
+  "widerspruch_jahresfrist|jahr|dataclass|mixed|full|all": "f74dfb2da05b2bd5e13280812a429c501be9785705362f4db97bb35d3f2dbe5e",
+  "widerspruch_jahresfrist|jahr|empty|unverified|full|all": "6152a324973f2f02a776411574180a0577cacd58fdc00128fcf3bb1d4fc87a8c",
   "widerspruch_jahresfrist|kein_va|dataclass|mixed|full|all": "4d306547a21fefc5ab597d30db4612082282f6402bc028333d06cb60dfb1aa33",
   "widerspruch_jahresfrist|kein_va|empty|unverified|full|all": "ce80145b836a5be8df41c06f1c3e52b840233f0c3be8772351deff1fe8520856",
   "widerspruch_jahresfrist|monat|dataclass|mixed|full|all": "3fa2f86f929b25f5ddcc21334548a7ad2479d73a0a86ed0c7355c4b18e5fd80c",
   "widerspruch_jahresfrist|monat|empty|unverified|full|all": "c0050c200ebbd74e7303f48fc9f62fbb5501f9a8e3bada1b81620b7724465a46",
   "widerspruch_jahresfrist|none|dataclass|mixed|full|all": "fca3ad2e49d8033d3818115e9bf0ad83338752aedd867c71f618dc786ec49163",
   "widerspruch_jahresfrist|none|empty|unverified|full|all": "b160c99ed7425cc6c58ffe66b7f6154ca0a0fddafda5dd85bcd3e65d54bd353e",
-  "widerspruch|jahr|dataclass|mixed|full|all": "aa44af1d21cf1b676a5a15b162ac086e708876553ffcb132443fff24c1293f82",
-  "widerspruch|jahr|empty|unverified|full|all": "69ae69b04231fbec0e81ae5c2972aa459fcec161c39d2af94928cd40a5b7d1ff",
+  "widerspruch|jahr|dataclass|mixed|full|all": "d1087b67c14d6e49211928f6dfd8ddeb24fa8691412e66b0c9f4251b74f1b7ef",
+  "widerspruch|jahr|empty|unverified|full|all": "ffbdef9b4338cee68fff7ccc502cda6fa43195ecdce7ec7ae4307523f5de327c",
   "widerspruch|kein_va|dataclass|mixed|full|all": "581dd53a5258e6e8a4d8b796f636aa11ad1ab02ed22c8192d3a65897711af30c",
   "widerspruch|kein_va|empty|unverified|full|all": "c0cef16eeaf1cd78dda7581348396f86c0b4f13e44dbfad4427139f4726c7906",
   "widerspruch|monat|dataclass|mixed|full|all": "3f079e9ce4060640df33bd35b6315f57f2d97d14df560e1e80de248a69422bcd",
@@ -152,12 +159,12 @@
   "widerspruch|none|empty|unverified|full|all": "372ba50e2c6708d34166809e55e0d05f190dd76d372c632b663fed1c53d09f24"
  },
  "documents:select": {
-  "kein_va": "akteneinsichtsantrag_25",
-  "lapsed_jahr": "widerspruch_jahresfrist",
-  "lapsed_monat": "ueberpruefungsantrag_44",
   "none": "akteneinsichtsantrag_25",
+  "open_monat": "widerspruch",
   "open_jahr": "widerspruch_jahresfrist",
-  "open_monat": "widerspruch"
+  "lapsed_monat": "ueberpruefungsantrag_44",
+  "lapsed_jahr": "widerspruch_jahresfrist",
+  "kein_va": "akteneinsichtsantrag_25"
  },
  "intake:enum": [
   "sozialrecht",

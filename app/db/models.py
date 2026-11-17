@@ -16,7 +16,9 @@ Plus (migration 013, WP-94):
                    a case ran with; the area-key CHECK is gone (D-057)
 """
 
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-94: LegalModule; CaseRunArea
+# Semantic Version: 0.6.0 | 2026-11-16 — WP-100: CaseDossier (case_dossier
+# table, migration 014, D-064).
+# 0.5.0 | 2026-11-16 — WP-94: LegalModule; CaseRunArea
 # module_id (FK) + module_version, area CHECK dropped; LEGAL_AREA_ALLOWED /
 # LEGAL_AREA_TIER removed (registry is the source of truth); legal_parameter
 # domain holds the module id, column default dropped.
@@ -800,4 +802,45 @@ class LegalModule(Base):
             f"tier IN ({_sql_in(MODULE_TIER_ALLOWED)})",
             name="ck_legal_module_tier",
         ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 15. case_dossier (WP-100)
+# ---------------------------------------------------------------------------
+
+
+class CaseDossier(Base):
+    """One built appointment dossier per row (roadmap P10, D-064).
+
+    A separate table rather than ``case_run.dossier_json``: every build is
+    kept as a numbered ``revision`` (what the person printed stays
+    reproducible), and ``/cases`` list queries never load dossier payloads.
+    ``dossier_json`` validates against ``schema_version``
+    (``citizen-dossier-vMAJOR.MINOR``); ``content_sha256`` is the SHA-256 of
+    its canonical JSON (sorted keys, UTF-8). The PDF is rendered from the
+    stored JSON on demand and not stored. Rows go with their case
+    (``ON DELETE CASCADE``).
+    """
+
+    __tablename__ = "case_dossier"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    case_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("case_run.id", name="fk_case_dossier_case_run_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    dossier_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("case_run_id", "revision", name="uq_case_dossier_case_revision"),
+        CheckConstraint("revision >= 1", name="ck_case_dossier_revision_positive"),
+        Index("idx_case_dossier_case", "case_run_id"),
     )

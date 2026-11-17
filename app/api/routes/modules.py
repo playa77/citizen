@@ -18,7 +18,9 @@ unreachable, ``corpus`` and ``installed_at`` are ``null`` — the catalog
 itself comes from the filesystem and stays available.
 """
 
-# Semantic Version: 1.0.0 | 2026-11-16 — WP-95: initial version.
+# Semantic Version: 1.1.0 | 2026-11-16 — P10: dossier_checklist served from the
+# module's dossier.yaml.
+# 1.0.0 | 2026-11-16 — WP-95: initial version.
 
 from __future__ import annotations
 
@@ -34,6 +36,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.routes.goldset import goldset_listing, load_goldset_file
 from app.db.models import LegalModule
 from app.db.session import async_session_factory
+from app.dossier.module_content import public_dossier_checklist
 from app.fristen.specs import DeadlineSpec, Duration
 from app.modules.areas import area_tables
 from app.modules.content import module_path
@@ -244,9 +247,9 @@ async def get_module(module_id: str) -> dict[str, Any]:
         "parameter_domain": (str(parameters["domain"]) if isinstance(parameters, dict) else None),
         "deadlines": [_deadline(spec) for spec in deadline_specs(manifest.id)],
         "document_types": _document_types(manifest),
-        # Dossier checklists arrive with roadmap P10 (WP-102); until a module
-        # declares a `dossier` file this stays null.
-        "dossier_checklist": None,
+        # P10 (WP-102): the module's dossier.yaml checklist + question list;
+        # null for a module that declares no `dossier` file.
+        "dossier_checklist": public_dossier_checklist(manifest.id),
         "compliance": _public_compliance(manifest),
     }
 

@@ -1,4 +1,6 @@
-# Semantic Version: 0.8.0 | 2026-11-16 — WP-96: startup warms the provenance
+# Semantic Version: 0.9.0 | 2026-11-16 — P10: dossier router; startup validates
+# the enabled modules' dossier content (dossier.yaml).
+# 0.8.0 | 2026-11-16 — WP-96: startup warms the provenance
 # module cache (parameter-set ids of the enabled modules).
 # 0.7.0 | 2026-11-16 — WP-95: /modules router; startup builds the
 # process-wide registry used by request validation (runtime.module_registry).
@@ -25,6 +27,7 @@ from app.api.routes import (
     conversations,
     corpus,
     documents,
+    dossier,
     eval_reports,
     goldset,
     ingest,
@@ -91,6 +94,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             len(_tables.presets),
             len(calculators_for(_enabled)),
             len(regime_providers_for(_enabled)),
+        )
+        # P10: invalid dossier content of an enabled module refuses startup.
+        from app.dossier.module_content import module_dossier
+
+        logger.info(
+            "Dossier content: %s",
+            ", ".join(m for m in _enabled if module_dossier(m) is not None) or "none",
         )
         # WP-96: warm the provenance cache (parameter-set ids) so no request
         # pays the parameter-file read; an unreadable parameter file of an
@@ -237,6 +247,7 @@ app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
 app.include_router(modules.router, prefix="/api/v1", tags=["modules"])
 app.include_router(ocr.router, prefix="/api/v1", tags=["ocr"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
+app.include_router(dossier.router, prefix="/api/v1", tags=["dossier"])
 app.include_router(goldset.router, prefix="/api/v1", tags=["goldset"])
 app.include_router(eval_reports.router, prefix="/api/v1", tags=["eval_reports"])
 

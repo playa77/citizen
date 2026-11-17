@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://citizen.local/schemas/citizen-dossier-v1.0.json",
+  "title": "Citizen appointment dossier (Mandatsvorbereitungs-Dossier) v1.0",
+  "description": "Machine-readable form of the appointment dossier (ARCHITECTURE.md § 3.7, roadmap WP-100). Eight sections: chronology, document_checklist, deadlines, calculations, evidence, questions, drafts, export. MAJOR.MINOR in the id: a MINOR adds optional fields, a MAJOR changes or removes one. Schema file version 1.0.0 | 2026-11-16.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "revision", "generated_at", "case", "notice",
+    "sections", "warnings", "disclosure", "provenance"
+  ],
+  "$defs": {
+    "isodate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "isodate_or_null": {"anyOf": [{"$ref": "#/$defs/isodate"}, {"type": "null"}]},
+    "str_or_null": {"type": ["string", "null"]},
+    "module_list": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "chronology_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_id", "date", "kind", "label_de", "status", "source", "module_id", "note"],
+      "properties": {
+        "entry_id": {"type": "string", "pattern": "^(chr|usr)-[0-9a-f]{12}$"},
+        "date": {"$ref": "#/$defs/isodate"},
+        "original_date": {"$ref": "#/$defs/isodate"},
+        "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "label_de": {"type": "string"},
+        "status": {"enum": ["proposed", "confirmed", "user_added"]},
+        "source": {
+          "anyOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["document", "label", "line", "excerpt"],
+              "properties": {
+                "document": {"type": "string"},
+                "label": {"type": "string"},
+                "line": {"type": "integer", "minimum": 1},
+                "excerpt": {"type": "string"}
+              }
+            }
+          ]
+        },
+        "module_id": {"$ref": "#/$defs/str_or_null"},
+        "note": {"$ref": "#/$defs/str_or_null"}
+      }
+    },
+    "deadline_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_id", "spec_id", "label_de", "severity", "basis", "status", "frist_typ",
+        "bekanntgabe", "frist_ende", "rollover_applied", "oq1_flag", "oq1_alternate_ende",
+        "explanation_de", "assumptions", "inputs"
+      ],
+      "properties": {
+        "module_id": {"type": "string"},
+        "spec_id": {"type": "string"},
+        "label_de": {"type": "string"},
+        "severity": {"type": "string"},
+        "basis": {"$ref": "#/$defs/str_or_null"},
+        "status": {"enum": ["computed", "provisional", "not_applicable", "missing_input"]},
+        "frist_typ": {"$ref": "#/$defs/str_or_null"},
+        "bekanntgabe": {"$ref": "#/$defs/isodate_or_null"},
+        "frist_ende": {"$ref": "#/$defs/isodate_or_null"},
+        "rollover_applied": {"type": ["boolean", "null"]},
+        "oq1_flag": {"type": ["boolean", "null"]},
+        "oq1_alternate_ende": {"$ref": "#/$defs/isodate_or_null"},
+        "explanation_de": {"$ref": "#/$defs/str_or_null"},
+        "assumptions": {"type": "array", "items": {"type": "string"}},
+        "inputs": {"type": "object"}
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "citizen-dossier-v1.0"},
+    "revision": {"type": "integer", "minimum": 0},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "title", "created_at", "legal_areas", "modules"],
+      "properties": {
+        "case_id": {"type": "string"},
+        "title": {"$ref": "#/$defs/str_or_null"},
+        "created_at": {"$ref": "#/$defs/str_or_null"},
+        "legal_areas": {"type": "array", "items": {"type": "string"}},
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "version", "title_de"],
+            "properties": {
+              "id": {"type": "string"},
+              "version": {"type": "string"},
+              "title_de": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "notice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["de", "disclaimer_version"],
+      "properties": {
+        "de": {"type": "string", "minLength": 20},
+        "disclaimer_version": {"type": "string"}
+      }
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chronology", "document_checklist", "deadlines", "calculations",
+        "evidence", "questions", "drafts", "export"
+      ],
+      "properties": {
+        "chronology": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entries", "counts"],
+          "properties": {
+            "entries": {"type": "array", "items": {"$ref": "#/$defs/chronology_entry"}},
+            "counts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["proposed", "confirmed", "user_added", "rejected"],
+              "properties": {
+                "proposed": {"type": "integer", "minimum": 0},
+                "confirmed": {"type": "integer", "minimum": 0},
+                "user_added": {"type": "integer", "minimum": 0},
+                "rejected": {"type": "integer", "minimum": 0}
+              }
+            }
+          }
+        },
+        "document_checklist": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items"],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "module_id", "modules", "label_de", "why_de", "topic", "required"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "module_id": {"type": "string"},
+                  "modules": {"$ref": "#/$defs/module_list"},
+                  "label_de": {"type": "string"},
+                  "why_de": {"$ref": "#/$defs/str_or_null"},
+                  "topic": {"$ref": "#/$defs/str_or_null"},
+                  "required": {"type": "boolean"}
+                }
+              }
+            }
+          }
+        },
+        "deadlines": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["facts_used", "items", "earliest_frist_ende"],
+          "properties": {
+            "facts_used": {"type": "object"},
+            "items": {"type": "array", "items": {"$ref": "#/$defs/deadline_item"}},
+            "earliest_frist_ende": {"$ref": "#/$defs/isodate_or_null"}
+          }
+        },
+        "calculations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "summary", "items"],
+          "properties": {
+            "status": {"enum": ["available", "summary_only", "none"]},
+            "summary": {
+              "anyOf": [
+                {"type": "null"},
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["total_discrepancies", "total_amount_eur", "direction"],
+                  "properties": {
+                    "total_discrepancies": {"type": "integer", "minimum": 0},
+                    "total_amount_eur": {"type": "number"},
+                    "direction": {"type": ["string", "null"]}
+                  }
+                }
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label", "relevant_rule", "deterministic_result", "computation_detail",
+                  "authority_values", "discrepancy_found", "discrepancy_amount_eur",
+                  "discrepancy_direction"
+                ],
+                "properties": {
+                  "label": {"type": "string"},
+                  "relevant_rule": {"$ref": "#/$defs/str_or_null"},
+                  "deterministic_result": {},
+                  "computation_detail": {"$ref": "#/$defs/str_or_null"},
+                  "authority_values": {"type": "object"},
+                  "discrepancy_found": {"type": "boolean"},
+                  "discrepancy_amount_eur": {"type": "number"},
+                  "discrepancy_direction": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items"],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "claim_id", "claim_text", "claim_type", "confidence_score",
+                  "verification", "user_adjudication", "bindings"
+                ],
+                "properties": {
+                  "claim_id": {"type": "string"},
+                  "claim_text": {"type": "string"},
+                  "claim_type": {"type": "string"},
+                  "confidence_score": {"type": "number"},
+                  "verification": {"enum": ["exakt", "normalisiert", "unverifiziert"]},
+                  "user_adjudication": {"type": ["object", "null"]},
+                  "bindings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["quote_excerpt", "binding_strength", "source"],
+                      "properties": {
+                        "quote_excerpt": {"type": "string"},
+                        "binding_strength": {"type": "number"},
+                        "source": {"$ref": "#/$defs/str_or_null"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "questions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items"],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "module_id", "modules", "text_de", "topic", "origin"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "module_id": {"$ref": "#/$defs/str_or_null"},
+                  "modules": {"$ref": "#/$defs/module_list"},
+                  "text_de": {"type": "string"},
+                  "topic": {"$ref": "#/$defs/str_or_null"},
+                  "origin": {"enum": ["module", "disputed_claim"]}
+                }
+              }
+            }
+          }
+        },
+        "drafts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items"],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["module_id", "document_type", "title", "rendered_text", "review_slots", "warnings"],
+                "properties": {
+                  "module_id": {"type": "string"},
+                  "document_type": {"type": "string"},
+                  "title": {"type": "string"},
+                  "rendered_text": {"type": "string"},
+                  "review_slots": {"type": "integer", "minimum": 0},
+                  "warnings": {"type": "array", "items": {"type": "string"}}
+                }
+              }
+            }
+          }
+        },
+        "export": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["formats", "pdf_attachments"],
+          "properties": {
+            "formats": {"type": "array", "items": {"enum": ["json", "pdf"]}},
+            "pdf_attachments": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "disclosure": {"type": "object"},
+    "provenance": {
+      "type": "object",
+      "required": ["spec_version", "generator", "app_version", "modules"],
+      "properties": {
+        "spec_version": {"type": "string"},
+        "generator": {"const": "citizen"},
+        "app_version": {"type": "string"},
+        "modules": {"type": "array"}
+      }
+    }
+  }
+}

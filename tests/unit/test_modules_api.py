@@ -16,7 +16,8 @@ test's loop via httpx ASGITransport; the engine pool is disposed after every
 test.
 """
 
-# Semantic Version: 1.0.0 | 2026-11-16 — WP-95
+# Semantic Version: 1.1.0 | 2026-11-16 — P10: the default module's dossier content.
+# 1.0.0 | 2026-11-16 — WP-95
 
 from __future__ import annotations
 
@@ -252,8 +253,9 @@ class TestModuleDetail:
         assert body["scope"]["summary_de"] == manifest.raw["scope"]["summary_de"]
         assert body["capabilities"]["deadlines"] is True
         assert body["capabilities"]["goldset"] is True
-        assert body["capabilities"]["dossier"] is False
-        assert body["dossier_checklist"] is None
+        # P10 (WP-102): the default module ships dossier content.
+        assert body["capabilities"]["dossier"] is True
+        assert body["dossier_checklist"]["format"] == "citizen-module-dossier-v1.0"
 
         fristen = yaml.safe_load((manifest.path / manifest.raw["fristen"]).read_text("utf-8"))
         assert [d["id"] for d in body["deadlines"]] == [f["id"] for f in fristen]

@@ -1,6 +1,8 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.6 | 2026-11-16 — § 3.3 `default_ingest_sources`; § 8 residual
+<!-- Version: 3.0.0-draft.7 | 2026-11-16 — P10: § 3.7 dossier as built, § 4
+     case_dossier (WP-100 storage decision), § 5 dossier routes (D-064).
+     3.0.0-draft.6 | 2026-11-16 — § 3.3 `default_ingest_sources`; § 8 residual
      couplings closed (D-063).
      3.0.0-draft.5 | 2026-11-16 — prompt set 3.0.0: § 2.4 RegimeProvider
      reference_period, profile result_categories (D-060).
@@ -13,10 +15,12 @@
      built (prompts, document_templates), § 8 status column. -->
 <!-- Status: TARGET architecture, partly delivered: WP-91 (registry/SDK),
      WP-92 (Fristen core), WP-93 (Sozialrecht extraction), WP-94 (data model),
-     WP-95 (module API) and WP-96 (compliance deltas) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
+     WP-95 (module API), WP-96 (compliance deltas) and P10 (dossier,
+     WP-100…WP-104) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
-<!-- Canonical package version: pyproject.toml (3.0.0 — cut at the P9 exit gate, WP-97). -->
+<!-- Canonical package version: pyproject.toml (3.0.0 cut at the P9 exit gate, WP-97;
+     3.2.0 with P10, D-064). -->
 
 ---
 
@@ -277,6 +281,16 @@ core service assembling, for one case across its modules:
 8. Export: print-ready PDF **and** machine-readable JSON validated against a
    versioned schema (`citizen-dossier-v1.0`).
 
+**Status (P10, D-064):** built in `app/dossier/` (chronology, deadlines,
+module content + merge, builder, drafts, PDF) behind
+`app/services/dossier_service.py`. The chronology is deterministic extraction
+plus module `chronology_cues`, confirmed by the person via API before it
+counts as fact; deadlines carry an explicit input state (`computed`,
+`provisional`, `not_applicable`, `missing_input`) and their assumptions;
+calculations show engine fields only. Module content: `dossier.yaml`
+(`citizen-module-dossier-v1.0`, schema `app/dossier/module-dossier.schema.json`).
+Quality evidence: per-module dossier goldset + `eval/dossier_eval.py`.
+
 ### 3.8 Intake engine (`app/services/intake.py`)
 
 Generic interview runner (docassemble-style DSL pattern). Area routing
@@ -310,7 +324,7 @@ these off.
 | `case_run_area.legal_area` | CHECK against `LEGAL_AREA_ALLOWED` (hard-coded tuple in `models.py`) | CHECK removed; `legal_area` keeps the stored area key. New `module_id` FK → `legal_module.id` (NULL only for core-procedural keys) plus `module_version`, so every case records the module and version it ran with (as built: D-057 — the FK sits beside the key because `schenkungsrecht`/`verwaltungsrecht` are not module ids) |
 | `legal_chunk.legal_area` | single tag derived from § range | kept for backward compatibility, no longer used for filtering; retrieval uses module corpus scopes (§ 3.3). Dropped in a later major |
 | `legal_parameter.domain` | default `sgb2` | holds module id; migration rewrites `sgb2 → sozialrecht`; no column default |
-| `case_run` | — | `dossier_json` (nullable, versioned schema) — or a separate `dossier` table if size requires (decided in WP-100) |
+| `case_run` | — | `dossier_json` (nullable, versioned schema) — or a separate `dossier` table if size requires (decided in WP-100: separate table `case_dossier`, one row per build revision, D-064) |
 
 All changes extend the single linear Alembic chain (`… → 012 → 013 …`); no
 branch DAGs (D-024). The `LEGAL_AREA_ALLOWED` / `LEGAL_AREA_TIER` constants in
@@ -319,7 +333,8 @@ and their order: `order` in each module's `intake.yaml`).
 
 **Status:** `legal_module`, the `case_run_area` module binding and the domain
 rewrite are done (WP-94, migration `013_legal_module`, D-057);
-`legal_chunk.legal_area` and `case_run.dossier_json` remain open.
+`legal_chunk.legal_area` remains open. The dossier is stored in `case_dossier`
+(migration `014_case_dossier`, D-064), not in a `case_run` column.
 
 ---
 
@@ -336,7 +351,8 @@ green):
 | `GET` | `/api/v1/modules/{module_id}` | full manifest (public parts), deadline catalog, document types, dossier checklist |
 | `GET` | `/api/v1/modules/{module_id}/goldset` | module goldset manifest (generalises `/goldset`) |
 | `POST` | `/api/v1/cases/{case_id}/dossier` | build dossier; `?format=json|pdf` |
-| `GET` | `/api/v1/cases/{case_id}/dossier` | last built dossier (JSON) |
+| `GET` | `/api/v1/cases/{case_id}/dossier` | last built dossier (JSON; PDF rendered from it with `?format=pdf`) |
+| `GET`/`PUT` | `/api/v1/cases/{case_id}/dossier/chronology` | chronology proposals; the person's confirmation step (added in P10) |
 
 Behavioral rules (D-039):
 
@@ -361,7 +377,7 @@ contract. Provenance `modules[…]` (`citizen-provenance-v1.1`) is built
 (WP-96, D-059): every AI-output surface — analyze terminal event,
 conversation chat `done` and first-message pipeline terminal event, case-chat
 `done`, `GeneratedDocument` — carries it (`API_DOCUMENTATION.md` § 7.1). The
-dossier routes are P10.
+dossier routes are built (P10, D-064; `API_DOCUMENTATION.md` § 8.11).
 
 No `/api/v2` is planned in roadmap v3.0.0. A v2 is only opened when a
 non-additive change becomes unavoidable, and gets its own decision.

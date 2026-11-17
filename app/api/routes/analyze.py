@@ -37,7 +37,10 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.7.0 | 2026-11-16 — WP-96: terminal-event provenance names
+# Semantic Version: 0.8.0 | 2026-11-16 — P10: the stored calculation_check stage
+# log also keeps the full calculation result (`result`) for the dossier; the
+# SSE stream is unchanged.
+# 0.7.0 | 2026-11-16 — WP-96: terminal-event provenance names
 # the request's modules (citizen-provenance-v1.1).
 # 0.6.0 | 2026-11-16 — WP-95: legal_areas validated against the
 # registry (422 MODULE_UNKNOWN / MODULE_NOT_ENABLED); terminal event carries
@@ -421,11 +424,29 @@ async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # 
 
                     # Persist PipelineStageLog records.
                     for entry in stage_log_entries:
+                        output_snapshot = entry.get("output_snapshot")
+                        # P10: the SSE payload carries only counts; the dossier
+                        # needs the calculators' line items, so the stored log
+                        # (not the stream) keeps the result. legal_snapshot is
+                        # already on case_run.
+                        if (
+                            entry["stage_name"] == "calculation_check"
+                            and isinstance(output_snapshot, dict)
+                            and state.calculation_result
+                        ):
+                            output_snapshot = {
+                                **output_snapshot,
+                                "result": {
+                                    k: v
+                                    for k, v in state.calculation_result.items()
+                                    if k != "legal_snapshot"
+                                },
+                            }
                         stage_log = PipelineStageLog(
                             case_run_id=case_run.id,
                             stage_name=entry["stage_name"],
                             input_snapshot=entry.get("input_snapshot"),
-                            output_snapshot=entry.get("output_snapshot"),
+                            output_snapshot=output_snapshot,
                             duration_ms=entry.get("duration_ms", 0),
                             error_trace=entry.get("error_trace"),
                         )

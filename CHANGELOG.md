@@ -1,3 +1,66 @@
+## 2026-11-16 — Core 3.2.0: P10 appointment dossier (WP-100…WP-104, D-064, D-065)
+
+The Mandatsvorbereitungs-Dossier: what a person takes to an appointment with
+an advice centre or a lawyer, for every case and generic across modules.
+`sozialrecht` **1.3.0**. `/api/v1` additive only; migration `014_case_dossier`.
+
+### Added
+
+- **Dossier schema `citizen-dossier-v1.0`** (`app/dossier/citizen-dossier-v1.0.schema.json`):
+  eight sections — chronology, document checklist, deadlines, calculations,
+  evidence, questions, drafts, export — plus notice, warnings, Art. 50
+  `disclosure`/`provenance`. Every build is validated before it is stored.
+- **Storage** `case_dossier` (migration 014): one row per build with
+  `revision`, `schema_version`, `content_sha256`; deleted with its case.
+- **Chronology builder** (`app/dossier/chronology.py`, WP-101): deterministic
+  date extraction from the analysed text and documents attached to the case;
+  module cues name the dates; every entry is a proposal until confirmed.
+- **Deadline banner** (`app/dossier/deadlines.py`): only from the Fristen
+  core; `computed` / `provisional` / `not_applicable` / `missing_input`, and
+  every assumed input listed per deadline.
+- **Module dossier content** (`dossier.yaml`, format
+  `citizen-module-dossier-v1.0`, WP-102): checklist, appointment questions,
+  chronology cues, dossier goldset; keyword selection; multi-module merge
+  with `merge_key`. Validated at startup for enabled modules.
+- **Routes** (WP-101/WP-103, `API_DOCUMENTATION.md` § 8.11):
+  `POST`/`GET /api/v1/cases/{case_id}/dossier?format=json|pdf`,
+  `GET`/`PUT /api/v1/cases/{case_id}/dossier/chronology`.
+- **PDF export** (`app/dossier/pdf.py`): local PyMuPDF rendering, deadline
+  banner first, provenance in footer + metadata + embedded `dossier.json` /
+  `provenance.json`.
+- **Dossier eval** `python -m eval.dossier_eval --module sozialrecht
+  [--save] [--pdf-dir DIR]` (1.0.1, WP-104): offline, no DB/LLM/API key;
+  a `--case` subset reports metrics without a gate verdict.
+  Sozialrecht dossier goldset v1.0.0: schema-valid 12/12, deadline
+  completeness **1.000**, checklist recall 0.979, chronology accuracy
+  0.935 — gate passed.
+
+### Changed
+
+- `GET /api/v1/modules/{module_id}`: `dossier_checklist` now serves the
+  module's dossier content (was always `null`); `capabilities.dossier` true
+  for `sozialrecht`.
+- `/analyze` stores the full calculation result in the `calculation_check`
+  stage log (`output_snapshot.result`) for the dossier. SSE stream and
+  `GET /cases/{id}` `final_output` keys unchanged (`stages[]` shows the new
+  key).
+
+### Fixed
+
+- **§ 37 Abs. 2 SGB X fiction** (`app/fristen/fictions.py` 0.2.0, D-065):
+  three days for dispatch before 2025-01-01, four since (PostModG). Letters
+  posted before 2025 got deadlines one day too late. WP-93 golden baseline
+  rebaselined for the 8 affected 2023-dated draft variants; five Fristen
+  tests moved their 2024 dispatch dates (asserted arithmetic unchanged).
+
+### Known open (D-064/D-065)
+
+- P10 exit: owner + practitioner review of two PDF samples — not done here.
+- Holiday table errors in `app/fristen/calendar.py` (e.g. NW 31.10/15.08) —
+  separate WP.
+- Draft claim slots need `user_adjudication.status == "confirmed"`, which
+  `/adjudicate` never writes (`agreed`/`disputed`).
+
 ## 2026-11-16 — Core 3.1.0: WP-97 follow-up — pseudonymization, test isolation, gate, last coupling (D-063)
 
 Fixes every defect the WP-97 run report left open or that its review turned
