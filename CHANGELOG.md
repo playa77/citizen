@@ -1,3 +1,70 @@
+## 2026-11-17 — Core 3.4.0: P12 backend — plain-language layer and consumer surfaces (WP-122…WP-125, D-067, D-068)
+
+The consumer UI lives in `playa77/citizen-gui` (D-067, resolves D-040; D-025
+stands). This release is the backend half of P12: every text a person reads
+about their findings, deadlines, the disclaimer and privacy is fixed,
+versioned copy in Bürgersprache, Leichte Sprache and plain English, gated
+offline. `sozialrecht` **1.5.0**; module contract (`core_api`) **3.2**.
+`/api/v1` additive only; no migration, no new setting.
+
+### Added
+
+- **Plain-language layer (WP-122):** `app/plain/` — module copy format
+  `citizen-plain-copy-v1.0` (manifest key `plain_language`, core_api 3.2),
+  renderer that fills only whitelisted placeholders from Fristen-core
+  results (dates spelled out with weekday), closed-vocabulary finding
+  classification with a non-reassuring fallback.
+- **API:** `POST /analyze` optional `plain_languages` → terminal `plain`;
+  `GET /cases/{case_id}/plain` (finding, deadlines evaluated live, `banner`);
+  `GET /modules/{module_id}/plain`; module detail `plain_languages` and
+  `capabilities.plain_language`; `GET /meta/disclaimer/plain` (plain
+  disclaimer + Art. 50 companion + ack instructions) and `GET /meta/privacy`
+  (effective posture of the installation), both readable before the ack.
+  Error codes `PLAIN_LANGUAGE_INVALID`, `PLAIN_LANGUAGE_UNAVAILABLE`,
+  `plain_copy_stale`, `plain_copy_invalid` (API_DOCUMENTATION.md § 5.2,
+  § 7.1, § 8.9, § 8.10, § 8.13).
+- **Core plain copy (WP-125):** `app/plain/core/{de,de-LS,en}.yaml`
+  (`citizen-plain-core-copy-v1.0`), pinned to DISCLAIMER `v3.0.0` and
+  disclosure `1.0`; a stale pin is refused (503).
+- **Gate:** `python -m eval.plain_eval --module sozialrecht [--save]` —
+  schema, coverage, placeholders, readability, duty of care, core pins, plain
+  goldset (`modules/sozialrecht/goldset/plain-v1.0.0.yaml`, 13 cases). Report
+  `eval/results/plain/`.
+- **WP-124:** inference profiles accept `chat_endpoint`; `on-prem` is
+  configured for a loopback runtime and stays disabled until measured
+  (`docs/consumer-inference-wp124.md`).
+- **Docs:** `docs/duty-of-care-checklist.md` (WP-123),
+  `docs/public-release-go-nogo.md` (WP-125, C-5 re-scoped, B2C privacy
+  profile), `docs/citizen-gui-checkup.md` (integration checkup for the GUI
+  owner), `docs/consumer-inference-wp124.md`.
+- **Tests:** `tests/unit/test_plain_language.py` (units, gate positive and
+  per-defect negative, HTTP surfaces, opt-in analyze), router/profile tests.
+
+### Changed
+
+- `GET /meta/disclaimer/text`: HTML now rendered from the pinned German core
+  copy. The previous fixed text said uploads are not stored permanently,
+  which has been false since cases persist in Postgres. Shape unchanged.
+- `API_DOCUMENTATION.md` § 8.9: the meta endpoints were documented as
+  ack-guarded; only `/meta/disclosure` is (corrected).
+- `sozialrecht` 1.5.0: `copy/` (de, de-LS, en; review `draft`), plain goldset,
+  `core_api: ">=3.2,<4.0"`.
+- `scripts/check_purpose_drift.py` 2.1.0: scans `app/plain/core/*.yaml`.
+- `app/modules/validate.py` 1.1.0: validates plain-language copy (schema,
+  duty of care); warns when a verified module has none.
+- `app/dossier/builder.py` 1.1.0: `deadlines_section` factored out (dossier
+  output unchanged).
+- `config/inference_profiles.yaml` 0.3.0; `app/core/router.py` 0.3.0.
+
+### Not verified here (D-068)
+
+- No human review of any plain-language copy (OQ-3); all copy is `draft`.
+- No local model measured for WP-124 (OQ-2).
+- P12 exit (usability test, accessibility audit) is GUI work.
+- mypy was run with `--python-version 3.12` in this environment: the venv is
+  3.12, and numpy 2.5's stubs do not parse under the configured 3.11 target.
+  CI runs both interpreters natively.
+
 ## 2026-11-17 — Core 3.3.0: P11 module platform (WP-110…WP-116, D-066)
 
 Modules can now be versioned with published errata, updated between releases
