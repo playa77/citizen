@@ -7,7 +7,9 @@
 # rules engine, the 2026-07-01 regime provider, the action-draft templates
 # and the goldsets. Behaviour is unchanged for requests that name no module.
 
-# Semantic Version: 1.4.0 | 2026-11-17 — P11: errata.yaml (E-2026-001, WP-110), corpus.yaml
+# Semantic Version: 1.5.0 | 2026-11-17 — P12/WP-122: plain-language copy (de, de-LS,
+# en) and plain goldset v1.0.0 (`plain_language`); core_api >=3.2.
+# 1.4.0 | 2026-11-17 — P11: errata.yaml (E-2026-001, WP-110), corpus.yaml
 # `case_law` (BSG via RII, WP-113); core_api >=3.1 (errata key).
 # 1.3.0 | 2026-11-16 — WP-102/WP-104: dossier.yaml (document
 # checklist, appointment questions, chronology cues, dossier goldset v1.0.0).
@@ -22,8 +24,8 @@
 # 1.0.0
 
 id: sozialrecht
-version: 1.4.0
-core_api: ">=3.1,<4.0"
+version: 1.5.0
+core_api: ">=3.2,<4.0"
 title:
   de: "Sozialrecht"
   en: "Social-benefits law"
@@ -50,6 +52,14 @@ documents: [widerspruch, widerspruch_jahresfrist, ueberpruefungsantrag_44, akten
 document_templates: documents/templates.yaml
 # WP-102: appointment dossier content (ARCHITECTURE.md § 3.7).
 dossier: dossier.yaml
+# WP-122: plain-language layer — copy per language (citizen-plain-copy-v1.0)
+# and the plain goldset gated by `python -m eval.plain_eval` (core_api 3.2).
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+    en: copy/en/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
 # WP-110: published corrections; affected cases by recorded module version.
 errata: errata.yaml
 goldset:

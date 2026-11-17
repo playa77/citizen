@@ -1,0 +1,54 @@
+# Core plain-language copy, Leichte Sprache (WP-125, D-068).
+# Critical copy: disclaimer and KI-Hinweis. Follows the Netzwerk Leichte
+# Sprache rules as far as a draft can (short sentences, one statement per
+# sentence, explained words); needs review by a Prüfgruppe (OQ-3).
+# Pinned to DISCLAIMER 3.0.0 and disclosure 1.0 like de.yaml.
+# Semantic Version: 1.0.0 | 2026-11-17
+
+format: citizen-plain-core-copy-v1.0
+language: de-LS
+disclaimer_version: v3.0.0
+disclosure_version: "1.0"
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: "Prüfung durch eine Prüfgruppe für Leichte Sprache offen (OQ-3)."
+
+disclaimer:
+  title: "Wichtig: Bitte zuerst lesen"
+  points:
+    - "Sie haben einen Brief bekommen. Zum Beispiel vom Amt."
+    - "Citizen hilft Ihnen: Sie verstehen den Brief besser."
+    - "Und Sie können sich gut auf einen Termin vorbereiten."
+    - "Der Termin ist bei einer Beratungs-Stelle. Oder bei einem Anwalt oder einer Anwältin."
+    - "Citizen ist kein Anwalt. Citizen gibt keinen Rechts-Rat."
+    - "Ein Teil von den Ergebnissen kommt von einer KI. KI bedeutet: Ein Computer schreibt Texte."
+    - "Die KI kann Fehler machen. Prüfen Sie deshalb jedes Ergebnis."
+    - "Fristen rechnet Citizen nach festen Regeln aus. Frist bedeutet: Bis zu diesem Tag müssen Sie etwas tun."
+    - "Zeigen Sie die Frist trotzdem einer Beratungs-Stelle."
+    - "Nutzen Sie Citizen nur für Ihre eigenen Briefe."
+    - "Citizen kann Briefe für Sie vorbereiten. Das sind nur Entwürfe."
+    - "Bei [BITTE PRÜFEN] müssen Sie selbst etwas prüfen oder ergänzen."
+    - "Sie entscheiden: Was schicken Sie ab?"
+  ack_label: "Ich habe das gelesen. Ich will Citizen benutzen."
+  full_text_note: "Es gibt auch einen langen Text mit allen Regeln. Der lange Text heißt DISCLAIMER_DE.md."
+
+ai_notice:
+  title: "Achtung: Diesen Text hat eine KI geschrieben"
+  text: "Eine KI hat diesen Text geschrieben. Die KI kann Fehler machen. Prüfen Sie den Text. Fragen Sie bei einer Beratungs-Stelle nach."
+
+privacy:
+  title: "Was passiert mit Ihren Daten?"
+  storage: "Citizen speichert Ihre Briefe. Sie bleiben gespeichert, bis Sie sie löschen."
+  deletion: "Sie können Ihre Fälle jederzeit löschen. Hochgeladene Briefe löschen Sie extra."
+  inference:
+    eu-avv: "Citizen schickt Texte an eine KI in Europa. Vorher ersetzt Citizen Ihren Namen und Ihre Adresse."
+    extern-openrouter: "Citizen schickt Texte an eine fremde KI. Die KI kann auch außerhalb von Europa sein. Vorher ersetzt Citizen Ihren Namen und Ihre Adresse."
+    on-prem: "Die KI läuft hier auf diesem Computer. Ihre Texte bleiben hier."
+    unknown: "Fragen Sie die Leute, die Citizen hier betreiben: Wohin gehen meine Texte?"
+  deployment:
+    dev: "Das hier ist nur ein Test. Laden Sie hier keine echten Briefe hoch."
+    self: "Sie betreiben Citizen selbst. Sie bestimmen, wer Ihre Daten sehen darf."
+    provider: "Eine Beratungs-Stelle betreibt Citizen hier. Die Beratungs-Stelle passt auf Ihre Daten auf. Fragen Sie dort nach."
+  residual_risk: "Citizen ersetzt Namen und Adressen. Trotzdem kann man manchmal erkennen: Um wen geht es?"

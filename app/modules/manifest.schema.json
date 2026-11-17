@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://citizen.dev/schemas/module-manifest-3.1.json",
-  "x-core-api": "3.1",
+  "$id": "https://citizen.dev/schemas/module-manifest-3.2.json",
+  "x-core-api": "3.2",
   "title": "Citizen module manifest",
-  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.1 (3.0 plus the optional `errata` key, WP-110; additive, so every 3.0 manifest stays valid). The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
+  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.2 (3.0 plus the optional `errata` key, WP-110, in 3.1, and the optional `plain_language` key, WP-122, in 3.2; additive, so every 3.0/3.1 manifest stays valid). The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
   "type": "object",
   "required": ["id", "version", "core_api", "title", "tier"],
   "additionalProperties": false,
@@ -104,6 +104,21 @@
       "type": "string",
       "pattern": "\\.yaml$",
       "description": "Errata file (citizen-module-errata-v1.0, app/modules/errata.schema.json; WP-110, core_api 3.1). Modules declaring it need core_api >=3.1."
+    },
+    "plain_language": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files"],
+      "description": "Plain-language copy (citizen-plain-copy-v1.0, app/plain/copy.schema.json; WP-122, core_api 3.2): one file per language key (de, de-LS, en, ...) plus the optional plain-language goldset checked by eval.plain_eval. Modules declaring it need core_api >=3.2.",
+      "properties": {
+        "files": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"pattern": "^[a-z]{2}(-LS)?$"},
+          "additionalProperties": {"type": "string", "pattern": "\\.yaml$"}
+        },
+        "goldset": {"type": "string", "pattern": "\\.yaml$"}
+      }
     },
     "regimes": {
       "type": "object",

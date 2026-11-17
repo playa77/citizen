@@ -2,6 +2,20 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 1.5.0 — 2026-11-17 — released with core 3.4.0 (P12, D-068)
+
+- `copy/` (new, WP-122): plain-language copy in Bürgersprache (`de`),
+  Leichte Sprache (`de-LS`) and plain English (`en`) for the five finding
+  categories (`rechtswidrig`, `teilweise_rechtswidrig`,
+  `ueberwiegend_rechtmaessig`, `kein_verwaltungsakt`, `einordnung_offen`) and
+  for `widerspruch_sgg_84` in every reachable status. Review status `draft`
+  in all three languages — human review is open (OQ-3).
+- `goldset/plain-v1.0.0.yaml` (new): 13 synthetic cases (6 deadline cases
+  through the Fristen core, 7 finding-classification cases), gated by
+  `python -m eval.plain_eval --module sozialrecht`.
+- Manifest: `plain_language` block; `core_api: ">=3.2,<4.0"` (the key is
+  core_api 3.2).
+
 ## 1.4.0 — 2026-11-17 — released with core 3.3.0 (P11)
 
 - `errata.yaml` (new, WP-110): **E-2026-001** — objection deadlines for

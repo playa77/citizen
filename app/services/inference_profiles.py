@@ -1,10 +1,11 @@
-"""Inference profile loader and egress guard. Version: 0.1.0.
+"""Inference profile loader and egress guard. Version: 0.2.0.
 
 Loads versioned inference profiles from ``config/inference_profiles.yaml``
 and enforces host allowlisting / PII scanning for every outbound LLM call.
 """
 
-# Semantic Version: 0.1.0 | 2026-07-12 — WP-31 initial implementation
+# Semantic Version: 0.2.0 | 2026-11-17 — WP-124: optional per-profile `chat_endpoint`.
+# 0.1.0 | 2026-07-12 — WP-31 initial implementation
 
 from __future__ import annotations
 
@@ -37,6 +38,8 @@ class InferenceProfile:
         per_stage: Per-stage model/temperature overrides.
         capability_manifest: Feature flags (streaming, function_calling, etc.).
         enabled: Whether this profile is active (default ``True``).
+        chat_endpoint: OpenAI-compatible chat-completions URL (WP-124);
+            ``None`` → OpenRouter. Its host must be in ``host_allowlist``.
     """
 
     name: str
@@ -48,6 +51,7 @@ class InferenceProfile:
     per_stage: dict[str, dict[str, Any]] = field(default_factory=dict)
     capability_manifest: dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    chat_endpoint: str | None = None
 
 
 def load_profiles(path: Path | None = None) -> dict[str, InferenceProfile]:
@@ -86,6 +90,7 @@ def load_profiles(path: Path | None = None) -> dict[str, InferenceProfile]:
             per_stage=cfg.get("per_stage", {}),
             capability_manifest=cfg.get("capability_manifest", {}),
             enabled=cfg.get("enabled", True),
+            chat_endpoint=(str(cfg["chat_endpoint"]) if cfg.get("chat_endpoint") else None),
         )
 
     logger.info(

@@ -1,0 +1,47 @@
+# Sozialrecht — plain-language copy, plain English (WP-122, D-068).
+# German legal terms (Bescheid, Widerspruch, Jobcenter) are kept and explained:
+# the person needs to recognise them in their letters.
+# Semantic Version: 1.0.0 | 2026-11-17
+
+format: citizen-plain-copy-v1.0
+module: sozialrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: "Review pending (OQ-3)."
+
+findings:
+  rechtswidrig:
+    title: "Citizen found a possible error in the decision (Bescheid)"
+    text: "The analysis suggests that the whole decision may be wrong. This is a preliminary assessment by Citizen, not a legal review."
+    next_step: "Have the decision checked by a social-benefits advice centre or a lawyer for social law. Keep the deadline for an objection (Widerspruch) in mind."
+  teilweise_rechtswidrig:
+    title: "Citizen found a possible error in part of the decision (Bescheid)"
+    text: "The analysis suggests that part of the decision may be wrong, for example a single amount. This is a preliminary assessment by Citizen, not a legal review."
+    next_step: "Take the decision and the dossier to your advice appointment. There you can decide whether to object to this part. Keep the deadline in mind."
+  ueberwiegend_rechtmaessig:
+    title: "Citizen found no clear error"
+    text: "The analysis found no error that clearly calls the decision into question. This does not mean the decision is certainly correct. Citizen can miss errors."
+    next_step: "If you are unsure or something seems wrong to you, have the decision checked by an advice centre before the deadline ends."
+  kein_verwaltungsakt:
+    title: "This letter is probably not a decision (Bescheid)"
+    text: "According to the analysis, the letter does not decide anything binding for you. It may be information, an invitation or a request for documents. Usually no objection is possible against such letters."
+    next_step: "Read carefully whether the letter asks you to do something by a certain date, for example attend an appointment or send documents. If you are unsure, ask an advice centre."
+  einordnung_offen:
+    title: "Citizen cannot classify the letter yet"
+    text: "The available legal texts and information are not enough for an assessment. This says nothing about whether the decision is right or wrong."
+    next_step: "Have the letter checked by an advice centre. Bring the dossier and all documents. Keep possible deadlines in mind."
+
+deadlines:
+  widerspruch_sgg_84:
+    title: "Deadline for an objection (Widerspruch)"
+    action: "If you want to object, your objection must reach the Jobcenter or office before the deadline ends. Get advice first if you can."
+    texts:
+      computed: "Your deadline for an objection ends on {frist_ende}. Legal basis: {basis}."
+      computed.jahr: "The decision lacks correct information about how to object. That gives you more time: your deadline ends on {frist_ende}. Legal basis: § 66 Abs. 2 SGG."
+      provisional: "Your deadline for an objection probably ends on {frist_ende}. Please confirm the date of the letter so that Citizen can calculate the deadline reliably."
+      provisional.jahr: "The decision probably lacks correct information about how to object. Your deadline would then end on {frist_ende}. Please confirm the date of the letter."
+      missing_input: "Citizen cannot calculate the deadline yet because the date of the letter is missing. Please enter the date. Until then, act as soon as possible: the deadline is often only one month."
+      not_applicable: "According to the analysis there is no objection deadline for this letter, because it is probably not a decision (Bescheid)."

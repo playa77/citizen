@@ -1,0 +1,46 @@
+# Core plain-language copy, plain English (WP-125, D-068).
+# A plain rendering of DISCLAIMER_EN.md v3.0.0 (Part B) and of the Art. 50
+# disclosure 1.0; it summarises, it does not replace them.
+# Semantic Version: 1.0.0 | 2026-11-17
+
+format: citizen-plain-core-copy-v1.0
+language: en
+disclaimer_version: v3.0.0
+disclosure_version: "1.0"
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: "Review pending (OQ-3)."
+
+disclaimer:
+  title: "Before you start: what Citizen is and what it is not"
+  points:
+    - "Citizen helps you understand a letter from a public authority or another body. It also helps you prepare for your appointment with an advice centre or a lawyer."
+    - "Citizen is not legal advice. It does not replace an advice centre or a lawyer."
+    - "Part of the results is written by an AI. The AI can make mistakes. Check every result before you use it."
+    - "Citizen calculates deadlines and amounts with fixed rules. Please check these figures with an advice centre too."
+    - "Use Citizen only for your own matters."
+    - "Draft letters are only drafts. You must check and complete every place marked [BITTE PRÜFEN]. You decide what you send."
+    - "Citizen is free and open source. The author is not liable for errors, as far as the law allows."
+  ack_label: "I have read these notes. I use Citizen at my own responsibility."
+  full_text_note: "The full legal notice is in DISCLAIMER_EN.md. It applies wherever this summary leaves something open."
+
+ai_notice:
+  title: "Note: this result comes from an AI"
+  text: "An AI system produced this analysis. It is not legally binding. Check the results before you use them."
+
+privacy:
+  title: "What happens to your data"
+  storage: "Your letters and analyses are stored in the database of this Citizen installation until you delete them."
+  deletion: "You can delete every case. Conversations with uploaded documents are deleted separately."
+  inference:
+    eu-avv: "For the analysis, texts are sent to an AI service in the EU. Before that, names, addresses, reference numbers and bank details are replaced by placeholders. A safeguard blocks transfers to any other destination."
+    extern-openrouter: "For the analysis, texts are sent to an external AI service, which may also operate outside the EU. Before that, names, addresses, reference numbers and bank details are replaced by placeholders."
+    on-prem: "The analysis runs on a computer of this installation. Your texts are not sent to an external AI service."
+    unknown: "Ask whoever runs this installation where texts are sent for the analysis."
+  deployment:
+    dev: "This is a test installation. Do not upload real letters here, only sample documents."
+    self: "You run this installation yourself. You decide who has access."
+    provider: "An organisation, for example an advice centre, runs this installation and is responsible for your data. Ask them for their privacy notice."
+  residual_risk: "Placeholders protect well, but not completely. Sometimes the remaining text can still show who it is about."

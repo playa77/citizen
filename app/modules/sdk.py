@@ -27,6 +27,10 @@ module never touches the database or the core's session handling.
 
 Changes
 -------
+0.5.0 (WP-122, core 3.4.0): ``SDK_VERSION`` "3.2" — the manifest schema
+gains the optional ``plain_language`` key (module copy files per language and
+the plain-language goldset). A 3.1 core rejects it, so a module using it
+declares ``core_api: ">=3.2,<4.0"``. No Python surface change.
 0.4.0 (WP-110/WP-112, core 3.3.0): ``SDK_VERSION`` "3.1" — the manifest
 schema gains the optional ``errata`` key (a 3.0 core rejects it, so a module
 using it declares ``core_api: ">=3.1,<4.0"``) and out-of-tree modules load
@@ -41,7 +45,7 @@ stays "3.0" (core 3.0.0 shipped at the P9 exit gate, WP-97).
 0.1.0 (WP-91): ``SDK_VERSION`` only.
 """
 
-# Semantic Version: 0.4.0
+# Semantic Version: 0.5.0
 
 from __future__ import annotations
 
@@ -50,7 +54,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
 
-SDK_VERSION = "3.1"
+SDK_VERSION = "3.2"
 """Core module-contract version; must stay compatible with every manifest's ``core_api``."""
 
 

@@ -22,7 +22,9 @@ unreachable, ``corpus`` and ``installed_at`` are ``null`` — the catalog
 itself comes from the filesystem and stays available.
 """
 
-# Semantic Version: 1.2.0 | 2026-11-17 — WP-110: `errata` on the module detail,
+# Semantic Version: 1.3.0 | 2026-11-17 — WP-122: `capabilities.plain_language`,
+# `plain_languages` on the module detail (additive).
+# 1.2.0 | 2026-11-17 — WP-110: `errata` on the module detail,
 # affected-cases route; WP-111: `updates`, `parameter_set`; WP-112: `origin`/
 # `declared_tier` in the summary; WP-116: catalog helpers moved to app/modules/catalog.py.
 # 1.1.0 | 2026-11-16 — P10: dossier_checklist served from the
@@ -55,6 +57,7 @@ from app.modules.runtime import (
     module_registry,
 )
 from app.modules.sync import manifest_sha256
+from app.plain.copy import copy_languages
 from app.services.corpus_readiness import chunk_counts_by_source_type, source_type_status
 
 logger = logging.getLogger(__name__)
@@ -236,7 +239,11 @@ async def get_module(module_id: str) -> dict[str, Any]:
             "document_templates": isinstance(raw.get("document_templates"), str),
             "goldset": isinstance(goldset, dict),
             "dossier": isinstance(raw.get("dossier"), str),
+            "plain_language": bool(copy_languages(manifest)),
         },
+        # P12 (WP-122): languages of the module's plain-language copy;
+        # the copy itself: GET /modules/{id}/plain.
+        "plain_languages": copy_languages(manifest),
         "parameter_domain": (str(parameters["domain"]) if isinstance(parameters, dict) else None),
         "deadlines": module_deadlines(manifest.id),
         "document_types": document_types(manifest),

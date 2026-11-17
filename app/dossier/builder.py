@@ -15,7 +15,9 @@ data. The dossier therefore always carries the Art. 50 disclosure and
 provenance objects.
 """
 
-# Semantic Version: 1.0.0 | 2026-11-16 — WP-103 initial.
+# Semantic Version: 1.1.0 | 2026-11-17 — WP-122: `deadlines_section` factored out
+# (plain-language case view); dossier output unchanged.
+# 1.0.0 | 2026-11-16 — WP-103 initial.
 
 from __future__ import annotations
 
@@ -255,6 +257,20 @@ def _modules_header(module_ids: Sequence[str]) -> list[dict[str, str]]:
     return header
 
 
+def deadlines_section(
+    inputs: DossierInputs, entries: Sequence[Any] | None = None
+) -> dict[str, Any]:
+    """The Fristen-core deadline section for *inputs* (also used by the
+    plain-language case view, WP-122, without building a dossier)."""
+    if entries is None:
+        entries = chronology_entries(inputs)
+    return compute_deadlines(
+        [ModuleSpecs(m, deadline_specs(m)) for m in inputs.module_ids],
+        inputs.facts,
+        [e for e in entries if e.status != STATUS_REJECTED],
+    )
+
+
 def build_dossier(
     inputs: DossierInputs, draft_factory: DraftFactory | None = None
 ) -> dict[str, Any]:
@@ -264,11 +280,7 @@ def build_dossier(
     entries = chronology_entries(inputs)
     warnings: list[str] = []
 
-    deadlines = compute_deadlines(
-        [ModuleSpecs(m, deadline_specs(m)) for m in inputs.module_ids],
-        inputs.facts,
-        [e for e in entries if e.status != STATUS_REJECTED],
-    )
+    deadlines = deadlines_section(inputs, entries)
     for item in deadlines["items"]:
         if item["status"] == "missing_input":
             warnings.append(
