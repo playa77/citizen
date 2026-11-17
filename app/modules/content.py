@@ -17,7 +17,9 @@ file that does not exist is a manifest error. This closes the structural
 validation D-042 deferred to WP-93.
 """
 
-# Semantic Version: 0.2.0 | 2026-11-17 — WP-110: `errata` is a declared file.
+# Semantic Version: 0.3.0 | 2026-11-17 — WP-122: `plain_language` copy files and
+# goldset are declared files.
+# 0.2.0 | 2026-11-17 — WP-110: `errata` is a declared file.
 # 0.1.0
 
 from __future__ import annotations
@@ -76,6 +78,13 @@ def declared_files(manifest: ModuleManifest) -> list[str]:
     goldset = raw.get("goldset")
     if isinstance(goldset, dict) and isinstance(goldset.get("path"), str):
         paths.append(goldset["path"])
+    plain = raw.get("plain_language")
+    if isinstance(plain, dict):
+        files = plain.get("files")
+        if isinstance(files, dict):
+            paths.extend(str(p) for p in files.values())
+        if isinstance(plain.get("goldset"), str):
+            paths.append(plain["goldset"])
     parameters = raw.get("parameters")
     if isinstance(parameters, dict):
         paths.extend(str(p) for p in parameters.get("files", []))

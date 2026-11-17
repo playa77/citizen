@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://citizen.dev/schemas/citizen-plain-copy-v1.0.json",
+  "title": "Citizen plain-language copy (module)",
+  "description": "One language of a module's plain-language layer (roadmap WP-122, D-068): fixed, reviewed copy per finding category and per deadline spec. Copy is static text; the only variable parts are the whitelisted placeholders, filled from deterministic engine output (dates and statute bases), never from LLM text.",
+  "type": "object",
+  "required": ["format", "module", "language", "review", "findings", "deadlines"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {"const": "citizen-plain-copy-v1.0"},
+    "module": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+    "language": {"type": "string", "pattern": "^[a-z]{2}(-LS)?$"},
+    "review": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["draft", "reviewed"]},
+        "reviewer": {"type": ["string", "null"]},
+        "date": {"type": ["string", "null"], "format": "date"},
+        "note": {"type": ["string", "null"]}
+      }
+    },
+    "findings": {
+      "type": "object",
+      "description": "Keyed by result-category key (slug of the prompt profile's result_categories term, plus the core's einordnung_offen).",
+      "additionalProperties": {"$ref": "#/$defs/finding"}
+    },
+    "deadlines": {
+      "type": "object",
+      "description": "Keyed by deadline spec id (fristen.yaml).",
+      "additionalProperties": {"$ref": "#/$defs/deadline"}
+    }
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1},
+    "finding": {
+      "type": "object",
+      "required": ["title", "text", "next_step"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"$ref": "#/$defs/text"},
+        "text": {"$ref": "#/$defs/text"},
+        "next_step": {"$ref": "#/$defs/text"}
+      }
+    },
+    "deadline": {
+      "type": "object",
+      "required": ["title", "action", "texts"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"$ref": "#/$defs/text"},
+        "action": {"$ref": "#/$defs/text"},
+        "texts": {
+          "type": "object",
+          "description": "Keyed by '<status>' or '<status>.<frist_typ>' (the more specific key wins). Status: computed | provisional | missing_input | not_applicable.",
+          "propertyNames": {
+            "pattern": "^(computed|provisional|missing_input|not_applicable)(\\.[a-z_]+)?$"
+          },
+          "additionalProperties": {"$ref": "#/$defs/text"},
+          "minProperties": 1
+        }
+      }
+    }
+  }
+}

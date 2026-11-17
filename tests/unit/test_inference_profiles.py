@@ -80,10 +80,19 @@ class TestProfileLoading:
         assert profile.enabled is True
 
     def test_on_prem_disabled(self) -> None:
+        # WP-124: configured for a local runtime, still disabled until it
+        # passes the goldset gate; only loopback hosts are allowed.
         profiles = load_profiles(_PROFILES_YAML)
         profile = profiles["on-prem"]
         assert profile.enabled is False
-        assert profile.host_allowlist == []
+        assert set(profile.host_allowlist) <= {"127.0.0.1", "localhost", "::1"}
+        assert profile.chat_endpoint is not None
+        assert profile.chat_endpoint.startswith("http://127.0.0.1:")
+
+    def test_chat_endpoint_defaults_to_openrouter(self) -> None:
+        profiles = load_profiles(_PROFILES_YAML)
+        assert profiles["eu-avv"].chat_endpoint is None
+        assert profiles["extern-openrouter"].chat_endpoint is None
 
     def test_raises_on_missing_file(self) -> None:
         with pytest.raises(FileNotFoundError):
@@ -234,3 +243,28 @@ class TestProfileDataclass:
         assert profile.name == "custom"
         assert profile.per_stage["classification"]["model"] == "gpt-4"
         assert profile.capability_manifest["streaming"] is True
+
+
+# ===========================================================================
+# WP-124: chat endpoint follows the active profile
+# ===========================================================================
+
+
+def test_router_chat_url_follows_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dataclasses import replace
+
+    import app.core.router as router_mod
+
+    local = replace(
+        load_profiles(_PROFILES_YAML)["on-prem"],
+        enabled=True,
+        chat_endpoint="http://127.0.0.1:8080/v1/chat/completions",
+    )
+    monkeypatch.setattr(_ip_mod, "get_active_profile", lambda name=None: local)
+    assert router_mod._chat_url() == "http://127.0.0.1:8080/v1/chat/completions"
+    # The egress guard checks the same URL against the profile allowlist.
+    router_mod._egress_check(router_mod._chat_url(), {"messages": []})
+
+    remote = replace(load_profiles(_PROFILES_YAML)["eu-avv"])
+    monkeypatch.setattr(_ip_mod, "get_active_profile", lambda name=None: remote)
+    assert router_mod._chat_url() == router_mod._API_URL

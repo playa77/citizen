@@ -10,7 +10,9 @@ Provides:
     GET /api/v1/meta/deployment-mode — active deployment posture (WP-62/WP-66)
 """
 
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-95: /meta/version carries
+# Semantic Version: 0.6.0 | 2026-11-17 — WP-125: /meta/disclaimer/text rendered from
+# the pinned plain-language core copy (the old text misstated storage).
+# 0.5.0 | 2026-11-16 — WP-95: /meta/version carries
 # `modules: {id: version}` of the enabled modules (additive key).
 # 0.4.0 | 2026-08-25 — Art. 50 disclosure endpoint (D-032):
 # /meta/disclosure added (ack-guarded via route-level dependency), /meta/version
@@ -18,16 +20,18 @@ Provides:
 
 from __future__ import annotations
 
+from html import escape
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import func as sa_func
 from sqlalchemy import select
 
-from app.core.config import _get_settings, get_app_version, get_app_version_tag
+from app.core.config import _get_settings, get_app_version
 from app.db.models import LegalParameter, LegalSource
 from app.db.session import get_async_session
 from app.modules.runtime import module_registry
+from app.plain.core_copy import CoreCopyError, load_core_copy
 from app.services.disclosure import (
     DISCLOSURE_VERSION,
     DisclosureInfo,
@@ -36,34 +40,38 @@ from app.services.disclosure import (
 
 router = APIRouter()
 
-# Disclaimer text (German) — loaded from config; version inserted at runtime
+# Disclaimer text (German). Since core 3.4.0 (WP-125, D-068) it is rendered
+# from the plain-language core copy pinned to the running disclaimer version
+# (app/plain/core/de.yaml). The former hard-coded text claimed that uploads
+# are "nicht dauerhaft gespeichert" — false since cases persist in Postgres —
+# and named authorities as advice centres; it was never versioned with the
+# disclaimer. Shape unchanged: {"text": <HTML>, "version": <disclaimer version>}.
 
-_DISCLAIMER_TEXT = f"""
-<h3>Rechtlicher Hinweis und Haftungsausschluss</h3>
 
-<p>Dieses Tool dient ausschließlich zu Informationszwecken und ersetzt keine rechtliche Beratung.
-Die bereitgestellten Informationen basieren auf einer automatisierten Analyse von Dokumenten
-und Gesetzestexten und können fehlerhaft, unvollständig oder veraltet sein.</p>
-
-<h3>Nutzungsbedingungen:</h3>
-<ol>
-<li>Dieses Tool darf nicht als einzige Rechtsquelle verwendet werden.</li>
-<li>Die Ergebnisse stellen keine rechtliche Beratung dar und begründen kein Mandatsverhältnis.</li>
-<li>Für Entscheidungen auf Basis der Tool-Ausgaben wird keine Haftung übernommen.</li>
-<li>Nutzer sollten stets einen zugelassenen Rechtsanwalt oder eine anerkannte
-    Beratungsstelle (z.B. Arbeitsagentur, Sozialamt) konsultieren.</li>
-<li>Die Nutzung erfolgt auf eigene Verantwortung.</li>
-</ol>
-
-<h3>Datenschutz:</h3>
-<ul>
-<li>Hochgeladene Dokumente werden temporär verarbeitet und nicht dauerhaft gespeichert.</li>
-<li>IP-Adressen werden anonymisiert protokolliert.</li>
-<li>Es werden keine personenbezogenen Daten an Dritte weitergegeben.</li>
-</ul>
-
-<p><strong>Version:</strong> {get_app_version_tag()}</p>
-""".strip()
+def _disclaimer_html(disclaimer_version: str) -> str:
+    try:
+        doc = load_core_copy(
+            "de", disclaimer_version=disclaimer_version, disclosure_version=DISCLOSURE_VERSION
+        )
+    except CoreCopyError:
+        # Stale pin: point to the authoritative documents rather than show a
+        # summary of another disclaimer version.
+        return (
+            "<h3>Rechtlicher Hinweis</h3>"
+            "<p>Citizen ist keine Rechtsberatung. Maßgeblich ist der vollständige "
+            f"rechtliche Hinweis in DISCLAIMER_DE.md (Fassung {escape(disclaimer_version)}).</p>"
+        )
+    d = doc["disclaimer"]
+    privacy = doc["privacy"]
+    items = "".join(f"<li>{escape(str(point))}</li>" for point in d["points"])
+    return (
+        "<h2>Rechtlicher Hinweis (Kurzfassung)</h2>"
+        f"<h3>{escape(str(d['title']))}</h3><ul>{items}</ul>"
+        f"<h3>{escape(str(privacy['title']))}</h3>"
+        f"<p>{escape(str(privacy['storage']))} {escape(str(privacy['deletion']))}</p>"
+        f"<p>{escape(str(d['full_text_note']))}</p>"
+        f"<p><strong>Version:</strong> {escape(disclaimer_version)}</p>"
+    )
 
 
 @router.get("/meta/disclaimer/version")
@@ -75,8 +83,9 @@ async def get_disclaimer_version() -> dict[str, str]:
 
 @router.get("/meta/disclaimer/text")
 async def get_disclaimer_text() -> dict[str, str]:
-    """Return the full disclaimer text (German)."""
-    return {"text": _DISCLAIMER_TEXT, "version": _get_settings().DISCLAIMER_VERSION}
+    """Return the disclaimer summary as HTML (German); plain JSON: /meta/disclaimer/plain."""
+    version = str(_get_settings().DISCLAIMER_VERSION)
+    return {"text": _disclaimer_html(version), "version": version}
 
 
 async def require_disclaimer_ack(

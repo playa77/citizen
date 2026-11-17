@@ -1,6 +1,8 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.8 | 2026-11-17 — P11 (D-066): § 2.1 out-of-tree modules,
+<!-- Version: 3.0.0-draft.9 | 2026-11-17 — P12 backend (D-067/D-068): § 2.1/§ 2.2
+     `plain_language` (core_api 3.2), § 3.10 plain-language layer, § 5 routes.
+     3.0.0-draft.8 | 2026-11-17 — P11 (D-066): § 2.1 out-of-tree modules,
      § 2.2 `errata` key (core_api 3.1), § 3.3 corpus automation + case law, § 3.9
      update channel as built, § 4 new tables, § 5 routes, § 6.2 errata as built.
      3.0.0-draft.7 | 2026-11-16 — P10: § 3.7 dossier as built, § 4
@@ -19,11 +21,12 @@
 <!-- Status: TARGET architecture, partly delivered: WP-91 (registry/SDK),
      WP-92 (Fristen core), WP-93 (Sozialrecht extraction), WP-94 (data model),
      WP-95 (module API), WP-96 (compliance deltas), P10 (dossier,
-     WP-100…WP-104) and P11 (module platform, WP-110…WP-116) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
+     WP-100…WP-104), P11 (module platform, WP-110…WP-116) and the P12 backend
+     (plain-language layer, consumer surfaces; UI in playa77/citizen-gui, D-067) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
 <!-- Canonical package version: pyproject.toml (3.0.0 cut at the P9 exit gate, WP-97;
-     3.2.0 with P10, D-064; 3.3.0 with P11, D-066). -->
+     3.2.0 with P10, D-064; 3.3.0 with P11, D-066; 3.4.0 with the P12 backend, D-068). -->
 
 ---
 
@@ -121,7 +124,7 @@ modules/sozialrecht/
 ├── documents/templates.yaml  # action-draft templates, slot definitions, generator selection
 ├── intake.yaml               # intake-interview schema (questions, routing keywords; per area key its global `order`, WP-94)
 ├── dossier.yaml              # document checklist + lawyer-question list (§ 3.7)
-├── copy/                     # plain-language layer: de/, de-LS/ (Leichte Sprache), en/, …
+├── copy/                     # plain-language layer: <lang>/plain.yaml for de, de-LS (Leichte Sprache), en, … (WP-122, core_api 3.2)
 ├── goldset/
 │   └── goldset-v0.2.0.yaml   # verified synthetic cases + thresholds
 ├── compliance/deny-phrases.json  # module deny phrases for the purpose-drift lint
@@ -152,6 +155,9 @@ prompts: prompts/profile.yaml
 document_templates: documents/templates.yaml
 dossier: dossier.yaml
 errata: errata.yaml                         # core_api 3.1 (WP-110): citizen-module-errata-v1.0
+plain_language:                             # core_api 3.2 (WP-122): citizen-plain-copy-v1.0 per language
+  files: { de: copy/de/plain.yaml, de-LS: copy/de-LS/plain.yaml, en: copy/en/plain.yaml }
+  goldset: goldset/plain-v1.0.0.yaml        # gate: python -m eval.plain_eval
 regimes: { provider: calculators:REGIMES }  # optional intertemporal regimes (e.g. 2026-07-01 reform)
 goldset: { path: goldset/goldset-v0.2.0.yaml, gate: { finding_recall: 0.85, hallucination_rate_max: 0.02 } }
 compliance:
@@ -346,6 +352,22 @@ these off.
 
 ---
 
+
+### 3.10 Plain-language layer (new; roadmap P12)
+
+**Built (WP-122…WP-125, D-068):** `app/plain/`. Module copy is data
+(`copy/<lang>/plain.yaml`, `citizen-plain-copy-v1.0`) keyed by finding
+category (the prompt profile's `result_categories` + the core's
+`einordnung_offen`) and by deadline spec id × status. The core never
+generates language: it selects copy and fills whitelisted placeholders from
+Fristen-core results; the finding category is matched against the closed
+vocabulary and falls back to the neutral open category. Core copy
+(`app/plain/core/<lang>.yaml`: disclaimer summary, AI notice, privacy) is
+pinned to the disclaimer/disclosure versions it summarises and refused when
+stale. Offline gate `python -m eval.plain_eval` (coverage, placeholders,
+readability, duty of care, plain goldset through the Fristen core); human
+review status is reported, not gated (OQ-3). The consumer UI that renders it
+is a separate repository (`playa77/citizen-gui`, D-067; D-025 stands).
 ## 4. Data model (target deltas)
 
 | Table / column | As-is | Target |
@@ -387,6 +409,9 @@ green):
 | `GET`/`PUT` | `/api/v1/cases/{case_id}/dossier/chronology` | chronology proposals; the person's confirmation step (added in P10) |
 | `GET` | `/api/v1/modules/{module_id}/errata/{erratum_id}/cases` | stored cases whose recorded module version an erratum affects (P11, WP-110) |
 | `POST` | `/api/v1/citations/verify` | parse and corpus-check citations in a text (P11, WP-114) |
+| `GET` | `/api/v1/cases/{case_id}/plain` | plain-language finding + deadlines + banner (P12, WP-122) |
+| `GET` | `/api/v1/modules/{module_id}/plain` | a module's plain-language copy (P12, WP-122) |
+| `GET` | `/api/v1/meta/disclaimer/plain`, `/api/v1/meta/privacy` | plain disclaimer + ack instructions; effective privacy posture — readable before the ack (P12, WP-125) |
 
 Behavioral rules (D-039):
 

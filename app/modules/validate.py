@@ -9,7 +9,8 @@ errors (the module must not ship)
     manifest schema + declared files; ``core_api`` admits this core; module
     code imports only ``app.modules.sdk``; changelog/errata discipline
     (WP-110); deadline specs, parameter files, dossier content, prompt
-    profile, document templates load; code references resolve to the SDK
+    profile, document templates and plain-language copy load (WP-122: schema
+    and duty of care); code references resolve to the SDK
     types; area keys fit the installed set (ownership, unique ``order``,
     synonyms, presets — the same assembly the core performs); own-matter
     scope (D-035); a ``verified`` module declares a goldset; compliance
@@ -21,7 +22,9 @@ warnings (allowed, but a reviewer should look)
 The CLI wrapper is ``python -m scripts.validate_module``.
 """
 
-# Semantic Version: 1.0.0 | 2026-11-17 — WP-115: initial version.
+# Semantic Version: 1.1.0 | 2026-11-17 — WP-122: plain-language copy is validated
+# (schema, duty of care); verified modules without copy get a warning.
+# 1.0.0 | 2026-11-17 — WP-115: initial version.
 
 from __future__ import annotations
 
@@ -110,6 +113,34 @@ def _content_checks(manifest: ModuleManifest, report: ValidationReport) -> None:
             lambda: validate_module_dossier(
                 load_section(manifest, "dossier"), context=f"module {manifest.id!r}"
             ),
+        )
+    plain_files = (
+        raw.get("plain_language", {}).get("files", {})
+        if isinstance(raw.get("plain_language"), dict)
+        else {}
+    )
+    for language, rel in plain_files.items():
+        # WP-122: schema + duty of care here; coverage and the plain goldset
+        # need the installed registry → python -m eval.plain_eval.
+        from app.modules.content import load_yaml
+        from app.plain.checks import discouraging_hits, iter_texts
+        from app.plain.copy import validate_copy
+
+        doc = _check(report, f"plain_language.{language}", lambda rel=rel: load_yaml(manifest, rel))
+        if doc is None:
+            continue
+        report.errors.extend(
+            f"plain_language.{language}: {e}" for e in validate_copy(doc, manifest, language)
+        )
+        for path, text in iter_texts(doc):
+            for hit in discouraging_hits(text):
+                report.errors.append(
+                    f"plain_language.{language}:{path}: discouraging phrase {hit!r}"
+                )
+    if manifest.tier == "verified" and not plain_files:
+        report.warnings.append(
+            "plain_language: a verified module should ship plain-language copy "
+            "(de + en; de-LS for critical deadlines — roadmap WP-122)"
         )
     for key in ("prompts", "document_templates", "corpus", "intake"):
         data = _check(report, key, lambda key=key: load_section(manifest, key))

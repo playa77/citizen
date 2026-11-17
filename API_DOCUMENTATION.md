@@ -40,8 +40,8 @@ Machine-readable OpenAPI description is served by the app itself:
 - **API version:** path-based (`/api/v1/...`). Breaking changes introduce a new
   prefix (`/api/v2`); v1 remains served during any transition.
 - **Application version:** `GET /api/v1/meta/version` →
-  `{"api_version": "3.3.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
-  "modules": {"sozialrecht": "1.4.0", …}}`. The package
+  `{"api_version": "3.4.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
+  "modules": {"sozialrecht": "1.5.0", …}}`. The package
   version is also embedded in the OpenAPI title and `/health`.
 - **Module versions:** each legal-area module is versioned on its own (semver
   in its manifest); `GET /api/v1/modules` and the `modules` key of
@@ -128,6 +128,10 @@ The disclaimer middleware uses a bare object (not wrapped in `"detail"`):
 | 422 | `POST /analyze` | `MODULE_UNKNOWN` — a `legal_areas` value no installed module (or the core procedural library) serves |
 | 422 | `POST /analyze` | `MODULE_NOT_ENABLED` — a `legal_areas` value whose module is installed but not enabled in this deployment (`enabled: false` in `GET /modules`) |
 | 422 | everywhere | FastAPI request-validation failure (`detail` is a list, not an object) |
+| 404 | `/modules/{module_id}/plain`, `/meta/disclaimer/plain`, `/meta/privacy` | `PLAIN_LANGUAGE_UNAVAILABLE` — the module ships no plain-language copy, or the core has no copy in the requested language (`available` lists the core languages) |
+| 422 | `POST /analyze`, `…/plain`, `/meta/disclaimer/plain`, `/meta/privacy` | `PLAIN_LANGUAGE_INVALID` — a language key is malformed (allowed form: `de`, `de-LS`, `en`, two lowercase letters with optional `-LS`) or more than 6 were requested; `values` lists the offending keys |
+| 500 | `…/plain` | `plain_copy_invalid` — a declared copy file is invalid (module defect; the offline gate `python -m eval.plain_eval` catches it before release) |
+| 503 | `/meta/disclaimer/plain`, `/meta/privacy` | `plain_copy_stale` — the core plain-language copy summarises another disclaimer/disclosure version than the running one; it is refused rather than shown |
 | 500 | anywhere | unrecoverable internal error; detail string present |
 
 SSE streams signal errors **inside the stream** as a final
@@ -213,6 +217,11 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
   enablement). Since WP-95 an unknown value no longer surfaces as
   `409 corpus_not_ready`.
 - `intake_session_id` (optional): UUID linking a preceding intake interview.
+- `plain_languages` (optional, core 3.4.0, WP-122): JSON array or
+  comma-separated string of plain-language keys (`de`, `de-LS`, `en`). When
+  present, the terminal summary event carries `plain` (below); when absent,
+  the terminal event is unchanged. A malformed key → `422
+  PLAIN_LANGUAGE_INVALID` before streaming starts.
 
 **Event stream** — each event is a line pair `data: {json}\n\n`:
 
@@ -230,7 +239,7 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 | `adversarial_review` | `running` → `complete` | counter-analysis: `review_count`, `key_risks` (populated since prompt set 3.0.0 — before, the review output was discarded and both were always empty; shape unchanged) |
 | `calculation_check` | `running` → `complete` | arithmetic verification |
 | *(all LLM stages)* | `complete` | `prompts[]` (prompt set 3.0.0, additive): `{id, version, sha256}` of each system prompt the stage sent — `classification`/`decomposition`, `construction`, `verification`, `adversarial_review`, `calculation_check`; recorded in the stage audit log (`stages[].output_snapshot`) |
-| *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>", "disclosure": {...}, "provenance": {...}, "resolved_modules": [...]}` — `resolved_modules` only when the request carried a non-empty `legal_areas` |
+| *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>", "disclosure": {...}, "provenance": {...}, "resolved_modules": [...], "plain": {...}}` — `resolved_modules` only when the request carried a non-empty `legal_areas`; `plain` only when it carried `plain_languages` |
 
 The final summary event embeds two Art. 50 (VO (EU) 2024/1689) objects:
 `disclosure` (`{version, must_display_before: "results", texts: {de, en}}`) —
@@ -268,6 +277,14 @@ in request order:
  {"legal_area": "verwaltungsrecht", "module_id": null, "module_version": null,
   "legacy_alias": false, "enabled": true}]
 ```
+
+**`plain` (core 3.4.0, WP-122, spec `citizen-plain-v1.0`)** — the
+plain-language finding, `{"spec_version": "citizen-plain-v1.0", "languages":
+["de", "en"], "finding": <finding> | null}`. `finding` is `null` when none
+of the request's modules ships plain-language copy, and `plain` itself is
+`null` if rendering failed (logged; the analysis result is still delivered).
+The finding shape is described in §8.13. Deadlines are not part of this
+event (the pipeline computes none); use `GET /cases/{case_id}/plain`.
 
 `module_id: null` marks a key served by the core procedural library (no
 module). The same entry shape appears on intake and preset responses (§8.2,
@@ -629,13 +646,19 @@ the preset lists none).
 
 ### 8.9 Meta
 
-All meta endpoints except `meta/disclaimer/version` require the disclaimer
-header.
+The disclaimer middleware does not guard `/api/v1/meta/*`: every meta
+endpoint is readable without `X-Disclaimer-Ack` except `meta/disclosure`,
+which checks the header itself (D-032). (Documents before core 3.4.0 said all
+meta endpoints except `disclaimer/version` needed the header; that never
+matched the code.) The plain-language disclaimer and the privacy view are
+meant to be shown *before* the person acknowledges.
 
 | Endpoint | Response |
 |---|---|
 | `GET /api/v1/meta/disclaimer/version` *(no ack needed)* | `{"version": "v3.0.0"}` — `"v"` + version of `DISCLAIMER_DE.md`/`DISCLAIMER_EN.md` (3.0.0 since WP-96; was `v0.1.0`). A bump requires every client to re-acknowledge |
-| `GET /api/v1/meta/disclaimer/text` | `{"text": "<HTML disclaimer>", "version": "v3.0.0"}` |
+| `GET /api/v1/meta/disclaimer/text` | `{"text": "<HTML disclaimer>", "version": "v3.0.0"}` — since core 3.4.0 the HTML is rendered from the German plain-language core copy pinned to the running disclaimer version (WP-125); before, it was a fixed text that wrongly said uploads are not stored permanently. For structured, multilingual content use `meta/disclaimer/plain` |
+| `GET /api/v1/meta/disclaimer/plain?lang=de,de-LS,en` | Disclaimer summary and Art. 50 notice in plain language (WP-125), default `lang=de`: `{"version": "v3.0.0", "disclosure_version": "1.0", "available_languages": ["de", "de-LS", "en"], "texts": {"de": {"language": "de", "bcp47": "de", "register": "buergersprache", "review_status": "draft", "disclaimer": {"title": "…", "points": ["…"], "ack_label": "…", "full_text_note": "…"}, "ai_notice": {"title": "…", "text": "…"}}}, "ack": {"header": "X-Disclaimer-Ack", "value": "v3.0.0", "note": "…"}, "full_text": {"de": "DISCLAIMER_DE.md", "en": "DISCLAIMER_EN.md"}}`. A summary, not a replacement: `disclosure.texts` remain what Art. 50(1) requires the client to show; `ai_notice` is the plain companion. Set the HTML `lang` attribute from `bcp47` (Leichte Sprache is German: `de`). `404 PLAIN_LANGUAGE_UNAVAILABLE`, `422 PLAIN_LANGUAGE_INVALID`, `503 plain_copy_stale` |
+| `GET /api/v1/meta/privacy?lang=de` | Effective privacy posture of this installation (WP-125), non-secret settings only: `{"deployment_mode": "self", "synthetic_data_only": false, "inference": {"profile": "eu-avv", "data_residency": "eu-only", "pseudonymization": "required", "avv_status": "signed", "external_hosts": ["openrouter.ai", "…"]}, "storage": {"cases_stored": true, "delete_case": "DELETE /api/v1/cases/{case_id}", "delete_conversation": "DELETE /api/v1/conversations/{conversation_id}", "note": "…"}, "texts": {"de": {"language": "de", "bcp47": "de", "register": "buergersprache", "review_status": "draft", "title": "…", "storage": "…", "deletion": "…", "inference": "<text for the active profile>", "deployment": "<text for the deployment mode>", "residual_risk": "…"}}}`. `inference` is `{"profile": "<name>", "error": "profile_unavailable"}` when the configured profile cannot be loaded. Same error codes as `disclaimer/plain` |
 | `GET /api/v1/meta/disclosure` | `{"version": "1.0", "must_display_before": "results", "texts": {"de": "Diese Analyse wurde von einem KI-System erstellt …", "en": "This analysis was produced by an AI system …"}}` — Art. 50(1) notification; cacheable, does not vary by deployment mode |
 | `GET /api/v1/meta/version` | `{"api_version": "3.1.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0", "modules": {"andere": "0.1.1", …, "sozialrecht": "1.2.0"}}` — `modules` (WP-95) maps every **enabled** module id to its version, sorted by id |
 | `GET /api/v1/meta/legal-timestamp` | `{"parameter_freshness": "2026-07-01", "corpus_freshness": "2026-08-01"}` (either may be `null`) |
@@ -691,7 +714,9 @@ The summary fields above plus the public manifest parts:
  "scope": {"summary_de": "…", "own_matter_only": true, "out_of_scope": ["…"]},
  "legacy_aliases": [],
  "capabilities": {"deadlines": true, "calculators": true, "regime_provider": true,
-                  "document_templates": true, "goldset": true, "dossier": true},
+                  "document_templates": true, "goldset": true, "dossier": true,
+                  "plain_language": true},
+ "plain_languages": ["de", "de-LS", "en"],
  "parameter_domain": "sozialrecht",
  "deadlines": [{"id": "widerspruch_sgg_84", "label_de": "Widerspruchsfrist",
                 "trigger": "bekanntgabe", "duration": {"days": 0, "months": 1, "years": 0},
@@ -741,6 +766,11 @@ Added in core 3.3.0 (P11):
   first (`[]` none; `null` when the database is unreachable). Each lists the
   parameter identities it wrote (`action`: `created`, `updated`,
   `unchanged`) and its corpus change notices.
+Added in core 3.4.0 (P12): `capabilities.plain_language` and
+`plain_languages` — the languages of the module's plain-language copy
+(`[]` for a module without copy); the copy itself is served by
+`GET /modules/{module_id}/plain` (§8.13).
+
 - `parameter_set`: the module's current parameter-set id, as in provenance
   `modules[].parameter_set` — `<version>+<newest valid_from>`, with
   `.u<serial>` appended once update feeds were applied; `null` for a module
@@ -977,6 +1007,91 @@ disclosure. Body `{"text": "<up to 200000 chars>", "verify": true}`:
 - `verify: false` or an unreachable database → `verification: null`,
   `corpus_checked: false`. `422` empty or oversized `text`.
 
+### 8.13 Plain language (roadmap P12, WP-122)
+
+Fixed, reviewed copy in Bürgersprache (`de`), Leichte Sprache (`de-LS`) and
+plain English (`en`). Nothing here is generated by a language model: the
+server selects module copy and fills only whitelisted placeholders —
+deadline dates (`{frist_ende}`, `{bekanntgabe}`) from the Fristen core and
+the statute `{basis}` from the deadline spec. Dates are spelled out with the
+weekday (`Montag, 21. Dezember 2026` / `Monday, 21 December 2026`). Each
+language block carries `bcp47` (the HTML `lang` value; `de` for Leichte
+Sprache), `register` (`buergersprache`, `leichte_sprache`, `plain_en`) and
+`review_status` (`draft` until a human reviewer signed the copy off — roadmap
+OQ-3; show copy either way, it passed the offline gate). Language keys:
+`lang` query parameter, comma-separated, default `de`, at most 6.
+
+#### `GET /api/v1/cases/{case_id}/plain?lang=de,de-LS,en`
+
+```json
+{"case_id": "…", "spec_version": "citizen-plain-v1.0", "languages": ["de", "en"],
+ "finding": {"module_id": "sozialrecht", "category": "teilweise_rechtswidrig",
+             "category_term": "teilweise rechtswidrig", "category_source": "ergebnis",
+             "texts": {"de": {"language": "de", "bcp47": "de", "register": "buergersprache",
+                              "review_status": "draft", "title": "…", "text": "…",
+                              "next_step": "…"}},
+             "missing_languages": []},
+ "deadlines": [{"module_id": "sozialrecht", "spec_id": "widerspruch_sgg_84",
+                "severity": "critical", "status": "provisional", "frist_typ": "monat",
+                "frist_ende": "2026-08-10",
+                "texts": {"de": {"language": "de", "bcp47": "de", "register": "buergersprache",
+                                 "review_status": "draft", "title": "Frist für den Widerspruch",
+                                 "text": "Ihre Frist für den Widerspruch endet voraussichtlich am Montag, 10. August 2026. …",
+                                 "text_key": "provisional", "action": "…"}},
+                "missing_languages": [], "assumptions": ["…"]}],
+ "banner": {"module_id": "sozialrecht", "spec_id": "widerspruch_sgg_84"},
+ "facts_used": {"bescheid_datum": "2026-07-06", "…": "…"},
+ "has_ergebnis": true,
+ "disclosure": {…}, "provenance": {…}}
+```
+
+- **Deadlines** are evaluated live by the Fristen core from the case's
+  current chronology decisions and facts — the same inputs as the dossier
+  (§8.11), without building one; a `PUT …/dossier/chronology` shows at once.
+  `status` and the date semantics are those of the dossier's deadlines
+  section (`computed`, `provisional`, `missing_input`, `not_applicable`).
+- **`banner`** names the deadline a client must show first and impossible
+  to miss (roadmap WP-121): the critical deadline with status `computed`,
+  `provisional` or `missing_input` — a `missing_input` one first (the time
+  left is unknown), otherwise the earliest `frist_ende`; `null` when there
+  is none.
+- **`finding.category`** is read from the opening sentence of the analysis
+  `ergebnis` ("Vorläufige Einordnung: <Begriff>.") and matched against the
+  module's closed category vocabulary (`GET /modules/{id}/plain`
+  `categories`). Anything else falls back to `einordnung_offen` with
+  `category_source: "fallback"` — never to reassuring copy. `finding` is
+  `null` when no module of the case ships copy; `has_ergebnis: false` means
+  the case has no stored analysis text (the finding is then the fallback).
+- A language the module does not ship (or a status text that cannot be
+  rendered) is listed in `missing_languages`, never silently replaced.
+- Carries `disclosure`/`provenance` (Art. 50): the category is derived from
+  AI output. `403` without ack, `404` unknown case, `422
+  PLAIN_LANGUAGE_INVALID`.
+
+#### `GET /api/v1/modules/{module_id}/plain?lang=…`
+
+The module's copy for caching/offline display; all languages when `lang` is
+omitted:
+
+```json
+{"module_id": "sozialrecht", "module_version": "1.5.0",
+ "spec_version": "citizen-plain-v1.0",
+ "available_languages": ["de", "de-LS", "en"],
+ "categories": [{"key": "rechtswidrig", "term": "rechtswidrig"}, "…",
+                {"key": "einordnung_offen", "term": "Einordnung offen"}],
+ "copy": {"de": {"format": "citizen-plain-copy-v1.0", "module": "sozialrecht",
+                 "language": "de", "review": {"status": "draft", "…": "…"},
+                 "findings": {"rechtswidrig": {"title": "…", "text": "…", "next_step": "…"}},
+                 "deadlines": {"widerspruch_sgg_84": {"title": "…", "action": "…",
+                               "texts": {"computed": "… {frist_ende} …", "…": "…"}}}}},
+ "missing_languages": []}
+```
+
+Deadline texts here still contain their placeholders; render deadlines via
+`/cases/{case_id}/plain` (never fill dates client-side from other sources).
+`404 MODULE_UNKNOWN`, `404 PLAIN_LANGUAGE_UNAVAILABLE` (module without copy),
+`422 PLAIN_LANGUAGE_INVALID`.
+
 ---
 
 ## 9. Minimal client checklist
@@ -1000,6 +1115,11 @@ disclosure. Body `{"text": "<up to 200000 chars>", "verify": true}`:
 9. For the appointment dossier: `GET …/dossier/chronology`, let the person
    confirm/correct entries and facts (`PUT`), then `POST …/dossier` (JSON or
    PDF). Show `deadlines` first and never hide `provisional`/`missing_input`.
+10. Plain language (core 3.4.0): before the ack, show
+    `GET /meta/disclaimer/plain` (and `GET /meta/privacy`) in the person's
+    language; send `plain_languages` with `/analyze`; for a stored case use
+    `GET /cases/{case_id}/plain` and render `banner` first; set the HTML
+    `lang` from `bcp47`.
 
 ---
 

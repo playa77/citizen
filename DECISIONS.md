@@ -1601,3 +1601,118 @@ decision (it would be a `DISCLAIMER_VERSION` bump). (iv) After the first
 `bsg` ingestion the Sozialrecht goldset gate must be rerun. (v) Still open
 from D-064/D-065: practitioner PDF review; holiday-table errors in
 `app/fristen/calendar.py`.
+
+### D-067 R2 — 2026-11-17 — Consumer UI location: `playa77/citizen-gui` (resolves D-040, OQ-6)
+**Decision:** Owner decision of 2026-11-17: the consumer UI lives in its own
+repository, `playa77/citizen-gui` (the roadmap's working name was
+`citizen-web`), and consumes `/api/v1`. **D-025 stands** — this repository
+stays API-only and ships no UI code. P12 is therefore split: the backend half
+(plain-language API, consumer compliance surfaces, inference plumbing) is
+built here (D-068); the guided journey, accessibility implementation and
+usability test (WP-121/WP-123 UI parts, P12 exit) belong to citizen-gui.
+Integration is checked by `docs/citizen-gui-checkup.md`, written for the GUI
+owner, not by shared code.
+**Rejected:** Reversing D-025 and serving a web app from this backend (the
+D-040 alternative); preparing GUI code in a staging folder here (owner: not
+needed, the repository exists).
+**Rationale:** Keeps the core a reviewable API with one contract
+(`API_DOCUMENTATION.md`); the GUI can release on its own cadence.
+
+### D-068 R2 — 2026-11-17 — P12 backend: plain-language layer, consumer compliance surfaces, local-inference plumbing; core 3.4.0, `sozialrecht` 1.5.0
+**Scope and acceptance (recorded before the change, AGENTS.md):** the
+backend half of roadmap P12 (§ 6) under D-067 — WP-122 (plain-language layer
+as module `copy/` content, additive `plain` API fields, goldset-gated),
+WP-123 (backend share: duty-of-care rules enforced on copy, `bcp47` for
+screen readers, checklist), WP-124 (plumbing and protocol to measure a local
+inference default), WP-125 (plain disclaimer + ack flow, privacy view,
+re-scoped C-5 go/no-go). Acceptance: `/api/v1` additive only with
+`API_DOCUMENTATION.md` in the same change; requests without the new keys
+unchanged (golden SSE transcript green); an offline gate for the copy
+passes and demonstrably fails on each defect class; full suite + ruff/format
++ mypy strict + purpose-drift green.
+**Decision:**
+(a) **Copy is data, never generated.** Module copy per language
+(`modules/<id>/copy/<lang>/plain.yaml`, format `citizen-plain-copy-v1.0`,
+schema `app/plain/copy.schema.json`) declared by a new optional manifest key
+`plain_language: {files: {<lang>: <path>}, goldset: <path>}`. The key raises
+the module contract to **core_api 3.2** (`SDK_VERSION` "3.2", additive).
+Finding copy is keyed by result category (slug of the prompt profile's
+`result_categories` term + the core's `einordnung_offen`); deadline copy by
+spec id with texts per `<status>[.<frist_typ>]`. The renderer only selects
+copy and fills whitelisted placeholders (`frist_ende`, `bekanntgabe`,
+`oq1_alternate_ende`, `basis`) from Fristen-core items; a text that needs a
+value the item lacks is reported in `missing_languages`, never rendered
+without its date.
+(b) **Category from the closed vocabulary.** The finding category is parsed
+from the `ergebnis` opening sentence ("Vorläufige Einordnung: …", prompt set
+3.0.0) and matched exactly or by longest prefix; anything else falls back to
+`einordnung_offen` (`category_source: "fallback"`) so an off-vocabulary
+model answer can never select reassuring copy.
+(c) **Languages:** `de` (Bürgersprache) and `en` cover everything; `de-LS`
+(Leichte Sprache) is required for critical deadlines and the core
+disclaimer copy (roadmap WP-122). Leichte Sprache has no BCP 47 subtag:
+blocks carry `bcp47: "de"` for the HTML `lang` attribute (WP-123).
+(d) **Gate** `python -m eval.plain_eval` (offline): schema, coverage,
+placeholders reachable per status, readability (words per sentence: 22 /
+14 for Leichte Sprache), duty of care (discouraging-phrase list in
+`app/plain/checks.py`), core-copy pins, and a plain goldset run through the
+Fristen core (`sozialrecht` goldset/plain-v1.0.0, 13 cases). Human review
+(OQ-3) is reported (`review_pending`), not gated: all copy ships
+`review.status: draft`. The module validator checks schema + duty of care;
+a verified module without copy gets a warning.
+(e) **API (additive):** `POST /analyze` optional `plain_languages` → terminal
+`plain` (absent → event unchanged); `GET /cases/{id}/plain` (finding +
+deadlines evaluated live from the case's chronology/facts + `banner` =
+first critical actionable deadline, `missing_input` first) with Art. 50
+objects (the category derives from AI output); `GET /modules/{id}/plain`;
+module detail `plain_languages` + `capabilities.plain_language`;
+`GET /meta/disclaimer/plain` and `GET /meta/privacy` (readable before the
+ack: `/meta` is outside the disclaimer middleware). Error codes
+`PLAIN_LANGUAGE_INVALID` (422), `PLAIN_LANGUAGE_UNAVAILABLE` (404),
+`plain_copy_stale` (503), `plain_copy_invalid` (500).
+(f) **Core copy pinned to the legal texts it summarises:**
+`app/plain/core/<lang>.yaml` carries `disclaimer_version` and
+`disclosure_version`; a mismatch with the running versions is refused (503)
+rather than shown, and tested. It summarises DISCLAIMER 3.0.0 — it is not a
+new part of the disclaimer, so **no disclaimer bump**; `DISCLAIMER_VERSION`
+stays `v3.0.0`. The purpose-drift lint (2.1.0) now scans it.
+(g) **`/meta/disclaimer/text` corrected.** Its fixed HTML claimed uploads are
+"nicht dauerhaft gespeichert" (false since cases persist in Postgres), named
+authorities as advice centres and was not versioned with the disclaimer. It
+now renders the pinned German core copy; response shape unchanged. The API
+document's claim that all meta endpoints need the ack header was wrong
+(only `/meta/disclosure` checks it) and is corrected.
+(h) **WP-124 plumbing only.** Profiles may name an OpenAI-compatible
+`chat_endpoint`; the router and the egress guard use it. `on-prem` is
+configured for a loopback runtime (`127.0.0.1:11434`) but stays
+`enabled: false` until a goldset run passes (`docs/consumer-inference-wp124.md`).
+(i) **Versions:** core **3.4.0** (MINOR); `sozialrecht` **1.5.0** (MINOR:
+new language copy, `core_api >=3.2`); module contract **3.2**; new formats
+`citizen-plain-copy-v1.0`, `citizen-plain-core-copy-v1.0`,
+`citizen-plain-goldset-v1.0`, `citizen-plain-v1.0` (API objects),
+`citizen-plain-eval-v1.0` (reports). No migration, no new setting.
+**Rejected:** (1) LLM-simplified findings — unverifiable language on the most
+safety-relevant surface; fixed copy keyed by deterministic data is gateable.
+(2) Adding `plain` to the dossier schema now — would version
+`citizen-dossier-v1.0`; the case view gives the same content without it.
+(3) Always-on `plain` in the analyze terminal event — would break the
+byte-identical default pinned by the golden transcript; opt-in is additive.
+(4) Enabling `on-prem` before measurement — would offer an unverified
+default. (5) Bumping the disclaimer for the plain summary — the summary
+restates v3.0.0; pinning it is the stronger guarantee.
+**Rationale:** P12's goal is a citizen-facing journey; the backend's part is
+to make every text the person reads fixed, versioned, gateable and honest
+about what is computed and what is not.
+**Open / not verified here:** (i) OQ-3: no human review of any copy yet
+(Sozialberatungsstelle for de/en, Prüfgruppe for Leichte Sprache).
+(ii) OQ-2 / WP-124: no local model measured (no GPU/runtime in the build
+environment). (iii) P12 exit (usability test ≥ 5 people, accessibility
+audit) is GUI work with a partner Beratungsstelle. (iv) The GUI integration
+findings in `docs/citizen-gui-checkup.md` (deadline banner reads a field the
+core never sends, generator-options shape, nginx 1 MB upload limit, dossier
+unused) are for the GUI owner. (v) Pre-existing:
+`tests/integration/test_retrieval.py::…test_retrieval_returns_chunks_with_metadata`
+fails intermittently on the base tree too (depends on hash-seeded test
+embeddings and database state). (vi) Still open from D-064…D-066: practitioner
+PDF review, `app/fristen/calendar.py` holiday tables, live legal-source runs,
+release key.

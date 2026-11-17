@@ -1,4 +1,5 @@
-# Semantic Version: 0.10.0 | 2026-11-17 — P11: out-of-tree module log (WP-112), applied
+# Semantic Version: 0.11.0 | 2026-11-17 — P12: plain-language router (WP-122/WP-125).
+# 0.10.0 | 2026-11-17 — P11: out-of-tree module log (WP-112), applied
 # update feeds into provenance (WP-111), citations router (WP-114).
 # 0.9.0 | 2026-11-16 — P10: dossier router; startup validates
 # the enabled modules' dossier content (dossier.yaml).
@@ -38,6 +39,7 @@ from app.api.routes import (
     meta,
     modules,
     ocr,
+    plain,
     presets,
 )
 from app.core.config import get_app_version, get_app_version_tag, settings
@@ -280,6 +282,7 @@ app.include_router(ocr.router, prefix="/api/v1", tags=["ocr"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
 app.include_router(dossier.router, prefix="/api/v1", tags=["dossier"])
 app.include_router(citations.router, prefix="/api/v1", tags=["citations"])
+app.include_router(plain.router, prefix="/api/v1", tags=["plain"])
 app.include_router(goldset.router, prefix="/api/v1", tags=["goldset"])
 app.include_router(eval_reports.router, prefix="/api/v1", tags=["eval_reports"])
 

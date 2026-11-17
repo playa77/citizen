@@ -37,7 +37,9 @@ Each SSE event follows the format::
     data: {"stage": "<name>", "status": "complete", "payload": {...}}\\n\\n
 """
 
-# Semantic Version: 0.8.0 | 2026-11-16 — P10: the stored calculation_check stage
+# Semantic Version: 0.9.0 | 2026-11-17 — P12/WP-122: optional request key
+# `plain_languages` → terminal event `plain` (absent: event unchanged).
+# 0.8.0 | 2026-11-16 — P10: the stored calculation_check stage
 # log also keeps the full calculation result (`result`) for the dossier; the
 # SSE stream is unchanged.
 # 0.7.0 | 2026-11-16 — WP-96: terminal-event provenance names
@@ -85,6 +87,7 @@ from app.modules.runtime import (
     area_module_binding,
     resolve_request_areas,
 )
+from app.plain.service import PlainLanguageRequestError, analysis_plain, parse_languages
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.corpus_readiness import check_preflight
 from app.services.disclosure import build_disclosure_and_provenance
@@ -231,6 +234,21 @@ async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # 
         legal_areas = [str(a).strip() for a in legal_areas_raw if str(a).strip()]
     else:
         legal_areas = []
+    # P12 (WP-122): opt-in plain-language finding in the terminal event. Absent
+    # → the terminal event stays byte-identical (golden SSE transcript).
+    plain_languages: list[str] | None = None
+    if payload.get("plain_languages") not in (None, "", []):
+        try:
+            plain_languages = parse_languages(payload.get("plain_languages"))
+        except PlainLanguageRequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "PLAIN_LANGUAGE_INVALID",
+                    "message": str(exc),
+                    "values": exc.values,
+                },
+            ) from None
     intake_session_id_str = payload.get("intake_session_id")
     intake_session_uuid: uuid.UUID | None = None
     if intake_session_id_str:
@@ -513,6 +531,16 @@ async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # 
             disclosure_info, provenance_marker = build_disclosure_and_provenance(
                 settings, legal_areas
             )
+            if plain_languages is not None:
+                try:
+                    final_payload["plain"] = analysis_plain(
+                        state.final_output, legal_areas, plain_languages
+                    )
+                except Exception:
+                    # Copy is static module data; a defect must not cost the
+                    # person their analysis result.
+                    logger.exception("plain-language rendering failed")
+                    final_payload["plain"] = None
             final_payload["disclosure"] = disclosure_info.model_dump(mode="json")
             final_payload["provenance"] = provenance_marker.model_dump(mode="json")
             yield _sse_format(final_payload)

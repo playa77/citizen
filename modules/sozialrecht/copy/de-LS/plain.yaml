@@ -1,0 +1,47 @@
+# Sozialrecht — plain-language copy, Leichte Sprache (WP-122, D-068).
+# Required for critical copy (the Widerspruchsfrist); findings included as well.
+# Needs review by a Prüfgruppe für Leichte Sprache (OQ-3).
+# Semantic Version: 1.0.0 | 2026-11-17
+
+format: citizen-plain-copy-v1.0
+module: sozialrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: "Prüfung durch eine Prüfgruppe für Leichte Sprache offen (OQ-3)."
+
+findings:
+  rechtswidrig:
+    title: "Vielleicht ist der Bescheid falsch"
+    text: "Citizen hat einen Fehler gefunden. Vielleicht ist der ganze Bescheid falsch. Das ist nur eine erste Einschätzung. Citizen ist kein Anwalt."
+    next_step: "Gehen Sie zu einer Beratungs-Stelle. Zeigen Sie dort den Bescheid. Denken Sie an die Frist."
+  teilweise_rechtswidrig:
+    title: "Vielleicht ist ein Teil vom Bescheid falsch"
+    text: "Citizen hat einen Fehler gefunden. Vielleicht ist ein Teil vom Bescheid falsch. Zum Beispiel ein Betrag. Das ist nur eine erste Einschätzung."
+    next_step: "Gehen Sie zu einer Beratungs-Stelle. Nehmen Sie den Bescheid mit. Denken Sie an die Frist."
+  ueberwiegend_rechtmaessig:
+    title: "Citizen hat keinen großen Fehler gefunden"
+    text: "Citizen hat keinen großen Fehler gefunden. Aber Citizen kann Fehler übersehen."
+    next_step: "Sind Sie unsicher? Dann gehen Sie zu einer Beratungs-Stelle. Machen Sie das vor dem Ende der Frist."
+  kein_verwaltungsakt:
+    title: "Das ist vielleicht kein Bescheid"
+    text: "Der Brief ist vielleicht kein Bescheid. Vielleicht ist es eine Information. Oder eine Einladung. Gegen so einen Brief gibt es meistens keinen Widerspruch."
+    next_step: "Lesen Sie den Brief genau. Sollen Sie etwas tun? Zum Beispiel zu einem Termin gehen? Dann machen Sie das rechtzeitig. Fragen Sie bei einer Beratungs-Stelle nach."
+  einordnung_offen:
+    title: "Citizen ist sich nicht sicher"
+    text: "Citizen weiß noch nicht genug über den Brief. Das heißt nicht: Der Brief ist richtig. Und es heißt nicht: Der Brief ist falsch."
+    next_step: "Gehen Sie zu einer Beratungs-Stelle. Nehmen Sie alle Briefe mit. Denken Sie an die Frist."
+
+deadlines:
+  widerspruch_sgg_84:
+    title: "Ihre Frist für den Widerspruch"
+    action: "Sie wollen widersprechen? Dann muss Ihr Brief rechtzeitig beim Amt sein. Gehen Sie vorher zu einer Beratungs-Stelle."
+    texts:
+      computed: "Sie haben Zeit bis: {frist_ende}. Bis zu diesem Tag muss Ihr Widerspruch beim Amt sein."
+      computed.jahr: "Im Bescheid fehlt eine wichtige Information. Deshalb haben Sie mehr Zeit. Sie haben Zeit bis: {frist_ende}."
+      provisional: "Sie haben wahrscheinlich Zeit bis: {frist_ende}. Bitte prüfen Sie das Datum vom Brief. Dann kann Citizen die Frist sicher ausrechnen."
+      provisional.jahr: "Im Bescheid fehlt wahrscheinlich eine wichtige Information. Dann haben Sie mehr Zeit. Sie haben wahrscheinlich Zeit bis: {frist_ende}. Bitte prüfen Sie das Datum vom Brief."
+      missing_input: "Citizen kennt das Datum vom Brief noch nicht. Deshalb kann Citizen die Frist nicht ausrechnen. Bitte tragen Sie das Datum ein. Oft haben Sie nur einen Monat Zeit. Handeln Sie deshalb schnell."
+      not_applicable: "Für diesen Brief gibt es wahrscheinlich keine Frist für einen Widerspruch. Denn der Brief ist wahrscheinlich kein Bescheid."

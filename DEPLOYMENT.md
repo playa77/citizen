@@ -1,6 +1,8 @@
 # Citizen Deployment Guide
 
-**Version: 1.2.0 | 2026-11-17** — P11: module platform operations (update channel,
+**Version: 1.3.0 | 2026-11-17** — P12 backend: release step 7 (plain gate, GUI
+proxy upload limit, local inference status).
+Previous: 1.2.0 | 2026-11-17 — P11: module platform operations (update channel,
 corpus watch, out-of-tree modules, MCP). 1.1.0 | 2026-08-25
 
 Production deployment of the Citizen legal reasoning engine on VPS.
@@ -272,6 +274,14 @@ When deploying a new version:
 6. Core 3.3.0 (P11) adds migration `015_module_platform` (tables
    `module_update`, `corpus_source_watch`) — applied by the startup
    auto-migration like every other step of the chain
+
+7. Core 3.4.0 (P12 backend) adds no migration and no setting. Before a
+   release, run the offline plain-language gate
+   (`python -m eval.plain_eval --module sozialrecht`); a consumer UI
+   (`playa77/citizen-gui`) in front of the API needs `client_max_body_size`
+   ≥ 26m on its nginx (`docs/citizen-gui-checkup.md`). Local inference
+   (`INFERENCE_PROFILE=on-prem`) is configured but disabled until measured:
+   `docs/consumer-inference-wp124.md`
 
 ---
 

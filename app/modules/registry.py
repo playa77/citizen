@@ -1,7 +1,7 @@
 """Module registry (WP-91; ARCHITECTURE.md § 3.1).
 
 Discovers ``modules/*/module.yaml``, validates each manifest against
-``app/modules/manifest.schema.json`` (core_api 3.1), computes the enabled
+``app/modules/manifest.schema.json`` (core_api 3.2), computes the enabled
 set and resolves requested module ids, including legacy aliases (D-038).
 
 Enablement defaults follow D-037: an explicit ``ENABLED_MODULES`` setting
@@ -15,7 +15,8 @@ enabled manifest or a ``DEFAULT_MODULE`` outside the enabled set raises and
 therefore refuses startup.
 """
 
-# Semantic Version: 0.3.0 | 2026-11-17 — WP-112: out-of-tree modules from the
+# Semantic Version: 0.3.1 | 2026-11-17 — WP-122: schema core_api 3.2 (`plain_language`).
+# 0.3.0 | 2026-11-17 — WP-112: out-of-tree modules from the
 # `citizen.modules` entry-point group, clamped to tier `community`; enabled
 # out-of-tree code must pass the import lint. Schema core_api 3.1 (WP-110).
 # 0.2.0 | 2026-11-16 — WP-93: discovery also refuses manifests
@@ -112,8 +113,8 @@ _schema_cache: dict[str, Draft202012Validator] = {}
 def _schema_validator(core_api: str) -> Draft202012Validator:
     """Return (cached) validator for the manifest schema.
 
-    The shipped schema is core_api 3.1 (a superset of 3.0); the ``core_api`` argument exists so a
-    future schema set can select by contract version without an API change.
+    The shipped schema is core_api 3.2 (a superset of 3.0 and 3.1); the ``core_api``
+    argument exists so a future schema set can select by contract version without an API change.
     """
     validator = _schema_cache.get(core_api)
     if validator is None:

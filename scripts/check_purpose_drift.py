@@ -11,7 +11,8 @@ guards the Annex III self-assessment in DISCLAIMER_*.md Part C against copy
 drift.
 
 Scan set (WP-96, closes C-3):
-    core     README*.md, DISCLAIMER_*.md, ARCHITECTURE.md, docs/*.md —
+    core     README*.md, DISCLAIMER_*.md, ARCHITECTURE.md, docs/*.md,
+             app/plain/core/*.yaml (plain-language core copy) —
              a core pattern without matches is reported as a warning
     modules  modules/*/copy/** (every file), modules/*/DISCLAIMER_ADDENDUM.md —
              optional: modules without copy or addendum are normal
@@ -38,7 +39,9 @@ Usage:
         [--deny-phrase-file FILE.json] [--list-phrases]
 """
 
-# Version: 2.0.0 | 2026-11-16 — WP-96: extended scan set (DISCLAIMER_*.md,
+# Version: 2.1.0 | 2026-11-17 — WP-125: core plain-language copy
+# (app/plain/core/*.yaml) joins the core scan set.
+# 2.0.0 | 2026-11-16 — WP-96: extended scan set (DISCLAIMER_*.md,
 # ARCHITECTURE.md, docs/*.md, module copy + addenda), dead globs dropped
 # (STATEMENT.md, COMPLIANCE*.md, docs/pitch*), per-module deny phrases from
 # manifests, same-line allow marker. Exit codes and CLI flags unchanged.
@@ -63,6 +66,8 @@ DEFAULT_TARGETS: tuple[str, ...] = (
     "DISCLAIMER_*.md",
     "ARCHITECTURE.md",
     "docs/*.md",
+    # P12 (WP-125): core plain-language copy shown to consumers before the ack.
+    "app/plain/core/*.yaml",
 )
 
 # Module scan targets: optional — most modules carry no copy or addendum yet,

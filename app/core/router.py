@@ -4,7 +4,9 @@ Includes egress guard (WP-31) that enforces host allowlisting and PII scanning
 for every outbound LLM/embedding call.
 """
 
-# Semantic Version: 0.2.0 | 2026-11-16 — CR-03 (F-02): optional max_tokens and
+# Semantic Version: 0.3.0 | 2026-11-17 — WP-124: chat endpoint from the active
+# inference profile (`chat_endpoint`), OpenRouter otherwise.
+# 0.2.0 | 2026-11-16 — CR-03 (F-02): optional max_tokens and
 # response_format (JSON mode, gated on the profile's json_mode capability),
 # finish_reason "length" detection with one larger-budget retry, token usage log.
 # 0.1.0
@@ -29,6 +31,18 @@ from app.services.pseudonymization import PiiMapping
 logger = logging.getLogger(__name__)
 
 _API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _chat_url() -> str:
+    """Chat-completions endpoint of the active inference profile (WP-124).
+
+    Profiles may name an OpenAI-compatible ``chat_endpoint`` (e.g. a local
+    runtime for ``on-prem``); without one, OpenRouter. The egress guard checks
+    whichever URL is used against the profile's host allowlist.
+    """
+    from app.services.inference_profiles import get_active_profile
+
+    return get_active_profile().chat_endpoint or _API_URL
 
 
 def _deduplicate_preserve_order(items: list[str]) -> list[str]:
@@ -288,7 +302,8 @@ class OpenRouterClient:
                         max_tokens=budget,
                         response_format=response_format,
                     )
-                    _egress_check(_API_URL, payload)
+                    chat_url = _chat_url()
+                    _egress_check(chat_url, payload)
                     logger.info(
                         "chat_completion → sending (model=%s, attempt=%d/%d, msg_chars=%d)",
                         current_model,
@@ -303,7 +318,7 @@ class OpenRouterClient:
                     try:
                         resp = await asyncio.wait_for(
                             self._client.post(
-                                _API_URL,
+                                chat_url,
                                 json=payload,
                                 headers=_headers(),
                                 timeout=timeout_config,
@@ -449,7 +464,8 @@ class OpenRouterClient:
                         response_format=response_format,
                     )
                     payload["stream"] = True
-                    _egress_check(_API_URL, payload)
+                    chat_url = _chat_url()
+                    _egress_check(chat_url, payload)
                     logger.info(
                         "chat_completion_stream → streaming "
                         "(model=%s, attempt=%d/%d, msg_chars=%d)",
@@ -461,7 +477,7 @@ class OpenRouterClient:
                     req_start = time.monotonic()
                     async with self._client.stream(
                         "POST",
-                        _API_URL,
+                        chat_url,
                         json=payload,
                         headers=_headers(),
                         timeout=timeout_config,

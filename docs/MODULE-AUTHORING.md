@@ -1,6 +1,7 @@
 # Writing a Citizen module
 
-<!-- Version: 1.0.0 | 2026-11-17 — WP-115 authoring kit (core 3.3.0, core_api 3.1). -->
+<!-- Version: 1.1.0 | 2026-11-17 — WP-122: plain-language copy (core 3.4.0, core_api 3.2).
+     1.0.0 | 2026-11-17 — WP-115 authoring kit (core 3.3.0, core_api 3.1). -->
 <!-- Architecture: ARCHITECTURE.md § 2 (module contract) · Catalog: docs/module-catalog.md -->
 
 A module teaches Citizen one area of German law: which statutes matter,
@@ -50,6 +51,7 @@ the scaffold encodes structure, never law.
 | `dossier.yaml` | for the dossier | appointment checklist, questions, chronology cues |
 | `errata.yaml` | from the first erratum | published corrections (§ 6) |
 | `goldset/goldset-vX.Y.Z.yaml` | for promotion | synthetic test cases + gate |
+| `copy/<lang>/plain.yaml` + `goldset/plain-vX.Y.Z.yaml` | for verified modules (sub-WP .7) | plain-language copy per finding category and deadline (§ 9a), declared under `plain_language` |
 | `compliance/deny-phrases.json` | recommended | module-specific purpose-drift phrases |
 | `DISCLAIMER_ADDENDUM.md` | recommended | area limits, `## DE` / `## EN` |
 | `prompts/profile.yaml`, `documents/templates.yaml` | optional | stage prompt profile; action-draft templates |
@@ -62,9 +64,12 @@ Every path the manifest declares must exist inside the module directory;
 
 Errors (the module must not ship):
 
-- manifest schema (`app/modules/manifest.schema.json`, core_api 3.1) and
+- manifest schema (`app/modules/manifest.schema.json`, core_api 3.2) and
   declared files;
-- `core_api` admits the running core (`">=3.1,<4.0"` for new modules);
+- `core_api` admits the running core (`">=3.2,<4.0"` for new modules;
+  `plain_language` needs 3.2, `errata` 3.1);
+- plain-language copy validates (`citizen-plain-copy-v1.0`) and contains no
+  discouraging phrase (`docs/duty-of-care-checklist.md`);
 - module code imports nothing from `app.*` except `app.modules.sdk`;
 - `scope.own_matter_only: true`;
 - deadline specs, parameter files, dossier content, prompt profile and
@@ -188,11 +193,40 @@ published eval report and a decision-ledger entry (roadmap § 7); it is never
 promoted to meet a date. Until then the scaffold's
 `goldset/goldset-v0.1.0.yaml` documents the case shape.
 
+## 9a. Plain-language copy (sub-WP .7)
+
+Declare it in the manifest (core_api 3.2):
+
+```yaml
+plain_language:
+  files: { de: copy/de/plain.yaml, de-LS: copy/de-LS/plain.yaml, en: copy/en/plain.yaml }
+  goldset: goldset/plain-v1.0.0.yaml
+```
+
+- `findings`: one entry per result category of your prompt profile plus
+  `einordnung_offen` (keys are slugs: `überwiegend rechtmäßig` →
+  `ueberwiegend_rechtmaessig`), each `title`, `text`, `next_step`.
+- `deadlines.<spec_id>`: `title`, `action`, `texts` keyed by status
+  (`computed`, `provisional`, `missing_input`, `not_applicable`), optionally
+  refined by `frist_typ` (`computed.jahr`). Only `{frist_ende}`,
+  `{bekanntgabe}`, `{basis}` may appear, and only where the status provides
+  them (no `{frist_ende}` in `missing_input`).
+- `de` and `en` cover everything; `de-LS` (Leichte Sprache) at least every
+  `severity: critical` deadline.
+- Never discourage (`docs/duty-of-care-checklist.md`); sentences ≤ 22 words
+  (Leichte Sprache ≤ 14).
+- `review.status: draft` until a named reviewer signs off (OQ-3).
+- Gate: `python -m eval.plain_eval --module <id>`. Model `goldset/plain-*.yaml`
+  on `modules/sozialrecht/goldset/plain-v1.0.0.yaml`: deadline cases give
+  `facts` and run through the Fristen core; finding cases give an `ergebnis`
+  opening sentence.
+
 ## 10. Review checklist
 
 - [ ] `python -m scripts.validate_module <dir>` passes; warnings understood
 - [ ] every parameter has a `basis` and a steward's review
 - [ ] every deadline spec has golden date tests
+- [ ] `python -m eval.plain_eval --module <id>` passes (verified modules)
 - [ ] copy speaks to the person, in their own matter; purpose-drift lint green
 - [ ] `DISCLAIMER_ADDENDUM.md` states the limits and the point where an
       advice centre or lawyer is indispensable

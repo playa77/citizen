@@ -1,0 +1,49 @@
+# Sozialrecht — plain-language copy, Bürgersprache (WP-122, D-068).
+# Static, reviewed copy per finding category and deadline spec. Placeholders
+# ({frist_ende}, {bekanntgabe}, {basis}) are filled by the core from Fristen-core
+# results only. Duty of care (docs/duty-of-care-checklist.md): never discourage,
+# always name the next step and the advice centre.
+# Semantic Version: 1.0.0 | 2026-11-17
+
+format: citizen-plain-copy-v1.0
+module: sozialrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: "Prüfung durch eine Sozialberatungsstelle offen (OQ-3)."
+
+findings:
+  rechtswidrig:
+    title: "Citizen hat einen möglichen Fehler im Bescheid gefunden"
+    text: "Die Auswertung deutet darauf hin, dass der Bescheid insgesamt fehlerhaft sein könnte. Das ist eine vorläufige Einordnung durch Citizen und keine rechtliche Prüfung."
+    next_step: "Lassen Sie den Bescheid bei einer Sozialberatungsstelle oder einer Anwältin oder einem Anwalt für Sozialrecht prüfen. Achten Sie auf die Frist für den Widerspruch."
+  teilweise_rechtswidrig:
+    title: "Citizen hat in einem Teil des Bescheids einen möglichen Fehler gefunden"
+    text: "Die Auswertung deutet darauf hin, dass ein Teil des Bescheids fehlerhaft sein könnte, zum Beispiel ein einzelner Betrag. Das ist eine vorläufige Einordnung durch Citizen und keine rechtliche Prüfung."
+    next_step: "Nehmen Sie den Bescheid und das Dossier mit zur Beratung. Dort klären Sie, ob Sie gegen diesen Teil Widerspruch einlegen. Achten Sie auf die Frist."
+  ueberwiegend_rechtmaessig:
+    title: "Citizen hat keinen deutlichen Fehler gefunden"
+    text: "Die Auswertung hat keinen Fehler gefunden, der den Bescheid klar in Frage stellt. Das bedeutet nicht, dass der Bescheid sicher richtig ist. Citizen kann Fehler übersehen."
+    next_step: "Wenn Sie unsicher sind oder Ihnen etwas falsch vorkommt, lassen Sie den Bescheid vor Ablauf der Frist bei einer Sozialberatungsstelle prüfen."
+  kein_verwaltungsakt:
+    title: "Dieses Schreiben ist vermutlich kein Bescheid"
+    text: "Das Schreiben regelt nach der Auswertung nichts verbindlich für Sie. Es kann zum Beispiel eine Information, eine Einladung oder eine Bitte um Unterlagen sein. Gegen solche Schreiben gibt es meist keinen Widerspruch."
+    next_step: "Lesen Sie genau, ob das Schreiben etwas von Ihnen verlangt, zum Beispiel einen Termin oder Unterlagen bis zu einem Datum. Wenn Sie unsicher sind, fragen Sie bei einer Sozialberatungsstelle nach."
+  einordnung_offen:
+    title: "Citizen kann das Schreiben noch nicht sicher einordnen"
+    text: "Die vorhandenen Gesetzestexte und Angaben reichen für eine Einordnung nicht aus. Das sagt nichts darüber, ob der Bescheid richtig oder falsch ist."
+    next_step: "Lassen Sie das Schreiben bei einer Sozialberatungsstelle prüfen. Nehmen Sie das Dossier und alle Unterlagen mit. Achten Sie auf mögliche Fristen."
+
+deadlines:
+  widerspruch_sgg_84:
+    title: "Frist für den Widerspruch"
+    action: "Wenn Sie widersprechen wollen, muss Ihr Widerspruch bis zum Ende der Frist beim Jobcenter oder Amt ankommen. Lassen Sie sich vorher beraten, wenn das möglich ist."
+    texts:
+      computed: "Ihre Frist für den Widerspruch endet am {frist_ende}. Grundlage: {basis}."
+      computed.jahr: "Im Bescheid fehlt eine richtige Belehrung über den Widerspruch. Deshalb haben Sie länger Zeit: Ihre Frist endet am {frist_ende}. Grundlage: § 66 Abs. 2 SGG."
+      provisional: "Ihre Frist für den Widerspruch endet voraussichtlich am {frist_ende}. Bitte bestätigen Sie das Datum des Schreibens, damit Citizen die Frist sicher berechnen kann."
+      provisional.jahr: "Im Bescheid fehlt vermutlich eine richtige Belehrung über den Widerspruch. Ihre Frist endet dann voraussichtlich am {frist_ende}. Bitte bestätigen Sie das Datum des Schreibens."
+      missing_input: "Citizen kann die Frist noch nicht berechnen, weil das Datum des Schreibens fehlt. Tragen Sie das Datum ein. Bis dahin gilt: Handeln Sie so bald wie möglich, die Frist beträgt oft nur einen Monat."
+      not_applicable: "Für dieses Schreiben gibt es nach der Auswertung keine Widerspruchsfrist, weil es vermutlich kein Bescheid ist."

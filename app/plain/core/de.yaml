@@ -1,0 +1,48 @@
+# Core plain-language copy, Bürgersprache (WP-125, D-068).
+# A plain rendering of DISCLAIMER_DE.md v3.0.0 (Teil B) and of the Art. 50
+# disclosure 1.0 — it summarises, it does not replace them. Pinned to both
+# versions: a disclaimer or disclosure bump fails tests/unit/test_plain_language.py
+# until this copy is re-checked against the new text.
+# Semantic Version: 1.0.0 | 2026-11-17
+
+format: citizen-plain-core-copy-v1.0
+language: de
+disclaimer_version: v3.0.0
+disclosure_version: "1.0"
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: "Prüfung durch Beratungsstelle offen (OQ-3)."
+
+disclaimer:
+  title: "Bevor Sie anfangen: Was Citizen ist und was nicht"
+  points:
+    - "Citizen hilft Ihnen, ein Schreiben von einer Behörde oder einer anderen Stelle zu verstehen. Und es hilft Ihnen, Ihren Termin bei einer Beratungsstelle oder einer Anwältin oder einem Anwalt vorzubereiten."
+    - "Citizen ist keine Rechtsberatung. Citizen ersetzt keine Beratungsstelle und keine Anwältin und keinen Anwalt."
+    - "Einen Teil der Ergebnisse schreibt eine KI. Die KI kann sich irren. Prüfen Sie jedes Ergebnis, bevor Sie es verwenden."
+    - "Fristen und Beträge rechnet Citizen nach festen Regeln aus. Auch diese Zahlen sollten Sie mit einer Beratungsstelle prüfen."
+    - "Nutzen Sie Citizen nur für Ihre eigenen Angelegenheiten."
+    - "Entwürfe für Schreiben sind nur Entwürfe. Stellen mit [BITTE PRÜFEN] müssen Sie selbst prüfen und ergänzen. Sie entscheiden, was Sie abschicken."
+    - "Citizen ist kostenlos und quelloffen. Für Fehler übernimmt der Autor keine Haftung, soweit das Gesetz das erlaubt."
+  ack_label: "Ich habe diese Hinweise gelesen. Ich nutze Citizen auf eigene Verantwortung."
+  full_text_note: "Den vollständigen rechtlichen Hinweis finden Sie im Dokument DISCLAIMER_DE.md. Er gilt, wenn diese Kurzfassung etwas offenlässt."
+
+ai_notice:
+  title: "Hinweis: Dieses Ergebnis stammt von einer KI"
+  text: "Diese Auswertung hat ein KI-System erstellt. Sie ist nicht rechtsverbindlich. Prüfen Sie die Ergebnisse, bevor Sie sie verwenden."
+
+privacy:
+  title: "Was mit Ihren Daten passiert"
+  storage: "Ihre Schreiben und Auswertungen werden in der Datenbank dieser Citizen-Installation gespeichert, bis Sie sie löschen."
+  deletion: "Sie können jeden Fall löschen. Unterhaltungen mit hochgeladenen Dokumenten löschen Sie getrennt."
+  inference:
+    eu-avv: "Für die Auswertung werden Texte an einen KI-Dienst in der EU geschickt. Vorher werden Namen, Adressen, Nummern und Kontodaten durch Platzhalter ersetzt. Ein Schutz blockiert Übermittlungen an andere Stellen."
+    extern-openrouter: "Für die Auswertung werden Texte an einen externen KI-Dienst geschickt. Der Dienst kann auch außerhalb der EU arbeiten. Vorher werden Namen, Adressen, Nummern und Kontodaten durch Platzhalter ersetzt."
+    on-prem: "Die Auswertung läuft auf einem Rechner dieser Installation. Ihre Texte werden nicht an einen externen KI-Dienst geschickt."
+    unknown: "Fragen Sie die Stelle, die diese Installation betreibt, wohin Texte für die Auswertung geschickt werden."
+  deployment:
+    dev: "Dies ist eine Test-Installation. Laden Sie hier keine echten Schreiben hoch, nur Beispiel-Dokumente."
+    self: "Diese Installation betreiben Sie selbst. Sie entscheiden, wer Zugriff hat."
+    provider: "Diese Installation betreibt eine Organisation, zum Beispiel eine Beratungsstelle. Sie ist für Ihre Daten verantwortlich. Fragen Sie dort nach der Datenschutzerklärung."
+  residual_risk: "Platzhalter schützen gut, aber nicht vollständig. Aus dem übrigen Text kann man manchmal trotzdem erkennen, um wen es geht."

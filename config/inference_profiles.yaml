@@ -1,4 +1,7 @@
-# Version: 0.2.0 | 2026-11-16 — capability json_mode (CR-03): when true, JSON
+# Version: 0.3.0 | 2026-11-17 — WP-124: `chat_endpoint` key; on-prem profile
+# configured as a local-runtime candidate (127.0.0.1:11434), still disabled
+# until it passes the goldset gate.
+# 0.2.0 | 2026-11-16 — capability json_mode (CR-03): when true, JSON
 # stages send response_format={"type": "json_object"}. Off until verified
 # against every model of the profile's fallback chain.
 # 0.1.0
@@ -68,12 +71,22 @@ profiles:
       vision: false
       max_tokens: 128000
 
+  # WP-124 candidate for the consumer default (OQ-2): any OpenAI-compatible
+  # local runtime (Ollama, llama.cpp server, vLLM) on this machine. Models come
+  # from PRIMARY_MODEL / FALLBACK_MODEL_* (runtime model names); embeddings
+  # need EMBEDDING_BASE_URL on a local host too, with a 1536-dimension model
+  # (ChunkEmbedding is Vector(1536)) — otherwise the egress guard blocks them.
+  # NOT gate-verified: becomes the consumer default only after a goldset run
+  # passes the module gate (docs/consumer-inference-wp124.md).
   on-prem:
-    label: "On-Premise LLM (Disabled)"
+    label: "On-Premise / local LLM (WP-124 candidate, disabled until gate-verified)"
     data_residency: "on-prem"
     avv_status: "signed"
     pseudonymization: "optional"
-    host_allowlist: []
+    chat_endpoint: "http://127.0.0.1:11434/v1/chat/completions"
+    host_allowlist:
+      - "127.0.0.1"
+      - "localhost"
     per_stage: {}
     capability_manifest:
       streaming: false
@@ -81,4 +94,5 @@ profiles:
       json_mode: false
       vision: false
       max_tokens: 4096
+    # Disabled until the WP-124 gate run: enable here to measure (operator step).
     enabled: false

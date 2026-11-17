@@ -1,6 +1,7 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.0.2 | 2026-11-17 — P11 status added (D-066).
+<!-- Version: 3.0.3 | 2026-11-17 — P12 backend status, WP-120 decided (D-067/D-068).
+     3.0.2 | 2026-11-17 — P11 status added (D-066).
      3.0.1 | 2026-11-16 — release numbers shifted one minor: core 3.1.0
      went to the WP-97 follow-up (D-063), so P10 ships as 3.2.0, P11 3.3.0, P12 3.4.0
      (D-064); P10 status added.
@@ -246,6 +247,16 @@ a release key, decide whether the disclaimer names community modules.
 **Goal:** a polished, accessible, local-first guided journey for citizens.
 **Release: `citizen-web` 1.0.0; core 3.4.0 (plain-language API fields).**
 
+**Status (2026-11-17, D-067/D-068):** WP-120 decided — the UI is
+`playa77/citizen-gui`, D-025 stands. Backend half built in core 3.4.0
+(`sozialrecht` 1.5.0, module contract 3.2): WP-122 plain-language layer +
+gate, WP-123 duty-of-care rules on copy and `bcp47`, WP-124 plumbing
+(`chat_endpoint`, `on-prem` configured, disabled), WP-125 plain disclaimer/ack,
+privacy view, go/no-go checklist (`docs/public-release-go-nogo.md`). Open:
+human copy review (OQ-3), local-model measurement (OQ-2), GUI work
+(WP-121, WP-123 UI, integration findings in `docs/citizen-gui-checkup.md`),
+P12 exit (usability test, accessibility audit).
+
 - **WP-120 — UI location decision (D-040).** Owner confirms separate
   repository consuming `/api/v1` (recommended) or reverses D-025.
 - **WP-121 — Guided journey.** Module choice (intake) → upload → OCR confirm →
@@ -382,7 +393,7 @@ decide promotion. Funding outcomes re-plan P12/P13 capacity by decision entry.
 | OQ-3 | Who reviews plain-language simplifications (Beratungsstellen, legal-informatics students)? | Dan + adopters | WP-122, every .7 |
 | OQ-4 | Module order: confirm the necessity hypothesis with user-need evidence (adopter case statistics) | Dan + adopters | P13 order |
 | OQ-5 | NLnet generative-AI policy fit | Dan | WP-141 |
-| OQ-6 | UI repository location (D-040) | Dan | WP-120 |
+| OQ-6 | UI repository location (D-040) — **resolved 2026-11-17 (D-067): `playa77/citizen-gui`** | Dan | WP-120 |
 | OQ-7 | Reuse terms of Düsseldorfer Tabelle and Landes-Mietrechtsverordnungen as parameter data | counsel/adopters | WP-131, WP-135 |
 | OQ-8 | Art. 10 DSGVO: may Strafrecht cases ever use external inference, even pseudonymized? | counsel | WP-139 |
 | OQ-9 | StBerG boundary for the Steuerrecht module's advice-center use (currently disabled) | counsel | WP-137 |
