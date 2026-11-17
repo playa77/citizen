@@ -1483,3 +1483,121 @@ deadline *later* than the law allows (dangerous): NW lists 31.10
 holidays make deadlines earlier (safe but wrong): Allerheiligen (01.11) for
 BY/BW/RP/SL. Easter dates exist only for 2024–2027; other years are clamped
 to the nearest table year's movable holidays.
+
+### D-066 R2 — 2026-11-17 — P11 module platform (WP-110…WP-116): errata, signed update channel, out-of-tree modules, corpus automation, citations, MCP; core 3.3.0, `sozialrecht` 1.4.0
+**Scope and acceptance (recorded before the change, AGENTS.md):** implement
+roadmap phase P11 (§ 5) — module versioning and errata (WP-110), signed
+update channel (WP-111), out-of-tree modules (WP-112), corpus automation
+(WP-113), citation service (WP-114), authoring kit (WP-115), optional MCP
+surface (WP-116). Acceptance = the roadmap exit: a scaffolded test module
+passes validation, ships a parameter update via the signed feed and is
+visible via `/modules` (pinned by `tests/integration/test_p11_exit.py`, run
+through the shipped CLIs as subprocesses); `/api/v1` additive only (D-039)
+with `API_DOCUMENTATION.md` in the same change; full suite + ruff/format +
+mypy strict + purpose-drift green; requests that name no module unchanged.
+**Decision:**
+(a) **Errata are data** (`errata.yaml`, format `citizen-module-errata-v1.0`,
+schema `app/modules/errata.schema.json`), declared by a new optional manifest
+key `errata`. A 3.0 core rejects unknown manifest keys, so the key raises the
+module contract to **core_api 3.1** (`SDK_VERSION` "3.1", schema
+`x-core-api` 3.1, additive: every `>=3.0` manifest stays valid). Affected
+cases are found by semver on `case_run_area.module_version` (D-057) — in
+Python, not SQL (`app/modules/semver.py`, one parser for errata, feed
+ranges and changelog order). Changelog discipline is now checked: newest
+`CHANGELOG.md` heading = manifest version, strictly descending; erratum
+`fixed_in` is a changelog version ≤ manifest version and outside its own
+range. The check found two real gaps — `erbrecht` 0.2.0 and
+`familienrecht` 0.2.1 shipped without changelog entries; backfilled (no
+version change: documentation only). First erratum: `sozialrecht`
+**E-2026-001** = the D-065 fiction defect (deadlines one day late for letters
+posted before 2025-01-01), affected module versions `>=1.0.0,<1.3.0`, core
+`>=3.0.0,<3.2.0`.
+(b) **Update channel:** Ed25519 detached signatures (`cryptography`, now a
+declared dependency — it was only transitive) over the exact feed bytes, no
+JSON canonicalisation; the signature is verified *before* the feed is parsed.
+Trust anchors in `config/update-trust.yaml` (`UPDATE_TRUST_FILE`), per key
+scoped to module ids; the file ships **empty**. Feeds
+(`citizen-update-feed-v1.0`) carry parameter rows (validated like module
+parameter files; domain taken from the installed manifest, never from the
+feed) and corpus change notices. Applicability: module installed, version in
+`applies_to`, serial above every applied serial (anti-rollback/replay),
+`issued_at` ≤ now + 1 day. Ledger table `module_update` (migration
+`015_module_platform`, unique `(module_id, serial)`). Provenance
+`parameter_set` becomes `<version>+<newest valid_from>.u<serial>` once a feed
+was applied (unchanged otherwise); the ledger is read at startup. File
+re-seeding never reverts a feed-written identity (`protected` in the shared
+upsert `app/modules/parameter_seed.py`). Fetch: `https://` or local path
+only, ≤ 1 MiB, plain GET, bounded retries — no telemetry.
+(c) **Out-of-tree modules:** entry-point group `citizen.modules`; the target
+is a directory, a package (its directory) or a callable returning one.
+Effective tier is clamped to `community` (`planned` stays `planned`),
+`declared_tier` and `origin` (`in_tree`/`entry_point`) are served on
+`/modules`. Never enabled implicitly in any mode (community was already
+outside the D-037 tier rule); `ENABLED_MODULES` must list them — also in
+`provider`. A broken package or one reusing an in-tree id is *rejected and
+logged*, not fatal (it could never run implicitly); naming a rejected module
+in `ENABLED_MODULES` fails startup as uninstalled. Enabled out-of-tree code
+must pass the import lint or startup refuses.
+(d) **Corpus automation:** change detection = conditional GET of
+`gii-toc.xml` (presence) + `HEAD` of each source's `xml.zip`
+(`ETag`/`Last-Modified`/length, compared only when sent), state in
+`corpus_source_watch`; "daily" is the operator's scheduler running
+`python -m scripts.corpus_watch` (no in-process scheduler). Case law: modules
+declare `case_law` in `corpus.yaml` (provider `rii` or `olda`, court,
+`since`, `max_documents`), honoured only for tier `verified`; the existing
+catalog source type `bsg` (`has_scraper` was false) is now filled from RII.
+`sozialrecht` 1.4.0 declares BSG since 2023-01-01, max. 200. Ingestion is
+opt-in; because `bsg` is already in Sozialrecht's retrieval scope, ingested
+decisions reach analysis — the goldset gate must be rerun after the first
+ingestion.
+(e) **Citations:** own regex parser (§/§§/Art., Abs./Satz/Nr., ff., lists
+and ranges; ECLI; BSG docket numbers) — eyecite's span-extraction *pattern*,
+no eyecite code — plus corpus verification by hierarchy path
+(`… > § N > Abs. M …`). Route `POST /api/v1/citations/verify`; not wired into
+the pipeline (that would change analysis output and needs a gate).
+(f) **MCP:** a dependency-free stdio JSON-RPC implementation of the MCP
+subset needed (initialize, ping, tools/list, tools/call; protocol
+2025-06-18, 2025-03-26, 2024-11-05), six read-only tools, `python -m
+app.mcp`. It is a local process interface beside `/api/v1`, opens no port
+and is not part of the D-025 HTTP contract (API_DOCUMENTATION.md § 1 says
+so). Public catalog helpers moved to `app/modules/catalog.py` and are shared
+by the route and the MCP server.
+(g) **Authoring kit:** `app/modules/validate.py` (offline; assembles the area
+tables over installed modules + candidate), `app/modules/scaffold.py`,
+CLIs `scripts/validate_module.py` / `scripts/new_module.py`,
+`docs/MODULE-AUTHORING.md`; the scaffold's goldset file is the template.
+(h) **Versions:** core **3.3.0** (MINOR: new routes, tables, settings,
+contract 3.1 additive); `sozialrecht` **1.4.0** (MINOR: errata file, case-law
+declaration, `core_api >=3.1`); module contract **3.1**; new artefact
+formats errata 1.0, update feed 1.0, signature 1.0, trust 1.0. No disclaimer
+change (no addendum touched), `DISCLAIMER_VERSION` stays `v3.0.0`. New
+setting `UPDATE_TRUST_FILE`.
+**Rejected:** (1) Parsing errata out of `CHANGELOG.md` prose — fragile and
+unvalidatable; a schema'd file is reviewable data. (2) GPG/minisign or a
+hosted update service — an extra binary or a running service; Ed25519 via an
+already-installed library keeps "static files, ≈ zero running cost".
+(3) Signing canonicalised JSON — what is verified must be exactly what is
+parsed. (4) Letting a feed name the parameter domain — a key trusted for one
+module could then write into another's namespace. (5) Treating a broken
+out-of-tree package as fatal — one bad `pip install` would take the service
+down for a module nobody enabled. (6) The official `mcp` SDK — a new
+dependency tree for a six-tool read-only catalog; the protocol subset is
+small and fully unit-tested here. (7) Wiring citation verification into the
+pipeline now — it would change analysis output without a goldset gate.
+**Rationale:** The roadmap's exit asks that modules can be developed,
+versioned, updated and contributed safely; every mechanism above fails
+closed (empty trust file, community modules off, signature before parse,
+serials only grow) and every amount still comes from versioned parameters.
+**Open / not verified here:** (i) no network access to
+gesetze-im-internet.de, rechtsprechung-im-internet.de or openlegaldata.io
+from the build environment — parsers and request flows are tested against
+synthetic fixtures shaped like the public formats; the first live run must
+confirm the RII document structure and the OLDA filter names
+(`court__slug`, `date__gte`), which are taken from public documentation.
+(ii) No maintainer release key exists yet; publishing one (and the feed
+location) is an owner action. (iii) Community modules are not covered by the
+disclaimer's Part D — whether the disclaimer should say so is an owner
+decision (it would be a `DISCLAIMER_VERSION` bump). (iv) After the first
+`bsg` ingestion the Sozialrecht goldset gate must be rerun. (v) Still open
+from D-064/D-065: practitioner PDF review; holiday-table errors in
+`app/fristen/calendar.py`.

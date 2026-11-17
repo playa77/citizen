@@ -1,6 +1,7 @@
 # Citizen Deployment Guide
 
-**Version: 1.1.0 | 2026-08-25**
+**Version: 1.2.0 | 2026-11-17** — P11: module platform operations (update channel,
+corpus watch, out-of-tree modules, MCP). 1.1.0 | 2026-08-25
 
 Production deployment of the Citizen legal reasoning engine on VPS.
 
@@ -267,6 +268,74 @@ When deploying a new version:
 5. If the release bumps `DISCLAIMER_VERSION` (e.g. WP-96: `v0.1.0` → `v3.0.0`),
    check that `.env` does not pin the old value; clients must re-acknowledge
    (`X-Disclaimer-Ack`) — requests with the old version answer 403
+
+6. Core 3.3.0 (P11) adds migration `015_module_platform` (tables
+   `module_update`, `corpus_source_watch`) — applied by the startup
+   auto-migration like every other step of the chain
+
+---
+
+## Module platform operations (core 3.3.0, P11)
+
+All commands run inside the app container
+(`docker compose exec citizen-app …`) or the project venv.
+
+### Signed parameter updates (WP-111)
+
+Parameter corrections between releases arrive as a signed feed (two static
+files, e.g. GitHub release assets: `<feed>.json` and `<feed>.json.sig`).
+
+1. Once: add the maintainer's published release key to
+   `config/update-trust.yaml` (`UPDATE_TRUST_FILE`). The shipped file is
+   empty — until a key is added, no feed verifies.
+2. Check, then apply (one transaction: parameter rows + ledger row):
+
+   ```bash
+   python -m scripts.module_update apply https://…/sozialrecht-update-3.json --dry-run
+   python -m scripts.module_update apply https://…/sozialrecht-update-3.json
+   ```
+
+3. Restart the app so provenance `parameter_set` ids include the feed
+   (`…+<valid_from>.u<serial>`); `python -m scripts.module_update status`
+   lists what was applied. A feed with a serial at or below the last applied
+   one is refused (rollback/replay); a re-run of the same feed is a no-op.
+
+Re-seeding module files (`scripts.seed_module_parameters`) never reverts a
+value a feed wrote; the next module release carries it in its files.
+
+### Daily corpus change detection (WP-113)
+
+```bash
+python -m scripts.corpus_watch --ingest        # cron/systemd timer, once a day
+```
+
+Checks the statute sources of the effective corpus selection against
+`gii-toc.xml` and each source's `xml.zip` validators; `--ingest` re-ingests
+what changed (needs the embedding key). The first run records a baseline.
+Example crontab line (04:17 daily, container-local time):
+
+```
+17 4 * * * cd /app && python -m scripts.corpus_watch --ingest >> /var/log/citizen-corpus-watch.log 2>&1
+```
+
+Case law (BSG via rechtsprechung-im-internet.de, declared by verified modules
+in `corpus.yaml` `case_law`) is opt-in: `python -m scripts.corpus_watch
+--case-law bsg`. Once ingested, `sozialrecht` retrieves it — rerun the
+goldset gate after the first ingestion.
+
+### Out-of-tree modules (WP-112)
+
+`pip install` a package that registers a `citizen.modules` entry point; it
+loads at tier `community` and stays disabled until listed in
+`ENABLED_MODULES` (JSON list, including `DEFAULT_MODULE`). Validate it first:
+`python -m scripts.validate_module --module <id>`. Enabled out-of-tree code
+that imports core internals refuses startup.
+
+### MCP surface (WP-116, optional)
+
+`python -m app.mcp` runs a read-only MCP server on stdio for a local MCP
+client (it opens no port). It needs the same configuration as the app
+(`.env`, database for corpus tools).
 
 ---
 
