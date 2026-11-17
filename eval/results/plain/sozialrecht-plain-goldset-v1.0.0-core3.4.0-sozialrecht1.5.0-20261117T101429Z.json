@@ -1,0 +1,122 @@
+{
+  "format": "citizen-plain-eval-v1.0",
+  "module": "sozialrecht",
+  "languages": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "categories": [
+    "rechtswidrig",
+    "teilweise_rechtswidrig",
+    "ueberwiegend_rechtmaessig",
+    "kein_verwaltungsakt",
+    "einordnung_offen"
+  ],
+  "deadline_specs": [
+    "widerspruch_sgg_84"
+  ],
+  "review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "core_review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "goldset": {
+    "version": "1.0.0",
+    "path": "goldset/plain-v1.0.0.yaml"
+  },
+  "cases_passed": 13,
+  "cases_total": 13,
+  "cases": [
+    {
+      "case_id": "PL-D01",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-D02",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-D03",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-D04",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-D05",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-D06",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F01",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F02",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F03",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F04",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F05",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F06",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F07",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": {},
+  "subset": null,
+  "gate_passed": true,
+  "module_version": "1.5.0",
+  "core_version": "3.4.0",
+  "git_sha": "6c30bd2",
+  "run_timestamp": "2026-11-17T10:14:29.772597+00:00"
+}
