@@ -16,7 +16,8 @@ Usage::
 Exit codes: 0 success, 1 invalid module data or unknown module, 2 database error.
 """
 
-# Version: 2026-11-16.1 (WP-93; supersedes seed_legal_parameters.py 1.0.0)
+# Version: 2026-11-17.1 (WP-111: shared upsert, feed-written rows are kept)
+# 2026-11-16.1 (WP-93; supersedes seed_legal_parameters.py 1.0.0)
 
 from __future__ import annotations
 
@@ -25,69 +26,32 @@ import asyncio
 import logging
 import sys
 
-from sqlalchemy import select
-
 from app.modules.parameters import ParameterRow, load_parameter_rows
-from app.modules.registry import ModuleManifestError, default_modules_root, discover_modules
+from app.modules.registry import (
+    ModuleManifestError,
+    default_modules_root,
+    discover_installed_modules,
+)
 
 logger = logging.getLogger("seed_module_parameters")
 
-_UPDATABLE = (
-    "value_numeric",
-    "value_json",
-    "value_text",
-    "unit",
-    "valid_to",
-    "review_status",
-    "regime",
-    "notes",
-)
 
-
-async def _upsert(rows: list[ParameterRow]) -> tuple[int, int, int]:
-    """Upsert *rows*; return (created, updated, unchanged)."""
-    from app.db.models import LegalParameter
+async def _upsert(rows: list[ParameterRow]) -> tuple[int, int, int, int]:
+    """Upsert *rows*; return (created, updated, unchanged, kept-from-feed)."""
     from app.db.session import async_session_factory
+    from app.modules.parameter_seed import upsert_parameter_rows
     from app.services.parameter_store import reload_parameter_cache
+    from app.updates.ledger import feed_owned_parameters
 
-    created = updated = unchanged = 0
     async with async_session_factory() as session:
-        for row in rows:
-            existing = (
-                await session.execute(
-                    select(LegalParameter).where(
-                        LegalParameter.parameter_key == row.key,
-                        LegalParameter.domain == row.domain,
-                        LegalParameter.valid_from == row.valid_from,
-                    )
-                )
-            ).scalar_one_or_none()
-            if existing is None:
-                session.add(
-                    LegalParameter(
-                        parameter_key=row.key,
-                        domain=row.domain,
-                        valid_from=row.valid_from,
-                        **{attr: getattr(row, attr) for attr in _UPDATABLE},
-                    )
-                )
-                created += 1
-                logger.info("created  %s@%s (regime=%s)", row.key, row.valid_from, row.regime)
-                continue
-            dirty = False
-            for attr in _UPDATABLE:
-                if getattr(existing, attr) != getattr(row, attr):
-                    setattr(existing, attr, getattr(row, attr))
-                    dirty = True
-            if dirty:
-                updated += 1
-                logger.info("updated  %s@%s (regime=%s)", row.key, row.valid_from, row.regime)
-            else:
-                unchanged += 1
+        # WP-111: identities a signed update feed wrote are not reverted by
+        # module files that predate the correction.
+        protected = await feed_owned_parameters(session)
+        result = await upsert_parameter_rows(session, rows, protected=protected)
         await session.commit()
         # Make the new values visible to the sync param() cache immediately.
         await reload_parameter_cache(session)
-    return created, updated, unchanged
+    return len(result.created), len(result.updated), len(result.unchanged), len(result.protected)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -102,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        modules = discover_modules(default_modules_root())
+        modules, _rejected = discover_installed_modules(default_modules_root())
         selected = args.module or sorted(modules)
         unknown = [m for m in selected if m not in modules]
         if unknown:
@@ -121,15 +85,17 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("dry run complete — %d row(s) valid, database untouched", len(rows))
         return 0
     try:
-        created, updated, unchanged = asyncio.run(_upsert(rows))
+        created, updated, unchanged, kept = asyncio.run(_upsert(rows))
     except Exception as exc:  # report and exit non-zero; no partial-success claim
         logger.error("database seeding failed: %s", exc)
         return 2
     logger.info(
-        "seed complete — %d created, %d updated, %d unchanged (%d rows)",
+        "seed complete — %d created, %d updated, %d unchanged, %d kept from update feeds "
+        "(%d rows)",
         created,
         updated,
         unchanged,
+        kept,
         len(rows),
     )
     return 0

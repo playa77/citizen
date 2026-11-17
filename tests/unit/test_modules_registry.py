@@ -31,6 +31,7 @@ from app.modules.registry import (
     load_registry,
     load_registry_from_settings,
 )
+from app.modules.sdk import SDK_VERSION
 
 # ---------------------------------------------------------------------------
 # Fixture helpers
@@ -463,5 +464,5 @@ class TestManifestSchema:
         from app.modules import SCHEMA_PATH
 
         data = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-        assert data.get("x-core-api") == "3.0"
+        assert data.get("x-core-api") == SDK_VERSION
         assert "id" in data["properties"]

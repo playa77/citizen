@@ -1,4 +1,5 @@
-# Semantic Version: 0.6.0 | 2026-11-16 — CR-03: STAGE_MAX_TOKENS (per-stage
+# Semantic Version: 0.7.0 | 2026-11-17 — WP-111: UPDATE_TRUST_FILE (update-channel trust anchors).
+# 0.6.0 | 2026-11-16 — CR-03: STAGE_MAX_TOKENS (per-stage
 # output caps, empty by default).
 # 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
 # v0.1.0 → v3.0.0 (aligned with DISCLAIMER_DE/EN.md 3.0.0).
@@ -165,6 +166,11 @@ class Settings(BaseSettings):
     # dev/self enable every installed module of tier experimental|verified,
     # provider only verified; community is never enabled implicitly.
     ENABLED_MODULES: list[str] | None = None
+    # --- Module platform (P11) ----------------------------------------------
+    # WP-111: trust anchors (public keys) of the signed module update channel.
+    # Relative paths resolve against the repository root. The shipped file is
+    # empty: no feed verifies until an operator adds a published key.
+    UPDATE_TRUST_FILE: str = "config/update-trust.yaml"
 
     @property
     def DISCLAIMER_SALT(self) -> str:

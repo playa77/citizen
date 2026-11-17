@@ -1,0 +1,21 @@
+# Trust anchors of the signed module update channel (WP-111; app/updates).
+#
+# Public Ed25519 keys whose signatures this deployment accepts, and the module
+# ids each key may sign feeds for ("*" = every module). Shipped EMPTY on
+# purpose: until the maintainer publishes a release key and the operator adds
+# it here, no update feed verifies and nothing is applied.
+#
+# Entry shape (key id = first 16 hex of SHA-256 over the raw public key; the
+# maintainer CLI prints both:  python -m scripts.module_update keygen …):
+#
+#   - id: 0123456789abcdef
+#     public_key: <base64 of the 32-byte raw public key>
+#     modules: ["*"]
+#     note: "Citizen maintainer release key 2027"
+#
+# Location override: setting UPDATE_TRUST_FILE.
+
+# Version: 1.0.0 | 2026-11-17
+
+format: citizen-update-trust-v1.0
+keys: []

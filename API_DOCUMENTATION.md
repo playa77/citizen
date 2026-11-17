@@ -10,8 +10,12 @@ against this document alone.
   the person's own legal matters only (D-035, DISCLAIMER 3.0.0).
 - **Architecture:** single FastAPI service, PostgreSQL 16 + pgvector,
   OpenRouter LLM/embedding backends.
-- **Interface:** this REST-ish JSON API is the **only** external interface.
-  There is no web UI, no GUI client in this repository.
+- **Interface:** this REST-ish JSON API is the **only** external network
+  interface. There is no web UI, no GUI client in this repository. Since
+  core 3.3.0 an optional, read-only MCP server (`python -m app.mcp`, stdio,
+  roadmap WP-116, D-066) exposes a subset of the reference data — module
+  catalog, deadline catalog, corpus status, statute text, citation check —
+  to local MCP clients; it opens no port and is not part of this contract.
 
 ---
 
@@ -36,8 +40,8 @@ Machine-readable OpenAPI description is served by the app itself:
 - **API version:** path-based (`/api/v1/...`). Breaking changes introduce a new
   prefix (`/api/v2`); v1 remains served during any transition.
 - **Application version:** `GET /api/v1/meta/version` →
-  `{"api_version": "3.2.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
-  "modules": {"sozialrecht": "1.3.0", …}}`. The package
+  `{"api_version": "3.3.0", "disclaimer_version": "v3.0.0", "disclosure_version": "1.0",
+  "modules": {"sozialrecht": "1.4.0", …}}`. The package
   version is also embedded in the OpenAPI title and `/health`.
 - **Module versions:** each legal-area module is versioned on its own (semver
   in its manifest); `GET /api/v1/modules` and the `modules` key of
@@ -117,7 +121,7 @@ The disclaimer middleware uses a bare object (not wrapped in `"detail"`):
 | 404 | cases, conversations, corpus jobs, goldset, intake, eval reports | unknown resource id |
 | 400 | `PUT /cases/{case_id}/dossier/chronology` | `invalid_chronology_update` — unknown entry id, bad status/date, unknown or invalid fact |
 | 404 | `GET /cases/{case_id}/dossier` | `dossier_not_built` — the case exists but no dossier was built yet |
-| 404 | `/modules/{module_id}*` | `MODULE_UNKNOWN` — no installed module has this id; `goldset_not_declared` — the module ships no goldset |
+| 404 | `/modules/{module_id}*` | `MODULE_UNKNOWN` — no installed module has this id; `goldset_not_declared` — the module ships no goldset; `erratum_unknown` — the module declares no erratum with this id |
 | 409 | `POST /analyze` | `corpus_not_ready` — a selected legal area has no corpus chunks |
 | 409 | intake `message` | interview turn limit reached |
 | 415 | `POST /ingest` | unsupported MIME type (allowed: PDF, JPG, PNG, TXT, HTML, EML) |
@@ -651,8 +655,9 @@ mode (`dev`/`self`: `experimental` + `verified`; `provider`: `verified` only).
 ```json
 {"default_module": "sozialrecht",
  "modules": [
-   {"id": "sozialrecht", "version": "1.2.0", "tier": "verified",
+   {"id": "sozialrecht", "version": "1.4.0", "tier": "verified",
     "enabled": true, "is_default": true,
+    "origin": "in_tree", "declared_tier": "verified",
     "title": {"de": "Sozialrecht", "en": "Social-benefits law"},
     "area_keys": ["sozialrecht"],
     "corpus": {"chunk_count": 1234, "source_types": ["sgb2", "sgbx", "…"],
@@ -670,6 +675,11 @@ mode (`dev`/`self`: `experimental` + `verified`; `provider`: `verified` only).
   module expects no source type, e.g. the catch-all).
 - `installed_at`: when the running manifest was first synced into the
   database; `null` when no synced row describes the running manifest.
+- `origin` (core 3.3.0, WP-112): `in_tree` — shipped and reviewed with the
+  core; `entry_point` — an installed package registered in the
+  `citizen.modules` entry-point group. Out-of-tree modules are served at
+  `tier: "community"` whatever their manifest says (`declared_tier` keeps the
+  manifest's value) and are enabled only when `ENABLED_MODULES` lists them.
 
 #### `GET /api/v1/modules/{module_id}`
 
@@ -697,7 +707,19 @@ The summary fields above plus the public manifest parts:
                                       "required": true}],
                        "questions": [{"id": "frist_bestaetigen", "text_de": "…",
                                       "topic": "fristen"}]},
- "compliance": null}
+ "compliance": null,
+ "errata": [{"id": "E-2026-001", "published": "2026-11-17",
+             "affected_versions": ">=1.0.0,<1.3.0", "fixed_in": "1.3.0",
+             "core_versions": ">=3.0.0,<3.2.0", "severity": "critical",
+             "component": "deadline", "summary_de": "…", "summary_en": "…",
+             "action_de": "…", "action_en": "…", "references": ["DECISIONS.md D-065"]}],
+ "updates": [{"serial": 1, "issued_at": "2027-01-15T09:00:00+00:00",
+              "applied_at": "2027-01-16T07:12:03+00:00", "key_id": "0123456789abcdef",
+              "module_version": "1.4.0",
+              "parameters": [{"key": "…", "valid_from": "2027-01-01",
+                              "erratum": null, "action": "created"}],
+              "corpus_notices": [{"source_type": "sgb2", "summary_de": "…"}]}],
+ "parameter_set": "1.4.0+2027-01-01.u1"}
 ```
 
 File paths and code references of the manifest are not served (only the
@@ -705,7 +727,24 @@ File paths and code references of the manifest are not served (only the
 content — every checklist item and question, each with an optional
 `when: {"any_keyword": [...]}` selection rule (§8.11) — or `null` for a module
 without dossier data. `compliance` is `null` unless the manifest
-declares one (`special_regimes`, `referral`). `404` `MODULE_UNKNOWN` for an
+declares one (`special_regimes`, `referral`).
+
+Added in core 3.3.0 (P11):
+
+- `errata` (WP-110): the module's published corrections, oldest first —
+  `[]` when it declares none. `affected_versions` is a module version range
+  (comma-separated comparators); a stored case is affected when the module
+  version recorded for it (`case_run_area.module_version`) lies in the range.
+  `core_versions` (optional) names the core versions when the defect sat in
+  the core. List the affected cases with the route below.
+- `updates` (WP-111): signed update feeds applied to this deployment, newest
+  first (`[]` none; `null` when the database is unreachable). Each lists the
+  parameter identities it wrote (`action`: `created`, `updated`,
+  `unchanged`) and its corpus change notices.
+- `parameter_set`: the module's current parameter-set id, as in provenance
+  `modules[].parameter_set` — `<version>+<newest valid_from>`, with
+  `.u<serial>` appended once update feeds were applied; `null` for a module
+  without parameters. `404` `MODULE_UNKNOWN` for an
 id that is not installed; disabled modules are served (with
 `"enabled": false`).
 
@@ -715,7 +754,7 @@ The goldset declared by the module manifest, same `goldset`/`cases` shape as
 `GET /api/v1/goldset`, plus the module and its evaluation gate:
 
 ```json
-{"module_id": "sozialrecht", "module_version": "1.3.0",
+{"module_id": "sozialrecht", "module_version": "1.4.0",
  "gate": {"rule": "zero_regression", "baseline_report": "eval/results/….json"},
  "goldset": {"id": "…", "version": "0.2.0", "…": "…"},
  "cases": [{"id": "GS-001", "…": "…"}]}
@@ -724,6 +763,25 @@ The goldset declared by the module manifest, same `goldset`/`cases` shape as
 May serve a newer goldset version than `/api/v1/goldset` (which follows
 `GOLDSET_PATH`). `404` `MODULE_UNKNOWN`, `404` `goldset_not_declared`, `500`
 unreadable goldset file.
+
+#### `GET /api/v1/modules/{module_id}/errata/{erratum_id}/cases`
+
+Stored cases that ran with a module version the erratum affects (core 3.3.0,
+WP-110), oldest first, one entry per (case, area key):
+
+```json
+{"module_id": "sozialrecht", "module_version": "1.4.0",
+ "erratum": {"id": "E-2026-001", "affected_versions": ">=1.0.0,<1.3.0", "…": "…"},
+ "count": 1,
+ "cases": [{"case_id": "…", "legal_area": "sozialrecht", "module_version": "1.2.0",
+            "created_at": "2026-11-10T08:00:00+00:00", "title": "…"}]}
+```
+
+Matching is semver on the recorded `module_version`; cases stored before
+core 3.0.0 recorded no module version and never match. Whether a matched
+case is actually affected depends on the erratum's `summary_de`/`action_de`
+(e.g. only letters posted before a date). `404` `MODULE_UNKNOWN`, `404`
+`erratum_unknown`.
 
 ### 8.11 Appointment dossier (Mandatsvorbereitung, roadmap P10)
 
@@ -881,6 +939,43 @@ The last built revision, same shape and headers as the POST, status `200`;
 the PDF is rendered from the stored JSON. `404` unknown case; `404`
 `dossier_not_built` (structured `detail`, with `action`) before the first
 POST. Deleting the case deletes its dossiers.
+
+### 8.12 Citations (roadmap P11, WP-114)
+
+#### `POST /api/v1/citations/verify`
+
+Finds German legal citations in a text and checks them against the ingested
+corpus. Deterministic (regular expressions + database lookups), read-only,
+no LLM, nothing stored — the response is not AI-generated and carries no
+disclosure. Body `{"text": "<up to 200000 chars>", "verify": true}`:
+
+```json
+{"count": 2, "corpus_checked": true,
+ "summary": {"source_not_ingested": 1, "verified": 1},
+ "citations": [
+   {"kind": "statute", "text": "§ 44 Abs. 1 Satz 2 SGB X", "span": [5, 29],
+    "law": "SGB X", "source_type": "sgbx", "paragraphs": ["44"],
+    "absatz": "1", "satz": "2", "nummer": null, "ff": false, "article": false,
+    "identifier": null,
+    "verification": {"status": "verified",
+                     "paragraphs": [{"paragraph": "44", "status": "verified"}]}},
+   {"kind": "ecli", "text": "ECLI:DE:BSG:2019:…", "span": [40, 72], "law": null,
+    "…": "…", "identifier": "ECLI:DE:BSG:2019:…",
+    "verification": {"status": "not_ingested"}}]}
+```
+
+- `kind`: `statute` (`§`, `§§`, `Art.`), `ecli`, `docket` (BSG docket
+  numbers such as `B 4 AS 19/18 R`). `span` is `[start, end)` in characters.
+- `paragraphs`: cited §/Art. numbers; ranges as `"11–11b"`. `absatz`/`satz`/
+  `nummer` refer to the first cited §.
+- `verification.status` — statutes: `verified`, `absatz_not_found`,
+  `not_found` (law ingested, § absent: check the citation),
+  `source_not_ingested`, `not_in_catalog` (law recognised, corpus carries no
+  source; articles of the GG etc.), `no_law` (no recognised law after the §);
+  decisions: `decision_found` (with `title`), `decision_not_found`,
+  `not_ingested` (no case law ingested).
+- `verify: false` or an unreachable database → `verification: null`,
+  `corpus_checked: false`. `422` empty or oversized `text`.
 
 ---
 

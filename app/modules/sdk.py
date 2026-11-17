@@ -27,6 +27,11 @@ module never touches the database or the core's session handling.
 
 Changes
 -------
+0.4.0 (WP-110/WP-112, core 3.3.0): ``SDK_VERSION`` "3.1" — the manifest
+schema gains the optional ``errata`` key (a 3.0 core rejects it, so a module
+using it declares ``core_api: ">=3.1,<4.0"``) and out-of-tree modules load
+through the ``citizen.modules`` entry-point group. No Python surface change;
+every ``>=3.0`` manifest stays compatible.
 0.3.0 (prompt set 3.0.0, CR-06): optional ``RegimeProvider.reference_period``
 — the module reads the reference date from the document, so the regime no
 longer follows the server's clock (F-06). Additive; ``SDK_VERSION`` stays "3.0".
@@ -36,7 +41,7 @@ stays "3.0" (core 3.0.0 shipped at the P9 exit gate, WP-97).
 0.1.0 (WP-91): ``SDK_VERSION`` only.
 """
 
-# Semantic Version: 0.3.0
+# Semantic Version: 0.4.0
 
 from __future__ import annotations
 
@@ -45,7 +50,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
 
-SDK_VERSION = "3.0"
+SDK_VERSION = "3.1"
 """Core module-contract version; must stay compatible with every manifest's ``core_api``."""
 
 

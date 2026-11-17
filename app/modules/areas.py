@@ -36,7 +36,8 @@ Ordering rules (behaviour-preserving, pinned by tests):
   score — the v2.0.0 tie-break).
 """
 
-# Semantic Version: 0.2.0 | 2026-11-16 — WP-94: area-key set and order read from
+# Semantic Version: 0.3.0 | 2026-11-17 — WP-112: tables include out-of-tree modules.
+# 0.2.0 | 2026-11-16 — WP-94: area-key set and order read from
 # module/procedural intake data (`order`); LEGAL_AREA_ALLOWED removed.
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ from app.modules.registry import (
     ModuleManifest,
     ModuleManifestError,
     default_modules_root,
-    discover_modules,
+    discover_installed_modules,
 )
 
 #: Owner id used for keys served by the core procedural library.
@@ -186,7 +187,14 @@ def _area_entry(section: dict[str, Any], key: str, owner_id: str, name: str) -> 
 
 def build_area_tables(modules_dir: Path, default_module: str) -> AreaTables:
     """Assemble the area tables from the modules installed under *modules_dir*."""
-    modules = discover_modules(modules_dir)
+    # WP-112: out-of-tree modules contribute area keys too (installed ≠ enabled).
+    modules, _rejected = discover_installed_modules(modules_dir)
+    return build_area_tables_from(modules, default_module)
+
+
+def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: str) -> AreaTables:
+    """Assemble the area tables from an explicit module set (WP-115 validator:
+    the installed set plus a candidate module)."""
     procedural_intake = _procedural_section("intake")
     keys, declared_by = _declared_area_keys(modules, procedural_intake)
     procedural_keys = set((procedural_intake.get("areas") or {}).keys())
@@ -312,7 +320,7 @@ def build_area_tables(modules_dir: Path, default_module: str) -> AreaTables:
 
 @lru_cache(maxsize=1)
 def area_tables() -> AreaTables:
-    """Area tables for the configured ``DEFAULT_MODULE`` and the in-tree modules."""
+    """Area tables for the configured ``DEFAULT_MODULE`` and the installed modules."""
     from app.core.config import settings
 
     return build_area_tables(default_modules_root(), settings.DEFAULT_MODULE)
@@ -325,4 +333,5 @@ __all__ = [
     "PresetFallback",
     "area_tables",
     "build_area_tables",
+    "build_area_tables_from",
 ]

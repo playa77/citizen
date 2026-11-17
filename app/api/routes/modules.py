@@ -6,6 +6,10 @@ Provides:
                                                catalog, document types
     GET /api/v1/modules/{module_id}/goldset  — the module's declared goldset
                                                (manifest + case summaries)
+    GET /api/v1/modules/{module_id}/errata/{erratum_id}/cases
+                                             — stored cases whose recorded
+                                               module version an erratum
+                                               affects (WP-110)
 
 Read-only views over the running module registry. Every field is module
 data or registry state; the routes contain no area-specific logic. Only
@@ -18,7 +22,10 @@ unreachable, ``corpus`` and ``installed_at`` are ``null`` — the catalog
 itself comes from the filesystem and stays available.
 """
 
-# Semantic Version: 1.1.0 | 2026-11-16 — P10: dossier_checklist served from the
+# Semantic Version: 1.2.0 | 2026-11-17 — WP-110: `errata` on the module detail,
+# affected-cases route; WP-111: `updates`, `parameter_set`; WP-112: `origin`/
+# `declared_tier` in the summary; WP-116: catalog helpers moved to app/modules/catalog.py.
+# 1.1.0 | 2026-11-16 — P10: dossier_checklist served from the
 # module's dossier.yaml.
 # 1.0.0 | 2026-11-16 — WP-95: initial version.
 
@@ -34,17 +41,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes.goldset import goldset_listing, load_goldset_file
-from app.db.models import LegalModule
+from app.db.models import CaseRun, CaseRunArea, LegalModule, ModuleUpdate
 from app.db.session import async_session_factory
 from app.dossier.module_content import public_dossier_checklist
-from app.fristen.specs import DeadlineSpec, Duration
 from app.modules.areas import area_tables
+from app.modules.catalog import document_types, module_deadlines, public_compliance, public_scope
 from app.modules.content import module_path
+from app.modules.errata import Erratum, module_errata
 from app.modules.registry import ModuleManifest
 from app.modules.runtime import (
     MODULE_UNKNOWN,
-    deadline_specs,
-    document_templates,
+    module_provenance,
     module_registry,
 )
 from app.modules.sync import manifest_sha256
@@ -114,6 +121,42 @@ async def _db_state() -> tuple[dict[str, int] | None, dict[str, LegalModule] | N
         return None, None
 
 
+async def _applied_updates(module_id: str) -> list[dict[str, Any]] | None:
+    """Applied signed update feeds of a module (WP-111), newest first; ``None``
+    when the database is unreachable."""
+    try:
+        async with async_session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(ModuleUpdate)
+                        .where(ModuleUpdate.module_id == module_id)
+                        .order_by(ModuleUpdate.serial.desc())
+                    )
+                )
+                .scalars()
+                .all()
+            )
+    except (SQLAlchemyError, OSError) as exc:
+        logger.warning("module catalog: update ledger unavailable (%s); updates null", exc)
+        return None
+    return [
+        {
+            "serial": row.serial,
+            "issued_at": row.issued_at.isoformat(),
+            "applied_at": row.applied_at.isoformat(),
+            "key_id": row.key_id,
+            "module_version": row.module_version,
+            "parameters": [
+                {k: p.get(k) for k in ("key", "valid_from", "erratum", "action")}
+                for p in row.parameters
+            ],
+            "corpus_notices": list(row.corpus_notices),
+        }
+        for row in rows
+    ]
+
+
 def _installed_at(manifest: ModuleManifest, rows: dict[str, LegalModule] | None) -> str | None:
     """``legal_module.installed_at`` if the row describes the running manifest.
 
@@ -139,6 +182,10 @@ def _summary(
         "tier": manifest.tier,
         "enabled": registry.is_enabled(manifest.id),
         "is_default": manifest.id == registry.default_module,
+        # WP-112: "in_tree" (reviewed, ships with the core) or "entry_point"
+        # (installed package, tier clamped to community).
+        "origin": manifest.origin,
+        "declared_tier": manifest.declared_tier or manifest.tier,
         "title": dict(manifest.title),
         "area_keys": _area_keys(manifest.id),
         "corpus": (
@@ -147,55 +194,6 @@ def _summary(
             else None
         ),
         "installed_at": _installed_at(manifest, rows),
-    }
-
-
-def _duration(duration: Duration) -> dict[str, int]:
-    return {"days": duration.days, "months": duration.months, "years": duration.years}
-
-
-def _deadline(spec: DeadlineSpec) -> dict[str, Any]:
-    return {
-        "id": spec.id,
-        "label_de": spec.label_de,
-        "trigger": spec.trigger,
-        "duration": _duration(spec.duration),
-        "basis": spec.basis,
-        "fristbeginn_basis": spec.fristbeginn_basis,
-        "bekanntgabe_fiction": spec.bekanntgabe_fiction,
-        "rollover": spec.rollover,
-        "missing_rechtsbehelfsbelehrung": (
-            {
-                "duration": _duration(spec.missing_rechtsbehelfsbelehrung.duration),
-                "basis": spec.missing_rechtsbehelfsbelehrung.basis,
-            }
-            if spec.missing_rechtsbehelfsbelehrung is not None
-            else None
-        ),
-        "severity": spec.severity,
-        "applies_when": dict(spec.applies_when),
-    }
-
-
-def _document_types(manifest: ModuleManifest) -> list[dict[str, Any]]:
-    """Declared action-draft types with their template titles (if any)."""
-    templates = (document_templates(manifest.id) or {}).get("templates") or {}
-    result: list[dict[str, Any]] = []
-    for doc_id in manifest.raw.get("documents") or []:
-        template = templates.get(doc_id) or {}
-        result.append({"id": doc_id, "title": template.get("title")})
-    return result
-
-
-def _public_compliance(manifest: ModuleManifest) -> dict[str, Any] | None:
-    """Public compliance facts (referral duty, special regimes); no file paths."""
-    compliance = manifest.raw.get("compliance")
-    if not isinstance(compliance, dict):
-        return None
-    referral = compliance.get("referral")
-    return {
-        "special_regimes": list(compliance.get("special_regimes") or []),
-        "referral": dict(referral) if isinstance(referral, dict) else None,
     }
 
 
@@ -224,17 +222,12 @@ async def get_module(module_id: str) -> dict[str, Any]:
     manifest = _manifest_or_404(module_id)
     by_source, rows = await _db_state()
     raw = manifest.raw
-    scope = raw.get("scope") or {}
     parameters = raw.get("parameters")
     goldset = raw.get("goldset")
     return {
         **_summary(manifest, by_source, rows),
         "core_api": manifest.core_api,
-        "scope": {
-            "summary_de": scope.get("summary_de"),
-            "own_matter_only": scope.get("own_matter_only"),
-            "out_of_scope": list(scope.get("out_of_scope") or []),
-        },
+        "scope": public_scope(manifest),
         "legacy_aliases": list(manifest.legacy_aliases),
         "capabilities": {
             "deadlines": isinstance(raw.get("fristen"), str),
@@ -245,12 +238,18 @@ async def get_module(module_id: str) -> dict[str, Any]:
             "dossier": isinstance(raw.get("dossier"), str),
         },
         "parameter_domain": (str(parameters["domain"]) if isinstance(parameters, dict) else None),
-        "deadlines": [_deadline(spec) for spec in deadline_specs(manifest.id)],
-        "document_types": _document_types(manifest),
+        "deadlines": module_deadlines(manifest.id),
+        "document_types": document_types(manifest),
         # P10 (WP-102): the module's dossier.yaml checklist + question list;
         # null for a module that declares no `dossier` file.
         "dossier_checklist": public_dossier_checklist(manifest.id),
-        "compliance": _public_compliance(manifest),
+        "compliance": public_compliance(manifest),
+        # WP-110: published corrections; affected stored cases via
+        # GET /modules/{id}/errata/{erratum_id}/cases.
+        "errata": [erratum.as_dict() for erratum in module_errata(manifest)],
+        # WP-111: applied signed update feeds (parameter sets, corpus notices).
+        "updates": await _applied_updates(manifest.id),
+        "parameter_set": module_provenance(manifest.id)[2],
     }
 
 
@@ -293,4 +292,64 @@ async def get_module_goldset(module_id: str) -> dict[str, Any]:
         "module_version": manifest.version,
         "gate": dict(gate) if isinstance(gate, dict) else None,
         **goldset_listing(doc),
+    }
+
+
+def _erratum_or_404(manifest: ModuleManifest, erratum_id: str) -> Erratum:
+    for erratum in module_errata(manifest):
+        if erratum.id == erratum_id:
+            return erratum
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={
+            "error": "erratum_unknown",
+            "message": f"Modul '{manifest.id}' hat kein Erratum '{erratum_id}'.",
+            "module_id": manifest.id,
+            "erratum_id": erratum_id,
+        },
+    )
+
+
+@router.get("/modules/{module_id}/errata/{erratum_id}/cases")
+async def get_erratum_cases(module_id: str, erratum_id: str) -> dict[str, Any]:
+    """Stored cases that ran with a module version the erratum affects.
+
+    Matches ``case_run_area.module_id`` + ``module_version`` (D-057) against
+    the erratum's ``affected_versions`` range; version comparison is semver,
+    done here rather than in SQL. One entry per (case, area key).
+    """
+    manifest = _manifest_or_404(module_id)
+    erratum = _erratum_or_404(manifest, erratum_id)
+    async with async_session_factory() as session:
+        rows = (
+            await session.execute(
+                select(
+                    CaseRunArea.case_run_id,
+                    CaseRunArea.legal_area,
+                    CaseRunArea.module_version,
+                    CaseRun.created_at,
+                    CaseRun.title,
+                )
+                .join(CaseRun, CaseRun.id == CaseRunArea.case_run_id)
+                .where(CaseRunArea.module_id == manifest.id)
+                .order_by(CaseRun.created_at, CaseRunArea.case_run_id)
+            )
+        ).all()
+    cases = [
+        {
+            "case_id": str(row.case_run_id),
+            "legal_area": row.legal_area,
+            "module_version": row.module_version,
+            "created_at": row.created_at.isoformat(),
+            "title": row.title,
+        }
+        for row in rows
+        if erratum.affects(row.module_version)
+    ]
+    return {
+        "module_id": manifest.id,
+        "module_version": manifest.version,
+        "erratum": erratum.as_dict(),
+        "count": len(cases),
+        "cases": cases,
     }

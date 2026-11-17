@@ -1,4 +1,6 @@
-# Semantic Version: 0.9.0 | 2026-11-16 — P10: dossier router; startup validates
+# Semantic Version: 0.10.0 | 2026-11-17 — P11: out-of-tree module log (WP-112), applied
+# update feeds into provenance (WP-111), citations router (WP-114).
+# 0.9.0 | 2026-11-16 — P10: dossier router; startup validates
 # the enabled modules' dossier content (dossier.yaml).
 # 0.8.0 | 2026-11-16 — WP-96: startup warms the provenance
 # module cache (parameter-set ids of the enabled modules).
@@ -24,6 +26,7 @@ from fastapi.responses import Response
 from app.api.routes import (
     analyze,
     cases,
+    citations,
     conversations,
     corpus,
     documents,
@@ -78,6 +81,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             sorted(_registry.enabled),
             _registry.default_module,
         )
+        # WP-112: out-of-tree modules (tier community, opt-in only).
+        _external = sorted(mid for mid, m in _registry.modules.items() if m.origin == "entry_point")
+        if _external or _registry.rejected:
+            logger.warning(
+                "Out-of-tree modules: installed=%s enabled=%s rejected=%s",
+                _external,
+                sorted(set(_external) & _registry.enabled),
+                _registry.rejected,
+            )
         # WP-93: module content (area tables, typed code extension points).
         from app.modules.areas import area_tables
         from app.modules.runtime import (
@@ -170,6 +182,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         logger.error("legal_module sync failed: %s. Continuing anyway.", exc)
 
+    # WP-111: applied signed update feeds change the provenance parameter_set
+    # ids (`…+<valid_from>.u<serial>`). Without the ledger the ids fall back
+    # to the module files — logged loudly, since provenance would then
+    # under-state which parameters ran.
+    try:
+        from app.modules.runtime import set_applied_updates
+        from app.updates.ledger import load_applied_updates
+
+        async with async_session_factory() as session:
+            _applied = await load_applied_updates(session)
+        set_applied_updates({m: (a.serial, a.latest_valid_from) for m, a in _applied.items()})
+        if _applied:
+            logger.info(
+                "Applied update feeds: %s",
+                ", ".join(f"{m} serial {a.serial}" for m, a in sorted(_applied.items())),
+            )
+    except Exception as exc:
+        logger.error("module_update ledger unreadable: %s. parameter_set ids ignore feeds.", exc)
+
     # Preload the legal parameter cache for synchronous param() lookups.
     from app.services.parameter_store import reload_parameter_cache
 
@@ -248,6 +279,7 @@ app.include_router(modules.router, prefix="/api/v1", tags=["modules"])
 app.include_router(ocr.router, prefix="/api/v1", tags=["ocr"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
 app.include_router(dossier.router, prefix="/api/v1", tags=["dossier"])
+app.include_router(citations.router, prefix="/api/v1", tags=["citations"])
 app.include_router(goldset.router, prefix="/api/v1", tags=["goldset"])
 app.include_router(eval_reports.router, prefix="/api/v1", tags=["eval_reports"])
 

@@ -7,7 +7,9 @@
 # rules engine, the 2026-07-01 regime provider, the action-draft templates
 # and the goldsets. Behaviour is unchanged for requests that name no module.
 
-# Semantic Version: 1.3.0 | 2026-11-16 — WP-102/WP-104: dossier.yaml (document
+# Semantic Version: 1.4.0 | 2026-11-17 — P11: errata.yaml (E-2026-001, WP-110), corpus.yaml
+# `case_law` (BSG via RII, WP-113); core_api >=3.1 (errata key).
+# 1.3.0 | 2026-11-16 — WP-102/WP-104: dossier.yaml (document
 # checklist, appointment questions, chronology cues, dossier goldset v1.0.0).
 # 1.2.0 | 2026-11-16 — corpus.yaml `default_ingest_sources`
 # (sgb2, sgbx): the ingest default moved out of the core config (D-063).
@@ -20,8 +22,8 @@
 # 1.0.0
 
 id: sozialrecht
-version: 1.3.0
-core_api: ">=3.0,<4.0"
+version: 1.4.0
+core_api: ">=3.1,<4.0"
 title:
   de: "Sozialrecht"
   en: "Social-benefits law"
@@ -48,6 +50,8 @@ documents: [widerspruch, widerspruch_jahresfrist, ueberpruefungsantrag_44, akten
 document_templates: documents/templates.yaml
 # WP-102: appointment dossier content (ARCHITECTURE.md § 3.7).
 dossier: dossier.yaml
+# WP-110: published corrections; affected cases by recorded module version.
+errata: errata.yaml
 goldset:
   path: goldset/goldset-v0.2.0.yaml
   # P9 exit gate (roadmap WP-97): zero regression against the WP-90 baseline

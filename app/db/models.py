@@ -16,7 +16,9 @@ Plus (migration 013, WP-94):
                    a case ran with; the area-key CHECK is gone (D-057)
 """
 
-# Semantic Version: 0.6.0 | 2026-11-16 — WP-100: CaseDossier (case_dossier
+# Semantic Version: 0.7.0 | 2026-11-17 — P11: ModuleUpdate (WP-111), CorpusSourceWatch
+# (WP-113), migration 015.
+# 0.6.0 | 2026-11-16 — WP-100: CaseDossier (case_dossier
 # table, migration 014, D-064).
 # 0.5.0 | 2026-11-16 — WP-94: LegalModule; CaseRunArea
 # module_id (FK) + module_version, area CHECK dropped; LEGAL_AREA_ALLOWED /
@@ -844,3 +846,63 @@ class CaseDossier(Base):
         CheckConstraint("revision >= 1", name="ck_case_dossier_revision_positive"),
         Index("idx_case_dossier_case", "case_run_id"),
     )
+
+
+# ---------------------------------------------------------------------------
+# 16. module_update (WP-111) and corpus_source_watch (WP-113)
+# ---------------------------------------------------------------------------
+
+
+class ModuleUpdate(Base):
+    """One applied signed update feed (roadmap P11, migration 015).
+
+    ``(module_id, serial)`` is unique and the apply path only accepts a
+    serial above the module's highest applied one (anti-rollback/replay).
+    ``parameters`` lists the ``legal_parameter`` identities the feed wrote
+    (``key``, ``valid_from``, ``action``); the file seeder leaves them alone.
+    No FK to ``legal_module``: the CLI may apply before the first sync.
+    """
+
+    __tablename__ = "module_update"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    module_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    serial: Mapped[int] = mapped_column(Integer, nullable=False)
+    feed_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    key_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    applied_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    module_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    parameters: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    corpus_notices: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("module_id", "serial", name="uq_module_update_module_serial"),
+        CheckConstraint("serial >= 1", name="ck_module_update_serial_positive"),
+        Index("idx_module_update_module", "module_id"),
+    )
+
+
+class CorpusSourceWatch(Base):
+    """Last observed upstream state of one corpus source (WP-113).
+
+    Written by the daily change detection (``python -m scripts.corpus_watch``):
+    presence in ``gii-toc.xml`` and the HTTP validators of the source's XML
+    archive. ``changed_at`` is the last time a validator differed.
+    """
+
+    __tablename__ = "corpus_source_watch"
+
+    source_type: Mapped[str] = mapped_column(String(50), primary_key=True)
+    toc_link: Mapped[str | None] = mapped_column(Text, nullable=True)
+    etag: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_modified: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_length: Mapped[int | None] = mapped_column(sa.BigInteger, nullable=True)
+    in_toc: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=sa.text("true"))
+    checked_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    changed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)

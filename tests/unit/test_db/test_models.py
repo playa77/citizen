@@ -6,7 +6,8 @@ Tests that do NOT require a live database:
 - Alembic env.py imports models correctly
 """
 
-# Semantic Version: 0.3.0 | 2026-11-16 — WP-100: case_dossier table.
+# Semantic Version: 0.4.0 | 2026-11-17 — P11: module_update, corpus_source_watch.
+# 0.3.0 | 2026-11-16 — WP-100: case_dossier table.
 # 0.2.0 | 2026-11-16 — WP-94: legal_module table, case_run_area
 # module binding, no area CHECK.
 
@@ -41,7 +42,7 @@ def _check_constraints(table: type[models.Base]) -> list[CheckConstraint]:
 
 def test_table_count() -> None:
     tables = models.Base.metadata.tables
-    assert len(tables) == 16, f"Expected 16 tables, got {len(tables)}: {list(tables)}"
+    assert len(tables) == 18, f"Expected 18 tables, got {len(tables)}: {list(tables)}"
 
 
 def test_expected_table_names() -> None:
@@ -62,6 +63,8 @@ def test_expected_table_names() -> None:
         "case_run_area",
         "legal_module",
         "case_dossier",
+        "module_update",
+        "corpus_source_watch",
     }
     actual = set(models.Base.metadata.tables.keys())
     assert actual == expected, f"Missing: {expected - actual}; Extra: {actual - expected}"

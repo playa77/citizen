@@ -11,7 +11,7 @@
 - id: widerspruch_sgg_84
   label_de: "Widerspruchsfrist"
   trigger: bekanntgabe
-  bekanntgabe_fiction: sgbx_37_2        # § 37 Abs. 2 SGB X: 4 Tage nach Aufgabe zur Post
+  bekanntgabe_fiction: sgbx_37_2        # § 37 Abs. 2 SGB X: 4 Tage nach Aufgabe zur Post (3 Tage vor 2025-01-01, D-065)
   duration: { months: 1 }               # § 84 Abs. 1 SGG, § 188 Abs. 2 BGB
   rollover: sgg_64_3                    # § 64 Abs. 3 SGG
   missing_rechtsbehelfsbelehrung:

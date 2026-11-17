@@ -6,10 +6,13 @@ Pure parsing and validation of the YAML files a manifest declares under
 the former ``scripts/seed_legal_parameters.py``.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-17 — WP-111: parse_parameter_entry() public (update feeds
+# carry the same row format, ISO date strings accepted).
+# 0.1.0
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -50,6 +53,25 @@ class ParameterRow:
     review_status: str
     regime: str | None
     notes: str | None
+
+
+def _iso_dates(entry: dict[str, Any]) -> dict[str, Any]:
+    """Accept ISO strings for the date fields (JSON update feeds, WP-111)."""
+    result = dict(entry)
+    for name in ("valid_from", "valid_to"):
+        value = result.get(name)
+        if isinstance(value, str):
+            # A malformed string stays as-is: _row reports the bad date.
+            with contextlib.suppress(ValueError):
+                result[name] = date.fromisoformat(value)
+    return result
+
+
+def parse_parameter_entry(entry: Any, domain: str, where: str) -> ParameterRow:
+    """Validate one parameter entry (YAML file or update feed) into a row."""
+    if isinstance(entry, dict):
+        entry = _iso_dates(entry)
+    return _row(entry, domain, where)
 
 
 def _row(entry: Any, domain: str, where: str) -> ParameterRow:
@@ -123,4 +145,4 @@ def load_parameter_rows(manifest: ModuleManifest) -> list[ParameterRow]:
     return rows
 
 
-__all__ = ["ParameterRow", "load_parameter_rows"]
+__all__ = ["ParameterRow", "load_parameter_rows", "parse_parameter_entry"]

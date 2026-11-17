@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://citizen.dev/schemas/module-manifest-3.0.json",
-  "x-core-api": "3.0",
+  "$id": "https://citizen.dev/schemas/module-manifest-3.1.json",
+  "x-core-api": "3.1",
   "title": "Citizen module manifest",
-  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.0. The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
+  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.1 (3.0 plus the optional `errata` key, WP-110; additive, so every 3.0 manifest stays valid). The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
   "type": "object",
   "required": ["id", "version", "core_api", "title", "tier"],
   "additionalProperties": false,
@@ -99,6 +99,11 @@
     "dossier": {
       "type": "string",
       "pattern": "\\.yaml$"
+    },
+    "errata": {
+      "type": "string",
+      "pattern": "\\.yaml$",
+      "description": "Errata file (citizen-module-errata-v1.0, app/modules/errata.schema.json; WP-110, core_api 3.1). Modules declaring it need core_api >=3.1."
     },
     "regimes": {
       "type": "object",

@@ -6,11 +6,12 @@ and third-party/stdlib imports are allowed; the rule bounds the coupling
 between reviewable community data packages and the compliance core.
 
 Run as part of the unit suite (``tests/unit/test_modules_registry.py``) so
-CI enforces it; a CLI wrapper is deliberately deferred to the WP-115
-authoring kit.
+CI enforces it; the WP-115 validator (``scripts/validate_module.py``) runs it
+per module, and the registry runs it on every enabled out-of-tree module.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-17 — lint_module_dir() for one module (WP-112/WP-115).
+# 0.1.0
 
 from __future__ import annotations
 
@@ -51,6 +52,16 @@ def _violations_in_file(path: Path) -> list[str]:
                 "only app.modules.sdk is allowed"
             )
     return messages
+
+
+def lint_module_dir(module_dir: Path) -> list[str]:
+    """Lint every ``*.py`` of one module directory (WP-112/WP-115)."""
+    if not module_dir.is_dir():
+        return []
+    violations: list[str] = []
+    for py_file in sorted(module_dir.rglob("*.py")):
+        violations.extend(_violations_in_file(py_file))
+    return violations
 
 
 def lint_module_imports(modules_dir: Path) -> list[str]:

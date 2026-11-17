@@ -28,3 +28,14 @@ norm_reference_source_types:
 - sgg
 - sgb3
 - sgb12
+# WP-113 (module 1.4.0): case law the corpus automation ingests into source
+# type `bsg` (`python -m scripts.corpus_watch --case-law bsg`, or a
+# /corpus/update selection containing `bsg`). Honoured because the module is
+# tier `verified`. `bsg` is already in this area's source_types, so ingested
+# decisions are retrieved — rerun the goldset gate after the first ingestion.
+case_law:
+- source_type: bsg
+  provider: rii
+  court: BSG
+  since: 2023-01-01
+  max_documents: 200
