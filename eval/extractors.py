@@ -1,4 +1,9 @@
-# Version: 1.1.0 | 2026-11-16 — prompt set 3.0.0 measurement fix (F-19, CR-13):
+# Version: 1.2.0 | 2026-11-17 — assessment scorer fix (D-069, docs/quality-plan.md
+# Q1): reads the "Vorläufige Einordnung:" verdict sentence first; free-text
+# fallback ignores negated mentions and picks the earliest match; drops the
+# "unzulässig" keyword; adds the labels rechtmaessig / einordnung_offen.
+# Assessment scores are not comparable with reports scored by 1.1.0.
+# 1.1.0 | 2026-11-16 — prompt set 3.0.0 measurement fix (F-19, CR-13):
 # norm regex accepts spelled-out Satz and §§ lists and no longer swallows
 # trailing prose; hierarchy norms are normalised to the same key.
 # 1.0.0 | 2026-07-12
@@ -168,67 +173,138 @@ def extract_citations_from_pipeline(output: PipelineOutput) -> set[str]:
     return result
 
 
-def extract_assessment_from_pipeline(output: PipelineOutput) -> str | None:
-    """Extract overall assessment from pipeline output via keyword matching.
+# --- Overall assessment (1.2.0) --------------------------------------------
+#
+# The P-04/P-08 prompt (prompt set 3.0.0+) makes ``ergebnis`` open with
+# exactly one sentence "Vorläufige Einordnung: <Begriff>." whose term comes
+# from the module's closed ``result_categories`` vocabulary plus the core's
+# "Einordnung offen". That sentence is the verdict; it is read first.
+# Free-text keyword search is only the fallback for outputs that lack it
+# (legacy prompt sets, malformed answers).
+#
+# 1.0.0/1.1.0 defects fixed here (docs/quality-plan.md, D-069):
+# - no negation handling: "nicht rechtswidrig" scored ``rechtswidrig``;
+# - label precedence over the whole text: any "rechtswidrig" in the
+#   reasoning beat a "kein Verwaltungsakt" verdict;
+# - "unzulässig" mapped to ``rechtswidrig`` although it describes an
+#   inadmissible remedy (e.g. a Widerspruch against a non-VA), not an
+#   unlawful notice;
+# - "keinen Verwaltungsakt" (accusative) was not recognised;
+# - a plain "rechtmäßig" verdict and "Einordnung offen" fell through to
+#   ``None`` and were indistinguishable from an extraction failure.
 
-    The ``ergebnis`` section of ``output.final_output`` is searched for
-    known assessment keywords. Longer/more-specific patterns are checked
-    first to avoid false positives (e.g. ``teilweise_rechtswidrig`` before
-    ``rechtswidrig``).
+# Label patterns, matched case-insensitively. Order matters only for the
+# verdict sentence (first label whose pattern matches the term wins); in the
+# free-text fallback the EARLIEST non-negated match wins, so overlapping
+# phrases ("teilweise rechtswidrig" ⊃ "rechtswidrig") resolve by position.
+_ASSESSMENT_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "kein_verwaltungsakt",
+        (
+            r"\bkein(?:e[nrs]?)?\s+verwaltungsakt",
+            r"\bkeine\s+verwaltungsaktqualität",
+            r"\bnicht\s+um\s+einen\s+verwaltungsakt",
+            r"\bkein\s+va\b",
+        ),
+    ),
+    ("einordnung_offen", (r"\beinordnung\s+offen\b",)),
+    (
+        "teilweise_rechtswidrig",
+        (r"\bteil(?:weise|s)\s+rechts(?:widrig|fehlerhaft)",),
+    ),
+    (
+        "ueberwiegend_rechtmaessig",
+        (
+            r"\büberwiegend\s+rechtmäßig",
+            r"\bim\s+wesentlichen\s+(?:korrekt|rechtmäßig)",
+            r"\bkeine\s+durchgreifenden\s+fehler",
+        ),
+    ),
+    ("rechtswidrig", (r"\bnicht\s+rechtmäßig", r"\brechtswidrig")),
+    ("rechtmaessig", (r"\brechtmäßig",)),
+)
+
+_VERDICT_RE = re.compile(r"vorläufige\s+einordnung\s*:\s*([^.\n]*)", re.IGNORECASE)
+# A negator among the last few words of the same clause cancels a match.
+# "nicht nur" intensifies rather than negates ("nicht nur teilweise").
+_NEGATORS = frozenset({"nicht", "kein", "keine", "keinen", "keiner", "keines", "weder", "nie"})
+_NEGATION_WINDOW_WORDS = 3
+_CLAUSE_BREAK_RE = re.compile(r"[.;:!?\n]|,\s")
+# Postposed negation in the same clause: "Rechtswidrigkeit ist nicht
+# erkennbar", "… liegt nicht vor". Applied to the text right after a match.
+_POSTPOSED_NEGATION_RE = re.compile(
+    r"\w*\s+(?:\w+\s+)?(?:nicht|kaum)\s+"
+    r"(?:erkennbar|ersichtlich|gegeben|festzustellen|feststellbar|vor)\b"
+)
+
+
+def _is_negated(text: str, start: int, end: int) -> bool:
+    """True if the match ``text[start:end]`` is negated within its clause."""
+    if _POSTPOSED_NEGATION_RE.match(text, end):
+        return True
+    clause_start = 0
+    for m in _CLAUSE_BREAK_RE.finditer(text, 0, start):
+        clause_start = m.end()
+    words = re.findall(r"\w+", text[clause_start:start])[-_NEGATION_WINDOW_WORDS:]
+    for i, word in enumerate(words):
+        if word in _NEGATORS:
+            following = words[i + 1] if i + 1 < len(words) else ""
+            if word == "nicht" and following == "nur":
+                continue
+            return True
+    return False
+
+
+def _first_label(text: str, *, by_position: bool) -> str | None:
+    """Return the label of the first non-negated pattern match in ``text``.
+
+    ``by_position`` False: label order decides (verdict sentence).
+    ``by_position`` True: the earliest match in the text decides (fallback).
+    """
+    best: tuple[int, str] | None = None
+    for label, patterns in _ASSESSMENT_PATTERNS:
+        for pattern in patterns:
+            for m in re.finditer(pattern, text):
+                if _is_negated(text, m.start(), m.end()):
+                    continue
+                if not by_position:
+                    return label
+                if best is None or m.start() < best[0]:
+                    best = (m.start(), label)
+                break  # earliest non-negated hit of this pattern is enough
+    return best[1] if best else None
+
+
+def extract_assessment_from_pipeline(output: PipelineOutput) -> str | None:
+    """Extract the overall assessment from the ``ergebnis`` section.
+
+    1. The verdict sentence "Vorläufige Einordnung: <Begriff>." (prompt set
+       3.0.0+) decides when present and its term is recognised.
+    2. Otherwise the whole section is searched; negated mentions are
+       ignored and the earliest remaining match wins.
 
     Returns
     -------
     str | None
-        One of ``teilweise_rechtswidrig``, ``ueberwiegend_rechtmaessig``,
-        ``rechtswidrig``, ``kein_verwaltungsakt``, or ``None`` if no match.
+        One of the goldset labels ``rechtswidrig``,
+        ``teilweise_rechtswidrig``, ``ueberwiegend_rechtmaessig``,
+        ``kein_verwaltungsakt``; or ``rechtmaessig`` / ``einordnung_offen``
+        (real answers that no goldset label equals, so they score as a
+        mismatch); or ``None`` if no assessment can be extracted.
     """
-    ASSESSMENT_KEYWORDS: list[tuple[str, list[str]]] = [
-        (
-            "teilweise_rechtswidrig",
-            [
-                "teilweise rechtswidrig",
-                "teils rechtswidrig",
-                "teilweise rechtsfehlerhaft",
-            ],
-        ),
-        (
-            "ueberwiegend_rechtmaessig",
-            [
-                "überwiegend rechtmäßig",
-                "im wesentlichen korrekt",
-                "weist jedoch keine durchgreifenden fehler",
-            ],
-        ),
-        (
-            "rechtswidrig",
-            [
-                "rechtswidrig",
-                "nicht rechtmäßig",
-                "unzulässig",
-            ],
-        ),
-        (
-            "kein_verwaltungsakt",
-            [
-                "kein verwaltungsakt",
-                "nicht verwaltungsakt",
-                "kein va",
-            ],
-        ),
-    ]
-
     text = output.final_output.get("ergebnis", "")
     if not text:
         return None
 
     text_lower = text.lower()
 
-    for assessment, keywords in ASSESSMENT_KEYWORDS:
-        for kw in keywords:
-            if kw in text_lower:
-                return assessment
+    verdict = _VERDICT_RE.search(text_lower)
+    if verdict:
+        label = _first_label(verdict.group(1), by_position=False)
+        if label is not None:
+            return label
 
-    return None
+    return _first_label(text_lower, by_position=True)
 
 
 def extract_calculation_values(output: PipelineOutput) -> dict[str, float]:

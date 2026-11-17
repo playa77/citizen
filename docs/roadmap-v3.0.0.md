@@ -1,6 +1,9 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.0.3 | 2026-11-17 — P12 backend status, WP-120 decided (D-067/D-068).
+<!-- Version: 3.1.0 (DRAFT, awaiting owner approval of D-069) | 2026-11-17 — phase
+     P14 (LLM analysis quality gate, WP-150…WP-155) inserted before P13; P13
+     frozen until the P14 gate passes; P13 sub-WP .8 uses the P14 gate.
+     3.0.3 | 2026-11-17 — P12 backend status, WP-120 decided (D-067/D-068).
      3.0.2 | 2026-11-17 — P11 status added (D-066).
      3.0.1 | 2026-11-16 — release numbers shifted one minor: core 3.1.0
      went to the WP-97 follow-up (D-063), so P10 ships as 3.2.0, P11 3.3.0, P12 3.4.0
@@ -12,7 +15,7 @@
 <!-- Canonical version source: pyproject.toml. Baseline: v2.0.0. -->
 <!-- Phase/WP numbering continues the decade scheme: P9→WP-90s, P10→WP-100s,
      P11→WP-110s, P12→WP-120s, P13→WP-130s (one WP per module, sub-WPs .1–.9),
-     Track G→WP-140s. Numbering is identity, not order — order is § 10. -->
+     Track G→WP-140s, P14→WP-150s (v3.1.0). Numbering is identity, not order — order is § 10. -->
 <!-- Decisions: D-034 … D-041 (appended to DECISIONS.md on 2026-11-16). -->
 <!-- Architecture: ARCHITECTURE.md · Module scope: docs/module-catalog.md -->
 
@@ -280,7 +283,32 @@ P12 exit (usability test, accessibility audit).
 
 ---
 
+## 7a. Phase P14 — LLM Analysis Quality Gate (v3.1.0, D-069) — runs before P13
+
+**Goal:** issue recall, citation precision and assessment match each
+**> 90 %** (mean over the held-out goldset, 3 runs) for `sozialrecht`. These
+are the project's most important values (owner, 2026-11-17); at prompt set
+3.0.1 they are 41.5 / 30.3 / 16.7 % and the current scorer and goldset cannot
+measure 90 % (recall ceiling 66.4 %, precision ceiling 83.3 %). Plan and
+rationale: `docs/quality-plan.md`.
+
+| WP | Content | Exit |
+|---|---|---|
+| WP-150 | Decision, freeze, strict gate for the three metrics, go/no-go item G15 | D-069 approved |
+| WP-151 | Instrument: assessment scorer fix (done, extractors 1.2.0), structured verdict field, module issue taxonomy, required/acceptable citations, per-case diagnostics, kept outputs, reviewer validation ≥ 95 % | scorer frozen at a version |
+| WP-152 | Goldset v1.0.0: ≥ 90 synthetic cases (60 development / 30 held-out), professional review | all cases signed off |
+| WP-153 | Diagnosis: fresh reference (3 runs), `retrieval_norm_recall`, miss classification | ranked miss table |
+| WP-154 | Improvement arms (checklists per notice type, deterministic detectors, retrieval, citation discipline, rule-derived verdict, model/multi-pass) | development set > 0.90 |
+| WP-155 | Gate on the held-out set, release, published report | all three > 0.90; P13 unfrozen |
+
+**Frozen while P14 runs:** P13 and new features. Allowed: security, privacy,
+defect and compliance fixes; Track G is the owner's call (OQ-Q3).
+
+---
+
 ## 7. Phase P13 — Area Modules M1–M10
+
+**Frozen until WP-155 passes (D-069).**
 
 **Goal:** ten further modules reach `verified`, each serving the same API.
 Profiles and statutory anchors: `docs/module-catalog.md`.
@@ -296,7 +324,7 @@ Each module is one WP with the same nine sub-WPs:
 | .5 | Action-draft templates (`[BITTE PRÜFEN]` slots) |
 | .6 | Intake schema + dossier checklist + lawyer-question list |
 | .7 | Plain-language copy (DE Bürgersprache, EN; Leichte Sprache for critical) + review |
-| .8 | Goldset ≥ 15 cases, published eval report, gate thresholds |
+| .8 | Goldset (development + held-out, P14 format), published eval report, P14 gate (> 0.90 recall, precision, assessment) |
 | .9 | Compliance: disclaimer addendum, deny phrases, special regimes; promotion D-entry; module 1.0.0 |
 
 | WP | Module | Notes |
@@ -362,6 +390,7 @@ stays `experimental` — it is never promoted to meet a date.
         ─ P10 dossier                                                         ⇒ core 3.2.0
         ─ P11 module platform (WP-115 authoring kit first)                   ⇒ core 3.3.0
         ─ P12 consumer UI (may start in parallel with P11 after WP-120)     ⇒ citizen-web 1.0.0, core 3.4.0
+        ─ P14 quality gate WP-150 → WP-151 → WP-152 → WP-153 ⇄ WP-154 → WP-155 (blocks P13, D-069)
         ─ P13 M1 → M2 → M3 → M4 → M5 → M6 → M7 (needs P12 i18n) → M8 → M9 → M10
 ```
 
@@ -397,6 +426,7 @@ decide promotion. Funding outcomes re-plan P12/P13 capacity by decision entry.
 | OQ-7 | Reuse terms of Düsseldorfer Tabelle and Landes-Mietrechtsverordnungen as parameter data | counsel/adopters | WP-131, WP-135 |
 | OQ-8 | Art. 10 DSGVO: may Strafrecht cases ever use external inference, even pseudonymized? | counsel | WP-139 |
 | OQ-9 | StBerG boundary for the Steuerrecht module's advice-center use (currently disabled) | counsel | WP-137 |
+| OQ-Q1…Q4 | P14: reviewer, held-out custody, Track G during the freeze, inference budget (`docs/quality-plan.md` § 10) | Dan | WP-151…WP-155 |
 
 ---
 

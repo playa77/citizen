@@ -1,6 +1,8 @@
 # Public release go/no-go — consumer distribution (WP-125, carry-over C-5)
 
-<!-- Version: 1.0.0 | 2026-11-17 — roadmap P12, D-068. Re-scopes the provider
+<!-- Version: 1.1.0 (DRAFT, with D-069) | 2026-11-17 — item G15: P14 LLM analysis
+     quality gate.
+     1.0.0 | 2026-11-17 — roadmap P12, D-068. Re-scopes the provider
      go/no-go of roadmap v2.0.0 WP-69 to a free consumer distribution
      (citizen core + playa77/citizen-gui). -->
 
@@ -32,6 +34,7 @@ clients use `provider` and are themselves controllers (DISCLAIMER B.4).
 | G12 | Release key published, update channel trust file populated (WP-111) | trust file empty | **open** (owner) |
 | G13 | `DEPLOYMENT_MODE=self` start without synthetic-data guard; dev banner absent; `X-Document-Tag` not required | dev guard only in `dev` | ✓ |
 | G14 | No discouraging language anywhere in consumer copy | gate `duty_of_care` | ✓ (module + core copy) |
+| G15 | LLM analysis quality gate (P14, D-069): issue recall, citation precision, assessment match each > 0.90, mean over the held-out goldset, 3 runs | 41.5 / 30.3 / 16.7 % at prompt set 3.0.1 (goldset v0.2.0, scorer cannot measure 90 %, `docs/quality-plan.md` § 3) | **open** — blocks release |
 
 ## 2. Known limits to publish with the release
 
