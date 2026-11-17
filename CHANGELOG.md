@@ -1,7 +1,7 @@
-## Unreleased — P14 quality gate drafts (D-069, proposed)
+## Unreleased — P14 quality gate (D-069, approved 2026-11-17)
 
-Not released; awaiting owner approval of D-069. No `app/` change, no API
-change.
+No `app/` change, no API change. Open in WP-150: the three metrics become
+strict in `eval/regression_gate.py`.
 
 ### Fixed
 
@@ -15,12 +15,12 @@ change.
   and cannot be re-scored (outputs not kept). Tests:
   `tests/unit/test_eval_assessment.py`.
 
-### Added (drafts)
+### Added
 
-- `docs/quality-plan.md` 0.1.0 — P14 plan: > 90 % issue recall, citation
+- `docs/quality-plan.md` 1.0.0 — P14 plan: > 90 % issue recall, citation
   precision and assessment match on a held-out goldset; instrument first.
 - Roadmap 3.1.0 (P14, WP-150…WP-155, P13 frozen); go/no-go 1.1.0 item G15;
-  DECISIONS.md D-069 (proposed).
+  DECISIONS.md D-069.
 
 ## 2026-11-17 — Core 3.4.0: P12 backend — plain-language layer and consumer surfaces (WP-122…WP-125, D-067, D-068)
 

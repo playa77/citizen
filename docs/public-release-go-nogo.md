@@ -1,6 +1,6 @@
 # Public release go/no-go — consumer distribution (WP-125, carry-over C-5)
 
-<!-- Version: 1.1.0 (DRAFT, with D-069) | 2026-11-17 — item G15: P14 LLM analysis
+<!-- Version: 1.1.0 | 2026-11-17 — D-069: item G15, P14 LLM analysis
      quality gate.
      1.0.0 | 2026-11-17 — roadmap P12, D-068. Re-scopes the provider
      go/no-go of roadmap v2.0.0 WP-69 to a free consumer distribution

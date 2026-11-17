@@ -1,6 +1,6 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.1.0 (DRAFT, awaiting owner approval of D-069) | 2026-11-17 — phase
+<!-- Version: 3.1.0 | 2026-11-17 — D-069 approved: phase
      P14 (LLM analysis quality gate, WP-150…WP-155) inserted before P13; P13
      frozen until the P14 gate passes; P13 sub-WP .8 uses the P14 gate.
      3.0.3 | 2026-11-17 — P12 backend status, WP-120 decided (D-067/D-068).

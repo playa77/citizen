@@ -1,8 +1,8 @@
 # Citizen — Quality Plan: LLM Analysis Gate (Phase P14)
 
-<!-- Version: 0.1.0 (DRAFT, awaiting owner approval) | 2026-11-17 — D-069 (proposed).
-     Becomes 1.0.0 when the owner approves D-069. -->
-<!-- Roadmap: docs/roadmap-v3.0.0.md § 7a (v3.1.0 draft) · Decision: DECISIONS.md D-069 -->
+<!-- Version: 1.0.0 | 2026-11-17 — approved with D-069.
+     0.1.0 | 2026-11-17 — draft. -->
+<!-- Roadmap: docs/roadmap-v3.0.0.md § 7a (v3.1.0) · Decision: DECISIONS.md D-069 -->
 
 ## 1. Why this plan exists
 
@@ -127,7 +127,7 @@ Order is strict for Q0–Q2; Q3 and Q4 iterate.
 
 ### Q1 — WP-151 Fix the instrument
 
-- **a. Assessment scorer** — `eval/extractors.py` 1.2.0 (done in this draft,
+- **a. Assessment scorer** — `eval/extractors.py` 1.2.0 (done with D-069,
   `tests/unit/test_eval_assessment.py`): reads the verdict sentence first,
   ignores negated mentions, earliest match wins in the fallback, no
   "unzulässig", labels `rechtmaessig` / `einordnung_offen` for real answers no

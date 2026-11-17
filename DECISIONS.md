@@ -1718,8 +1718,7 @@ PDF review, `app/fristen/calendar.py` holiday tables, live legal-source runs,
 release key.
 
 ### D-069 R2 — 2026-11-17 — LLM analysis quality gate (P14): issue recall, citation precision and assessment match > 90 %; feature freeze
-**Status: PROPOSED (draft, awaiting owner approval).** This line is replaced
-by "Approved <date>" when the owner signs; nothing below takes effect before.
+**Status: Approved 2026-11-17 by the owner.** Plan `docs/quality-plan.md` 1.0.0.
 **Scope and acceptance (recorded before the change, AGENTS.md):** owner
 instruction 2026-11-17: issue recall, citation precision and assessment match
 are the most important values of the project; anything far below target puts
