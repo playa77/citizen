@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "citizen"
-version = "3.2.0"
+version = "3.3.0"
 description = "Local-first, evidence-constrained legal reasoning engine for German social law"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -29,6 +29,7 @@ dependencies = [
     "python-multipart==0.0.9",
     "PyYAML>=6.0,<7.0",
     "jsonschema>=4.21,<5.0",  # module manifest validation (WP-91, D-044)
+    "cryptography>=42.0",  # Ed25519 update-feed signatures (WP-111, D-066); was transitive only
 ]
 
 [project.optional-dependencies]

@@ -2,6 +2,13 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 0.2.1 — 2026-11-16 (prompt set 3.0.0, D-060)
+
+- No file change: the module inherits the `erbrecht` prompt profile, whose
+  0.2.0 change alters the prompts rendered for this module. PATCH.
+- Entry backfilled 2026-11-17 (WP-110): the version shipped without a
+  changelog entry; found by the new changelog/manifest consistency check.
+
 ## 0.2.0 — 2026-11-16 (WP-96)
 
 - `compliance/deny-phrases.json`: youth-welfare-office and family-court

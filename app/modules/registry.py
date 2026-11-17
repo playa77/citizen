@@ -1,7 +1,7 @@
 """Module registry (WP-91; ARCHITECTURE.md § 3.1).
 
 Discovers ``modules/*/module.yaml``, validates each manifest against
-``app/modules/manifest.schema.json`` (core_api 3.0), computes the enabled
+``app/modules/manifest.schema.json`` (core_api 3.1), computes the enabled
 set and resolves requested module ids, including legacy aliases (D-038).
 
 Enablement defaults follow D-037: an explicit ``ENABLED_MODULES`` setting
@@ -15,14 +15,20 @@ enabled manifest or a ``DEFAULT_MODULE`` outside the enabled set raises and
 therefore refuses startup.
 """
 
-# Semantic Version: 0.2.0 | 2026-11-16 — WP-93: discovery also refuses manifests
+# Semantic Version: 0.3.0 | 2026-11-17 — WP-112: out-of-tree modules from the
+# `citizen.modules` entry-point group, clamped to tier `community`; enabled
+# out-of-tree code must pass the import lint. Schema core_api 3.1 (WP-110).
+# 0.2.0 | 2026-11-16 — WP-93: discovery also refuses manifests
 # declaring missing or out-of-directory files (D-042 deferral closed).
 
 from __future__ import annotations
 
 import json
+import logging
 import re
-from dataclasses import dataclass, field
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field, replace
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +38,15 @@ from jsonschema.exceptions import SchemaError as _JsonSchemaError
 
 from app.modules import SCHEMA_PATH
 from app.modules.sdk import SDK_VERSION
+
+logger = logging.getLogger(__name__)
+
+#: Entry-point group for out-of-tree modules (WP-112, ARCHITECTURE.md § 2.1).
+ENTRY_POINT_GROUP = "citizen.modules"
+
+#: Module origins: shipped in this repository vs. installed as a package.
+ORIGIN_IN_TREE = "in_tree"
+ORIGIN_ENTRY_POINT = "entry_point"
 
 #: Legacy v2.0.0 area keys for modules that are queued but not yet installed
 #: (D-038). Once a module ships, its manifest declares the alias itself and
@@ -80,6 +95,11 @@ class ModuleManifest:
     legacy_aliases: tuple[str, ...]
     raw: dict[str, Any]
     path: Path  # the module directory
+    # WP-112: where the module came from. Out-of-tree modules are loaded at
+    # tier `community` at most; `declared_tier` keeps what the manifest said.
+    origin: str = ORIGIN_IN_TREE
+    distribution: str | None = None  # installing package (entry-point modules)
+    declared_tier: str | None = None  # None: equals `tier`
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +112,7 @@ _schema_cache: dict[str, Draft202012Validator] = {}
 def _schema_validator(core_api: str) -> Draft202012Validator:
     """Return (cached) validator for the manifest schema.
 
-    The shipped schema is core_api 3.0; the ``core_api`` argument exists so a
+    The shipped schema is core_api 3.1 (a superset of 3.0); the ``core_api`` argument exists so a
     future schema set can select by contract version without an API change.
     """
     validator = _schema_cache.get(core_api)
@@ -108,7 +128,7 @@ def _schema_validator(core_api: str) -> Draft202012Validator:
 
 
 def _validate_manifest(raw: dict[str, Any], manifest_path: Path) -> None:
-    errors = sorted(_schema_validator("3.0").iter_errors(raw), key=lambda e: list(e.path))
+    errors = sorted(_schema_validator(SDK_VERSION).iter_errors(raw), key=lambda e: list(e.path))
     if errors:
         details = "; ".join(
             f"{'/'.join(str(p) for p in err.path) or '<root>'}: {err.message}" for err in errors
@@ -190,6 +210,125 @@ def discover_modules(modules_dir: Path) -> dict[str, ModuleManifest]:
             )
         modules[manifest.id] = manifest
     return modules
+
+
+# ---------------------------------------------------------------------------
+# Out-of-tree modules (WP-112)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EntryPointModule:
+    """One ``citizen.modules`` entry point: its name, package and loader."""
+
+    name: str
+    distribution: str | None
+    load: Callable[[], Any]
+
+
+def _iter_entry_points() -> list[EntryPointModule]:
+    """Entry points of the ``citizen.modules`` group (seam for tests)."""
+    found: list[EntryPointModule] = []
+    for ep in metadata.entry_points(group=ENTRY_POINT_GROUP):
+        dist = getattr(ep, "dist", None)
+        found.append(EntryPointModule(ep.name, dist.name if dist is not None else None, ep.load))
+    return found
+
+
+def _entry_point_dir(target: Any) -> Path:
+    """Module directory an entry point designates.
+
+    Accepted targets: a path (``str``/``PathLike``), an imported Python
+    package/module (its directory), or a zero-argument callable returning a
+    path. The directory must contain ``module.yaml``.
+    """
+    if callable(target) and not isinstance(target, type):
+        target = target()
+    if isinstance(target, str | Path):
+        directory = Path(target)
+    elif getattr(target, "__file__", None):
+        directory = Path(str(target.__file__)).parent
+    else:
+        raise ModuleManifestError(f"entry point target {target!r} is not a module directory")
+    if directory.is_file():
+        directory = directory.parent
+    if not (directory / "module.yaml").is_file():
+        raise ModuleManifestError(f"entry point directory {directory} has no module.yaml")
+    return directory.resolve()
+
+
+def _clamp_tier(tier: str) -> str:
+    """Out-of-tree modules are `community` at most (`planned` stays unloadable)."""
+    return "planned" if tier == "planned" else "community"
+
+
+def discover_entry_point_modules(
+    entry_points: Iterable[EntryPointModule] | None = None,
+) -> tuple[dict[str, ModuleManifest], dict[str, str]]:
+    """Discover out-of-tree modules; return ``(modules, rejected)``.
+
+    Unlike in-tree discovery, a broken out-of-tree package does not abort:
+    it is rejected (name → reason, logged) because it can never be enabled
+    implicitly (tier `community`, D-037). Naming a rejected module in
+    ``ENABLED_MODULES`` fails startup as an uninstalled module.
+    """
+    modules: dict[str, ModuleManifest] = {}
+    rejected: dict[str, str] = {}
+    for ep in _iter_entry_points() if entry_points is None else entry_points:
+        try:
+            directory = _entry_point_dir(ep.load())
+            manifest = _parse_manifest(directory, directory.parent)
+        except Exception as exc:  # any package defect → rejected, never fatal
+            rejected[ep.name] = str(exc)
+            logger.warning("out-of-tree module %r rejected: %s", ep.name, exc)
+            continue
+        if manifest.id in modules:
+            rejected[ep.name] = f"duplicate module id {manifest.id!r}"
+            logger.warning("out-of-tree module %r rejected: duplicate id", ep.name)
+            continue
+        modules[manifest.id] = replace(
+            manifest,
+            tier=_clamp_tier(manifest.tier),
+            origin=ORIGIN_ENTRY_POINT,
+            distribution=ep.distribution,
+            declared_tier=manifest.tier,
+        )
+    return modules, rejected
+
+
+def discover_installed_modules(
+    modules_dir: Path,
+    entry_points: Iterable[EntryPointModule] | None = None,
+) -> tuple[dict[str, ModuleManifest], dict[str, str]]:
+    """In-tree modules plus out-of-tree modules; ``(modules, rejected)``.
+
+    In-tree discovery stays strict (first invalid manifest raises). An
+    out-of-tree module whose id an in-tree module already uses is rejected —
+    a package must never shadow a reviewed first-party module.
+    """
+    modules = discover_modules(modules_dir)
+    external, rejected = discover_entry_point_modules(entry_points)
+    for module_id, manifest in external.items():
+        if module_id in modules:
+            reason = f"module id {module_id!r} is already used by an in-tree module"
+            rejected[manifest.distribution or module_id] = reason
+            logger.warning("out-of-tree module rejected: %s", reason)
+            continue
+        modules[module_id] = manifest
+    return modules, rejected
+
+
+def assert_out_of_tree_code_clean(manifest: ModuleManifest) -> None:
+    """Refuse an enabled out-of-tree module whose code imports core internals."""
+    if manifest.origin != ORIGIN_ENTRY_POINT:
+        return
+    from app.modules.lint import lint_module_dir
+
+    violations = lint_module_dir(manifest.path)
+    if violations:
+        raise ModuleContractError(
+            f"out-of-tree module {manifest.id!r} fails the import lint: " + "; ".join(violations)
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +427,8 @@ class ModuleRegistry:
     default_module: str
     # Alias → canonical id; manifest-declared aliases first, built-ins second.
     aliases: dict[str, str] = field(default_factory=dict)
+    # WP-112: out-of-tree entry points that were not loaded (name → reason).
+    rejected: dict[str, str] = field(default_factory=dict)
 
     def is_enabled(self, module_id: str) -> bool:
         return module_id in self.enabled
@@ -314,12 +455,14 @@ def load_registry(
     deployment_mode: str,
     enabled_modules: list[str] | None,
     default_module: str,
+    entry_points: Iterable[EntryPointModule] | None = None,
 ) -> ModuleRegistry:
     """Discover → validate → enable → resolve (one startup-ready registry)."""
-    modules = discover_modules(modules_dir)
+    modules, rejected = discover_installed_modules(modules_dir, entry_points)
     enabled = compute_enabled_set(modules, deployment_mode, enabled_modules)
     for module_id in sorted(enabled):
         assert_core_api_compatible(modules[module_id])
+        assert_out_of_tree_code_clean(modules[module_id])
     if default_module not in enabled:
         raise MissingDefaultModuleError(
             f"DEFAULT_MODULE {default_module!r} is not in the enabled set "
@@ -335,7 +478,11 @@ def load_registry(
         aliases.setdefault(alias, target)
 
     return ModuleRegistry(
-        modules=modules, enabled=enabled, default_module=default_module, aliases=aliases
+        modules=modules,
+        enabled=enabled,
+        default_module=default_module,
+        aliases=aliases,
+        rejected=rejected,
     )
 
 

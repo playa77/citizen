@@ -1,0 +1,199 @@
+# Writing a Citizen module
+
+<!-- Version: 1.0.0 | 2026-11-17 — WP-115 authoring kit (core 3.3.0, core_api 3.1). -->
+<!-- Architecture: ARCHITECTURE.md § 2 (module contract) · Catalog: docs/module-catalog.md -->
+
+A module teaches Citizen one area of German law: which statutes matter,
+which deadlines run, which amounts can be checked, what a person should
+bring to an advice appointment. The core knows *how* to analyse a letter;
+the module knows *what* applies. Modules are **mostly data** — YAML files a
+reviewer can read line by line — plus, only where data cannot express it,
+small pure Python functions behind `app.modules.sdk`.
+
+Every module serves the same declared purpose (D-020/D-035): a natural
+person preparing **their own matter** — understanding a letter, meeting the
+deadline, arriving at the advice centre or lawyer with what is needed. Copy
+speaks to that person ("Sie"). Nothing in a module may frame the tool for
+the institution on the other side of the letter; the purpose-drift lint
+enforces this for every module's copy and disclaimer addendum.
+
+---
+
+## 1. Quick start
+
+```bash
+# in-tree (this repository, tier experimental)
+python -m scripts.new_module mietrecht_neu --title-de "Mietrecht" --title-en "Tenancy law"
+
+# out-of-tree (installable package, tier community)
+python -m scripts.new_module mein_modul --title-de "…" --title-en "…" --out-of-tree ../my-modules
+
+# validate (offline: no database, no API key)
+python -m scripts.validate_module modules/mietrecht_neu
+python -m scripts.validate_module --all --json
+```
+
+The scaffold writes a module that passes the validator as generated. Every
+legal value in it is a placeholder (`TODO`, `review_status: proposed`):
+the scaffold encodes structure, never law.
+
+## 2. Files
+
+| File | Required | What it holds |
+|---|---|---|
+| `module.yaml` | yes | manifest: id, version, `core_api`, title, tier, scope, file declarations |
+| `CHANGELOG.md` | yes (validator) | `## X.Y.Z — date` entries, newest first, first = manifest version |
+| `corpus.yaml` | for retrieval | `areas.<key>.source_types`; optional `chunk_tags`, `case_law` |
+| `intake.yaml` | for routing | `areas.<key>.order` (globally unique), keywords, synonyms, presets |
+| `fristen.yaml` | for deadlines | deadline specs evaluated by the Fristen core (§ 4) |
+| `parameters/*.yaml` | for amounts | versioned values with validity, basis and review status |
+| `dossier.yaml` | for the dossier | appointment checklist, questions, chronology cues |
+| `errata.yaml` | from the first erratum | published corrections (§ 6) |
+| `goldset/goldset-vX.Y.Z.yaml` | for promotion | synthetic test cases + gate |
+| `compliance/deny-phrases.json` | recommended | module-specific purpose-drift phrases |
+| `DISCLAIMER_ADDENDUM.md` | recommended | area limits, `## DE` / `## EN` |
+| `prompts/profile.yaml`, `documents/templates.yaml` | optional | stage prompt profile; action-draft templates |
+| `calculators.py`, `regime.py` | optional code | `sdk.Calculator`, `sdk.RegimeProvider` only |
+
+Every path the manifest declares must exist inside the module directory;
+`..` and absolute paths are refused.
+
+## 3. The rules the validator enforces
+
+Errors (the module must not ship):
+
+- manifest schema (`app/modules/manifest.schema.json`, core_api 3.1) and
+  declared files;
+- `core_api` admits the running core (`">=3.1,<4.0"` for new modules);
+- module code imports nothing from `app.*` except `app.modules.sdk`;
+- `scope.own_matter_only: true`;
+- deadline specs, parameter files, dossier content, prompt profile and
+  templates load; code references resolve to the SDK types;
+- area keys fit the installed modules (one owner per key, unique `order`,
+  no synonym claimed twice) — checked by assembling the same tables the core
+  builds at startup;
+- changelog and errata discipline (§ 6);
+- tier `verified` declares a goldset.
+
+Warnings (allowed, but a reviewer looks): parameters not yet `verified`,
+corpus source types the core does not store, no goldset, no addendum, no
+errata file, `case_law` on a module that is not `verified`.
+
+## 4. Deadlines and amounts
+
+Deadlines and amounts come only from deterministic engines on versioned
+parameters, never from model output. A deadline is data:
+
+```yaml
+- id: einspruch_beispiel
+  label_de: "Einspruchsfrist"
+  trigger: zustellung
+  bekanntgabe_fiction: none
+  duration: { days: 14 }
+  rollover: bgb_193
+  basis: "§ … …"
+  severity: critical
+```
+
+The Fristen core owns calendars, fictions and rollover rules; a module
+picks from its libraries. Each spec needs golden date tests before
+promotion. Amounts: every constant lives in `parameters/` with `valid_from`,
+`basis` and a parameter steward's `review_status: verified`; calculators are
+pure functions of (extraction, parameters).
+
+## 5. In-tree vs. out-of-tree
+
+**In-tree** modules live in `modules/<id>/`, are reviewed with the core and
+start at tier `experimental` (enabled in `dev`/`self`, not in `provider`).
+Adding one is also a disclaimer change: its addendum goes into Part D of
+`DISCLAIMER_DE.md` / `DISCLAIMER_EN.md` and `DISCLAIMER_VERSION` is bumped
+(`tests/unit/test_disclaimer_addenda.py`).
+
+**Out-of-tree** modules are Python packages registering an entry point:
+
+```toml
+[project.entry-points."citizen.modules"]
+mein_modul = "citizen_module_mein_modul"   # package whose directory holds module.yaml
+```
+
+The core loads them at tier `community` whatever the manifest says, never
+enables them implicitly (not even in `dev`), and enables them only when
+`ENABLED_MODULES` lists them. An out-of-tree package cannot replace an
+in-tree module id; a broken package is rejected and logged, not fatal. Once
+enabled, its code must pass the import lint or the service refuses to
+start. Out-of-tree modules are not covered by the maintainers' review or the
+disclaimer's Part D.
+
+## 6. Versions, changelog, errata
+
+Module semver (ARCHITECTURE.md § 6.2):
+
+| Bump | When |
+|---|---|
+| MAJOR | a deadline spec, calculator or document type removed/renamed, or a calculator's legal semantics change |
+| MINOR | new deadline spec, document type, calculator, goldset cases, parameter validity period, language |
+| PATCH | correction of a wrong value or copy — **plus an erratum** |
+
+An erratum tells people whose case ran with a faulty version what to do:
+
+```yaml
+format: citizen-module-errata-v1.0
+errata:
+  - id: E-2027-001
+    published: 2027-01-15
+    affected_versions: ">=1.0.0,<1.4.1"
+    fixed_in: 1.4.1
+    severity: critical          # critical | major | minor
+    component: parameter        # parameter | deadline | calculator | template | dossier | copy | prompt | other
+    summary_de: "…"
+    summary_en: "…"
+    action_de: "…"
+```
+
+`fixed_in` must be a changelog version, not newer than the manifest, and
+outside `affected_versions`. The API serves errata on
+`GET /api/v1/modules/{id}` and lists affected stored cases on
+`GET /api/v1/modules/{id}/errata/{erratum_id}/cases`.
+
+## 7. Parameter updates between releases
+
+A corrected value does not have to wait for a release: the maintainer
+publishes a signed feed (`citizen-update-feed-v1.0`, Ed25519) that
+operators verify and apply with `python -m scripts.module_update`
+(DEPLOYMENT.md). Feed rows use the same format as `parameters/*.yaml`; the
+parameter domain comes from the installed manifest, never from the feed.
+The next module release must carry the corrected value in its files.
+
+## 8. Case law
+
+A `verified` module may declare case law for the corpus automation:
+
+```yaml
+case_law:
+  - source_type: bsg        # a source type the module retrieves from
+    provider: rii           # rii (rechtsprechung-im-internet.de) | olda (Open Legal Data)
+    court: BSG              # RII court prefix / OLDA court slug
+    since: 2023-01-01
+    max_documents: 200
+```
+
+Ingested decisions change what retrieval returns for the module: rerun the
+goldset gate after the first ingestion.
+
+## 9. Goldset and promotion
+
+Goldset cases are **synthetic** — invented people, invented letters. A
+module moves from `experimental` to `verified` only with ≥ 15 cases, a
+published eval report and a decision-ledger entry (roadmap § 7); it is never
+promoted to meet a date. Until then the scaffold's
+`goldset/goldset-v0.1.0.yaml` documents the case shape.
+
+## 10. Review checklist
+
+- [ ] `python -m scripts.validate_module <dir>` passes; warnings understood
+- [ ] every parameter has a `basis` and a steward's review
+- [ ] every deadline spec has golden date tests
+- [ ] copy speaks to the person, in their own matter; purpose-drift lint green
+- [ ] `DISCLAIMER_ADDENDUM.md` states the limits and the point where an
+      advice centre or lawyer is indispensable
+- [ ] `CHANGELOG.md` entry for the version; errata for every correction

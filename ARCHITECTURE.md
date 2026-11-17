@@ -1,6 +1,9 @@
 # Citizen — Architecture v3.0.0: Core + Legal-Area Modules
 
-<!-- Version: 3.0.0-draft.7 | 2026-11-16 — P10: § 3.7 dossier as built, § 4
+<!-- Version: 3.0.0-draft.8 | 2026-11-17 — P11 (D-066): § 2.1 out-of-tree modules,
+     § 2.2 `errata` key (core_api 3.1), § 3.3 corpus automation + case law, § 3.9
+     update channel as built, § 4 new tables, § 5 routes, § 6.2 errata as built.
+     3.0.0-draft.7 | 2026-11-16 — P10: § 3.7 dossier as built, § 4
      case_dossier (WP-100 storage decision), § 5 dossier routes (D-064).
      3.0.0-draft.6 | 2026-11-16 — § 3.3 `default_ingest_sources`; § 8 residual
      couplings closed (D-063).
@@ -15,12 +18,12 @@
      built (prompts, document_templates), § 8 status column. -->
 <!-- Status: TARGET architecture, partly delivered: WP-91 (registry/SDK),
      WP-92 (Fristen core), WP-93 (Sozialrecht extraction), WP-94 (data model),
-     WP-95 (module API), WP-96 (compliance deltas) and P10 (dossier,
-     WP-100…WP-104) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
+     WP-95 (module API), WP-96 (compliance deltas), P10 (dossier,
+     WP-100…WP-104) and P11 (module platform, WP-110…WP-116) are in the code; § 8 marks what remains. Every "target" statement below is delivered by
      docs/roadmap-v3.0.0.md; "as-is" statements describe the code today. -->
 <!-- Decisions: D-034 … D-041 in DECISIONS.md. -->
 <!-- Canonical package version: pyproject.toml (3.0.0 cut at the P9 exit gate, WP-97;
-     3.2.0 with P10, D-064). -->
+     3.2.0 with P10, D-064; 3.3.0 with P11, D-066). -->
 
 ---
 
@@ -98,8 +101,12 @@ jurisdiction-package pattern, in MIT form).
 
 First-party modules live in this repository under `modules/<module_id>/`
 (target) and are installed with the core. Out-of-tree modules (Python entry
-point group `citizen.modules`) are a later capability (roadmap WP-112) and are
-always loaded at tier `community` at most.
+point group `citizen.modules`) are loaded at tier `community` at most
+(built in WP-112, D-066: never enabled implicitly, only via
+`ENABLED_MODULES`; a broken package or one reusing an in-tree id is rejected
+and logged; enabled out-of-tree code must pass the import lint). Authoring:
+`docs/MODULE-AUTHORING.md`, `python -m scripts.new_module`,
+`python -m scripts.validate_module` (WP-115).
 
 ```
 modules/sozialrecht/
@@ -119,7 +126,8 @@ modules/sozialrecht/
 │   └── goldset-v0.2.0.yaml   # verified synthetic cases + thresholds
 ├── compliance/deny-phrases.json  # module deny phrases for the purpose-drift lint
 ├── DISCLAIMER_ADDENDUM.md    # area-specific limits (feeds DISCLAIMER_* Part D)
-└── CHANGELOG.md              # module changelog (own semver)
+├── errata.yaml               # published corrections (WP-110, core_api 3.1)
+└── CHANGELOG.md              # module changelog (own semver; newest heading = manifest version)
 ```
 
 ### 2.2 Manifest (`module.yaml`)
@@ -143,6 +151,7 @@ intake: intake.yaml
 prompts: prompts/profile.yaml
 document_templates: documents/templates.yaml
 dossier: dossier.yaml
+errata: errata.yaml                         # core_api 3.1 (WP-110): citizen-module-errata-v1.0
 regimes: { provider: calculators:REGIMES }  # optional intertemporal regimes (e.g. 2026-07-01 reform)
 goldset: { path: goldset/goldset-v0.2.0.yaml, gate: { finding_recall: 0.85, hallucination_rate_max: 0.02 } }
 compliance:
@@ -241,6 +250,15 @@ Retrieval filters by the union of the enabled request modules' scopes. This
 replaces both `AREA_TO_SOURCE_TYPES` and the § range → `legal_area` tagging in
 `corpus.py`, which cannot express that one BGB is shared by five modules.
 
+**Built (WP-113, D-066):** daily change detection
+(`app/services/corpus_watch.py`, `python -m scripts.corpus_watch`, state in
+`corpus_source_watch`) — the operator's scheduler runs it; case law from
+rechtsprechung-im-internet.de (and, experimentally, Open Legal Data) for the
+`case_law` entries that `verified` modules declare in `corpus.yaml`
+(`app/services/case_law.py`; `bsg` is filled this way). Citations in any text
+can be parsed and checked against the corpus (`app/citations/`,
+`POST /api/v1/citations/verify`, WP-114).
+
 ### 3.4 Parameter store (`app/services/parameter_store.py`)
 
 Already versioned with validity periods and source quotes. Target: the
@@ -305,6 +323,18 @@ Signed, public, static feeds (GitHub releases) for parameter sets and corpus
 change notices, per module. The client verifies signatures before applying.
 No hosted service, no telemetry — running cost stays ≈ zero.
 
+**Built (WP-111, D-066):** `app/updates/` — Ed25519 detached signatures over
+the exact feed bytes, verified before parsing, against
+`config/update-trust.yaml` (keys scoped to module ids; shipped empty); feed
+format `citizen-update-feed-v1.0`; applicability (installed version in
+`applies_to`, serial strictly growing, no future `issued_at`); one
+transaction writes the `legal_parameter` rows and a `module_update` ledger
+row; provenance `parameter_set` gains `.u<serial>`; file re-seeding never
+reverts a feed value. Operator/maintainer CLI: `python -m
+scripts.module_update`. A read-only MCP server (`python -m app.mcp`, WP-116)
+exposes module catalog, deadline catalog, corpus status and citation checks
+to local MCP clients.
+
 ### 3.10 Unchanged core guarantees
 
 Pseudonymization before any external inference, egress guard, inference
@@ -324,6 +354,8 @@ these off.
 | `case_run_area.legal_area` | CHECK against `LEGAL_AREA_ALLOWED` (hard-coded tuple in `models.py`) | CHECK removed; `legal_area` keeps the stored area key. New `module_id` FK → `legal_module.id` (NULL only for core-procedural keys) plus `module_version`, so every case records the module and version it ran with (as built: D-057 — the FK sits beside the key because `schenkungsrecht`/`verwaltungsrecht` are not module ids) |
 | `legal_chunk.legal_area` | single tag derived from § range | kept for backward compatibility, no longer used for filtering; retrieval uses module corpus scopes (§ 3.3). Dropped in a later major |
 | `legal_parameter.domain` | default `sgb2` | holds module id; migration rewrites `sgb2 → sozialrecht`; no column default |
+| `module_update` | — | **new (P11, migration 015)**: one row per applied signed update feed — `module_id`, `serial` (unique per module), `feed_sha256`, `key_id`, `issued_at`, `applied_at`, `module_version`, `source`, `parameters` (identities written), `corpus_notices` |
+| `corpus_source_watch` | — | **new (P11, migration 015)**: last observed upstream state per corpus source (`gii-toc.xml` presence, archive `ETag`/`Last-Modified`/length, `checked_at`, `changed_at`) |
 | `case_run` | — | `dossier_json` (nullable, versioned schema) — or a separate `dossier` table if size requires (decided in WP-100: separate table `case_dossier`, one row per build revision, D-064) |
 
 All changes extend the single linear Alembic chain (`… → 012 → 013 …`); no
@@ -353,6 +385,8 @@ green):
 | `POST` | `/api/v1/cases/{case_id}/dossier` | build dossier; `?format=json|pdf` |
 | `GET` | `/api/v1/cases/{case_id}/dossier` | last built dossier (JSON; PDF rendered from it with `?format=pdf`) |
 | `GET`/`PUT` | `/api/v1/cases/{case_id}/dossier/chronology` | chronology proposals; the person's confirmation step (added in P10) |
+| `GET` | `/api/v1/modules/{module_id}/errata/{erratum_id}/cases` | stored cases whose recorded module version an erratum affects (P11, WP-110) |
+| `POST` | `/api/v1/citations/verify` | parse and corpus-check citations in a text (P11, WP-114) |
 
 Behavioral rules (D-039):
 
@@ -407,6 +441,14 @@ Each module carries its own semver and `CHANGELOG.md`:
 | MAJOR | a deadline spec, calculator or document type is removed/renamed, or a calculator's legal semantics change |
 | MINOR | new deadline spec, document type, calculator, goldset cases, new parameter validity period, new language in `copy/` |
 | PATCH | correction of a wrong parameter value or copy error — additionally flagged as **errata** in the module changelog and surfaced via `/modules/{id}` so affected cases can be identified by `module_version` |
+
+**Built (WP-110, D-066):** errata are a schema'd file (`errata.yaml`,
+`citizen-module-errata-v1.0`, manifest key `errata` → `core_api` 3.1);
+`GET /modules/{id}` serves them and `GET /modules/{id}/errata/{erratum_id}/cases`
+matches `case_run_area.module_version` by semver. The validator and
+`tests/unit/test_module_versioning.py` enforce the changelog rules (newest
+heading = manifest version, strictly descending; `fixed_in` released and
+outside its own range).
 
 ### 6.3 Pinned artefacts
 

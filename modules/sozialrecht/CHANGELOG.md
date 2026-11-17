@@ -2,6 +2,20 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 1.4.0 — 2026-11-17 — released with core 3.3.0 (P11)
+
+- `errata.yaml` (new, WP-110): **E-2026-001** — objection deadlines for
+  letters posted before 2025-01-01 were one day too late in module versions
+  1.0.0–1.2.x (core < 3.2.0; fixed by D-065 in core 3.2.0 / module 1.3.0).
+  Affected stored cases: `GET /api/v1/modules/sozialrecht/errata/E-2026-001/cases`.
+- `corpus.yaml`: `case_law` (WP-113) — BSG decisions since 2023-01-01 from
+  rechtsprechung-im-internet.de into source type `bsg` (max. 200, newest
+  first). Opt-in ingestion; retrieval uses them once ingested.
+- `fristen.yaml`: comment on the § 37 Abs. 2 SGB X fiction states the
+  intertemporal rule (3 days before 2025-01-01, 4 since); no data change.
+- Manifest: `errata: errata.yaml`; `core_api: ">=3.1,<4.0"` (the `errata`
+  key is core_api 3.1).
+
 ## 1.3.0 — 2026-11-16 — released with core 3.2.0 (D-064)
 
 - `dossier.yaml` (new, WP-102): document checklist (6 always, 8 by keyword),

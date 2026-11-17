@@ -1,6 +1,7 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.0.1 | 2026-11-16 — release numbers shifted one minor: core 3.1.0
+<!-- Version: 3.0.2 | 2026-11-17 — P11 status added (D-066).
+     3.0.1 | 2026-11-16 — release numbers shifted one minor: core 3.1.0
      went to the WP-97 follow-up (D-063), so P10 ships as 3.2.0, P11 3.3.0, P12 3.4.0
      (D-064); P10 status added.
      3.0.0 | 2026-11-16 -->
@@ -209,6 +210,14 @@ PDF samples with a practitioner — **open**.
 
 **Goal:** modules can be developed, versioned, updated and contributed
 safely. **Release: core 3.3.0.**
+
+**Status (2026-11-17, D-066):** WP-110…WP-116 built; core 3.3.0,
+`sozialrecht` 1.4.0, module contract 3.1. Exit criterion ✓ — pinned by
+`tests/integration/test_p11_exit.py` (scaffold → validate → signed parameter
+feed → `/modules`, through the shipped CLIs). Not verified in the build
+environment: live runs against gesetze-im-internet.de, rechtsprechung-im-
+internet.de and Open Legal Data (fixtures only); open owner actions: publish
+a release key, decide whether the disclaimer names community modules.
 
 - **WP-110 — Module versioning and errata.** Module semver rules
   (ARCHITECTURE.md § 6.2), per-module CHANGELOG, errata surfacing on

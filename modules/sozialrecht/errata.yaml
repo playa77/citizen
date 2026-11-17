@@ -1,0 +1,35 @@
+# Errata of module `sozialrecht` (WP-110; format citizen-module-errata-v1.0,
+# schema app/modules/errata.schema.json). One entry per published correction;
+# cases are matched by the module version recorded in case_run_area.
+# Served on GET /api/v1/modules/sozialrecht; affected stored cases:
+# GET /api/v1/modules/sozialrecht/errata/<id>/cases.
+
+format: citizen-module-errata-v1.0
+errata:
+  - id: E-2026-001
+    published: 2026-11-17
+    affected_versions: ">=1.0.0,<1.3.0"
+    fixed_in: 1.3.0
+    core_versions: ">=3.0.0,<3.2.0"
+    severity: critical
+    component: deadline
+    summary_de: >-
+      Widerspruchsfrist bei Briefen, die vor dem 01.01.2025 zur Post gegeben
+      wurden: Die Bekanntgabe wurde mit vier statt drei Tagen nach Aufgabe zur
+      Post berechnet (§ 37 Abs. 2 SGB X a. F.). Das Fristende lag dadurch
+      einen Tag zu spät.
+    summary_en: >-
+      Objection deadline for letters posted before 2025-01-01: notification
+      was assumed four instead of three days after posting (§ 37(2) SGB X,
+      old version), so the computed deadline was one day too late.
+    action_de: >-
+      Betrifft nur Fälle mit einem Bescheid, der vor dem 01.01.2025 zur Post
+      gegeben wurde. Frist mit der aktuellen Version neu berechnen lassen und
+      im Zweifel bei einer Beratungsstelle bestätigen lassen.
+    action_en: >-
+      Only cases with a letter posted before 2025-01-01. Recompute the
+      deadline with the current version and confirm it with an advice centre
+      if in doubt.
+    references:
+      - "DECISIONS.md D-065"
+      - "app/fristen/fictions.py 0.2.0 (core 3.2.0)"

@@ -19,7 +19,9 @@ enabled → ``MODULE_NOT_ENABLED``. ``request_modules`` itself stays lenient
 already-validated keys.
 """
 
-# Semantic Version: 0.5.0 | 2026-11-16 — CR-06: regime_block_for() anchors the
+# Semantic Version: 0.6.0 | 2026-11-17 — WP-112: installed_modules() includes
+# out-of-tree modules; WP-111: parameter_set carries applied update feeds.
+# 0.5.0 | 2026-11-16 — CR-06: regime_block_for() anchors the
 # legal regime to the document's reference period and renders <rechtsstand>.
 # 0.4.0 | 2026-11-16 — WP-96: module_provenance() /
 # provenance_modules() for the citizen-provenance-v1.1 `modules` list.
@@ -47,7 +49,7 @@ from app.modules.registry import (
     ModuleManifestError,
     ModuleRegistry,
     default_modules_root,
-    discover_modules,
+    discover_installed_modules,
     load_registry_from_settings,
 )
 from app.modules.sdk import Calculator, RegimeProvider
@@ -55,8 +57,9 @@ from app.modules.sdk import Calculator, RegimeProvider
 
 @lru_cache(maxsize=1)
 def installed_modules() -> dict[str, ModuleManifest]:
-    """Installed in-tree modules (discovery is validated once per process)."""
-    return discover_modules(default_modules_root())
+    """Installed modules — in-tree plus out-of-tree (WP-112); validated once per process."""
+    modules, _rejected = discover_installed_modules(default_modules_root())
+    return modules
 
 
 @lru_cache(maxsize=1)
@@ -220,6 +223,19 @@ def resolve_request_areas(legal_areas: list[str]) -> list[ResolvedArea]:
 # ---------------------------------------------------------------------------
 
 
+#: WP-111: applied signed-update state per module — ``(highest serial, newest
+#: valid_from a feed wrote)``. Loaded from the ``module_update`` ledger at
+#: startup (``set_applied_updates``); empty means "no feed applied".
+_applied_updates: dict[str, tuple[int, date | None]] = {}
+
+
+def set_applied_updates(state: dict[str, tuple[int, date | None]]) -> None:
+    """Install the applied-feed state and drop cached provenance ids."""
+    _applied_updates.clear()
+    _applied_updates.update(state)
+    module_provenance.cache_clear()
+
+
 @lru_cache(maxsize=64)
 def module_provenance(module_id: str) -> tuple[str, str, str | None]:
     """``(id, version, parameter_set)`` of an installed module, computed once.
@@ -228,6 +244,11 @@ def module_provenance(module_id: str) -> tuple[str, str, str | None]:
     module version plus the latest ``valid_from`` of the module's parameter
     files, written as semver build metadata (``"1.0.0+2026-07-01"``). A
     module that declares no parameters has no parameter set (``None``).
+
+    WP-111: when signed update feeds were applied, the newest ``valid_from``
+    they wrote counts too and the highest feed serial is appended as a
+    further build identifier (``"1.4.0+2027-01-01.u3"``) — the module
+    version alone no longer pins the parameter values then.
 
     Reads the module's parameter files on the first call per module only
     (cached for the process lifetime; module files do not change under a
@@ -238,10 +259,15 @@ def module_provenance(module_id: str) -> tuple[str, str, str | None]:
     from app.modules.parameters import load_parameter_rows
 
     rows = load_parameter_rows(manifest)
+    dates = [row.valid_from for row in rows]
+    serial, feed_latest = _applied_updates.get(module_id, (0, None))
+    if feed_latest is not None:
+        dates.append(feed_latest)
     parameter_set = None
-    if rows:
-        latest = max(row.valid_from for row in rows)
-        parameter_set = f"{manifest.version}+{latest.isoformat()}"
+    if dates:
+        parameter_set = f"{manifest.version}+{max(dates).isoformat()}"
+        if serial:
+            parameter_set += f".u{serial}"
     return manifest.id, manifest.version, parameter_set
 
 
@@ -441,4 +467,5 @@ __all__ = [
     "resolve_area",
     "resolve_request_areas",
     "resolved_modules",
+    "set_applied_updates",
 ]

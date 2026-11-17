@@ -1,3 +1,67 @@
+## 2026-11-17 — Core 3.3.0: P11 module platform (WP-110…WP-116, D-066)
+
+Modules can now be versioned with published errata, updated between releases
+through a signed feed, installed out of tree, authored with a validator and
+scaffold, and fed by automated corpus change detection and case-law
+ingestion. `sozialrecht` **1.4.0**; module contract (`core_api`) **3.1**.
+`/api/v1` additive only; migration `015_module_platform`.
+
+### Added
+
+- **Errata (WP-110):** manifest key `errata` (core_api 3.1), format
+  `citizen-module-errata-v1.0`; `errata` on `GET /api/v1/modules/{id}`;
+  `GET /api/v1/modules/{id}/errata/{erratum_id}/cases` lists stored cases
+  whose recorded module version is affected. `app/modules/semver.py`.
+  Changelog/manifest consistency is checked for every module.
+- **Signed update channel (WP-111):** `app/updates/` — Ed25519 feeds
+  (`citizen-update-feed-v1.0`) with parameter sets and corpus notices,
+  trust file `config/update-trust.yaml` (`UPDATE_TRUST_FILE`, shipped
+  empty), anti-rollback serials, ledger table `module_update`; CLI
+  `python -m scripts.module_update keygen|make|sign|verify|apply|status`.
+  `GET /modules/{id}` gains `updates` and `parameter_set`; provenance
+  `parameter_set` becomes `<version>+<valid_from>.u<serial>` after a feed.
+- **Out-of-tree modules (WP-112):** entry-point group `citizen.modules`,
+  tier clamped to `community`, opt-in via `ENABLED_MODULES` only, import
+  lint enforced for enabled ones; `/modules` gains `origin`, `declared_tier`.
+- **Corpus automation (WP-113):** `python -m scripts.corpus_watch` —
+  `gii-toc.xml` + archive-validator change detection (table
+  `corpus_source_watch`), `--ingest` for changed sources; case-law ingestion
+  from rechtsprechung-im-internet.de / Open Legal Data for `case_law` that
+  verified modules declare (`bsg` now has a scraper).
+- **Citation service (WP-114):** `app/citations/` parser (§/§§/Art.,
+  Abs./Satz/Nr., ranges, ff., ECLI, BSG dockets) and corpus verification;
+  `POST /api/v1/citations/verify`.
+- **Authoring kit (WP-115):** `python -m scripts.new_module` (in-tree or
+  out-of-tree package), `python -m scripts.validate_module`,
+  `docs/MODULE-AUTHORING.md`, goldset template in the scaffold.
+- **MCP surface (WP-116):** `python -m app.mcp` — read-only stdio MCP server
+  (module catalog, deadline catalog, corpus status, statute text, citation
+  check); dependency-free.
+- **Tests:** P11 exit criterion end to end through the CLIs
+  (`tests/integration/test_p11_exit.py`); migration 015; unit tests per WP.
+
+### Changed
+
+- `sozialrecht` 1.4.0: `errata.yaml` with **E-2026-001** (the D-065
+  deadline defect, module versions 1.0.0–1.2.x), `corpus.yaml` `case_law`
+  (BSG via RII since 2023-01-01), `core_api: ">=3.1,<4.0"`.
+- `erbrecht` / `familienrecht` changelogs: missing 0.2.0 / 0.2.1 entries
+  backfilled (found by the new consistency check; no version change).
+- `scripts/seed_module_parameters.py` 2026-11-17.1: shared upsert; never
+  reverts a value a signed feed wrote.
+- `cryptography` declared as a direct dependency (was transitive).
+- `API_DOCUMENTATION.md`: § 1 notes the optional local MCP interface;
+  § 8.10 errata/updates/origin; § 8.12 citations.
+
+### Not verified here (D-066)
+
+- No network access to the legal sources from the build environment: RII,
+  OLDA and gii-toc handling is tested against synthetic fixtures; the first
+  live run must confirm the RII XML structure and the OLDA filter names.
+- No maintainer release key published yet (owner action); the trust file is
+  empty, so no feed verifies until one is added.
+- After the first `bsg` ingestion the Sozialrecht goldset gate must be rerun.
+
 ## 2026-11-16 — Core 3.2.0: P10 appointment dossier (WP-100…WP-104, D-064, D-065)
 
 The Mandatsvorbereitungs-Dossier: what a person takes to an appointment with

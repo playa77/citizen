@@ -2,6 +2,13 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 0.2.0 — 2026-11-16 (prompt set 3.0.0, D-060)
+
+- `prompts/profile.yaml`: `issue_terms` gain norm anchors; new
+  `result_categories`. MINOR: the rendered stage prompts change.
+- Entry backfilled 2026-11-17 (WP-110): the version shipped without a
+  changelog entry; found by the new changelog/manifest consistency check.
+
 ## 0.1.1 — 2026-11-16 (WP-94)
 
 - `intake.yaml`: every area row declares `order`, its rank in the global

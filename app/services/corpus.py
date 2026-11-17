@@ -5,7 +5,9 @@ structure into ``§ → Absatz → Satz`` units, generates metadata, and returns
 normalised :class:`dict` objects ready for embedding and DB insertion.
 """
 
-# Semantic Version: 0.3.0 | 2026-11-16 — `default_corpus_sources()`: the
+# Semantic Version: 0.4.0 | 2026-11-17 — WP-113: `bsg` is scraped from case-law
+# providers (app/services/case_law.py); gii_source_slugs() for change detection.
+# 0.3.0 | 2026-11-16 — `default_corpus_sources()`: the
 # ingest default comes from the DEFAULT_MODULE's corpus scope unless
 # CORPUS_SOURCES is set (last residual coupling of ARCHITECTURE.md § 8).
 # 0.2.0 | 2026-11-16 — WP-93: § range → legal_area chunk tags
@@ -213,12 +215,12 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "full_name": "BSG-Rechtsprechung (Bundessozialgericht)",
         "description": "Entscheidungen des Bundessozialgerichts zu SGB II/SGB XII.",
         "tooltip": (
-            "Noch nicht verfügbar. BSG-Urteile sollen in einer späteren "
-            "Version integriert werden."
+            "Entscheidungen aus rechtsprechung-im-internet.de, soweit ein "
+            "geprüftes Modul sie in seiner corpus.yaml (`case_law`) anfordert."
         ),
-        "has_scraper": False,
+        "has_scraper": True,
         "checked_by_default": False,
-        "source": "bsg.bund.de",
+        "source": "rechtsprechung-im-internet.de",
     },
     "erbstg": {
         "key": "erbstg",
@@ -369,6 +371,10 @@ async def get_effective_corpus_sources() -> list[str]:
     return default_corpus_sources()
 
 
+#: Source types filled from case-law providers (WP-113) instead of statutes.
+CASE_LAW_SOURCE_TYPES = frozenset({"bsg"})
+
+
 # ---------------------------------------------------------------------------
 # Source URL prefixes (gesetze-im-internet.de official XML/HTML endpoints)
 # ---------------------------------------------------------------------------
@@ -387,6 +393,15 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "erbstg": "/erbstg/",  # ErbStG - Erbschaft- und Schenkungsteuergesetz
     "hoefev": "/hoefeordn_/",  # Höfeordnung (slug varies by BL; fallback)
 }
+
+
+def gii_source_slugs() -> dict[str, str]:
+    """Source type → gesetze-im-internet.de directory slug (``sgb2`` → ``sgb_2``).
+
+    Used by the daily change detection (WP-113) to find each source's
+    ``xml.zip`` in ``gii-toc.xml``.
+    """
+    return {key: prefix.strip("/") for key, prefix in _SOURCE_TYPE_PREFIX.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +546,14 @@ async def scrape_and_chunk(
     # Dispatch weisung to dedicated PDF scraper
     if source_type == "weisung":
         return await scrape_weisungen(client=client)
+
+    # WP-113: case-law source types are filled from the `case_law`
+    # declarations of verified modules (RII / Open Legal Data).
+    if source_type in CASE_LAW_SOURCE_TYPES:
+        from app.services.case_law import scrape_case_law
+
+        async with _SCRAPE_SEMAPHORE:
+            return await scrape_case_law(source_type, client=client)
 
     # All other known source types use gesetze-im-internet.de
     if source_type not in _SOURCE_TYPE_PREFIX:

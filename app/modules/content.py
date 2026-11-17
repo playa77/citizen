@@ -17,7 +17,8 @@ file that does not exist is a manifest error. This closes the structural
 validation D-042 deferred to WP-93.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-17 — WP-110: `errata` is a declared file.
+# 0.1.0
 
 from __future__ import annotations
 
@@ -60,7 +61,15 @@ def declared_files(manifest: ModuleManifest) -> list[str]:
     """
     raw = manifest.raw
     paths: list[str] = []
-    for key in ("corpus", "fristen", "intake", "dossier", "prompts", "document_templates"):
+    for key in (
+        "corpus",
+        "fristen",
+        "intake",
+        "dossier",
+        "prompts",
+        "document_templates",
+        "errata",
+    ):
         value = raw.get(key)
         if isinstance(value, str):
             paths.append(value)
