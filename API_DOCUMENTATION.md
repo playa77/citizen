@@ -5,8 +5,9 @@ with no prior knowledge of this repository can build a fully functional client
 against this document alone.
 
 - **Product:** Citizen — local-first, evidence-constrained legal reasoning
-  engine; core plus legal-area modules, German social law (SGB II / SGB X) is
-  the default module. Citizen-side self-help and appointment preparation in
+  engine; core plus peer legal-area modules with no default module.
+  German social law (SGB II / SGB X) is one module among the others.
+  Citizen-side self-help and appointment preparation in
   the person's own legal matters only (D-035, DISCLAIMER 3.0.0).
 - **Architecture:** single FastAPI service, PostgreSQL 16 + pgvector,
   OpenRouter LLM/embedding backends.
@@ -18,6 +19,29 @@ against this document alone.
   to local MCP clients; it opens no port and is not part of this contract.
 
 ---
+
+## 0. First blocking implementation TODO: selection and session restore
+
+Complete [TODO.md](TODO.md), step 1, **before implementing any further
+legal-area modules**. [D-069](docs/decisions/D-069-module-selection-and-session-restore.md)
+requires GUI/desktop startup to present all modules for explicit loading
+selection, with none preselected. When a saved session exists, also offer
+**Restore last session**; do not restore automatically. Starting a new session
+returns to module selection. Deployment enablement and maturity describe
+availability, not session selection.
+
+Clients must carry the chosen/restored scope explicitly through analysis,
+chat, corpus setup and provenance. Catalog order must not imply preference.
+Saved modules that are unavailable must be surfaced, not replaced with a
+fallback. Session persistence and restoration are pending implementation;
+this reference introduces no new session-restoration endpoint.
+
+**Legacy backend contract:** the current code still implements `DEFAULT_MODULE`
+and returns `default_module` / `is_default` metadata. The reference below
+records those current wire behaviors where necessary. They are implementation
+work to retire in the first TODO, not instructions to preselect Sozialrecht
+or any other module. Removing fallback semantics and transitioning metadata
+must respect the additive `/api/v1` compatibility rule in §2.
 
 ## 1. Base URLs and deployment
 
@@ -194,7 +218,9 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 ```
 
 - `text` (required, non-empty): the normalized input document.
-- `legal_areas` (optional): JSON array or comma-separated string (the array
+- `legal_areas` (optional in the legacy backend contract; GUI/desktop clients
+  must send their explicit chosen/restored scope): JSON array or
+  comma-separated string (the array
   form is accepted since WP-95; before, only the string form passed request
   validation). Values drawn from
   the area keys of the installed modules (e.g. `sozialrecht`, `erbrecht`,
@@ -204,7 +230,9 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
   prompts.
   Each value resolves to the module that owns it (legacy key
   `schenkungsrecht` → module `erbrecht`, `verwaltungsrecht` → core procedural
-  library; empty → the default module `sozialrecht`). The `calculation_check`
+  library). The current implementation still resolves an omitted/empty list
+  through its legacy `DEFAULT_MODULE` fallback; removing this behavior is
+  part of the first blocking TODO (§0). The `calculation_check`
   stage and the legal-regime banner run the **resolved modules'** calculators
   and regime providers: only `sozialrecht` ships them (since WP-93). A request
   whose areas resolve to no such module gets `calculation_check` with an empty
@@ -260,8 +288,10 @@ order, each `{id, version, parameter_set}`:
 | `version` | string | module semver at generation time |
 | `parameter_set` | string \| null | pinned legal-parameter set: `"<module version>+<latest valid_from>"`, e.g. `"1.2.0+2026-01-01"`; `null` for a module without parameters |
 
-Resolution follows the engines: no/empty `legal_areas` → `[DEFAULT_MODULE]`;
-keys served by the core procedural library (`verwaltungsrecht`) add no
+Resolution follows the explicitly supplied area keys. **Legacy behavior
+pending removal in the first TODO:** no/empty `legal_areas` currently produces
+`[DEFAULT_MODULE]`; clients must not use omission to select a module. Keys
+served by the core procedural library (`verwaltungsrecht`) add no
 module, so a procedural-only request yields `[]`. If a field cannot be
 determined it reads `"unknown"` (never an error); if the modules cannot be
 resolved at all, the list is `[{"id": "unknown", "version": "unknown",
@@ -336,8 +366,9 @@ SSE chat grounded in a completed case run. Body `{"content": "..."}`.
 Events: streaming token events then
 `data: {"type": "done", "case_id": "...", "full_response": "...", "disclosure": {...}, "provenance": {...}}`
 — the two Art. 50 objects as in §7.1 (added by WP-96, D-059; additive).
-`provenance.modules` names the modules of the case's recorded `legal_areas`
-(none recorded → `DEFAULT_MODULE`). Error events
+`provenance.modules` names the modules of the case's recorded `legal_areas`.
+For cases without recorded areas the backend still uses its legacy fallback;
+removing that implicit selection is part of the first TODO (§0). Error events
 `{"error": "case_chat_failed" | "service_unavailable"}` carry neither object.
 The user message and assistant reply are persisted into the case's
 `chat_history`.
@@ -536,7 +567,9 @@ Returns conversation detail (below). Upload errors → `400`; dev-tag guard → 
 
 #### `POST /api/v1/conversations/{conversation_id}/messages` — body `{"content": "...", "legal_areas": ["<area key>", ...]}`
 
-`legal_areas` is optional (prompt set 3.0.0, additive): it selects the
+`legal_areas` is optional in the legacy wire contract (prompt set 3.0.0,
+additive); GUI/desktop clients must pass the chosen/restored session scope.
+It selects the
 module profile of the chat persona, the areas of a first-message pipeline
 run and the modules named in `provenance.modules`. Validated like
 `/analyze`: `422` `MODULE_UNKNOWN` / `MODULE_NOT_ENABLED` (same detail
@@ -548,8 +581,10 @@ pipeline stage events plus a final summary
 (the two Art. 50 objects added by WP-96, D-059; additive); otherwise chat/RAG
 token events ending with
 `{"type": "done", "full_response": "...", "disclosure": {...}, "provenance": {...}}`
-(the two Art. 50 objects as in §7.1). Without `legal_areas`,
-`provenance.modules` is `[DEFAULT_MODULE]` on both terminal events. Error event:
+(the two Art. 50 objects as in §7.1). The legacy implementation still puts
+`[DEFAULT_MODULE]` in `provenance.modules` on both terminal events when
+`legal_areas` is omitted; removing this behavior is part of the first TODO
+(§0), not a supported GUI selection strategy. Error event:
 `{"error": "message_generation_failed", ...}`. `400` empty content, `404`
 unknown conversation.
 
@@ -603,7 +638,7 @@ Errors: `400` (missing/invalid `case_run_id`, unknown `doc_type`), `404`.
 
 ### 8.7 Goldsets & evaluation (Prüfstand)
 
-#### `GET /api/v1/goldset` — manifest + summarized case list (no document texts). Serves the goldset at `GOLDSET_PATH` (default: Sozialrecht v0.1.0) and stays the Sozialrecht alias until `/api/v2`; module goldsets: `GET /api/v1/modules/{module_id}/goldset` (§8.10).
+#### `GET /api/v1/goldset` — manifest + summarized case list (no document texts). Legacy fixture alias serving `GOLDSET_PATH` (currently the Sozialrecht v0.1.0 test corpus), not a session/module selection. Clients selecting a module use `GET /api/v1/modules/{module_id}/goldset` (§8.10).
 #### `GET /api/v1/goldset/{case_id}` — full case incl. input document text, expected findings, citations, calculation, traps. `404` unknown id.
 #### `POST /api/v1/goldset/{case_id}/analyze` — SSE stream, identical contract to `POST /api/v1/analyze`, using the goldset case's stored input text. Nothing is persisted (no CaseRun).
 
@@ -672,8 +707,15 @@ comes from the filesystem and is always served; the database-backed fields
 `corpus` and `installed_at` are `null` when the database is unreachable.
 Enablement follows `ENABLED_MODULES`, else the tier rule of the deployment
 mode (`dev`/`self`: `experimental` + `verified`; `provider`: `verified` only).
+This controls which installed modules may run; it does not mean those modules
+are loaded into the user's session. Present the catalog as peers and obtain
+an explicit selection or session restore (first blocking TODO, §0).
 
 #### `GET /api/v1/modules`
+
+**Current legacy response, pending the first TODO's compatible transition.**
+The `default_module` and `is_default` values below describe the existing
+backend only; clients must not use them to select, load or highlight a module.
 
 ```json
 {"default_module": "sozialrecht",
@@ -689,8 +731,8 @@ mode (`dev`/`self`: `experimental` + `verified`; `provider`: `verified` only).
     "installed_at": "2026-11-16T10:00:00+00:00"}]}
 ```
 
-- Order: modules in the order of the area keys they own (default module
-  first today).
+- Order: modules in the order of the area keys they own. The first entry
+  has no loading priority and must not be preselected.
 - `area_keys`: the `legal_areas` values this module serves (its id plus
   legacy aliases, e.g. `erbrecht` → `["erbrecht", "schenkungsrecht"]`).
 - `corpus`: readiness over the union of the area keys' corpus source types —
@@ -1096,6 +1138,11 @@ Deadline texts here still contain their placeholders; render deadlines via
 
 ## 9. Minimal client checklist
 
+**First implementation task:** complete [TODO.md](TODO.md), step 1, across
+backend and GUI/desktop before implementing further legal-area modules. The
+startup/session steps below state that requirement; they are not shipped
+session-restoration APIs.
+
 1. `GET /api/v1/meta/disclaimer/version` → remember value V.
 2. Send `X-Disclaimer-Ack: V` on every subsequent request.
 3. Fetch `GET /api/v1/meta/disclosure` (cache by `version`); before presenting
@@ -1104,13 +1151,19 @@ Deadline texts here still contain their placeholders; render deadlines via
    delivered with each AI-generated payload (Art. 50(2)).
 4. On `DEPLOYMENT_MODE=dev` (check `meta/deployment-mode`), add
    `X-Document-Tag: synthetic` to every upload.
-5. Optional: `GET /api/v1/modules` to offer only enabled modules as
-   `legal_areas`; handle `422 MODULE_UNKNOWN` / `MODULE_NOT_ENABLED`.
-6. For analysis: `POST /analyze` (or conversation first-message) and consume
+5. At GUI/desktop startup, fetch `GET /api/v1/modules` and present all modules
+   as peers, with availability/maturity shown separately and none preselected.
+   For a returning user, also offer **Restore last session** or a new module
+   selection. Restore only on explicit choice; flag unavailable saved modules.
+   Deployment enablement is not the saved/selected session scope. Handle
+   `422 MODULE_UNKNOWN` / `MODULE_NOT_ENABLED`.
+6. Pass the selected/restored `legal_areas` explicitly to `POST /analyze`
+   (or conversation first-message) and consume
    the SSE stream; tolerate `running`/`complete` pairs per stage and a terminal
    `final_output` summary event; handle `{"error": ...}` terminal events.
-7. For corpus setup: check `corpus/health`; if unhealthy trigger
-   `corpus/update` and poll `corpus/status/{job_id}`.
+7. For corpus setup, explicitly select sources appropriate to the session's
+   modules, check `corpus/health`, then if unhealthy trigger `corpus/update`
+   and poll `corpus/status/{job_id}`. Do not rely on the legacy module fallback.
 8. Treat any unexpected disconnect mid-SSE as a failed run and re-submit.
 9. For the appointment dossier: `GET …/dossier/chronology`, let the person
    confirm/correct entries and facts (`PUT`), then `POST …/dossier` (JSON or

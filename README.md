@@ -6,6 +6,14 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688.svg)](https://fastapi.tiangolo.com)
 
+**Nächster Schritt — blockierendes TODO:** Vor jeder weiteren
+Implementierungsarbeit, insbesondere an weiteren Rechtsgebiets-Modulen,
+müssen die implizite Standardmodul-Logik entfernt und
+Modulauswahl sowie Sitzungswiederherstellung in Backend und GUI/Desktop
+umgesetzt und geprüft werden. Verbindliche Reihenfolge und Prüfpunkte:
+[TODO.md](TODO.md), Schritt 1; Entscheidung
+[D-069](docs/decisions/D-069-module-selection-and-session-restore.md).
+
 Citizen ist eine freie (MIT), nicht-kommerzielle, lokale und evidenzgebundene
 Analyse-Engine für Menschen, die ein Schreiben in **ihrer eigenen
 Angelegenheit** bekommen haben — einen Bescheid, eine Kündigung, einen
@@ -29,9 +37,9 @@ Teil A („Projektstatement")
 | | |
 |---|---|
 | **Weg** | Freier öffentlicher Pfad: MIT, kostenlos, nicht-kommerziell, nicht als Kanzlei-Software gebaut (Entscheidung **D-034**) |
-| **Architektur (Ziel)** | Domänenneutraler Kern + austauschbare **Rechtsgebiets-Module**; Sozialrecht ist Modul 1 und Standard (**D-036**) — siehe [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **Architektur (Ziel)** | Domänenneutraler Kern + gleichberechtigte **Rechtsgebiets-Module**; kein Standardmodul. Auswahl beim GUI-/Desktop-Start oder ausdrückliche Wiederherstellung der letzten Sitzung (**D-069**) |
 | **Roadmap** | [docs/roadmap-v3.0.0.md](docs/roadmap-v3.0.0.md): Modul-Architektur → Dossier → Modul-Plattform → Bürger-Oberfläche → zehn weitere Module |
-| **Stand des Codes** | v3.0.0: Modul-Architektur umgesetzt (WP-91…WP-97) — Kern ohne Rechtsgebietswissen, Sozialrecht als Modul `1.1.0` (Standard), sieben experimentelle Stub-Module, Modul-API und Compliance-Deltas; P10 (Dossier) ist die nächste Phase |
+| **Stand des Codes** | Kern `3.4.0`, Sozialrecht-Modul `1.5.0`, sieben experimentelle Stub-Module. Die alte Backend-Fallback-Logik besteht noch; ihre Ablösung einschließlich Startauswahl und Sitzungswiederherstellung ist das erste blockierende TODO vor der Implementierung weiterer Module |
 
 ## Rechtlicher Status
 
@@ -57,13 +65,22 @@ Der jeweils aktive Modus wird über die Einstellung `DEPLOYMENT_MODE` bestimmt
 
 Jedes Rechtsgebiet wird ein eigenes, versioniertes Modul (Gesetzeskorpus,
 Parameter, Fristen, Rechenwerke, Entwürfe, Dossier-Checkliste,
-Bürgersprache, Golden Set) hinter derselben API. Ohne weitere Einstellung
-startet Citizen mit dem Modul **Sozialrecht**. Profile und Reihenfolge:
+Bürgersprache, Golden Set) hinter derselben API. **Kein Modul ist Standard;
+Sozialrecht ist eines unter allen anderen.** Beim ersten Start von GUI/Desktop
+werden alle Module zur Auswahl angezeigt; kein Modul ist vorausgewählt oder
+wird automatisch geladen. Wer die Anwendung schon genutzt hat, erhält
+zusätzlich die Option **„Letzte Sitzung wiederherstellen“** („Restore last
+session“) oder kann für eine neue Sitzung erneut Module auswählen. Nur eine
+ausdrückliche Auswahl bzw. Wiederherstellung bestimmt die geladenen Module.
+Verfügbarkeit und Modul-Reife werden separat ausgewiesen; noch geplante
+Module sind dadurch nicht bereits implementiert. Dieser Startablauf ist das
+erste [blockierende TODO](TODO.md), danach folgen die übrigen Module.
+Profile und Implementierungsreihenfolge:
 [docs/module-catalog.md](docs/module-catalog.md).
 
 | # | Modul | Inhalt | Stand |
 |---|---|---|---|
-| M0 | `sozialrecht` | Bürgergeld/Grundsicherungsgeld (SGB II), SGB X, SGG | ✅ **unterstützt** — goldset-verifiziert, **Standardmodul** |
+| M0 | `sozialrecht` | Bürgergeld/Grundsicherungsgeld (SGB II), SGB X, SGG | ✅ **unterstützt** — goldset-verifiziert, gleichberechtigtes Modul |
 | M1 | `schuldnerrecht` | Mahnbescheid, Inkasso, Pfändung, P-Konto, Weg in die Verbraucherinsolvenz | 🗓️ geplant |
 | M2 | `mietrecht` | Mieterhöhung, Betriebskosten, Mängel, Kündigung | ⚠️ experimentell → geplant als Modul |
 | M3 | `arbeitsrecht` | Kündigung (3-Wochen-Frist), Lohn, Urlaub, Zeugnis | ⚠️ experimentell → geplant als Modul |
@@ -144,13 +161,18 @@ API-Ausgaben entsprechend gekennzeichnet. Die Altschlüssel `schenkungsrecht`,
 * **API-only:** Kein Web-UI, kein GUI-Client in diesem Repository — die
   versionierte REST-API unter `/api/v1` ist die einzige externe Schnittstelle
   (D-025), dokumentiert in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
-  Eine Bürger-Oberfläche ist geplant (Roadmap P12); wo sie liegt, ist offen
-  (D-040).
+  Die Bürger-Oberfläche liegt in `playa77/citizen-gui` (D-067); ihre
+  Modulauswahl und Sitzungswiederherstellung gehören zum ersten TODO (D-069).
 
 ### Geplant (Roadmap v3.0.0 — noch nicht implementiert)
 
-* **Modul-System:** Rechtsgebiete als versionierte Pakete, ein-/ausschaltbar
-  (`DEFAULT_MODULE`, `ENABLED_MODULES`), neue Endpunkte `/api/v1/modules`.
+* **Zuerst: Modulauswahl und Sitzungswiederherstellung:** Alle Module sind
+  gleichberechtigt. Neue Sitzung mit ausdrücklicher Auswahl, bei vorhandener
+  Sitzung zusätzlich „Letzte Sitzung wiederherstellen“. Die bereits
+  vorhandene Modul-API dient dem Katalog; `ENABLED_MODULES` beschreibt die
+  Freigabe durch die Installation, nicht die Auswahl der Sitzung. Vor der
+  Implementierung weiterer Module muss [TODO.md](TODO.md), Schritt 1,
+  vollständig abgeschlossen sein.
 * **Mandatsvorbereitungs-Dossier:** Chronologie, Dokumenten-Checkliste,
   Fristen, Rechenergebnisse, belegte Fundstellen, Fragenliste für den Termin,
   Entwürfe — als druckfertiges PDF und als maschinenlesbares JSON.
@@ -236,8 +258,16 @@ docker compose up -d --build
 docker compose exec citizen-app alembic upgrade head
 
 # 6. Gesetzeskorpus laden (Abruf + Embedding)
+#    Quellenauswahl ausdrücklich passend zu den gewählten Modulen setzen;
+#    bis TODO.md Schritt 1 abgeschlossen ist, besteht noch ein Backend-Fallback.
 #    Hinweis: erfordert bestätigten Disclaimer; Version siehe
 #    GET /api/v1/meta/disclaimer/version
+#    Beispiel nur bei ausdrücklich gewähltem Sozialrecht; für andere oder
+#    mehrere Module die Quellenliste entsprechend ersetzen/ergänzen:
+curl -X PUT http://localhost:8000/api/v1/corpus/sources \
+  -H "X-Disclaimer-Ack: v3.0.0" \
+  -H "Content-Type: application/json" -d '{"sources":["sgb2","sgbx"]}'
+
 curl -X POST http://localhost:8000/api/v1/corpus/update \
   -H "X-Disclaimer-Ack: v3.0.0" \
   -H "Content-Type: application/json" -d '{}'
@@ -325,8 +355,8 @@ citizen/
 │   │                                     #  inference_profiles, verification,
 │   │                                     #  document_generators, retrieval
 │   └── utils/                            # image, pdf, text, tokens
-├── modules/                              # Rechtsgebiets-Module: sozialrecht (Standard,
-│                                         #  verified: Fristen, Rechner, Parameter, Vorlagen,
+├── modules/                              # Gleichberechtigte Module: sozialrecht
+│                                         #  (verified: Fristen, Rechner, Parameter, Vorlagen,
 │                                         #  Goldsets) + 7 Stub-Module (experimental)
 ├── eval/                                 # Eval-Harness, Reports
 ├── tests/                                # 37 Testdateien (~12.600 Zeilen)
@@ -355,8 +385,8 @@ citizen/
 | | `PIPELINE_TIMEOUT_SEC` | `480` | Hartes Pipeline-Timeout (Timeout-Kette D-017) |
 | **Retrieval** | `RETRIEVAL_MODE` | `per_question` | Embedding-Strategie (`per_question` / `combined`) |
 | | `TOP_K_RETRIEVAL` | `10` | Max. Chunks je Anfrage |
-| **Korpus** | `CORPUS_SOURCES` | ungesetzt → `default_ingest_sources` des `DEFAULT_MODULE` (Sozialrecht: `["sgb2", "sgbx"]`) | Standardquellen (zur Laufzeit änderbar) |
-| | `GOLDSET_PATH` | `modules/sozialrecht/goldset/goldset-v0.1.0.yaml` | Goldset der Prüfstand-API |
+| **Korpus** | `CORPUS_SOURCES` | Explizite Quellenauswahl; bislang ungesetzt → alter Backend-Fallback | Quellen an den gewählten Modulen ausrichten; Entfernung des impliziten Fallbacks ist Teil des ersten TODO |
+| | `GOLDSET_PATH` | `modules/sozialrecht/goldset/goldset-v0.1.0.yaml` | Bestehender Sozialrecht-Prüfdatensatz des Legacy-Endpunkts; keine Modulauswahl. Modulbezogen `/api/v1/modules/{module_id}/goldset` verwenden |
 | **Rate-Limit** | `RATE_LIMIT_REQUESTS` / `_WINDOW` | `0` / `60` | In-Memory-Limiter existiert, ist aber nicht eingebunden (`0` = deaktiviert) |
 | **OCR** | `ENABLE_OCR_LLM_SYNTHESIS` | `False` | LLM-Synthese der Dual-OCR-Ergebnisse |
 

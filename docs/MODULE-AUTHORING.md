@@ -1,8 +1,20 @@
 # Writing a Citizen module
 
-<!-- Version: 1.1.0 | 2026-11-17 — WP-122: plain-language copy (core 3.4.0, core_api 3.2).
+<!-- Version: 1.1.1 | 2026-11-25 — D-069: startup/session TODO before further module implementation.
+     1.1.0 | 2026-11-17 — WP-122: plain-language copy (core 3.4.0, core_api 3.2).
      1.0.0 | 2026-11-17 — WP-115 authoring kit (core 3.3.0, core_api 3.1). -->
 <!-- Architecture: ARCHITECTURE.md § 2 (module contract) · Catalog: docs/module-catalog.md -->
+
+**Before implementing any further module, complete the first blocking
+[TODO](../TODO.md), step 1:** remove the implicit default and implement
+GUI/desktop module selection and explicit **Restore last session**. This is
+accepted but pending work ([D-069](decisions/D-069-module-selection-and-session-restore.md)).
+The authoring/scaffolding commands below apply after that prerequisite passes.
+
+Every module is a peer; `sozialrecht` has no preferred loading role. First
+launch presents all modules with none preselected. Later launches also offer
+session restore or a new selection. Registry installation, tier and deployment
+enablement describe availability, not which modules a session has loaded.
 
 A module teaches Citizen one area of German law: which statutes matter,
 which deadlines run, which amounts can be checked, what a person should

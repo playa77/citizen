@@ -1,5 +1,12 @@
 # Changelog — module `sozialrecht`
 
+**Current loading policy (D-069, 2026-11-25):** Sozialrecht is a peer module,
+with no default or automatic-loading role. Complete the first blocking
+[TODO](../../TODO.md) (startup selection and explicit **Restore last session**)
+before implementing further modules. Entries below describe historical
+releases, including the former `DEFAULT_MODULE` behavior, not current product
+requirements. This policy note is not a new module release.
+
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
 ## 1.5.0 — 2026-11-17 — released with core 3.4.0 (P12, D-068)
