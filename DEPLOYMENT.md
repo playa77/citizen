@@ -1,11 +1,30 @@
 # Citizen Deployment Guide
 
-**Version: 1.3.0 | 2026-11-17** — P12 backend: release step 7 (plain gate, GUI
+**Version: 1.3.1 | 2026-11-25** — D-069: startup/session TODO blocks further
+module implementation; deployment enablement is not session selection.
+Previous: 1.3.0 | 2026-11-17 — P12 backend: release step 7 (plain gate, GUI
 proxy upload limit, local inference status).
 Previous: 1.2.0 | 2026-11-17 — P11: module platform operations (update channel,
 corpus watch, out-of-tree modules, MCP). 1.1.0 | 2026-08-25
 
 Production deployment of the Citizen legal reasoning engine on VPS.
+
+## First implementation TODO: module selection and session restore
+
+Complete [TODO.md](TODO.md), step 1, **before implementing further legal-area
+modules**. [D-069](docs/decisions/D-069-module-selection-and-session-restore.md)
+requires all modules, including Sozialrecht, to be peers with none preselected
+or loaded automatically. GUI/desktop startup presents all modules for loading
+selection; returning users can explicitly choose **Restore last session** or
+start a new selection. Deployment enablement controls availability, not the
+user's session scope.
+
+The backend still implements `DEFAULT_MODULE` and requires its configured
+legacy value to belong to the enabled set. Retiring this requirement, the
+implicit request/corpus/provenance fallbacks, and the default REST/MCP metadata
+belongs to the first TODO together with GUI selection/session persistence.
+Until then, clients must send an explicit module scope and configure corpus
+sources explicitly; do not treat the legacy backend value as a startup choice.
 
 ---
 
@@ -337,7 +356,9 @@ goldset gate after the first ingestion.
 
 `pip install` a package that registers a `citizen.modules` entry point; it
 loads at tier `community` and stays disabled until listed in
-`ENABLED_MODULES` (JSON list, including `DEFAULT_MODULE`). Validate it first:
+`ENABLED_MODULES` (JSON list controlling deployment availability). Until the
+first TODO is implemented, the backend still requires its legacy fallback
+module to be in that list; this is not a user/session selection. Validate it first:
 `python -m scripts.validate_module --module <id>`. Enabled out-of-tree code
 that imports core internals refuses startup.
 

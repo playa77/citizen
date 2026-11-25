@@ -1,9 +1,23 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.0.1 | 2026-11-16 — M0 status row: module 1.2.0 (D-063). 1.0.0 | 2026-11-16 -->
+<!-- Version: 1.0.2 | 2026-11-25 — D-069: peer modules; startup/session TODO blocks further module implementation.
+     1.0.1 | 2026-11-16 — M0 status row: module 1.2.0 (D-063). 1.0.0 | 2026-11-16 -->
 <!-- Companion to ARCHITECTURE.md (module contract) and docs/roadmap-v3.0.0.md
-     (phase P13 delivers modules M1–M10). Decisions: D-036 (Sozialrecht =
-     module + default), D-038 (queue of ten further modules). -->
+     (phase P13 delivers modules M1–M10). Decisions: D-036 (core + modules),
+     D-038 (queue), D-069 (no default; startup selection/session restore first). -->
+
+**First blocking TODO:** complete module-neutral startup and session restore
+before implementing any further module. The binding checklist is
+[TODO.md](../TODO.md), step 1; decision:
+[D-069](decisions/D-069-module-selection-and-session-restore.md).
+
+All modules are peers, including `sozialrecht`. On first GUI/desktop launch,
+present all modules for the user to choose which to load, with none
+preselected. On later launches, also offer **Restore last session** or a new
+selection. Restoration is explicit; unavailable saved modules must not be
+silently replaced. Module maturity and deployment eligibility remain visible
+but do not imply loading or selection. Planned modules are listed as planned
+until implemented; the remaining modules are the next work after this TODO.
 
 > **Status of the statutory anchors below:** planning inputs compiled from
 > general knowledge of German law on 2026-11-16. Each anchor is a *hypothesis
@@ -28,7 +42,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 
 | # | Module id | Title | Status | Queue rationale (necessity hypothesis — to be revised by user-need evidence, roadmap OQ-4) |
 |---|---|---|---|---|
-| M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · default** | module 1 since core 3.0.0 (WP-97); module version 1.2.0 (core 3.1.0, D-063) |
+| M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · peer module** | first implemented module (WP-97); this gives it no startup/loading priority |
 | M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | planned | largest clientele overlap with M0; existential (Kontopfändung); 2-week deadlines; Pfändungstabelle is pure deterministic math |
 | M2 | `mietrecht` | Wohnraummietrecht | planned (legacy key experimental) | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | planned (legacy key experimental) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
@@ -47,9 +61,11 @@ procurement) are out of scope by definition, as are lawyer-side features
 `andere` → retained as an unverified catch-all that runs the core without
 module engines (no deadlines asserted, no calculations), tier `experimental`.
 
-Sequencing is constrained by phase order in the roadmap (module refactor →
-dossier → module platform → UI); within P13 the queue order above is the
-default and may be re-ordered by decision when user-need evidence arrives.
+The first implementation task is [TODO.md](../TODO.md), step 1: remove the
+single-module fallback and implement startup selection/session restore. Only
+after it is verified may the remaining modules above be implemented. Their
+queue is implementation sequencing, not catalog preference, preselection or
+automatic loading; it may be revised when user-need evidence arrives.
 
 ---
 
@@ -61,7 +77,7 @@ deadlines** (→ `fristen.yaml`) · **deterministic calculators** (→
 **corpus** (→ `corpus.yaml`) · **dossier focus** · **compliance specifics** ·
 **crossovers**.
 
-### M0 — `sozialrecht` (existing; default)
+### M0 — `sozialrecht` (existing; peer module)
 
 - **Scope:** Bürgergeld / Grundsicherungsgeld (SGB II), Verfahren (SGB X),
   Sozialgerichtsverfahren (SGG); adjacent SGB I, III, IX, XII as corpus.
