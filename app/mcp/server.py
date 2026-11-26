@@ -118,6 +118,7 @@ async def _get_module(args: dict[str, Any]) -> Any:
         document_types,
         module_deadlines,
         public_compliance,
+        public_intake_schema,
         public_scope,
     )
     from app.modules.errata import module_errata
@@ -127,6 +128,7 @@ async def _get_module(args: dict[str, Any]) -> Any:
         **_summary(manifest),
         "core_api": manifest.core_api,
         "scope": public_scope(manifest),
+        "intake_schema": public_intake_schema(manifest),
         "legacy_aliases": list(manifest.legacy_aliases),
         "deadlines": module_deadlines(manifest.id),
         "document_types": document_types(manifest),

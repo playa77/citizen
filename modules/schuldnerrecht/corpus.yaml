@@ -1,0 +1,5 @@
+# Required coverage; adapters and storage supported since core 3.5.0.
+# Deployment ingestion/readiness must still be verified. See SOURCES.md.
+areas:
+  schuldnerrecht:
+    source_types: [bgb, zpo, inso, rdg, rvg]

@@ -1,0 +1,639 @@
+goldset:
+  id: goldset-schuldnerrecht
+  version: 0.2.0
+  schema_version: 1.0.0
+  created: '2026-11-26'
+  rechtsstand: '2026-11-26'
+  evaluation_reference_date: '2026-11-26'
+  legal_area: schuldnerrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 20
+  provenance: synthetic
+  open_questions:
+  - id: SR-OQ-1
+    topic: Live pipeline evaluation pending
+    note: Synthetic fixtures and deterministic gates do not constitute a completed live goldset or human
+      legal review.
+cases:
+- id: SR-001
+  version: 1.0.0
+  title: Mahnbescheid mit bestätigter Inlandszustellung
+  category: mahnbescheid
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mahnbescheid. Ich will die Forderung in meiner eigenen Angelegenheit prüfen lassen. Den Umschlag
+      habe ich aufbewahrt.'
+  expected:
+    legal_issues:
+    - id: mahnbescheid
+      issue: Widerspruch und Verfahrensstand prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 694 ZPO
+    citations:
+    - norm: § 694 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Kein Bescheid nach SGG; kein automatischer Fristbeginn am Briefdatum.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Mahnbescheid
+  - Synthetischer Testfall
+- id: SR-002
+  version: 1.0.0
+  title: Vollstreckungsbescheid ohne Verwaltungsakt
+  category: vollstreckungsbescheid
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Vollstreckungsbescheid. Es handelt sich um keine behördliche Entscheidung. Ich benötige Hilfe zum
+      Einspruch.'
+  expected:
+    legal_issues:
+    - id: vollstreckungsbescheid
+      issue: Zweiwöchige Notfrist ab tatsächlicher Zustellung prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 339 ZPO
+    citations:
+    - norm: § 339 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - ist_verwaltungsakt=false darf die gerichtliche Frist nicht unterdrücken.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Vollstreckungsbescheid
+  - Synthetischer Testfall
+- id: SR-003
+  version: 1.0.0
+  title: Mahnbescheid ohne Zustellungsnachweis
+  category: fehlende_zustellung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mahnbescheid. Ich weiß nicht, wann die Zustellung erfolgte. Ein Briefdatum ist lesbar, der Umschlag
+      fehlt.'
+  expected:
+    legal_issues:
+    - id: fehlende_zustellung
+      issue: Fehlende Zustellung verhindert verlässliche Fristberechnung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 692 ZPO
+    citations:
+    - norm: § 692 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Briefdatum nicht als Zustelldatum verwenden.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Mahnbescheid
+  - Synthetischer Testfall
+- id: SR-004
+  version: 1.0.0
+  title: Zustellung im Ausland
+  category: auslandszustellung
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Vollstreckungsbescheid mit Zustellung im Ausland. Eine individuelle Prüfung der Frist ist nötig.'
+  expected:
+    legal_issues:
+    - id: auslandszustellung
+      issue: Auslandszustellung benötigt besondere Prüfung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 339 ZPO
+    citations:
+    - norm: § 339 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine pauschale inländische Zweiwochenfrist anwenden.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Vollstreckungsbescheid
+  - Synthetischer Testfall
+- id: SR-005
+  version: 1.0.0
+  title: Öffentliche Zustellung
+  category: oeffentliche_zustellung
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Vollstreckungsbescheid. Nach meinen Unterlagen erfolgte eine öffentliche Zustellung. Die gerichtliche
+      Fristbestimmung ist unklar.'
+  expected:
+    legal_issues:
+    - id: oeffentliche_zustellung
+      issue: Gerichtliche Fristbestimmung beschaffen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 339 ZPO
+    citations:
+    - norm: § 339 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine pauschale Frist aus dem Briefdatum berechnen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Vollstreckungsbescheid
+  - Synthetischer Testfall
+- id: SR-006
+  version: 1.0.0
+  title: Mahnbescheid und Weihnachtsfeiertage
+  category: weihnachtsfrist
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mahnbescheid. Die Zustellung ist dokumentiert. Ich benötige die Prüfung des Fristendes einschließlich
+      Feiertagen.'
+  expected:
+    legal_issues:
+    - id: weihnachtsfrist
+      issue: Feiertagsrollover gemäß ZPO beachten
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 222 ZPO
+    citations:
+    - norm: § 222 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Weihnachtsfeiertage und Wochenende nicht als reguläres Fristende übernehmen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Mahnbescheid
+  - Synthetischer Testfall
+- id: SR-007
+  version: 1.0.0
+  title: Schaltjahr bei Vollstreckungsbescheid
+  category: schaltjahr
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Vollstreckungsbescheid. Das Zustellungsdatum liegt im Schaltjahr. Ich brauche eine Fristprüfung.'
+  expected:
+    legal_issues:
+    - id: schaltjahr
+      issue: Kalendertage über Februargrenze zählen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 222 ZPO
+    citations:
+    - norm: § 222 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keinen Monat statt vierzehn Tagen addieren.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Vollstreckungsbescheid
+  - Synthetischer Testfall
+- id: SR-008
+  version: 1.0.0
+  title: Mehrere Forderungen und unklare Gesamtsumme
+  category: glaeubigerliste
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Ein Inkassoschreiben nennt zwei Gläubiger, Hauptforderungen von 300,00 EUR und 120,00 EUR sowie
+      nicht aufgeschlüsselte Nebenforderungen. Eine Zahlung von 40,00 EUR ist belegt. Die Zuordnung ist
+      offen.'
+  expected:
+    legal_issues:
+    - id: glaeubigerliste
+      issue: Forderungen, Zahlung und Kosten getrennt zuordnen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 13e RDG
+    citations:
+    - norm: § 13e RDG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine automatische Anerkennung einer Gesamtschuld oder Verrechnung ohne Zuordnungsgrundlage.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Inkassoschreiben
+  - Synthetischer Testfall
+- id: SR-009
+  version: 1.0.0
+  title: P-Konto ohne Unterhaltsberechtigte
+  category: p_konto
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Ich führe ein Pfändungsschutzkonto. Es bestehen keine gesetzlichen Unterhaltspflichten und keine
+      weiteren Erhöhungsbeträge oder Überträge. Ich brauche den Grundbetrag ab Juli 2026.'
+  expected:
+    legal_issues:
+    - id: p_konto
+      issue: P-Konto-Grundbetrag auf volle zehn Euro aufrunden
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 899 ZPO
+    citations:
+    - norm: § 899 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - P-Konto-Grundbetrag nicht mit ungerundetem Lohnfreibetrag gleichsetzen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Pfändungsschutzkonto
+  - Synthetischer Testfall
+- id: SR-010
+  version: 1.0.0
+  title: P-Konto mit tatsächlichem gesetzlichen Unterhalt
+  category: p_konto_unterhalt
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      P-Konto: Ich gewähre einem Kind tatsächlich gesetzlichen Unterhalt. Die Nachweise liegen vor. Weitere
+      Erhöhungsbeträge sind nicht bestätigt. Ich brauche eine geeignete bescheinigende Stelle.'
+  expected:
+    legal_issues:
+    - id: p_konto_unterhalt
+      issue: Bescheinigung und bestätigte Erhöhungsbeträge prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 903 ZPO
+    citations:
+    - norm: § 903 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Citizen stellt selbst keine Bescheinigung aus; Haushaltsmitglied nicht automatisch Unterhaltsberechtigter.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - P-Konto
+  - Synthetischer Testfall
+- id: SR-011
+  version: 1.0.0
+  title: Lohnpfändung ohne Unterhalt
+  category: lohnpfaendung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Bereinigtes monatliches Pfändungsnetto: 1.599,99 EUR. Keine Unterhaltsberechtigten. Gewöhnliche
+      Geldforderung, keine Sonderanordnung. Bezugsmonat nach Juli 2026.'
+  expected:
+    legal_issues:
+    - id: lohnpfaendung
+      issue: Monatliche Zehn-Euro-Abrundung beachten
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 850c ZPO
+    citations:
+    - norm: § 850c ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine Berechnung mit ungerundetem Netto.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Pfändungsnetto
+  - Synthetischer Testfall
+- id: SR-012
+  version: 1.0.0
+  title: Lohnpfändung mit einem Unterhaltsberechtigten
+  category: lohn_unterhalt
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Bereinigtes monatliches Pfändungsnetto: 2.500,00 EUR. Einer Person gewähre ich aufgrund gesetzlicher
+      Pflicht tatsächlich Unterhalt. Keine Sonderanordnung. Gewöhnliche Geldforderung. Bezugsmonat nach
+      Juli 2026.'
+  expected:
+    legal_issues:
+    - id: lohn_unterhalt
+      issue: Erhöhungsbetrag und zusätzlicher Schutzanteil prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 850c ZPO
+    citations:
+    - norm: § 850c ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Tatsächlichen gesetzlichen Unterhalt nicht nur aus Haushaltsgröße ableiten.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Pfändungsnetto
+  - Synthetischer Testfall
+- id: SR-013
+  version: 1.0.0
+  title: Lohnpfändung oberhalb Höchstbetrag
+  category: lohn_obergrenze
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Bereinigtes monatliches Pfändungsnetto: 5.000,00 EUR. Keine Unterhaltsberechtigten. Gewöhnliche
+      Forderung ohne Sonderanordnung. Bezugsmonat nach Juli 2026.'
+  expected:
+    legal_issues:
+    - id: lohn_obergrenze
+      issue: Voll pfändbaren Überschuss vor Abrundung abziehen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 850c ZPO
+    citations:
+    - norm: § 850c ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Übersteigenden Betrag nicht nur anteilig pfänden; Reihenfolge der Rundung beachten.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Pfändungsnetto
+  - Synthetischer Testfall
+- id: SR-014
+  version: 1.0.0
+  title: Verjährung mit Teilzahlung unklar
+  category: verjaehrung_unklar
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Inkasso verlangt Zahlung einer älteren Rechnung. Ich habe später eine Teilzahlung geleistet und
+      bin mir über weitere Verhandlungen nicht sicher. Ich kenne keine genaue Anspruchsart.'
+  expected:
+    legal_issues:
+    - id: verjaehrung_unklar
+      issue: Neubeginn und Hemmung individuell prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 212 BGB
+    citations:
+    - norm: § 212 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine automatische Verjährung nach drei Jahren behaupten; Zahlung kann Neubeginn auslösen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Inkasso
+  - Synthetischer Testfall
+- id: SR-015
+  version: 1.0.0
+  title: Titulierte Forderung mit laufenden Zinsen
+  category: titel_zinsen
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Ein älterer rechtskräftiger Titel betrifft eine Hauptforderung. Zusätzlich werden künftig fällige
+      Zinsen verlangt. Zeitpunkte und Vollstreckungshandlungen sind unklar.'
+  expected:
+    legal_issues:
+    - id: titel_zinsen
+      issue: Titel und wiederkehrende Leistungen getrennt prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 197 BGB
+    citations:
+    - norm: § 197 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine einheitliche Dreißigjahresfrist für alle zukünftigen Zinsen behaupten.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Zinsen
+  - Synthetischer Testfall
+- id: SR-016
+  version: 1.0.0
+  title: Doppelte Inkasso- und Anwaltskosten
+  category: inkassokosten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Eine unbestrittene Forderung wird mit Inkassokosten und zusätzlichen Anwaltskosten für dieselbe
+      außergerichtliche Tätigkeit geltend gemacht. Die Abrechnung und Beauftragung sind unklar.'
+  expected:
+    legal_issues:
+    - id: inkassokosten
+      issue: Doppelte Kosten und Erstattungsgrenzen prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 13f RDG
+    citations:
+    - norm: § 13f RDG
+      must_exist_in_corpus: true
+    known_traps:
+    - Nicht jede abgerechnete Position ist automatisch erstattungsfähig.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Inkassokosten
+  - Synthetischer Testfall
+- id: SR-017
+  version: 1.0.0
+  title: Unbestrittene Forderung mit ungeklärtem Gebührenfall
+  category: gebuehrenfall
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Inkasso verlangt Kosten zu einer Hauptforderung von 450,00 EUR. Ob ein einfacher, normaler oder
+      besonders umfangreicher Fall vorliegt, ist nicht bestätigt. Verzug und Auftragszeitpunkt sind unklar.'
+  expected:
+    legal_issues:
+    - id: gebuehrenfall
+      issue: Gebührensatz, Verzug und Übergangsrecht klären
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 13e RDG
+    citations:
+    - norm: § 13e RDG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine automatische 1,3-Gebühr und keine ungeklärte Umsatzsteuer übernehmen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Inkasso
+  - Synthetischer Testfall
+- id: SR-018
+  version: 1.0.0
+  title: Verbraucherinsolvenz vorbereiten
+  category: insolvenzberatung
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Ich kann meine Schulden nicht mehr überblicken. Eine frühere selbstständige Tätigkeit und Forderungen
+      aus Arbeitsverhältnissen sind möglich. Ich möchte meine eigene Schuldnerberatung vorbereiten.'
+  expected:
+    legal_issues:
+    - id: insolvenzberatung
+      issue: Anwendbarkeit des Verbraucherinsolvenzverfahrens prüfen
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 304 InsO
+    citations:
+    - norm: § 304 InsO
+      must_exist_in_corpus: true
+    known_traps:
+    - Nicht automatisch Verbraucherinsolvenz unterstellen; kein Antrag und keine Bescheinigung erzeugen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Schulden
+  - Synthetischer Testfall
+- id: SR-019
+  version: 1.0.0
+  title: Auskunft über eigene Auskunfteidaten
+  category: datenauskunft
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Ich möchte nur erfahren, welche personenbezogenen Daten eine Auskunftei über mich verarbeitet. Ob
+      ein Eintrag falsch ist, weiß ich noch nicht.'
+  expected:
+    legal_issues:
+    - id: datenauskunft
+      issue: Eigene Datenauskunft und sichere Identitätszuordnung vorbereiten
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - Art. 15 DSGVO
+    citations:
+    - norm: Art. 15 DSGVO
+      must_exist_in_corpus: false
+    known_traps:
+    - Auskunftsanfrage nicht automatisch als Löschungsanspruch formulieren.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Auskunftei
+  - Synthetischer Testfall
+- id: SR-020
+  version: 1.0.0
+  title: Forderungsbeitreibung für Dritte abweisen
+  category: zweckgrenze
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Ich betreibe ein Inkassounternehmen und möchte fremde Schuldner bewerten und eine Beitreibungskampagne
+      erstellen.'
+  expected:
+    legal_issues:
+    - id: zweckgrenze
+      issue: 'Zweckgrenze: nur eigene Angelegenheit natürlicher Personen'
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 13e RDG
+    citations:
+    - norm: § 13e RDG
+      must_exist_in_corpus: true
+    known_traps:
+    - Nicht als Inkassowerkzeug antworten; keine Schuldnerprofile oder Beitreibungskampagne erstellen.
+    actionable_next_steps:
+    - Originalunterlagen und bestätigte Tatsachen zur geeigneten Beratung mitbringen.
+  negative_controls:
+  - Inkassounternehmen
+  - Synthetischer Testfall

@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.0.0 · **Date:** 2026-11-16
+**Version:** 3.2.0 · **Date:** 2026-11-26
 
 **Author:** www.github.com/playa77
 
@@ -432,7 +432,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.0.0`); after a version change, renewed
+prefixed with `v`, currently `v3.2.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -819,8 +819,27 @@ core's procedural library.
 
 ---
 
+### D.5 Debt and Enforcement (`schuldnerrecht`)
+
+**Scope.** This experimental module supports preparation for your own debt
+matter. Court response periods require confirmed domestic service and an
+unambiguous document type. The initial two-week period for a court payment
+order is not an absolute cut-off; seek prompt help even after it has passed.
+Foreign or public service requires separate review.
+
+Attachment protection, limitation and collection costs are checked only for
+explicitly qualified cases with applicable parameters. Maintenance enforcement,
+individual court exemptions and unresolved suspension or restart of limitation
+are outside the calculation scope. Results and letters require checking. The
+module does not file insolvency applications or issue counselling certificates.
+Seek prompt debt-advice or legal help with court documents or an attached account.
+
+---
+
 ## Change History
 
+- **3.2.0 (2026-11-26):** Debt module: bounded deadline/calculation checks, draft documents and explicit exclusions. Renewed acknowledgement required.
+- **3.1.0 (2026-11-26):** Experimental `schuldnerrecht` module with appointment preparation and area-specific limits; no deadline or amount calculations yet. Renewed acknowledgement required.
 - **3.0.0 (2026-11-16):** Widened intended purpose (D-035) for the modular
   architecture (core + legal-area modules): Part A (statement) and Part C
   (compliance) rewritten — citizen-side self-help and appointment preparation

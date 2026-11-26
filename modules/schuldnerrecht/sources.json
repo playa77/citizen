@@ -1,0 +1,187 @@
+{
+  "format": "citizen-source-review-v1.0",
+  "module": "schuldnerrecht",
+  "review_status": "draft",
+  "documents": [
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__850c.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "40a9af06a00ad3c5a90ab69105a1400258a69473573a5cbc07b1b8527c5843fc",
+      "bytes": 10131
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__899.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "6fad144f30a9f3a0faba1454e780d530b00970a7857f0bfc755f9c5f56aa9303",
+      "bytes": 5027
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__902.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "61630faa2443b99b9d29079a5cd540bbad49158dd2dba4ad93f231eaff950abe",
+      "bytes": 6446
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__903.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "ac2e720103f1af50719c1e376e14df51c960c14661b7f4f26278c60a0175c192",
+      "bytes": 6766
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__850k.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "b8f1e8d433ab94933a40179e9bd9725e8e38ce360fe47d077e58075dba811567",
+      "bytes": 5623
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__700.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "57a86952aecc82cf2e59dde3b1991160c4d322368bb9715d5b7282ba1c94a61a",
+      "bytes": 4944
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__339.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "4b48e59cd709a2eac4bdcebfce4a14a47d2ba8501b5010cb432ce18cb928d1c6",
+      "bytes": 3906
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__692.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "f4715e7c0b9720fef78eac72e1bdac5c2ee9199514879ef00c9033ade8582470",
+      "bytes": 5709
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__694.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "50923f394830b702f5d1782073d13104ba37faeb29cef6e16147cd44326dc0dc",
+      "bytes": 3751
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__222.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "bc7f8c65105881711e1aacbcbe49110d777ae7ce7d4e5d14dee6c829b1011583",
+      "bytes": 3801
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__195.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "db542b2a124f440ebcfad22129b7323809692e96cd4efd638dadfa6a23474ca1",
+      "bytes": 3454
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__197.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "ce5c8c8daa4bf9596f44d836e18fde85b48c4ac94f2c6288b4f76c0983fbca53",
+      "bytes": 5069
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__199.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "1fad808afadae9631d82aa6b04ceae5bdd5bfa431b4d27470bc4b982a208c349",
+      "bytes": 5875
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__204.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "dfcb3d03b2e44da6f5eb99cc328c5ac765c4b959800e9fb00cebc7660d639a5e",
+      "bytes": 9722
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__212.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "d5e48aa20693e1c266d55ea1aec33865c11e18c7563daf75fe89047d5683a29b",
+      "bytes": 4534
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/inso/__304.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "087ed6440b261b66622d1c9d820339821a2ea29d7b207419a7d1b139a6698026",
+      "bytes": 4129
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/inso/__305.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "5b28e80d7d8ae42fb9c4ab18a4183aaf6f2d4c7069ffa1e300d6193d3de854d9",
+      "bytes": 7928
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/rdg/__13e.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "eacb7527c35e27013ba4ac75e2c926b0fd472b373b94c49aa918f37210aa952f",
+      "bytes": 4010
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/rdg/__13f.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "00a1068499a0f414978ecf04530d08fcbb3f049e319271ec385d7620ea75671c",
+      "bytes": 4083
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/rvg/__13.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "e2174d0f229ef7abf6f3a6fdaf7ed22a0892f5f0f589f248a64aad7fb3ac4c85",
+      "bytes": 7021
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/rvg/anlage_1.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "989bd3b94865d4eb73d335a2284d7a9fcfe014d79f9ae7ce9c30882db7ffde08",
+      "bytes": 247587
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/rvg/anlage_2.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "349730ee09a93c0794f08a945c45df78210f1fb3e943b5a89e5d2fc23f534aa4",
+      "bytes": 16091
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/pf_ndfreigrbek_2026/BJNR0500A0026.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "d20da48a6bce8c04df11b35a6b15857d9b1823b35c1b81aaf7e35fa7dd5be0c4",
+      "bytes": 797802
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/pf_ndfreigrbek_2025/BJNR06E0A0025.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "dcee4166f92958c7bfb99aed8cb4bb91bbb4507a8385db67578c3ec72a268c7b",
+      "bytes": 588769
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__201.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "87a9e151110024f1bd2bf0f9a4292c23c85195bc42ddaba38bea320f104f2677",
+      "bytes": 3729
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__187.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "8a1f3c70ceb349b44b3f995bf7d3ffc26d7a2b512ea77c384eb87c44cd961369",
+      "bytes": 4079
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__188.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "b80b9e0feb801a7e7b984b5294e37bba247080a1122b7af59d4dab21ebbd807e",
+      "bytes": 4494
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/bgb/__193.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "12f3ef798d3860d2e0182fc9f7794ad00786109f6e83a8306dab111777d10c2d",
+      "bytes": 3751
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/zpo/__702.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "68aef7744b09848a6050e5276a7e97134352956a49196855667e763076faad81",
+      "bytes": 5985
+    },
+    {
+      "url": "https://www.gesetze-im-internet.de/ustg_1980/__12.html",
+      "retrieved_on": "2026-11-26",
+      "sha256": "e8753b36595e445e776716ce43ec8d01633d9c548aec77d776105ae9484d09d0",
+      "bytes": 15219
+    }
+  ]
+}

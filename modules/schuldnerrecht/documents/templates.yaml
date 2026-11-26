@@ -1,0 +1,165 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Schuldnerberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – nur zur Vorbereitung Ihrer eigenen Angelegenheit.
+
+        [BITTE PRÜFEN: Schreiben, Zustellung und Unterlagen vollständig bestätigen]
+
+        Bewahren Sie Schreiben und Zustellungsumschlag auf. Lassen Sie gerichtliche Schreiben unverzüglich
+        prüfen.
+
+        Diese Vorlage ist kein Rechtsbehelf. Citizen reicht nichts ein, stellt keine Bescheinigung aus
+        und erstellt keinen Insolvenzantrag.
+
+        Wählen Sie einen passenden Entwurf erst nach Prüfung von Dokumentart, Empfänger und Verfahrensstand.
+
+        '
+  widerspruch_mahnbescheid_hilfe:
+    title: 'Mahnbescheid: Widerspruch vorbereiten'
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – Ausfüllhilfe, kein versandfertiger Rechtsbehelf.
+
+        [BITTE PRÜFEN: tatsächlich ein Mahnbescheid, zuständiges Gericht und Geschäftszeichen]
+
+        [BITTE PRÜFEN: tatsächliches Zustellungsdatum, Zustellungsart und Verfahrensstand]
+
+        Nutzen Sie möglichst den beigefügten Widerspruchsvordruck und beachten Sie dessen Hinweise.
+
+        Der amtliche Vordruck ist für gewöhnliche natürliche Personen nicht allgemein verpflichtend. Besondere
+        Formvorgaben gesondert prüfen.
+
+        Für den gewöhnlichen Inlandsfall fordert der Mahnbescheid zum Widerspruch binnen zwei Wochen ab
+        Zustellung auf.
+
+        Diese zwei Wochen sind keine absolute Ausschlussgrenze: Widerspruch bleibt möglich, solange der
+        Vollstreckungsbescheid noch nicht verfügt ist (§ 694 ZPO).
+
+        Ein verspäteter Widerspruch wird als Einspruch behandelt. Lassen Sie den Verfahrensstand dringend
+        prüfen.
+
+        Bei Vollstreckungsbescheid, Auslandszustellung oder öffentlicher Zustellung sofort fachkundige
+        Hilfe suchen.
+
+        [BITTE PRÜFEN: Widerspruch insgesamt oder gegen welchen genau bezeichneten Teil gewollt und sachgerecht]
+
+        [BITTE PRÜFEN: mögliche Formulierung nach Bestätigung: Hiermit widerspreche ich dem bezeichneten
+        Anspruch im bestätigten Umfang]
+
+        [BITTE PRÜFEN: Unterschrift, zulässiger Übermittlungsweg und rechtzeitiger Eingang beim zuständigen
+        Gericht]
+
+        Citizen reicht den Widerspruch nicht für Sie ein. Eine Nachricht an das Inkassounternehmen ersetzt
+        ihn nicht.
+
+        '
+  forderung_bestreiten:
+    title: Forderung prüfen und gegebenenfalls bestreiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Versand fachkundig prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: Empfänger und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Forderung und Geschäftszeichen]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte um nachvollziehbare Unterlagen zu Forderungsgrund, Forderungsinhaberschaft, Hauptforderung,
+        Zinsen und einzelnen Kostenpositionen.
+
+        [BITTE PRÜFEN: ob und in welchem Umfang ich die Forderung bestreite; konkrete tatsächliche Gründe]
+
+        [BITTE PRÜFEN: Verjährung nur nach Prüfung von Anspruchsart, Entstehung, Fälligkeit, Kenntnis,
+        Titel, Hemmung und Neubeginn einwenden]
+
+        [BITTE PRÜFEN: nur bei bestätigten Voraussetzungen aufnehmen: Ich erhebe die Einrede der Verjährung
+        gegen den genau bezeichneten Anspruch]
+
+        Diese Anfrage ersetzt keinen gerichtlichen Rechtsbehelf. Gerichtliche Fristen gesondert prüfen
+        lassen.
+
+        Vor Zahlung, Teilzahlung, Anerkenntnis oder Ratenvereinbarung mögliche Folgen für Einwendungen
+        und Verjährung klären.
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und Unterschrift]
+
+        '
+  p_konto_bescheinigung_anfragen:
+    title: 'P-Konto: Bescheinigung anfragen'
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – Anfrage an eine geeignete Person oder Stelle, keine Bescheinigung.
+
+        {absender}
+
+        An [BITTE PRÜFEN: zuständige bescheinigende Stelle nach § 903 ZPO und Anschrift]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte um Prüfung, ob Sie mir eine Bescheinigung über Erhöhungsbeträge für mein Pfändungsschutzkonto
+        ausstellen können.
+
+        [BITTE PRÜFEN: Kontoinhaberschaft, P-Konto und benötigte Kontozuordnung]
+
+        [BITTE PRÜFEN: tatsächliche Unterhaltspflichten, geleisteter Unterhalt, Leistungsarten, Beträge
+        und Nachweise]
+
+        Bitte teilen Sie mir mit, welche Unterlagen Sie hierfür benötigen.
+
+        Citizen bestätigt keine Freibeträge und stellt keine Bescheinigung aus. Diese Anfrage erhöht den
+        Schutzbetrag nicht selbst.
+
+        Sie ist weder eine Bescheinigung nach § 305 InsO noch ein Insolvenzantrag.
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und Unterschrift]
+
+        '
+  datenauskunft_art15:
+    title: 'Auskunftei: Auskunft nach Artikel 15 DSGVO anfragen'
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – Anfrage nur zu Ihren eigenen personenbezogenen Daten.
+
+        {absender}
+
+        An [BITTE PRÜFEN: verantwortliche Auskunftei und sicherer Kontaktweg]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte nach Artikel 15 DSGVO um Auskunft, ob Sie personenbezogene Daten über mich verarbeiten.
+
+        Soweit dies zutrifft, bitte ich um Zugang zu diesen Daten und eine Kopie sowie um Informationen
+        nach Artikel 15 DSGVO.
+
+        Bitte informieren Sie mich insbesondere über Zwecke, Datenkategorien, Empfänger, Speicherdauer
+        und verfügbare Angaben zur Datenherkunft.
+
+        Soweit einschlägig, bitte ich um Informationen zur automatisierten Entscheidungsfindung einschließlich
+        Profiling nach Artikel 15 Absatz 1 Buchstabe h DSGVO.
+
+        [BITTE PRÜFEN: erforderliche und verhältnismäßige Angaben zur sicheren Identitätszuordnung]
+
+        Diese Anfrage enthält keine Behauptung, dass Einträge unrichtig sind. Eine Berichtigung oder Löschung
+        muss gesondert geprüft werden.
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und Unterschrift]
+
+        '

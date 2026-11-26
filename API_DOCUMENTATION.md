@@ -786,6 +786,14 @@ an explicit selection or session restore (first blocking TODO, §0).
 
 #### `GET /api/v1/modules`
 
+WP-130 adds the experimental `schuldnerrecht` 0.2.0 module (core 3.5.0).
+It is available under the existing deployment-tier rules and must be explicitly
+selected. Its debt-specific profile, qualified deterministic calculators,
+domestic service-based deadlines, draft documents and plain copy use module
+API 3.3. The catalog supports its required statutes; ingestion and inference
+remain dependent on the installation's configured corpus and inference setup.
+The current disclaimer acknowledgement version is `v3.2.0`.
+
 `default_module` and `is_default` have been removed (D-070). This response
 contains no module preference. The same applies to MCP `list_modules` and
 `get_module`, including both structured and textual JSON results.
@@ -819,6 +827,11 @@ contains no module preference. The same applies to MCP `list_modules` and
   manifest's value) and are enabled only when `ENABLED_MODULES` lists them.
 
 #### `GET /api/v1/modules/{module_id}`
+
+Since core 3.5.0, `intake_schema` is an additive public JSON Schema object,
+or `null` when undeclared. It describes the module's confirmed intake facts
+for clients; existing request validation and dev/privacy guards remain in
+force. The local read-only MCP module-detail tool exposes the same schema.
 
 The summary fields above plus the public manifest parts:
 
@@ -991,12 +1004,34 @@ All keys optional. `rbb_status` ∈ {`korrekt`, `fehlerhaft`, `fehlt`};
 as the GET. Stored in `case_run.user_edits.dossier`; other `user_edits` keys
 are kept. `400` `invalid_chronology_update`, `404` unknown case.
 
-**Deadline inputs.** `facts.bescheid_datum` wins; otherwise the confirmed
+**Deadline inputs for Bekanntgabe-based rules.** `facts.bescheid_datum` wins; otherwise the confirmed
 `document_date` entry gives a `computed` deadline, an unconfirmed one only a
 `provisional` deadline, none at all `missing_input`. Unset facts take the
 conservative reading and are listed per deadline in `assumptions`
 (Rechtsbehelfsbelehrung correct, Aufgabe zur Post = letter date, treated as a
 Verwaltungsakt, Bundesland = Fristen-core default).
+
+**Service-based rules (core 3.5.0 / module API 3.3).** Additive fact keys:
+`zustellung_tatsaechlich` (confirmed actual service ISO date), `document_type`
+(module-declared document slug) and `zustellungsart` (`inland`, `ausland` or
+`oeffentlich`). These are optional in the general contract but required to
+compute a rule that declares them. Missing facts or an unsupported service
+mode yield `missing_input`, never a letter-date or postal-fiction substitute.
+Service rules with holiday rollover also require an explicit `bundesland`;
+they do not inherit the default Land used by legacy Bekanntgabe rules.
+An explicitly different document type yields `not_applicable` for that rule.
+These court rules do not inherit Verwaltungsakt assumptions or automatic
+Rechtsbehelfsbelehrung extensions. The input may omit `bescheid_datum` when
+the actual service date is supplied. For example:
+
+```json
+{"facts":{"zustellung_tatsaechlich":"2026-11-02",
+ "document_type":"vollstreckungsbescheid","zustellungsart":"inland",
+ "bundesland":"NW"}}
+```
+
+The domestic rule returns 2026-11-16. The Mahnbescheid's initial two-week
+action period is not an absolute cut-off; module copy explains § 694 ZPO.
 
 #### `POST /api/v1/cases/{case_id}/dossier?format=json|pdf`
 

@@ -1,0 +1,63 @@
+format: citizen-plain-copy-v1.0
+module: schuldnerrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending.
+findings:
+  forderung_pruefen:
+    title: Forderung prüfen
+    text: Grund und Nachweise der Forderung sind noch zu prüfen. Citizen bestätigt keine Zahlungspflicht.
+    next_step: Nehmen Sie Verträge, Rechnungen und Zahlungsbelege zur Schuldnerberatung mit.
+  kosten_pruefen:
+    title: Kosten prüfen
+    text: Einzelne Kostenpositionen benötigen eine Prüfung. Citizen bestätigt weder ihre Berechtigung
+      noch einen geschuldeten Gesamtbetrag.
+    next_step: Bitten Sie um eine aufgeschlüsselte Forderung. Lassen Sie Zinsen und Inkassokosten prüfen.
+  frist_pruefen:
+    title: Gerichtliche Frist prüfen
+    text: Dokumentart, tatsächliche Zustellung und Verfahrensstand müssen geklärt werden.
+    next_step: Bewahren Sie den Umschlag auf. Lassen Sie gerichtliche Schreiben unverzüglich prüfen.
+  beratung_erforderlich:
+    title: Beratung erforderlich
+    text: Ihr Fall benötigt eine individuelle Prüfung. Citizen stellt keine Bescheinigung aus und erstellt
+      keinen Insolvenzantrag.
+    next_step: Wenden Sie sich an eine geeignete Schuldnerberatungsstelle oder eine fachkundige anwaltliche
+      Beratung.
+  einordnung_offen:
+    title: Einordnung noch offen
+    text: Die Angaben reichen noch nicht für eine Einordnung. Das bestätigt weder die Forderung noch ihre
+      Unwirksamkeit.
+    next_step: Sammeln Sie Schreiben und Nachweise. Beachten Sie mögliche gerichtliche Fristen.
+deadlines:
+  widerspruch_mahnbescheid:
+    title: Widerspruch gegen den Mahnbescheid
+    action: Lassen Sie Dokument und Zustellung unverzüglich prüfen. Auslandszustellung und öffentliche
+      Zustellung benötigen individuelle Beratung.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Widerspruch kann bis zur Verfügung
+        des Vollstreckungsbescheids weiterhin möglich sein. Lassen Sie den Verfahrensstand prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die tatsächliche Zustellung und
+        lassen Sie die Berechnung prüfen. Widerspruch kann bis zur Verfügung des Vollstreckungsbescheids
+        weiterhin möglich sein. Lassen Sie den Verfahrensstand prüfen.
+      missing_input: Ein bestätigtes Zustellungsdatum oder weitere erforderliche Angaben fehlen. Eine
+        verlässliche Frist kann nicht genannt werden. Holen Sie unverzüglich Rat. Widerspruch kann bis
+        zur Verfügung des Vollstreckungsbescheids weiterhin möglich sein. Lassen Sie den Verfahrensstand
+        prüfen.
+      not_applicable: Diese Fristregel passt nicht zum erkannten Dokument. Andere Fristen oder Vollstreckungsschritte
+        können trotzdem wichtig sein. Widerspruch kann bis zur Verfügung des Vollstreckungsbescheids weiterhin
+        möglich sein. Lassen Sie den Verfahrensstand prüfen.
+  einspruch_vollstreckungsbescheid:
+    title: Einspruch gegen den Vollstreckungsbescheid
+    action: Lassen Sie Dokument und Zustellung unverzüglich prüfen. Auslandszustellung und öffentliche
+      Zustellung benötigen individuelle Beratung.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die tatsächliche Zustellung und
+        lassen Sie die Berechnung prüfen.
+      missing_input: Ein bestätigtes Zustellungsdatum oder weitere erforderliche Angaben fehlen. Eine
+        verlässliche Frist kann nicht genannt werden. Holen Sie unverzüglich Rat.
+      not_applicable: Diese Fristregel passt nicht zum erkannten Dokument. Andere Fristen oder Vollstreckungsschritte
+        können trotzdem wichtig sein.

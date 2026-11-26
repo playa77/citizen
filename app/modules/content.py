@@ -67,6 +67,7 @@ def declared_files(manifest: ModuleManifest) -> list[str]:
         "corpus",
         "fristen",
         "intake",
+        "intake_schema",
         "dossier",
         "prompts",
         "document_templates",

@@ -2,8 +2,10 @@
 
 ## 1. Blocking TODO: module selection and session restore
 
-**Do this before any other implementation work, including further legal-area
-modules.** Status: backend changes implemented and verified with the locked
+**Backend prerequisite completed; GUI work remains separately owned.** The
+owner's 2026-11-26 continuation direction in D-069 permits backend roadmap work
+to continue without this agent taking ownership of GUI implementation or
+claiming combined acceptance. Status: backend changes implemented and verified with the locked
 development environment; owner-managed GUI/session work and combined acceptance
 remain incomplete. Decisions:
 [D-069](docs/decisions/D-069-module-selection-and-session-restore.md),
@@ -48,11 +50,16 @@ validation and deterministic dossier/plain gates passed. Existing async
 cancellation/dependency warnings and the skipped checks are recorded there.
 The GUI is owned separately; its implementation and acceptance were not inspected
 or verified in this session. This checklist requires both repositories.
-Complete and verify every item above before proceeding to step 2.
+The separately owned GUI and combined checks remain open; the owner's newer
+direction permits backend step 2 to proceed (D-069, backend continuation direction).
 
 ## 2. Implement the remaining legal-area modules
 
-- [ ] After step 1 is complete, implement the remaining modules in the
+- [x] WP-130 backend implementation: `schuldnerrecht` 0.2.0, core 3.5.0 /
+  module API 3.3. Verification and operational limits: D-072 and its linked
+  completion plan. Human reviews remain deferred until all modules are
+  implemented (D-071); no verified promotion is claimed.
+- [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing
   authoring, legal-source review, goldset and promotion gates.

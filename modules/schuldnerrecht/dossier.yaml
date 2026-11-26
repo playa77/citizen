@@ -1,0 +1,52 @@
+# WP-130 appointment content; dates and amounts come from deterministic engines.
+format: citizen-module-dossier-v1.0
+checklist:
+  - id: glaeubigerliste
+    label_de: "Liste Ihrer Gläubiger mit Aktenzeichen, geforderten Beträgen und bisherigen Zahlungen"
+    why_de: "Die Beratung braucht einen Überblick über Ihre Schulden und darüber, welche Forderungen Sie bestreiten."
+    topic: forderungen
+    required: true
+  - id: forderungsunterlagen
+    label_de: "Forderungsschreiben, Verträge, Rechnungen, gerichtliche Titel und Forderungsaufstellungen mit Zinsen und Kosten"
+    why_de: "Damit kann die Beratung die Grundlage und die Zusammensetzung jeder Forderung prüfen."
+    topic: forderungen
+    required: true
+  - id: zustellnachweise
+    label_de: "Vollständige gerichtliche Schreiben mit Umschlägen und Nachweisen zum Zustelltag"
+    why_de: "Die Beratung benötigt die Zustellung, um mögliche Fristen zu prüfen."
+    topic: fristen
+    required: true
+  - id: zahlungsnachweise
+    label_de: "Zahlungsbelege, Ratenvereinbarungen und Ihr bisheriger Schriftverkehr zu den Forderungen"
+    topic: forderungen
+    required: true
+  - id: einkommen_ausgaben
+    label_de: "Übersicht über Ihr Einkommen, Vermögen, Ihre laufenden Ausgaben und Unterhaltspflichten"
+    topic: haushalt
+    required: true
+  - id: pfaendung_konto
+    label_de: "Pfändungsbeschluss, Kontoauszüge und vorhandene P-Konto-Bescheinigung"
+    topic: pfaendung
+    required: true
+    when:
+      any_keyword: [pfändung, p-konto, pfändungsschutz]
+questions:
+  - id: frist_pruefen
+    text_de: "Welche Fristen laufen bei meinen gerichtlichen Schreiben, und wie kann ich sie wahren?"
+    topic: fristen
+  - id: forderung_pruefen
+    text_de: "Welche Forderungen, Zinsen und Kosten sind nachvollziehbar, und welche Unterlagen fehlen zur Prüfung?"
+    topic: forderungen
+  - id: pfaendungsschutz
+    text_de: "Welche Schritte zum Schutz meines Einkommens und meines Kontos muss ich jetzt prüfen lassen?"
+    topic: pfaendung
+  - id: insolvenz_vorbereitung
+    text_de: "Welche Möglichkeiten der Schuldenbereinigung kommen für mich in Betracht, und welche Nachweise fehlen?"
+    topic: beratung
+
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

@@ -1,0 +1,62 @@
+format: citizen-plain-copy-v1.0
+module: schuldnerrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending.
+findings:
+  forderung_pruefen:
+    title: Check the claim
+    text: The basis and evidence for the claim still need checking. Citizen does not confirm that you
+      owe payment.
+    next_step: Bring contracts, invoices and payment records to debt advice.
+  kosten_pruefen:
+    title: Check the costs
+    text: Individual cost items need checking. Citizen confirms neither their validity nor a total amount
+      owed.
+    next_step: Ask for an itemised statement. Have interest and collection costs checked.
+  frist_pruefen:
+    title: Check the court deadline
+    text: The document type, actual service and procedural stage need checking.
+    next_step: Keep the envelope. Have court documents checked urgently.
+  beratung_erforderlich:
+    title: Individual advice needed
+    text: Your case needs individual review. Citizen issues no certificate and prepares no insolvency
+      application.
+    next_step: Contact a suitable debt advice centre or a qualified lawyer.
+  einordnung_offen:
+    title: Classification still open
+    text: The information does not support a classification yet. This confirms neither the claim nor its
+      invalidity.
+    next_step: Collect letters and evidence. Keep possible court deadlines in mind.
+deadlines:
+  widerspruch_mahnbescheid:
+    title: Payment-order opposition (Widerspruch)
+    action: Have the document and service checked urgently. Foreign or public service needs individual
+      advice.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Legal basis: {basis}. Opposition may remain possible
+        until the enforcement order is issued. Have the procedural stage checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the actual service and have the calculation
+        checked. Opposition may remain possible until the enforcement order is issued. Have the procedural
+        stage checked.
+      missing_input: A confirmed service date or other required information is missing. No reliable deadline
+        can be given. Seek advice urgently. Opposition may remain possible until the enforcement order
+        is issued. Have the procedural stage checked.
+      not_applicable: This deadline rule does not apply to the identified document. Other deadlines or
+        enforcement steps may still matter. Opposition may remain possible until the enforcement order
+        is issued. Have the procedural stage checked.
+  einspruch_vollstreckungsbescheid:
+    title: Enforcement-order objection (Einspruch)
+    action: Have the document and service checked urgently. Foreign or public service needs individual
+      advice.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Legal basis: {basis}.'
+      provisional: The provisional date is {frist_ende}. Confirm the actual service and have the calculation
+        checked.
+      missing_input: A confirmed service date or other required information is missing. No reliable deadline
+        can be given. Seek advice urgently.
+      not_applicable: This deadline rule does not apply to the identified document. Other deadlines or
+        enforcement steps may still matter.

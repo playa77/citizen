@@ -1,15 +1,17 @@
 # Writing a Citizen module
 
-<!-- Version: 1.1.1 | 2026-11-25 — D-069: startup/session TODO before further module implementation.
+<!-- Version: 1.2.0 | 2026-11-26 — core_api 3.3: service facts/public intake schema; D-071 deferred human review.
+     1.1.2 | 2026-11-26 — owner directs backend continuation; GUI separately owned.
+     1.1.1 | 2026-11-25 — D-069: startup/session TODO before further module implementation.
      1.1.0 | 2026-11-17 — WP-122: plain-language copy (core 3.4.0, core_api 3.2).
      1.0.0 | 2026-11-17 — WP-115 authoring kit (core 3.3.0, core_api 3.1). -->
 <!-- Architecture: ARCHITECTURE.md § 2 (module contract) · Catalog: docs/module-catalog.md -->
 
-**Before implementing any further module, complete the first blocking
-[TODO](../TODO.md), step 1:** remove the implicit default and implement
-GUI/desktop module selection and explicit **Restore last session**. This is
-accepted but pending work ([D-069](decisions/D-069-module-selection-and-session-restore.md)).
-The authoring/scaffolding commands below apply after that prerequisite passes.
+**Backend continuation authorized (2026-11-26):** the backend portion of
+[TODO](../TODO.md), step 1 is implemented and verified. The owner directed
+backend roadmap work to proceed; GUI/desktop selection and explicit restore
+remain separately owned and unverified here. See the continuation record in
+[D-069](decisions/D-069-module-selection-and-session-restore.md).
 
 Every module is a peer; `sozialrecht` has no preferred loading role. First
 launch presents all modules with none preselected. Later launches also offer
@@ -58,6 +60,7 @@ the scaffold encodes structure, never law.
 | `CHANGELOG.md` | yes (validator) | `## X.Y.Z — date` entries, newest first, first = manifest version |
 | `corpus.yaml` | for retrieval | `areas.<key>.source_types`; optional `chunk_tags`, `case_law` |
 | `intake.yaml` | for routing | `areas.<key>.order` (globally unique), keywords, synonyms, presets |
+| `intake-schema.yaml` | optional, `intake_schema` manifest key (core_api 3.3) | public JSON Schema in YAML for module-specific confirmed facts; served by REST/MCP module detail; existing API envelopes/guards stay in force |
 | `fristen.yaml` | for deadlines | deadline specs evaluated by the Fristen core (§ 4) |
 | `parameters/*.yaml` | for amounts | versioned values with validity, basis and review status |
 | `dossier.yaml` | for the dossier | appointment checklist, questions, chronology cues |
@@ -79,7 +82,8 @@ Errors (the module must not ship):
 - manifest schema (`app/modules/manifest.schema.json`, core_api 3.2) and
   declared files;
 - `core_api` admits the running core (`">=3.2,<4.0"` for new modules;
-  `plain_language` needs 3.2, `errata` 3.1);
+  `plain_language` needs 3.2, `errata` 3.1; public `intake_schema` and
+  actual-service rules need 3.3);
 - plain-language copy validates (`citizen-plain-copy-v1.0`) and contains no
   discouraging phrase (`docs/duty-of-care-checklist.md`);
 - module code imports nothing from `app.*` except `app.modules.sdk`;
@@ -115,7 +119,8 @@ parameters, never from model output. A deadline is data:
 The Fristen core owns calendars, fictions and rollover rules; a module
 picks from its libraries. Each spec needs golden date tests before
 promotion. Amounts: every constant lives in `parameters/` with `valid_from`,
-`basis` and a parameter steward's `review_status: verified`; calculators are
+`basis` and honest `review_status` metadata; human parameter review is deferred
+until all modules are implemented (D-071). Calculators are
 pure functions of (extraction, parameters).
 
 ## 5. In-tree vs. out-of-tree
@@ -227,7 +232,9 @@ plain_language:
   `severity: critical` deadline.
 - Never discourage (`docs/duty-of-care-checklist.md`); sentences ≤ 22 words
   (Leichte Sprache ≤ 14).
-- `review.status: draft` until a named reviewer signs off (OQ-3).
+- `review.status: draft` until human review occurs. No reviewer-name approval
+  gate blocks implementation; human reviews are deferred until all modules
+  are implemented (D-071).
 - Gate: `python -m eval.plain_eval --module <id>`. Model `goldset/plain-*.yaml`
   on `modules/sozialrecht/goldset/plain-v1.0.0.yaml`: deadline cases give
   `facts` and run through the Fristen core; finding cases give an `ergebnis`
@@ -236,7 +243,8 @@ plain_language:
 ## 10. Review checklist
 
 - [ ] `python -m scripts.validate_module <dir>` passes; warnings understood
-- [ ] every parameter has a `basis` and a steward's review
+- [ ] every parameter has a `basis`, validity and honest review status; human
+      review is deferred under D-071
 - [ ] every deadline spec has golden date tests
 - [ ] `python -m eval.plain_eval --module <id>` passes (verified modules)
 - [ ] copy speaks to the person, in their own matter; purpose-drift lint green

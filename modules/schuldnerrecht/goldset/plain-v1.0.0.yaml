@@ -1,0 +1,692 @@
+format: citizen-plain-goldset-v1.0
+module: schuldnerrecht
+version: 1.0.0
+note: Provisional copy is covered statically. Confirmed actual service is mandatory, so proposed document
+  dates cannot produce provisional court deadlines.
+cases:
+- id: PL-widerspruch_mahnbescheid-computed
+  kind: deadline
+  title: 'mahnbescheid: computed'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+    bundesland: NW
+    ist_verwaltungsakt: false
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-16'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - '16.'
+      en:
+      - '16 '
+      de-LS:
+      - '16.'
+- id: PL-widerspruch_mahnbescheid-missing_service
+  kind: deadline
+  title: 'mahnbescheid: missing_service'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-widerspruch_mahnbescheid-missing_document_type
+  kind: deadline
+  title: 'mahnbescheid: missing_document_type'
+  facts:
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-widerspruch_mahnbescheid-missing_mode
+  kind: deadline
+  title: 'mahnbescheid: missing_mode'
+  facts:
+    document_type: mahnbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-widerspruch_mahnbescheid-foreign
+  kind: deadline
+  title: 'mahnbescheid: foreign'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: ausland
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-widerspruch_mahnbescheid-public
+  kind: deadline
+  title: 'mahnbescheid: public'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: oeffentlich
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-widerspruch_mahnbescheid-not_applicable
+  kind: deadline
+  title: 'mahnbescheid: not_applicable'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-widerspruch_mahnbescheid-negative_collection
+  kind: deadline
+  title: 'mahnbescheid: negative_collection'
+  facts:
+    document_type: inkassoschreiben
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-widerspruch_mahnbescheid-letter_not_service
+  kind: deadline
+  title: 'mahnbescheid: letter_not_service'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+  proposed_letter_date: '2026-11-02'
+- id: PL-widerspruch_mahnbescheid-holiday
+  kind: deadline
+  title: 'mahnbescheid: holiday'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-12-11'
+    bundesland: NW
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-12-28'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - '28.'
+      en:
+      - '28 '
+      de-LS:
+      - '28.'
+- id: PL-widerspruch_mahnbescheid-leap
+  kind: deadline
+  title: 'mahnbescheid: leap'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2028-02-16'
+    bundesland: NW
+  spec_id: widerspruch_mahnbescheid
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2028-03-01'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - '1.'
+      en:
+      - '1 '
+      de-LS:
+      - '1.'
+- id: PL-einspruch_vollstreckungsbescheid-computed
+  kind: deadline
+  title: 'vollstreckungsbescheid: computed'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+    bundesland: NW
+    ist_verwaltungsakt: false
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-16'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - '16.'
+      en:
+      - '16 '
+      de-LS:
+      - '16.'
+- id: PL-einspruch_vollstreckungsbescheid-missing_service
+  kind: deadline
+  title: 'vollstreckungsbescheid: missing_service'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-einspruch_vollstreckungsbescheid-missing_document_type
+  kind: deadline
+  title: 'vollstreckungsbescheid: missing_document_type'
+  facts:
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-einspruch_vollstreckungsbescheid-missing_mode
+  kind: deadline
+  title: 'vollstreckungsbescheid: missing_mode'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-einspruch_vollstreckungsbescheid-foreign
+  kind: deadline
+  title: 'vollstreckungsbescheid: foreign'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: ausland
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-einspruch_vollstreckungsbescheid-public
+  kind: deadline
+  title: 'vollstreckungsbescheid: public'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: oeffentlich
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+- id: PL-einspruch_vollstreckungsbescheid-not_applicable
+  kind: deadline
+  title: 'vollstreckungsbescheid: not_applicable'
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-einspruch_vollstreckungsbescheid-negative_collection
+  kind: deadline
+  title: 'vollstreckungsbescheid: negative_collection'
+  facts:
+    document_type: inkassoschreiben
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-einspruch_vollstreckungsbescheid-letter_not_service
+  kind: deadline
+  title: 'vollstreckungsbescheid: letter_not_service'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - unverzüglich
+      - fehlen
+      en:
+      - urgently
+      - missing
+      de-LS:
+      - sofort
+      - fehlen
+  proposed_letter_date: '2026-11-02'
+- id: PL-einspruch_vollstreckungsbescheid-holiday
+  kind: deadline
+  title: 'vollstreckungsbescheid: holiday'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-12-11'
+    bundesland: NW
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-12-28'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - '28.'
+      en:
+      - '28 '
+      de-LS:
+      - '28.'
+- id: PL-einspruch_vollstreckungsbescheid-leap
+  kind: deadline
+  title: 'vollstreckungsbescheid: leap'
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2028-02-16'
+    bundesland: NW
+  spec_id: einspruch_vollstreckungsbescheid
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2028-03-01'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+    contains:
+      de:
+      - '1.'
+      en:
+      - '1 '
+      de-LS:
+      - '1.'
+- id: PL-F-forderung_pruefen
+  kind: finding
+  title: Forderung prüfen
+  ergebnis: 'Vorläufige Einordnung: Forderung prüfen.'
+  expect:
+    category: forderung_pruefen
+    category_source: ergebnis
+- id: PL-F-kosten_pruefen
+  kind: finding
+  title: Kosten prüfen
+  ergebnis: 'Vorläufige Einordnung: Kosten prüfen.'
+  expect:
+    category: kosten_pruefen
+    category_source: ergebnis
+- id: PL-F-frist_pruefen
+  kind: finding
+  title: Frist prüfen
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+- id: PL-F-beratung_erforderlich
+  kind: finding
+  title: Beratung erforderlich
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+- id: PL-F-einordnung_offen
+  kind: finding
+  title: Einordnung offen
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+- id: PL-F-fallback
+  kind: finding
+  title: Unbekannte Kategorie bleibt offen
+  ergebnis: Die Forderung ist garantiert rechtmäßig.
+  expect:
+    category: einordnung_offen
+    category_source: fallback

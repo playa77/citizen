@@ -27,6 +27,10 @@ module never touches the database or the core's session handling.
 
 Changes
 -------
+0.6.0 (WP-130, core 3.5.0): ``SDK_VERSION`` "3.3" — actual-service
+deadline specs, explicit dossier service facts and the optional public
+``intake_schema`` manifest entry (D-071). Older modules
+retain their existing evaluator path; service-spec modules require >=3.3.
 0.5.0 (WP-122, core 3.4.0): ``SDK_VERSION`` "3.2" — the manifest schema
 gains the optional ``plain_language`` key (module copy files per language and
 the plain-language goldset). A 3.1 core rejects it, so a module using it
@@ -45,7 +49,7 @@ stays "3.0" (core 3.0.0 shipped at the P9 exit gate, WP-97).
 0.1.0 (WP-91): ``SDK_VERSION`` only.
 """
 
-# Semantic Version: 0.5.0
+# Semantic Version: 0.6.0
 
 from __future__ import annotations
 
@@ -54,7 +58,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
 
-SDK_VERSION = "3.2"
+SDK_VERSION = "3.3"
 """Core module-contract version; must stay compatible with every manifest's ``core_api``."""
 
 
