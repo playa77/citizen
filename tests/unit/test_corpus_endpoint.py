@@ -164,7 +164,7 @@ async def test_run_corpus_update_failure(monkeypatch, caplog):
     ):
         mock_scrape.return_value = fake_chunks
         mock_embed.side_effect = RuntimeError("Network down")
-        await _run_corpus_update(job_id)
+        await _run_corpus_update(job_id, override_sources=["sgb2"])
 
     assert _job_store[job_id]["status"] == "failed"
     assert "Network down" in _job_store[job_id]["error"]

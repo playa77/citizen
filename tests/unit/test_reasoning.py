@@ -26,6 +26,7 @@ import pytest
 import pytest_asyncio
 
 from app.core.router import reset_client
+from app.services.prompts import get_prompts
 
 from app.services.reasoning import (
     JSONParseError,
@@ -163,7 +164,10 @@ class TestClassifyIssues:
         self._patcher.stop()
 
     async def test_returns_list_of_strings(self) -> None:
-        result = await classify_issues(_SAMPLE_TEXT)
+        result = await classify_issues(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["classification"],
+        )
         assert result == ["KdU", "Meldefrist"]
 
     async def test_empty_issues_returns_empty_list(self) -> None:
@@ -171,7 +175,10 @@ class TestClassifyIssues:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": []})),
         ).start()
-        result = await classify_issues(_SAMPLE_TEXT)
+        result = await classify_issues(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["classification"],
+        )
         assert result == []
 
     async def test_non_list_issues_returns_empty(self) -> None:
@@ -179,7 +186,10 @@ class TestClassifyIssues:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": "not a list"})),
         ).start()
-        result = await classify_issues(_SAMPLE_TEXT)
+        result = await classify_issues(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["classification"],
+        )
         assert result == []
 
     async def test_strips_empty_entries(self) -> None:
@@ -187,7 +197,10 @@ class TestClassifyIssues:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"issues": ["  ", "KdU", ""]})),
         ).start()
-        result = await classify_issues(_SAMPLE_TEXT)
+        result = await classify_issues(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["classification"],
+        )
         assert result == ["KdU"]
 
 
@@ -210,7 +223,10 @@ class TestDecomposeQuestions:
         self._patcher.stop()
 
     async def test_returns_list_of_questions(self) -> None:
-        result = await decompose_questions(_SAMPLE_TEXT)
+        result = await decompose_questions(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["decomposition"],
+        )
         assert len(result) == 2
         assert "Ist § 22 anwendbar?" in result
 
@@ -219,7 +235,10 @@ class TestDecomposeQuestions:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"questions": []})),
         ).start()
-        result = await decompose_questions(_SAMPLE_TEXT)
+        result = await decompose_questions(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["decomposition"],
+        )
         assert result == []
 
     async def test_non_list_returns_empty(self) -> None:
@@ -227,7 +246,10 @@ class TestDecomposeQuestions:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"questions": "single question"})),
         ).start()
-        result = await decompose_questions(_SAMPLE_TEXT)
+        result = await decompose_questions(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["decomposition"],
+        )
         assert result == []
 
 
@@ -260,7 +282,10 @@ class TestTriageDocument:
         self._patcher.stop()
 
     async def test_returns_dict_with_issues_and_questions(self) -> None:
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert isinstance(result, dict)
         assert "issues" in result
         assert "questions" in result
@@ -268,11 +293,17 @@ class TestTriageDocument:
         assert isinstance(result["questions"], list)
 
     async def test_issues_are_strings(self) -> None:
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert result["issues"] == ["SGB II § 31", "KdU", "Eingliederungsvereinbarung"]
 
     async def test_questions_are_strings(self) -> None:
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert len(result["questions"]) == 4
         assert "Ist die Sanktion nach § 31 SGB II rechtmäßig?" in result["questions"]
 
@@ -281,7 +312,10 @@ class TestTriageDocument:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({})),
         ).start()
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert result == {"issues": [], "questions": []}
 
     async def test_non_list_issues_returns_empty(self) -> None:
@@ -291,7 +325,10 @@ class TestTriageDocument:
                 json.dumps({"issues": "not a list", "questions": ["q"]})
             ),
         ).start()
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert result["issues"] == []
         assert result["questions"] == ["q"]
 
@@ -302,7 +339,10 @@ class TestTriageDocument:
                 json.dumps({"issues": ["i"], "questions": "not a list"})
             ),
         ).start()
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert result["issues"] == ["i"]
         assert result["questions"] == []
 
@@ -313,7 +353,10 @@ class TestTriageDocument:
                 json.dumps({"issues": ["  ", "KdU", ""], "questions": ["Q", "  "]})
             ),
         ).start()
-        result = await triage_document(_SAMPLE_TEXT)
+        result = await triage_document(
+            _SAMPLE_TEXT,
+            system_prompt=get_prompts(["sozialrecht"])["triage"],
+        )
         assert result["issues"] == ["KdU"]
         assert result["questions"] == ["Q"]
 
@@ -326,7 +369,10 @@ class TestTriageDocument:
             ]
         )
         with patch("app.services.reasoning.get_shared_client", return_value=mock):
-            result = await triage_document(_SAMPLE_TEXT)
+            result = await triage_document(
+            _SAMPLE_TEXT,
+                system_prompt=get_prompts(["sozialrecht"])["triage"],
+            )
 
         assert mock.chat_completion.call_count == 2
         assert result["issues"] == ["SGB II § 31", "KdU", "Eingliederungsvereinbarung"]
@@ -363,7 +409,9 @@ class TestConstructClaims:
         self._patcher.stop()
 
     async def test_returns_validated_claims(self) -> None:
-        result = await construct_claims(_SAMPLE_CHUNKS, ["Ist § 22 anwendbar?"])
+        result = await construct_claims(_SAMPLE_CHUNKS, ["Ist § 22 anwendbar?"],
+            system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+        )
         assert len(result) == 2
         assert result[0]["claim_text"] == "Aufwendungen sind angemessen."
         assert result[0]["confidence_score"] == 0.8
@@ -382,7 +430,9 @@ class TestConstructClaims:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
-        result = await construct_claims([], [])
+        result = await construct_claims([], [],
+            system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+        )
         assert result[0]["confidence_score"] == 1.0  # clamped
 
     async def test_defaults_invalid_claim_type(self) -> None:
@@ -398,7 +448,9 @@ class TestConstructClaims:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
-        result = await construct_claims([], [])
+        result = await construct_claims([], [],
+            system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+        )
         assert result[0]["claim_type"] == "fact"
 
     async def test_non_dict_items_skipped(self) -> None:
@@ -406,7 +458,9 @@ class TestConstructClaims:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(["string item", 42])),
         ).start()
-        result = await construct_claims([], [])
+        result = await construct_claims([], [],
+            system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+        )
         assert result == []
 
     async def test_non_list_response_returns_empty(self) -> None:
@@ -414,7 +468,9 @@ class TestConstructClaims:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"unexpected": "object"})),
         ).start()
-        result = await construct_claims([], [])
+        result = await construct_claims([], [],
+            system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+        )
         assert result == []
 
     async def test_confidence_nan_becomes_default(self) -> None:
@@ -430,7 +486,9 @@ class TestConstructClaims:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
-        result = await construct_claims([], [])
+        result = await construct_claims([], [],
+            system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+        )
         assert result[0]["confidence_score"] == 0.5
 
 
@@ -468,13 +526,17 @@ class TestVerifyClaims:
                 "claim_type": "fact",
             }
         ]
-        result = await verify_claims(claims, _SAMPLE_CHUNKS)
+        result = await verify_claims(claims, _SAMPLE_CHUNKS,
+            system_prompt=get_prompts(["sozialrecht"])["verification"],
+        )
         assert len(result) == 1
         assert result[0]["verified"] is True
         assert "reasoning" in result[0]
 
     async def test_empty_claims_returns_empty(self) -> None:
-        result = await verify_claims([], _SAMPLE_CHUNKS)
+        result = await verify_claims([], _SAMPLE_CHUNKS,
+            system_prompt=get_prompts(["sozialrecht"])["verification"],
+        )
         assert result == []
 
     async def test_non_list_response_returns_defaults(self) -> None:
@@ -483,7 +545,9 @@ class TestVerifyClaims:
             return_value=_make_mock_response(json.dumps({"unexpected": "object"})),
         ).start()
         claims = [{"claim_text": "test", "confidence_score": 0.5, "claim_type": "fact"}]
-        result = await verify_claims(claims, _SAMPLE_CHUNKS)
+        result = await verify_claims(claims, _SAMPLE_CHUNKS,
+            system_prompt=get_prompts(["sozialrecht"])["verification"],
+        )
         assert len(result) == 1
         assert result[0]["verified"] is False
         assert "Verification failed" in result[0]["reasoning"]
@@ -503,7 +567,9 @@ class TestVerifyClaims:
             return_value=_make_mock_response(json.dumps(invalid)),
         ).start()
         claims = [{"claim_text": "x", "confidence_score": 0.5, "claim_type": "fact"}]
-        result = await verify_claims(claims, _SAMPLE_CHUNKS)
+        result = await verify_claims(claims, _SAMPLE_CHUNKS,
+            system_prompt=get_prompts(["sozialrecht"])["verification"],
+        )
         assert result[0]["confidence_score"] == 0.5
 
 
@@ -527,7 +593,9 @@ class TestGenerateOutput:
         verified_claims = [
             {"claim_text": "test", "confidence_score": 0.8, "claim_type": "fact", "verified": True}
         ]
-        result = await generate_output(verified_claims)
+        result = await generate_output(verified_claims,
+            system_prompt=get_prompts(["sozialrecht"])["output"],
+        )
         expected_keys = {
             "sachverhalt",
             "rechtliche_wuerdigung",
@@ -542,7 +610,9 @@ class TestGenerateOutput:
         verified_claims = [
             {"claim_text": "test", "confidence_score": 0.8, "claim_type": "fact", "verified": True}
         ]
-        result = await generate_output(verified_claims)
+        result = await generate_output(verified_claims,
+            system_prompt=get_prompts(["sozialrecht"])["output"],
+        )
         for v in result.values():
             assert isinstance(v, str)
 
@@ -551,7 +621,7 @@ class TestGenerateOutput:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response(json.dumps({"sachverhalt": "only this key"})),
         ).start()
-        result = await generate_output([])
+        result = await generate_output([], system_prompt=get_prompts(["sozialrecht"])["output"])
         assert result["sachverhalt"] == "only this key"
         assert result["rechtliche_wuerdigung"] == ""
         assert result["ergebnis"] == ""
@@ -563,7 +633,7 @@ class TestGenerateOutput:
             "app.services.reasoning.get_shared_client",
             return_value=_make_mock_response('"just a string"'),
         ).start()
-        result = await generate_output([])
+        result = await generate_output([], system_prompt=get_prompts(["sozialrecht"])["output"])
         for v in result.values():
             assert v == ""
 
@@ -587,7 +657,10 @@ class TestJSONParsingRetry:
             ]
         )
         with patch("app.services.reasoning.get_shared_client", return_value=mock):
-            result = await classify_issues(_SAMPLE_TEXT)
+            result = await classify_issues(
+            _SAMPLE_TEXT,
+                system_prompt=get_prompts(["sozialrecht"])["classification"],
+            )
 
         assert mock.chat_completion.call_count == 2
         assert result == ["retry worked"]
@@ -601,7 +674,10 @@ class TestJSONParsingRetry:
             ]
         )
         with patch("app.services.reasoning.get_shared_client", return_value=mock):
-            result = await decompose_questions(_SAMPLE_TEXT)
+            result = await decompose_questions(
+            _SAMPLE_TEXT,
+                system_prompt=get_prompts(["sozialrecht"])["decomposition"],
+            )
 
         assert mock.chat_completion.call_count == 2
         assert result == ["retried question"]
@@ -624,7 +700,9 @@ class TestJSONParsingRetry:
             ]
         )
         with patch("app.services.reasoning.get_shared_client", return_value=mock):
-            result = await construct_claims(_SAMPLE_CHUNKS, ["q"])
+            result = await construct_claims(_SAMPLE_CHUNKS, ["q"],
+                system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+            )
 
         assert mock.chat_completion.call_count == 2
         assert result[0]["claim_text"] == "retry claim"
@@ -649,7 +727,9 @@ class TestJSONParsingRetry:
         )
         claims = [{"claim_text": "x", "confidence_score": 0.5, "claim_type": "fact"}]
         with patch("app.services.reasoning.get_shared_client", return_value=mock):
-            result = await verify_claims(claims, _SAMPLE_CHUNKS)
+            result = await verify_claims(claims, _SAMPLE_CHUNKS,
+                system_prompt=get_prompts(["sozialrecht"])["verification"],
+            )
 
         assert mock.chat_completion.call_count == 2
         assert result[0]["claim_text"] == "verified after retry"
@@ -663,7 +743,7 @@ class TestJSONParsingRetry:
             ]
         )
         with patch("app.services.reasoning.get_shared_client", return_value=mock):
-            result = await generate_output([])
+            result = await generate_output([], system_prompt=get_prompts(["sozialrecht"])["output"])
 
         assert mock.chat_completion.call_count == 2
         assert "sachverhalt" in result
@@ -696,3 +776,35 @@ class TestJSONParseErrorClass:
     def test_accepts_message(self) -> None:
         err = JSONParseError("bad json")
         assert "bad json" in str(err)
+
+
+@pytest.mark.parametrize("system_prompt", [None, "", "   "])
+@pytest.mark.parametrize(
+    "name,args",
+    [
+        ("classify_issues", (_SAMPLE_TEXT,)),
+        ("decompose_questions", (_SAMPLE_TEXT,)),
+        ("triage_document", (_SAMPLE_TEXT,)),
+        ("construct_claims", (_SAMPLE_CHUNKS, ["Frage?"])),
+        ("verify_claims", ([{"claim_text": "Test"}], _SAMPLE_CHUNKS)),
+        ("generate_output", ([{"claim_text": "Test"}],)),
+        ("generate_grounded_answer", (_SAMPLE_TEXT, [], [], [], [])),
+        ("adversarial_review", (_SAMPLE_TEXT, [], [], [], [])),
+        ("generate_grounded_answer_stream", (_SAMPLE_TEXT, [], [], [])),
+    ],
+)
+async def test_legal_reasoning_rejects_missing_prompt_before_client_access(
+    monkeypatch: pytest.MonkeyPatch, name: str, args: tuple, system_prompt: str | None
+) -> None:
+    from app.services import reasoning
+
+    client_factory = AsyncMock(side_effect=AssertionError("client must not be accessed"))
+    monkeypatch.setattr(reasoning, "get_shared_client", client_factory)
+    with pytest.raises(ValueError):
+        operation = getattr(reasoning, name)(*args, system_prompt=system_prompt)
+        if name == "generate_grounded_answer_stream":
+            async for _ in operation:
+                pass
+        else:
+            await operation
+    client_factory.assert_not_called()

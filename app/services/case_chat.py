@@ -28,7 +28,14 @@ from app.core.config import settings
 from app.core.pipeline import PipelineState, StageExecutionError, execute_stage
 from app.core.router import get_shared_client
 from app.services.disclosure import build_disclosure_and_provenance
-from app.services.prompts import get_chat_prompt, stage_max_tokens, stage_temperature
+from app.services.prompts import (
+    SELECTION_REQUIRED_TEXT,
+    ModuleSelectionRequired,
+    get_chat_prompt,
+    require_inference_scope,
+    stage_max_tokens,
+    stage_temperature,
+)
 from app.utils.tokens import trim_text
 
 logger = logging.getLogger(__name__)
@@ -93,10 +100,6 @@ _DOWNSTREAM_MAP: dict[str, list[str]] = {
 # Case Chat system prompt
 # ---------------------------------------------------------------------------
 
-#: Default rendering of P-12 (default module), kept for importers. Requests
-#: render the prompt for the case's areas via ``get_chat_prompt`` (CR-05).
-_CASE_CHAT_SYSTEM_PROMPT = get_chat_prompt("case_chat")
-
 #: Appended to a context block cut at its budget (CR-07/CR-14).
 _CUT_MARKER = "\n[… gekürzt]"
 
@@ -141,9 +144,24 @@ async def generate_case_chat_response(
         Optional identifier for logging.
     legal_areas :
         Area keys recorded for the case (``case_run_area``); they select the
-        modules named in the provenance marker. ``None``/empty → the case ran
-        with ``DEFAULT_MODULE``.
+        modules named in the provenance marker. Empty scope selects no module;
+        the response requests selection without legal inference.
     """
+    try:
+        require_inference_scope(legal_areas)
+    except ModuleSelectionRequired:
+        disclosure, provenance = build_disclosure_and_provenance(settings, legal_areas)
+        payload = {
+            "type": "done",
+            "case_id": case_id,
+            "full_response": SELECTION_REQUIRED_TEXT,
+            "selection_required": True,
+            "disclosure": disclosure.model_dump(mode="json"),
+            "provenance": provenance.model_dump(mode="json"),
+        }
+        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        return
+
     client = get_shared_client()
 
     # ── Build system prompt with case context (CR-14) ───────────────────
@@ -231,6 +249,16 @@ async def run_targeted_reevaluate(
     """
     # ── Reconstruct PipelineState ───────────────────────────────────────
     state = _reconstruct_pipeline_state(pipeline_state, context)
+
+    try:
+        require_inference_scope(state.legal_areas)
+    except ModuleSelectionRequired:
+        payload = {
+            "error": "MODULE_SELECTION_REQUIRED",
+            "detail": SELECTION_REQUIRED_TEXT,
+        }
+        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        return
 
     # ── Determine which stages to run ───────────────────────────────────
     stages_to_run: list[str] = [stage_name]
@@ -481,7 +509,10 @@ def _reconstruct_pipeline_state(
     if context:
         input_text = f"{input_text}\n\n--- Nutzerkontext für Neuauswertung ---\n\n{context}"
 
-    state = PipelineState(input_text=input_text)
+    state = PipelineState(
+        input_text=input_text,
+        legal_areas=list(saved_state.get("legal_areas") or []),
+    )
 
     # Populate saved fields if available.
     if "normalized_text" in saved_state:

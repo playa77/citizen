@@ -1,19 +1,4 @@
-"""Unit tests for app.services.prompts — prompt registry & byte-identity contract.
-
-Covers
-------
-- ``get_prompts([])`` returns the socialrecht defaults (backward compat)
-- ``get_prompts(["sozialrecht"])`` matches defaults
-- ``get_prompts(["erbrecht"])`` returns erbrecht-specific prompts for
-  classification, decomposition, triage, grounded_answer
-- Multi-area: ``get_prompts(["sozialrecht", "erbrecht"])`` returns
-  combined prompts containing both areas' content
-- ``get_prompts(None)`` matches the empty-list case
-- ``get_prompts(["andere"])`` falls back to socialrecht (per registry)
-- ``_normalise_area`` (re-exported) — out of scope, lives in intake.py
-- The socialrecht constants are byte-identical to the original strings
-  that lived in ``app.services.reasoning`` before the multi-area refactor.
-"""
+"""Explicit module prompt dispatch and preserved area-specific composition (D-070)."""
 
 # Semantic Version: 0.4.0 | 2026-11-16 — WP-93: profiles are module data; the
 # former core constants are derived here from the public API (byte-identity
@@ -24,58 +9,37 @@ from __future__ import annotations
 import pytest
 
 from app.modules.areas import area_tables
-from app.services.prompts import DEFAULT_PROMPTS, get_prompts
-from app.services.reasoning import (
-    _ADVERSARIAL_REVIEW_SYSTEM,
-    _CLAIM_CONSTRUCTION_SYSTEM,
-    _CLASSIFICATION_SYSTEM,
-    _DECOMPOSITION_SYSTEM,
-    _GROUNDED_ANSWER_SYSTEM,
-    _OUTPUT_SYSTEM,
-    _TRIAGE_SYSTEM,
-    _VERIFICATION_SYSTEM,
-)
+from app.services.prompts import ModuleSelectionRequired, get_chat_prompt, get_prompts
 
 # WP-93: area profiles live in modules/*/prompts/profile.yaml. The names the
 # v1.x tests used are derived from the public API.
-SOCIALRECHT_PROMPTS = DEFAULT_PROMPTS
+SOCIALRECHT_PROMPTS = get_prompts(["sozialrecht"])
 ERBRECHT_PROMPTS = get_prompts(["erbrecht"])
 REGISTRY = {area: get_prompts([area]) for area in area_tables().prompt_profiles}
 
 
 # ---------------------------------------------------------------------------
-# 1. Byte-identical contract
+# 1. Explicit inference scope
 # ---------------------------------------------------------------------------
 
 
-class TestByteIdenticalContract:
-    """The 8 system-prompt constants in ``reasoning.py`` must be the
-    *same Python string object* as their counterparts in
-    ``prompts.SOCIALRECHT_PROMPTS``."""
+@pytest.mark.parametrize(
+    "areas", [None, [], ["mietrecht"], ["xxx_nonexistent_xxx"], ["verwaltungsrecht"],
+              ["sozialrecht", "mietrecht"]],
+)
+def test_unusable_scope_requires_explicit_selection(areas: list[str] | None) -> None:
+    with pytest.raises(ModuleSelectionRequired):
+        get_prompts(areas)
+    for surface in ("chat", "case_chat"):
+        with pytest.raises(ModuleSelectionRequired):
+            get_chat_prompt(surface, areas)
 
-    def test_classification(self) -> None:
-        assert _CLASSIFICATION_SYSTEM == SOCIALRECHT_PROMPTS["classification"]
 
-    def test_decomposition(self) -> None:
-        assert _DECOMPOSITION_SYSTEM == SOCIALRECHT_PROMPTS["decomposition"]
-
-    def test_triage(self) -> None:
-        assert _TRIAGE_SYSTEM == SOCIALRECHT_PROMPTS["triage"]
-
-    def test_grounded_answer(self) -> None:
-        assert _GROUNDED_ANSWER_SYSTEM == SOCIALRECHT_PROMPTS["grounded_answer"]
-
-    def test_adversarial_review(self) -> None:
-        assert _ADVERSARIAL_REVIEW_SYSTEM == SOCIALRECHT_PROMPTS["adversarial_review"]
-
-    def test_claim_construction(self) -> None:
-        assert _CLAIM_CONSTRUCTION_SYSTEM == SOCIALRECHT_PROMPTS["claim_construction"]
-
-    def test_verification(self) -> None:
-        assert _VERIFICATION_SYSTEM == SOCIALRECHT_PROMPTS["verification"]
-
-    def test_output(self) -> None:
-        assert _OUTPUT_SYSTEM == SOCIALRECHT_PROMPTS["output"]
+def test_procedural_key_does_not_replace_explicit_profile() -> None:
+    assert get_prompts(["verwaltungsrecht", "sozialrecht"]) == SOCIALRECHT_PROMPTS
+    assert get_chat_prompt("chat", ["verwaltungsrecht", "sozialrecht"]) == get_chat_prompt(
+        "chat", ["sozialrecht"]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -84,14 +48,6 @@ class TestByteIdenticalContract:
 
 
 class TestGetPromptsDispatch:
-    def test_empty_list_returns_socialrecht(self) -> None:
-        result = get_prompts([])
-        assert result == SOCIALRECHT_PROMPTS
-
-    def test_none_returns_socialrecht(self) -> None:
-        result = get_prompts(None)
-        assert result == SOCIALRECHT_PROMPTS
-
     def test_socialrecht_returns_socialrecht(self) -> None:
         result = get_prompts(["sozialrecht"])
         assert result == SOCIALRECHT_PROMPTS
@@ -107,14 +63,6 @@ class TestGetPromptsDispatch:
         result = get_prompts(["schenkungsrecht"])
         assert result == ERBRECHT_PROMPTS
 
-    def test_unknown_area_falls_back_to_socialrecht(self) -> None:
-        result = get_prompts(["mietrecht"])  # stub module without a profile
-        assert result == SOCIALRECHT_PROMPTS
-
-    def test_garbage_value_falls_back_to_socialrecht(self) -> None:
-        result = get_prompts(["xxx_nonexistent_xxx"])
-        assert result == SOCIALRECHT_PROMPTS
-
     def test_all_returned_prompts_have_all_stages(self) -> None:
         expected_keys = {
             "classification", "decomposition", "triage",
@@ -122,7 +70,7 @@ class TestGetPromptsDispatch:
             "claim_construction", "verification", "output",
         }
         for areas in (
-            [], ["sozialrecht"], ["erbrecht"], ["sozialrecht", "erbrecht"],
+            ["sozialrecht"], ["erbrecht"], ["sozialrecht", "erbrecht"],
         ):
             keys = set(get_prompts(areas).keys())
             assert keys == expected_keys, f"areas={areas} missing={expected_keys - keys}"

@@ -5,10 +5,10 @@ deadline helpers ask this layer which module(s) a request runs with and
 fetch the module's typed extension points and data through it — never by
 importing module files directly.
 
-Resolution rule (D-036/D-039): the request's area keys map to their owning
+Resolution rule (D-069/D-070): the request's area keys map to their owning
 modules (legacy aliases to the module that owns them, D-038); keys served by
 the core procedural library contribute no module; an empty ``legal_areas``
-resolves to ``DEFAULT_MODULE``.
+resolves to no legal module.
 
 Request validation (WP-95, D-039): ``resolve_request_areas`` checks every
 requested area key against the area tables and the running registry's
@@ -64,7 +64,7 @@ def installed_modules() -> dict[str, ModuleManifest]:
 
 @lru_cache(maxsize=1)
 def module_registry() -> ModuleRegistry:
-    """The running registry (installed set, enabled set, default module).
+    """The running registry (installed set and deployment enablement).
 
     Built once per process from the live settings; startup calls it first,
     so a configuration error refuses startup before any request sees it.
@@ -85,11 +85,11 @@ def request_modules(legal_areas: list[str] | None) -> list[str]:
     """Module ids a request runs with, in request order, de-duplicated.
 
     Unknown area keys are ignored here (request validation is the caller's
-    job); an empty list resolves to the default module.
+    job); an empty list resolves to no module.
     """
-    tables = area_tables()
     if not legal_areas:
-        return [tables.default_module]
+        return []
+    tables = area_tables()
     modules: list[str] = []
     for key in legal_areas:
         owner = tables.owner.get(key)
@@ -198,7 +198,7 @@ def resolve_request_areas(legal_areas: list[str]) -> list[ResolvedArea]:
     Raises ``ModuleRequestError`` with code ``MODULE_UNKNOWN`` listing every
     unknown key, else with ``MODULE_NOT_ENABLED`` listing every key whose
     module is installed but not enabled. An empty list resolves to ``[]``
-    (the caller runs ``DEFAULT_MODULE``, which is always enabled).
+    and runs no legal module.
     """
     resolved: list[ResolvedArea] = []
     unknown: list[str] = []
@@ -275,7 +275,7 @@ def provenance_modules(legal_areas: Iterable[str] | None) -> list[str]:
     """Module ids a provenance marker names for a request's area keys.
 
     Same resolution as the engines use (``request_modules``): empty/absent
-    → ``DEFAULT_MODULE``; keys served by the core procedural library add no
+    → no legal module; keys served by the core procedural library add no
     module, so a procedural-only request yields ``[]``.
     """
     return request_modules(list(legal_areas) if legal_areas else None)
@@ -427,6 +427,34 @@ def document_templates(module_id: str) -> dict[str, Any] | None:
     return data
 
 
+class TemplateModuleSelectionError(ValueError):
+    """A case has no unambiguous, explicitly chosen template owner (D-070)."""
+
+    def __init__(self, code: str, eligible_modules: list[str]) -> None:
+        self.code = code
+        self.eligible_modules = eligible_modules
+        super().__init__(code)
+
+
+def template_module_for(legal_areas: list[str], module_id: str | None = None) -> str:
+    """Select templates only from the case scope; multiple owners need a choice."""
+    resolve_request_areas(legal_areas)
+    eligible = [
+        mid
+        for mid in request_modules(legal_areas)
+        if isinstance(get_manifest(mid).raw.get("document_templates"), str)
+    ]
+    if module_id is not None:
+        if module_id not in eligible:
+            raise TemplateModuleSelectionError("DOCUMENT_MODULE_NOT_IN_SCOPE", eligible)
+        return module_id
+    if not eligible:
+        raise TemplateModuleSelectionError("DOCUMENT_TEMPLATES_UNAVAILABLE", [])
+    if len(eligible) != 1:
+        raise TemplateModuleSelectionError("DOCUMENT_MODULE_REQUIRED", eligible)
+    return eligible[0]
+
+
 @lru_cache(maxsize=32)
 def deadline_specs(module_id: str) -> tuple[DeadlineSpec, ...]:
     """The module's deadline specs (``fristen.yaml``), loaded once."""
@@ -448,6 +476,7 @@ __all__ = [
     "MODULE_UNKNOWN",
     "ModuleRequestError",
     "ResolvedArea",
+    "TemplateModuleSelectionError",
     "UnknownAreaKeyError",
     "area_module_binding",
     "calculators_for",
@@ -468,4 +497,5 @@ __all__ = [
     "resolve_request_areas",
     "resolved_modules",
     "set_applied_updates",
+    "template_module_for",
 ]

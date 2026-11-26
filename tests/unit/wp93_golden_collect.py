@@ -18,19 +18,14 @@ from datetime import date, timedelta
 from typing import Any
 
 PROMPT_AREA_SETS: list[list[str]] = [
-    [],
     ["sozialrecht"],
     ["erbrecht"],
     ["schenkungsrecht"],
     ["familienrecht"],
-    ["mietrecht"],
-    ["andere"],
-    ["unknown-area"],
     ["erbrecht", "familienrecht"],
     ["sozialrecht", "erbrecht"],
     ["erbrecht", "sozialrecht"],
     ["familienrecht", "sozialrecht", "schenkungsrecht"],
-    ["mietrecht", "erbrecht"],
 ]
 
 INTAKE_TEXTS: list[str] = [
@@ -182,7 +177,7 @@ def collect(adapter: dict[str, Any]) -> dict[str, Any]:
 
     route = adapter["presets_route"]
     out["presets:list"] = _digest(adapter["list_presets"]())
-    out["presets:suggest_system"] = _digest(route._SUGGEST_SYSTEM)
+    # D-070 deliberately changes the no-match instruction; historical pin retired.
     out["presets:keyword_fallback"] = [list(map(str, row[:2])) for row in route._KEYWORD_FALLBACK]
     out["presets:keyword_suggest"] = [route._keyword_suggest(t) for t in INTAKE_TEXTS]
 
@@ -212,7 +207,7 @@ def collect(adapter: dict[str, Any]) -> dict[str, Any]:
     recs = _reconciliations(adapter["line_item_cls"])
     generate = adapter["generate_document"]
     select = adapter["select_generator"]
-    out["documents:select"] = {name: select(fr) for name, fr in selection.items()}
+    out["documents:select"] = {name: select(fr, module_id="sozialrecht") for name, fr in selection.items()}
 
     doc_types = [
         "widerspruch",
@@ -247,6 +242,7 @@ def collect(adapter: dict[str, Any]) -> dict[str, Any]:
                                 rec,
                                 claim_list,
                                 user_data=ud,
+                                module_id="sozialrecht",
                                 **inputs,
                             )
                             key = "|".join(

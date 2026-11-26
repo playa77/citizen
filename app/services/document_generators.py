@@ -252,10 +252,11 @@ class _SlotValues(dict[str, str]):
 
 
 def _templates(module_id: str | None) -> tuple[str, dict[str, Any]]:
-    from app.modules.areas import area_tables
     from app.modules.runtime import document_templates
 
-    resolved = module_id or area_tables().default_module
+    if not module_id or not module_id.strip():
+        raise ValueError("An explicit template module_id is required")
+    resolved = module_id
     data = document_templates(resolved)
     if data is None:
         raise ValueError(f"module {resolved!r} declares no document templates")
@@ -433,7 +434,7 @@ def select_generator(
     claims :
         Optional list of claims (used for future heuristics).
     module_id :
-        Module whose templates apply; ``None`` → ``DEFAULT_MODULE``.
+        Explicit module whose templates apply; missing IDs raise ``ValueError``.
 
     Returns
     -------
@@ -495,7 +496,7 @@ def generate_document(
     behoerde :
         Name of the issuing authority (optional).
     module_id :
-        Module whose templates apply; ``None`` → ``DEFAULT_MODULE``.
+        Explicit module whose templates apply; missing IDs raise ``ValueError``.
 
     Returns
     -------

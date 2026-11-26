@@ -77,15 +77,14 @@ def _render_suggest_system() -> str:
         "- secondary_areas: weitere Werte aus derselben Liste, ohne primary_area.\n"
         "</regeln>\n\n"
         "<ausgabeformat>\n"
-        f'{{ "preset_id": "{tables.fallback_preset}", "primary_area": "{tables.default_module}", '
+        f'{{ "preset_id": "", "primary_area": "{tables.catch_all}", '
         '"secondary_areas": [] }\n\n' + JSON_OBJECT_ONLY + "\n</ausgabeformat>"
     )
 
 
 _SUGGEST_SYSTEM = _render_suggest_system()
 
-# (preset_id, primary_area, keywords) — module data; the default module's
-# entries come last so it wins ties only as the initial fallback.
+# (preset_id, primary_area, keywords) — module data in declared area order.
 _KEYWORD_FALLBACK: list[tuple[str, str, tuple[str, ...]]] = [
     (fb.preset_id, fb.primary_area, fb.keywords) for fb in area_tables().preset_fallback
 ]
@@ -93,25 +92,32 @@ _KEYWORD_FALLBACK: list[tuple[str, str, tuple[str, ...]]] = [
 
 def _fallback_suggestion() -> tuple[str, str]:
     tables = area_tables()
-    preset = get_preset(tables.fallback_preset)
-    primary = preset["legal_areas"][0] if preset and preset["legal_areas"] else tables.catch_all
-    return tables.fallback_preset, primary
+    return "", tables.catch_all
 
 
 def _keyword_suggest(text: str) -> dict[str, Any]:
     haystack = (text or "").lower()
-    best = _fallback_suggestion()
+    matches: list[tuple[str, str]] = []
     best_score = 0
     for pid, primary, kws in _KEYWORD_FALLBACK:
         score = sum(1 for kw in kws if kw in haystack)
         if score > best_score:
             best_score = score
-            best = (pid, primary)
+            matches = [(pid, primary)]
+        elif score and score == best_score and (pid, primary) not in matches:
+            matches.append((pid, primary))
+    suggestions = [
+        {"preset_id": pid, "primary_area": primary, "secondary_areas": []}
+        for pid, primary in matches
+    ]
+    # A tie is a set of alternatives, never an arbitrary selected preset.
+    best = matches[0] if len(matches) == 1 else _fallback_suggestion()
     return {
         "preset_id": best[0],
         "primary_area": best[1],
         "secondary_areas": [],
         "match": "keyword_fallback",
+        "suggestions": suggestions,
     }
 
 
@@ -153,12 +159,12 @@ async def _call_llm_suggest(text: str) -> dict[str, Any]:
         primary = tables.catch_all
     secs = parsed.get("secondary_areas") or []
     secs_clean = [s for s in secs if s in tables.keys and s != primary]
-    return {
+    suggestion = {
         "preset_id": preset_id,
         "primary_area": primary,
         "secondary_areas": secs_clean,
-        "match": "llm",
     }
+    return {**suggestion, "match": "llm", "suggestions": [suggestion]}
 
 
 # ---------------------------------------------------------------------------
@@ -199,8 +205,19 @@ async def post_suggest_preset(
             detail="'text' must be non-empty.",
         )
     suggestion = await _call_llm_suggest(text)
-    keys = [suggestion["primary_area"], *suggestion["secondary_areas"]]
-    return {**suggestion, "resolved_modules": resolved_modules(keys)}
+    suggestions = suggestion.get("suggestions", [suggestion] if suggestion["preset_id"] else [])
+    keys = list(
+        dict.fromkeys(
+            key
+            for candidate in suggestions
+            for key in [candidate["primary_area"], *candidate["secondary_areas"]]
+        )
+    )
+    return {
+        **suggestion,
+        "suggestions": suggestions,
+        "resolved_modules": resolved_modules(keys),
+    }
 
 
 @router.post("/presets/apply")

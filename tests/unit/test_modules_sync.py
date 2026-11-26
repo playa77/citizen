@@ -60,7 +60,7 @@ async def _rows(db: AsyncSession) -> dict[str, LegalModule]:
 
 class TestSync:
     async def test_in_tree_modules_synced(self, session: AsyncSession) -> None:
-        registry = load_registry(default_modules_root(), "provider", None, "sozialrecht")
+        registry = load_registry(default_modules_root(), "provider", None)
         report = await sync_legal_modules(session, registry)
         rows = await _rows(session)
         assert set(registry.modules) <= set(rows)
@@ -83,7 +83,7 @@ class TestSync:
         self, session: AsyncSession, tmp_path: Path
     ) -> None:
         _write_module(tmp_path, "demo_sync", "0.1.0")
-        registry = load_registry(tmp_path, "dev", None, "demo_sync")
+        registry = load_registry(tmp_path, "dev", None)
         report = await sync_legal_modules(session, registry)
         assert report.inserted == ("demo_sync",)
         # every previously synced in-tree module is now "uninstalled": kept, disabled
@@ -95,7 +95,7 @@ class TestSync:
         )
         session.expire_all()
         _write_module(tmp_path, "demo_sync", "0.2.0")
-        registry = load_registry(tmp_path, "dev", None, "demo_sync")
+        registry = load_registry(tmp_path, "dev", None)
         report = await sync_legal_modules(session, registry)
         assert report.updated == ("demo_sync",)
         session.expire_all()
@@ -108,13 +108,13 @@ class TestSync:
     ) -> None:
         _write_module(tmp_path, "demo_a", "1.0.0")
         _write_module(tmp_path, "demo_b", "1.0.0", tier="experimental")
-        await sync_legal_modules(session, load_registry(tmp_path, "dev", None, "demo_a"))
+        await sync_legal_modules(session, load_registry(tmp_path, "dev", None))
         await session.execute(
             text("UPDATE legal_module SET installed_at = '2000-01-01' WHERE id = 'demo_b'")
         )
         session.expire_all()
         report = await sync_legal_modules(
-            session, load_registry(tmp_path, "provider", None, "demo_a")
+            session, load_registry(tmp_path, "provider", None)
         )
         assert report.updated == ("demo_b",)
         session.expire_all()

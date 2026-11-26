@@ -462,14 +462,11 @@ async def analyze_goldset_case(case_id: str) -> StreamingResponse:
     input_text = normalize_text(raw_text)
     session_id = str(uuid.uuid4())
 
-    # /api/v1/goldset* is the DEFAULT_MODULE goldset alias (ARCHITECTURE.md
-    # § 5); its cases run with that module explicitly (WP-93: id from the
-    # module tables instead of a literal).
-    from app.modules.areas import area_tables
-
+    # D-070 preserves the documented Sozialrecht compatibility alias;
+    # GOLDSET_PATH configures its dataset, not a general module default.
     state = PipelineState(
         input_text=input_text,
-        legal_areas=[area_tables().default_module],
+        legal_areas=["sozialrecht"],
     )
 
     logger.info(

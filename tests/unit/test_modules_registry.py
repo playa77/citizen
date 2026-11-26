@@ -2,7 +2,7 @@
 
 Covers discovery of ``modules/*/module.yaml``, manifest validation, the
 enablement rule of D-037 for each ``DEPLOYMENT_MODE``, legacy alias
-resolution (D-038) and the missing-default-module startup refusal.
+resolution (D-038) and startup without a preferred module.
 
 All fixtures are built in temporary directories so the tests never depend
 on the state of the repository's own ``modules/`` tree (except the lint
@@ -24,7 +24,6 @@ import yaml
 
 from app.modules.registry import (
     LEGACY_ALIASES,
-    MissingDefaultModuleError,
     ModuleManifestError,
     UnknownEnabledModuleError,
     discover_modules,
@@ -162,7 +161,6 @@ class TestEnablement:
             modules_dir=mixed_modules["root"],
             deployment_mode="dev",
             enabled_modules=None,
-            default_module="verified_mod",
         )
         assert registry.is_enabled("verified_mod")
         assert registry.is_enabled("experimental_mod")
@@ -174,7 +172,6 @@ class TestEnablement:
             modules_dir=mixed_modules["root"],
             deployment_mode="self",
             enabled_modules=None,
-            default_module="verified_mod",
         )
         assert registry.is_enabled("verified_mod")
         assert registry.is_enabled("experimental_mod")
@@ -186,7 +183,6 @@ class TestEnablement:
             modules_dir=mixed_modules["root"],
             deployment_mode="provider",
             enabled_modules=None,
-            default_module="verified_mod",
         )
         assert registry.is_enabled("verified_mod")
         assert not registry.is_enabled("experimental_mod")
@@ -200,7 +196,6 @@ class TestEnablement:
             modules_dir=mixed_modules["root"],
             deployment_mode="provider",
             enabled_modules=["experimental_mod", "verified_mod"],
-            default_module="verified_mod",
         )
         assert registry.is_enabled("experimental_mod")
         assert registry.is_enabled("verified_mod")
@@ -212,45 +207,36 @@ class TestEnablement:
                 modules_dir=mixed_modules["root"],
                 deployment_mode="dev",
                 enabled_modules=["nicht_installiert"],
-                default_module="verified_mod",
             )
 
 
 # ---------------------------------------------------------------------------
-# Default module
+# No module preference (D-070)
 # ---------------------------------------------------------------------------
 
 
-class TestDefaultModule:
-    def test_default_module_not_enabled_refuses_startup(self, tmp_path: Path) -> None:
+class TestNoModulePreference:
+    def test_provider_can_start_with_no_enabled_modules(self, tmp_path: Path) -> None:
         _write_module(tmp_path, "sozialrecht", {"tier": "experimental"})
-        with pytest.raises(MissingDefaultModuleError):
-            load_registry(
-                modules_dir=tmp_path,
-                deployment_mode="provider",  # experimental is not enabled here
-                enabled_modules=None,
-                default_module="sozialrecht",
-            )
+        registry = load_registry(tmp_path, "provider", None)
+        assert registry.enabled == frozenset()
+        assert "sozialrecht" in registry.modules
+        assert not hasattr(registry, "default_module")
 
-    def test_default_module_missing_entirely_refuses_startup(self, tmp_path: Path) -> None:
-        _write_module(tmp_path, "anderes_recht", {"id": "anderes_recht", "tier": "verified"})
-        with pytest.raises(MissingDefaultModuleError):
-            load_registry(
-                modules_dir=tmp_path,
-                deployment_mode="dev",
-                enabled_modules=None,
-                default_module="sozialrecht",
-            )
+    def test_startup_does_not_require_sozialrecht(self, tmp_path: Path) -> None:
+        _write_module(tmp_path, "anderes_recht", {"tier": "verified"})
+        registry = load_registry(tmp_path, "dev", None)
+        assert registry.enabled == frozenset({"anderes_recht"})
 
-    def test_default_module_enabled_passes(self, tmp_path: Path) -> None:
+    def test_explicit_empty_enablement_is_preserved(self, tmp_path: Path) -> None:
         _write_module(tmp_path, "sozialrecht")
-        registry = load_registry(
-            modules_dir=tmp_path,
-            deployment_mode="provider",
-            enabled_modules=None,
-            default_module="sozialrecht",
-        )
-        assert registry.default_module == "sozialrecht"
+        registry = load_registry(tmp_path, "dev", [])
+        assert registry.enabled == frozenset()
+
+    def test_empty_catalog_can_start(self, tmp_path: Path) -> None:
+        registry = load_registry(tmp_path, "dev", None)
+        assert registry.modules == {}
+        assert registry.enabled == frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +257,6 @@ class TestAliasResolution:
             modules_dir=tmp_path,
             deployment_mode="dev",
             enabled_modules=None,
-            default_module="erbrecht",
         )
         resolution = registry.resolve("schenkungsrecht")
         assert resolution.module_id == "erbrecht"
@@ -287,7 +272,6 @@ class TestAliasResolution:
             modules_dir=tmp_path,
             deployment_mode="dev",
             enabled_modules=None,
-            default_module="sozialrecht",
         )
         # erbrecht is queued (WP-138) but not installed; the alias still
         # maps to the canonical id and reports it as not installed.
@@ -302,7 +286,6 @@ class TestAliasResolution:
             modules_dir=tmp_path,
             deployment_mode="dev",
             enabled_modules=None,
-            default_module="sozialrecht",
         )
         resolution = registry.resolve("sozialrecht")
         assert resolution.module_id == "sozialrecht"
@@ -316,7 +299,6 @@ class TestAliasResolution:
             modules_dir=tmp_path,
             deployment_mode="dev",
             enabled_modules=None,
-            default_module="sozialrecht",
         )
         resolution = registry.resolve("quantenrecht")
         assert resolution.module_id == "quantenrecht"
@@ -336,7 +318,6 @@ class TestCoreApiCompatibility:
             modules_dir=tmp_path,
             deployment_mode="dev",
             enabled_modules=None,
-            default_module="sozialrecht",
         )
 
     def test_compatible_range_loads(self, tmp_path: Path) -> None:
@@ -388,11 +369,10 @@ class TestLoadFromSettings:
         _write_module(tmp_path, "sozialrecht")
         monkeypatch.setattr(settings, "DEPLOYMENT_MODE", "dev")
         monkeypatch.setattr(settings, "ENABLED_MODULES", None)
-        monkeypatch.setattr(settings, "DEFAULT_MODULE", "sozialrecht")
 
         registry = load_registry_from_settings(modules_dir=tmp_path)
         assert registry.is_enabled("sozialrecht")
-        assert registry.default_module == "sozialrecht"
+        assert not hasattr(registry, "default_module")
 
     def test_startup_refuses_unknown_enabled_module(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -402,7 +382,6 @@ class TestLoadFromSettings:
         _write_module(tmp_path, "sozialrecht")
         monkeypatch.setattr(settings, "DEPLOYMENT_MODE", "dev")
         monkeypatch.setattr(settings, "ENABLED_MODULES", ["nichtda"])
-        monkeypatch.setattr(settings, "DEFAULT_MODULE", "sozialrecht")
 
         with pytest.raises(UnknownEnabledModuleError):
             load_registry_from_settings(modules_dir=tmp_path)

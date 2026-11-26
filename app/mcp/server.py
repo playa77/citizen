@@ -98,7 +98,6 @@ def _summary(manifest: Any) -> dict[str, Any]:
         "version": manifest.version,
         "tier": manifest.tier,
         "enabled": registry.is_enabled(manifest.id),
-        "is_default": manifest.id == registry.default_module,
         "origin": manifest.origin,
         "title": dict(manifest.title),
     }
@@ -109,7 +108,6 @@ async def _list_modules(_: dict[str, Any]) -> Any:
 
     registry = module_registry()
     return {
-        "default_module": registry.default_module,
         "modules": [_summary(registry.modules[m]) for m in sorted(registry.modules)],
     }
 

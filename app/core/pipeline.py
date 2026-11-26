@@ -100,8 +100,7 @@ class PipelineState:
     errors: list[str] = field(default_factory=list)
     stream_output_lines: list[str] = field(default_factory=list)
     # legal_areas: list of area keys (module ids or legacy aliases) selected
-    # for this case. When empty the pipeline runs with DEFAULT_MODULE — the
-    # v2.0.0 single-area behaviour, fully backward compatible.
+    # for this case. Empty selection permits deterministic preparation only.
     legal_areas: list[str] = field(default_factory=list)
     # intake_session_id: optional reference to the IntakeSession that
     # produced the legal_areas + enriched input_text. Persisted on
@@ -300,6 +299,25 @@ async def _stage_normalization(state: PipelineState) -> None:
     """Stage 1 — strip whitespace, normalize encoding, clean OCR artefacts."""
     state.normalized_text = normalize_text(state.input_text)
     logger.info("Normalization complete (%d chars)", len(state.normalized_text))
+
+
+def _restore_output_pii(state: PipelineState) -> None:
+    """Restore prepared and inferred output through the same privacy boundary."""
+    if state.pii_mapping is None:
+        return
+    from app.services.pseudonymization import PiiMapping, depseudonymize_output
+
+    mapping = PiiMapping.from_dict(state.pii_mapping)
+    if mapping.placeholder_to_value:
+        for section_key, value in state.final_output.items():
+            if isinstance(value, str):
+                restored, warnings = depseudonymize_output(value, mapping)
+                state.final_output[section_key] = restored
+                state.pseudonymization_warnings.extend(f"{section_key}: {w}" for w in warnings)
+        logger.info(
+            "Depseudonymization complete with %d warning(s)",
+            len(state.pseudonymization_warnings),
+        )
 
 
 async def _stage_classification(state: PipelineState) -> None:
@@ -687,9 +705,6 @@ async def _stage_retrieval(state: PipelineState) -> None:
     logging/debugging.
     """
     from app.services.retrieval import (
-        retrieve_chunks,
-        retrieve_chunks_by_norm_reference,
-        retrieve_chunks_combined,
         retrieve_chunks_for_areas,
     )
 
@@ -707,39 +722,9 @@ async def _stage_retrieval(state: PipelineState) -> None:
         )
         return
 
-    if cfg._get_settings().RETRIEVAL_MODE == "combined":
-        state.retrieved_chunks = await retrieve_chunks_combined(
-            state.issues,
-            state.questions,
-            state.normalized_text,
-        )
-    else:
-        state.retrieved_chunks = await retrieve_chunks(state.questions)
-
-    # ── §-reference direct lookup for single-area path ─────────────────
-    # Extract norm references from the document text and merge with vector
-    # results (dedup by chunk_id, keeping vector result on collision).
-    if state.normalized_text:
-        from app.modules.areas import area_tables
-
-        # Default-module corpus scope (``norm_reference_source_types``, WP-93).
-        norm_chunks = await retrieve_chunks_by_norm_reference(
-            state.normalized_text,
-            source_types=area_tables().norm_reference_source_types,
-        )
-        if norm_chunks:
-            seen: set[str] = {c["chunk_id"] for c in state.retrieved_chunks}
-            for nc in norm_chunks:
-                if nc["chunk_id"] in seen:
-                    continue
-                seen.add(nc["chunk_id"])
-                state.retrieved_chunks.append(nc)
-            state.retrieved_chunks.sort(key=lambda c: c["distance"])
-            state.retrieved_chunks = state.retrieved_chunks[
-                : cfg._get_settings().MAX_CHUNKS_FOR_FINAL
-            ]
-
-    logger.info("Retrieval complete (%d chunks)", len(state.retrieved_chunks))
+    # Empty scope must never search the global corpus or a module's norm list.
+    state.per_area_chunks = {}
+    state.retrieved_chunks = []
 
 
 async def _stage_construction(state: PipelineState) -> None:
@@ -1117,6 +1102,47 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
             mapping.id_counter,
         )
 
+    # D-070: prepare input deterministically, then require a usable explicit
+    # module selection before touching retrieval, prompts or inference clients.
+    from app.services.prompts import (
+        SELECTION_REQUIRED_TEXT,
+        ModuleSelectionRequired,
+        require_inference_scope,
+    )
+
+    try:
+        require_inference_scope(state.legal_areas)
+    except ModuleSelectionRequired:
+        yield _sse_event(stage="normalization", status="running", payload={})
+        await _stage_normalization(state)
+        yield _sse_event(
+            stage="normalization",
+            status="complete",
+            payload=_stage_payload(state, stage_name="normalization", duration_ms=0),
+        )
+        state.final_output = {
+            "sachverhalt": state.normalized_text,
+            "rechtliche_wuerdigung": "",
+            "ergebnis": SELECTION_REQUIRED_TEXT,
+            "handlungsempfehlung": SELECTION_REQUIRED_TEXT,
+            "entwurf": "",
+            "unsicherheiten": "",
+        }
+        _restore_output_pii(state)
+        # Reuse the existing generation snapshot so case reload preserves the
+        # deterministic preparation. No generation model is called here.
+        yield _sse_event(
+            stage="generation",
+            status="complete",
+            payload={**state.final_output, "duration_ms": 0},
+        )
+        yield _sse_event(
+            stage="module_selection",
+            status="required",
+            payload={"error": "MODULE_SELECTION_REQUIRED", "legal_areas": state.legal_areas},
+        )
+        return
+
     # -----------------------------------------------------------------------
     # Corpus health check (before pipeline begins)
     # -----------------------------------------------------------------------
@@ -1382,23 +1408,6 @@ async def run_pipeline(state: PipelineState) -> AsyncGenerator[str, None]:
     # -------------------------------------------------------------------
     # WP-30: Depseudonymize final output — restore original PII for user
     # -------------------------------------------------------------------
-    if state.pii_mapping is not None:
-        from app.services.pseudonymization import (
-            PiiMapping,
-            depseudonymize_output,
-        )
-
-        mapping = PiiMapping.from_dict(state.pii_mapping)
-        if mapping.placeholder_to_value:
-            for section_key in list(state.final_output.keys()):
-                value = state.final_output[section_key]
-                if isinstance(value, str):
-                    restored, warnings = depseudonymize_output(value, mapping)
-                    state.final_output[section_key] = restored
-                    state.pseudonymization_warnings.extend(f"{section_key}: {w}" for w in warnings)
-            logger.info(
-                "Depseudonymization complete with %d warning(s)",
-                len(state.pseudonymization_warnings),
-            )
+    _restore_output_pii(state)
 
     logger.info("Pipeline completed successfully.")

@@ -11,8 +11,7 @@ wins; otherwise the tier rule for the current ``DEPLOYMENT_MODE`` applies
 
 The registry is pure filesystem + data logic: no DB, no pipeline wiring.
 ``load_registry_from_settings`` is the startup entry point — an invalid
-enabled manifest or a ``DEFAULT_MODULE`` outside the enabled set raises and
-therefore refuses startup.
+enabled manifest raises and therefore refuses startup.
 """
 
 # Semantic Version: 0.3.1 | 2026-11-17 — WP-122: schema core_api 3.2 (`plain_language`).
@@ -68,10 +67,6 @@ class ModuleContractError(Exception):
 
 class UnknownEnabledModuleError(Exception):
     """``ENABLED_MODULES`` names a module that is not installed."""
-
-
-class MissingDefaultModuleError(Exception):
-    """``DEFAULT_MODULE`` is not in the enabled set (D-037) — startup refuses."""
 
 
 # ---------------------------------------------------------------------------
@@ -425,7 +420,6 @@ class ModuleResolution:
 class ModuleRegistry:
     modules: dict[str, ModuleManifest]
     enabled: frozenset[str]
-    default_module: str
     # Alias → canonical id; manifest-declared aliases first, built-ins second.
     aliases: dict[str, str] = field(default_factory=dict)
     # WP-112: out-of-tree entry points that were not loaded (name → reason).
@@ -455,7 +449,6 @@ def load_registry(
     modules_dir: Path,
     deployment_mode: str,
     enabled_modules: list[str] | None,
-    default_module: str,
     entry_points: Iterable[EntryPointModule] | None = None,
 ) -> ModuleRegistry:
     """Discover → validate → enable → resolve (one startup-ready registry)."""
@@ -464,12 +457,6 @@ def load_registry(
     for module_id in sorted(enabled):
         assert_core_api_compatible(modules[module_id])
         assert_out_of_tree_code_clean(modules[module_id])
-    if default_module not in enabled:
-        raise MissingDefaultModuleError(
-            f"DEFAULT_MODULE {default_module!r} is not in the enabled set "
-            f"(mode={deployment_mode!r}, enabled={sorted(enabled)})"
-        )
-
     aliases: dict[str, str] = {}
     for manifest in modules.values():
         for alias in manifest.legacy_aliases:
@@ -481,7 +468,6 @@ def load_registry(
     return ModuleRegistry(
         modules=modules,
         enabled=enabled,
-        default_module=default_module,
         aliases=aliases,
         rejected=rejected,
     )
@@ -499,5 +485,4 @@ def load_registry_from_settings(modules_dir: Path | None = None) -> ModuleRegist
         modules_dir=modules_dir if modules_dir is not None else default_modules_root(),
         deployment_mode=settings.DEPLOYMENT_MODE,
         enabled_modules=settings.ENABLED_MODULES,
-        default_module=settings.DEFAULT_MODULE,
     )

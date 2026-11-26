@@ -1,6 +1,7 @@
 """Global pytest fixtures for Citizen test suite."""
 
-# Semantic Version: 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
+# Semantic Version: 0.6.0 | 2026-11-25 — no configured module preference.
+# 0.5.0 | 2026-11-16 — WP-96: DISCLAIMER_VERSION default
 # v3.0.0 (follows the config default).
 # 0.4.0 | 2026-11-16 — WP-91: DEFAULT_MODULE conftest
 # default added; ENABLED_MODULES intentionally left unset (D-037 default).
@@ -88,11 +89,8 @@ os.environ.setdefault("DISCLAIMER_VERSION", "v3.0.0")
 os.environ.setdefault("DEPLOYMENT_MODE", "dev")
 os.environ.setdefault("CITIZEN_SYNTHETIC_DATA_ONLY", "true")
 
-# WP-91: DEFAULT_MODULE has a conftest default so settings always resolve.
-# ENABLED_MODULES is deliberately left unset: its configured default is
-# "unset" (None), which activates the D-037 tier rule — setting it here
-# would mask that default path in every test.
-os.environ.setdefault("DEFAULT_MODULE", "sozialrecht")
+# ENABLED_MODULES is deliberately left unset: None activates the D-037 tier
+# rule. Deployment enablement does not select a module for a request.
 
 
 def _preload_module_code() -> None:

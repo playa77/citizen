@@ -15,7 +15,6 @@ import pytest
 
 from app.services.prompts import (
     _OPEN_CATEGORY,
-    DEFAULT_PROMPTS,
     PROMPT_SET_VERSION,
     STRICT_SUFFIX,
     _merge_profiles,
@@ -31,8 +30,8 @@ from citizen_modules.sozialrecht.calculators import (
     ExtractionValues,
 )
 
-AREA_SETS = [[], ["sozialrecht"], ["erbrecht"], ["sozialrecht", "erbrecht"], ["familienrecht"]]
-JSON_STAGES = [s for s in DEFAULT_PROMPTS]  # every stage prompt is a JSON stage
+AREA_SETS = [["sozialrecht"], ["erbrecht"], ["sozialrecht", "erbrecht"], ["familienrecht"]]
+JSON_STAGES = list(get_prompts(["sozialrecht"]))  # every stage prompt is a JSON stage
 
 
 def _format_example(prompt: str) -> str:
@@ -123,10 +122,10 @@ def test_issue_term_anchors_parse_as_norms() -> None:
 
 
 def test_no_lawyer_persona_or_advice_promise() -> None:
-    for stage, prompt in DEFAULT_PROMPTS.items():
+    for stage, prompt in get_prompts(["sozialrecht"]).items():
         assert "Erstberater" not in prompt, stage
         assert "Anwalt der Nutzerseite" not in prompt, stage
-    assert re.search(r"keine Rechtsberatung", DEFAULT_PROMPTS["grounded_answer"])
+    assert re.search(r"keine Rechtsberatung", get_prompts(["sozialrecht"])["grounded_answer"])
 
 
 def test_cross_check_searches_document_only() -> None:
@@ -149,8 +148,14 @@ async def test_legacy_messages_use_german_headings(monkeypatch: pytest.MonkeyPat
             return "[]" if "Rechtsfragen" in messages[1]["content"] else '{"sachverhalt": ""}'
 
     monkeypatch.setattr(reasoning, "get_shared_client", lambda: _Fake())
-    await reasoning.construct_claims([{"hierarchy_path": "SGB X", "text_content": "t"}], ["F?"])
-    await reasoning.generate_output([{"claim_text": "c", "claim_type": "interpretation"}])
+    await reasoning.construct_claims(
+        [{"hierarchy_path": "SGB X", "text_content": "t"}], ["F?"],
+        system_prompt=get_prompts(["sozialrecht"])["claim_construction"],
+    )
+    await reasoning.generate_output(
+        [{"claim_text": "c", "claim_type": "interpretation"}],
+        system_prompt=get_prompts(["sozialrecht"])["output"],
+    )
     assert sent[0].startswith("Rechtsfragen:\n") and "\n\nRechtsquellen:\n" in sent[0]
     assert sent[1].startswith("Geprüfte Claims:\n")
 

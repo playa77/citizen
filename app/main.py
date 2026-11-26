@@ -71,17 +71,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise
 
     # WP-91: module registry validation. An enabled module with an invalid
-    # manifest, an ENABLED_MODULES id that is not installed, or a
-    # DEFAULT_MODULE outside the enabled set refuses startup (D-037).
+    # manifest or an ENABLED_MODULES id that is not installed refuses startup.
     try:
         from app.modules.runtime import module_registry
 
         _registry = module_registry()
         logger.info(
-            "Module registry: %d installed, enabled=%s, default=%s",
+            "Module registry: %d installed, enabled=%s",
             len(_registry.modules),
             sorted(_registry.enabled),
-            _registry.default_module,
         )
         # WP-112: out-of-tree modules (tier community, opt-in only).
         _external = sorted(mid for mid, m in _registry.modules.items() if m.origin == "entry_point")

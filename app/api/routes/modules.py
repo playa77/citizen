@@ -184,7 +184,6 @@ def _summary(
         "version": manifest.version,
         "tier": manifest.tier,
         "enabled": registry.is_enabled(manifest.id),
-        "is_default": manifest.id == registry.default_module,
         # WP-112: "in_tree" (reviewed, ships with the core) or "entry_point"
         # (installed package, tier clamped to community).
         "origin": manifest.origin,
@@ -211,7 +210,6 @@ async def list_modules() -> dict[str, Any]:
     registry = module_registry()
     by_source, rows = await _db_state()
     return {
-        "default_module": registry.default_module,
         "modules": [
             _summary(registry.modules[module_id], by_source, rows)
             for module_id in _ordered_module_ids()

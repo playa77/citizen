@@ -121,12 +121,13 @@ def _module(root: Path, module_id: str, compliance: str = "") -> Path:
 
 def test_core_documents_are_scanned(tmp_path: Path) -> None:
     _write(tmp_path, "README.md", "ok\n")
-    for relative in ("DISCLAIMER_DE.md", "ARCHITECTURE.md", "docs/plan.md"):
+    documents = ("DISCLAIMER_DE.md", "docs/decisions/D-001-test.md", "docs/plan.md")
+    for relative in documents:
         _write(tmp_path, relative, "ok\n" + DRIFT_LINE + "\n")
     result = _run(tmp_path)
     assert result.returncode == 1
-    for relative in ("DISCLAIMER_DE.md:2", "ARCHITECTURE.md:2", "docs/plan.md:2"):
-        assert relative in result.stdout
+    for relative in documents:
+        assert f"{relative}:2" in result.stdout
 
 
 def test_module_copy_and_addendum_are_scanned(tmp_path: Path) -> None:

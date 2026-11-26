@@ -35,7 +35,7 @@ from app.modules.semver import VersionRangeError, in_range, parse_version, valid
 
 HEADERS = {"X-Disclaimer-Ack": settings.DISCLAIMER_VERSION}
 INSTALLED = discover_modules(default_modules_root())
-DEFAULT = settings.DEFAULT_MODULE
+SOZIALRECHT = "sozialrecht"
 
 
 def _erratum(**overrides: Any) -> dict[str, Any]:
@@ -167,12 +167,12 @@ def test_installed_modules_follow_versioning_rules(module_id: str) -> None:
     assert check_versioning(INSTALLED[module_id]) == []
 
 
-def test_default_module_publishes_d065_erratum() -> None:
-    errata = {e.id: e for e in module_errata(INSTALLED[DEFAULT])}
+def test_sozialrecht_publishes_d065_erratum() -> None:
+    errata = {e.id: e for e in module_errata(INSTALLED[SOZIALRECHT])}
     erratum = errata["E-2026-001"]
     assert erratum.component == "deadline" and erratum.severity == "critical"
     assert erratum.affects("1.2.0") and not erratum.affects(erratum.fixed_in)
-    assert not erratum.affects(INSTALLED[DEFAULT].version)
+    assert not erratum.affects(INSTALLED[SOZIALRECHT].version)
 
 
 # ---------------------------------------------------------------------------
@@ -195,14 +195,14 @@ async def client() -> AsyncGenerator[httpx.AsyncClient, None]:
 
 
 async def test_module_detail_serves_errata(client: httpx.AsyncClient) -> None:
-    body = (await client.get(f"/api/v1/modules/{DEFAULT}", headers=HEADERS)).json()
-    assert [e["id"] for e in body["errata"]] == [e.id for e in module_errata(INSTALLED[DEFAULT])]
+    body = (await client.get(f"/api/v1/modules/{SOZIALRECHT}", headers=HEADERS)).json()
+    assert [e["id"] for e in body["errata"]] == [e.id for e in module_errata(INSTALLED[SOZIALRECHT])]
     assert set(body["errata"][0]) >= {"affected_versions", "fixed_in", "action_de"}
     assert body["origin"] == "in_tree"
 
 
 async def test_erratum_cases_matches_recorded_module_versions(client: httpx.AsyncClient) -> None:
-    erratum = module_errata(INSTALLED[DEFAULT])[0]
+    erratum = module_errata(INSTALLED[SOZIALRECHT])[0]
     cases = {"affected": uuid.uuid4(), "fixed": uuid.uuid4(), "unrecorded": uuid.uuid4()}
     versions = {"affected": "1.2.0", "fixed": erratum.fixed_in, "unrecorded": None}
     async with async_session_factory() as session:
@@ -214,8 +214,8 @@ async def test_erratum_cases_matches_recorded_module_versions(client: httpx.Asyn
             session.add(
                 CaseRunArea(
                     case_run_id=case_id,
-                    legal_area=DEFAULT,
-                    module_id=DEFAULT if versions[name] else None,
+                    legal_area=SOZIALRECHT,
+                    module_id=SOZIALRECHT if versions[name] else None,
                     module_version=versions[name],
                     is_primary=True,
                 )
@@ -223,7 +223,7 @@ async def test_erratum_cases_matches_recorded_module_versions(client: httpx.Asyn
         await session.commit()
     try:
         resp = await client.get(
-            f"/api/v1/modules/{DEFAULT}/errata/{erratum.id}/cases", headers=HEADERS
+            f"/api/v1/modules/{SOZIALRECHT}/errata/{erratum.id}/cases", headers=HEADERS
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -238,7 +238,7 @@ async def test_erratum_cases_matches_recorded_module_versions(client: httpx.Asyn
 
 
 async def test_erratum_cases_404s(client: httpx.AsyncClient) -> None:
-    resp = await client.get(f"/api/v1/modules/{DEFAULT}/errata/E-1999-999/cases", headers=HEADERS)
+    resp = await client.get(f"/api/v1/modules/{SOZIALRECHT}/errata/E-1999-999/cases", headers=HEADERS)
     assert resp.status_code == 404 and resp.json()["detail"]["error"] == "erratum_unknown"
     resp = await client.get("/api/v1/modules/nope_mod/errata/E-1999-999/cases", headers=HEADERS)
     assert resp.status_code == 404 and resp.json()["detail"]["error"] == "MODULE_UNKNOWN"

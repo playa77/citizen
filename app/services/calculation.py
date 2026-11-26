@@ -105,8 +105,7 @@ async def check_calculations(
         Optional output sections from the reasoning pipeline.
     module_ids :
         Modules the request runs with (``app.modules.runtime.request_modules``);
-        ``None`` → the default module (v2.0.0 behaviour for callers that name
-        no module); ``[]`` → no calculator runs.
+        ``None`` or ``[]`` → no calculator runs.
 
     Returns
     -------
@@ -126,8 +125,7 @@ async def check_calculations(
             "Zum Aktivieren ENABLE_CALCULATION_CHECK=True setzen."
         )
 
-    # ``[]`` is a resolved request with no module (e.g. procedural library
-    # only) and must not fall back to the default module (D-054).
+    # Omitted and empty selections both run no module (D-070).
     resolved_modules = module_ids if module_ids is not None else request_modules(None)
     calculators = calculators_for(resolved_modules)
     if not calculators:

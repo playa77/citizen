@@ -1,8 +1,9 @@
 # D-069 R2 — Module selection and session restore
 
 - **Date:** 2026-11-25
-- **Status:** Accepted by owner; implementation pending and blocking all other
-  implementation work, including further legal-area modules.
+- **Status:** Accepted by owner; backend verified under D-070 on 2026-11-26.
+  GUI/session implementation and combined acceptance remain pending and block
+  all further implementation work, including legal-area modules.
 - **Supersedes:** the Sozialrecht default designation in historical D-036.
   The core/module architecture, deployment-tier rules (D-037), API compatibility
   rule (D-039) and separate GUI repository (D-067) remain applicable.
@@ -55,3 +56,14 @@ decision does not silently remove fields or change current error contracts.
 The linked TODO defines completion checks. Until they pass, API reference
 sections describing the current fallback are legacy implementation facts,
 not the intended product behavior. Historical release notes remain historical.
+
+## D-070 implementation follow-up — 2026-11-25
+
+[D-070](D-070-explicit-backend-module-scope.md) records the owner's specific
+approval to remove the catalog fields outright, superseding the compatible
+transition constraint above for those two fields only. It also records the
+subsequently approved deterministic preparation and explicit backend selection
+policies. Backend changes are in the working tree and passed the application/database
+checks; see its verification record for skips and existing warnings.
+GUI chooser, local session persistence and combined acceptance remain incomplete
+and are assigned to the GUI owner outside this session.

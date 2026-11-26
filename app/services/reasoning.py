@@ -35,7 +35,6 @@ from typing import Any
 
 from app.core.router import get_shared_client
 from app.services.prompts import (
-    DEFAULT_PROMPTS,
     STRICT_SUFFIX,
     stage_max_tokens,
     stage_temperature,
@@ -47,6 +46,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Custom exceptions
 # ---------------------------------------------------------------------------
+
+
+def _require_system_prompt(system_prompt: str | None) -> str:
+    """Legal reasoning callers must supply their selected module's prompt."""
+    if not system_prompt or not system_prompt.strip():
+        raise ValueError("An explicit module system_prompt is required")
+    return system_prompt
 
 
 class JSONParseError(Exception):
@@ -190,10 +196,8 @@ def _extract_json_segment(text: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 # Prompt strings live in app.services.prompts so the registry can serve
-# area-specific variants. We re-export the socialrecht (default) prompts
-# under the original module-level names so any pre-existing importer
-# keeps working byte-for-byte.
-_CLASSIFICATION_SYSTEM = DEFAULT_PROMPTS["classification"]
+# area-specific variants. Callers supply the selected module's system prompt
+# explicitly; there are no implicit legal prompt constants (D-070).
 
 
 async def classify_issues(
@@ -208,21 +212,21 @@ async def classify_issues(
     normalized_text :
         Cleaned text from the OCR / ingestion pipeline.
     system_prompt :
-        Optional override for the system prompt. When ``None`` the
-        original SGB-focused prompt is used. The pipeline passes a
-        multi-area-aware prompt from ``app.services.prompts``.
+        Explicit system prompt for the selected scope. Missing/empty prompts
+        raise ``ValueError`` before client access. The pipeline supplies the
+        module-aware prompt from ``app.services.prompts``.
 
     Returns
     -------
     list[str]
         A list of identified legal issue labels.
     """
+    sys_msg = _require_system_prompt(system_prompt)
     logger.info("classify_issues: starting (input=%d chars)", len(normalized_text))
     client = get_shared_client()
     from app.core.config import settings as _s
 
     triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
-    sys_msg = system_prompt if system_prompt is not None else _CLASSIFICATION_SYSTEM
     messages = [
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
         {
@@ -261,8 +265,6 @@ async def classify_issues(
 # Stage 3 — Question Decomposition
 # ---------------------------------------------------------------------------
 
-_DECOMPOSITION_SYSTEM = DEFAULT_PROMPTS["decomposition"]
-
 
 async def decompose_questions(
     normalized_text: str,
@@ -283,12 +285,12 @@ async def decompose_questions(
     list[str]
         A list of extracted legal questions.
     """
+    sys_msg = _require_system_prompt(system_prompt)
     logger.info("decompose_questions: starting (input=%d chars)", len(normalized_text))
     client = get_shared_client()
     from app.core.config import settings as _s
 
     triage_budget = _s.MAX_TRIAGE_INPUT_CHARS
-    sys_msg = system_prompt if system_prompt is not None else _DECOMPOSITION_SYSTEM
     messages = [
         {"role": "system", "content": sys_msg + _STRICT_SUFFIX},
         {
@@ -325,8 +327,6 @@ async def decompose_questions(
 # ---------------------------------------------------------------------------
 # Combined Stages 2+3 — Triage (WP-006)
 # ---------------------------------------------------------------------------
-
-_TRIAGE_SYSTEM = DEFAULT_PROMPTS["triage"]
 
 
 def _triage_cache_text(system_prompt: str, normalized_text: str) -> str:
@@ -365,12 +365,12 @@ async def triage_document(
         A dict with keys ``issues`` (list of legal issue labels) and
         ``questions`` (list of explicit legal questions).
     """
+    sys_msg = _require_system_prompt(system_prompt)
     from app.core.config import settings as s
 
     triage_model = s.TRIAGE_MODEL or s.PRIMARY_MODEL
     triage_timeout = s.TRIAGE_TIMEOUT_SEC
     triage_input_chars = s.MAX_TRIAGE_INPUT_CHARS
-    sys_msg = system_prompt if system_prompt is not None else _TRIAGE_SYSTEM
 
     # ── WP-011: triage cache ────────────────────────────────────────────
     if s.ENABLE_CACHE:
@@ -503,8 +503,6 @@ async def triage_document(
 # Combined Stages 5+6+7+8 — Grounded Answer Generation (WP-007)
 # ---------------------------------------------------------------------------
 
-_GROUNDED_ANSWER_SYSTEM = DEFAULT_PROMPTS["grounded_answer"]
-_ADVERSARIAL_REVIEW_SYSTEM = DEFAULT_PROMPTS["adversarial_review"]
 
 _SECTION_KEYS: tuple[str, ...] = (
     "sachverhalt",
@@ -630,10 +628,10 @@ async def generate_grounded_answer(
     Until prompt set 3.0.0 this body also served stage 7 under the name
     ``adversarial_review`` and discarded the review (F-17).
     """
+    sys_msg = _require_system_prompt(system_prompt)
     from app.core.config import settings as s
 
     del claims  # produced by the model, see docstring
-    sys_msg = system_prompt if system_prompt is not None else _GROUNDED_ANSWER_SYSTEM
     client = get_shared_client()
     final_models = _final_models(client)
     user_content, n_chunks = _final_user_content(normalized_text, issues, questions, chunks)
@@ -704,9 +702,9 @@ async def generate_grounded_answer_stream(
     with the same system prompt (it used to drop it, losing the area profile
     and the regime block).
     """
+    sys_msg = _require_system_prompt(system_prompt)
     from app.core.config import settings as s
 
-    sys_msg = system_prompt if system_prompt is not None else _GROUNDED_ANSWER_SYSTEM
     client = get_shared_client()
     final_models = _final_models(client)
     user_content, n_chunks = _final_user_content(normalized_text, issues, questions, chunks)
@@ -881,9 +879,9 @@ async def adversarial_review(
     when the response stays unparseable after one retry; the pipeline then
     falls back to its "Prüfung nicht verfügbar" result.
     """
+    sys_msg = _require_system_prompt(system_prompt)
     from app.core.config import settings as s
 
-    sys_msg = system_prompt if system_prompt is not None else _ADVERSARIAL_REVIEW_SYSTEM
     client = get_shared_client()
     final_models = _final_models(client)
     base_content, n_chunks = _final_user_content(normalized_text, issues, questions, chunks)
@@ -937,8 +935,6 @@ async def adversarial_review(
 # Stage 5 — Claim Construction
 # ---------------------------------------------------------------------------
 
-_CLAIM_CONSTRUCTION_SYSTEM = DEFAULT_PROMPTS["claim_construction"]
-
 
 async def construct_claims(
     chunks: list[dict[str, str]],
@@ -962,11 +958,10 @@ async def construct_claims(
         A list of claim dicts with keys: ``claim_text``, ``confidence_score``,
         ``claim_type``, ``question``.
     """
+    sys_msg = _require_system_prompt(system_prompt)
     logger.info("construct_claims: starting (%d chunks, %d questions)", len(chunks), len(questions))
     client = get_shared_client()
     from app.core.config import settings as _s
-
-    sys_msg = system_prompt if system_prompt is not None else _CLAIM_CONSTRUCTION_SYSTEM
 
     chunk_context = "\n\n---\n\n".join(
         f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}"
@@ -1038,8 +1033,6 @@ async def construct_claims(
 # Stage 6 — Verification Pass
 # ---------------------------------------------------------------------------
 
-_VERIFICATION_SYSTEM = DEFAULT_PROMPTS["verification"]
-
 
 async def verify_claims(
     claims: list[dict[str, str | float]],
@@ -1062,14 +1055,13 @@ async def verify_claims(
         Verified claims with an added ``verified`` (bool) and ``reasoning``
         (str) field, plus adjusted ``confidence_score``.
     """
+    sys_msg = _require_system_prompt(system_prompt)
     if not claims:
         return []
 
     logger.info("verify_claims: starting (%d claims, %d chunks)", len(claims), len(chunks))
     client = get_shared_client()
     from app.core.config import settings as _s
-
-    sys_msg = system_prompt if system_prompt is not None else _VERIFICATION_SYSTEM
 
     chunk_text = "\n\n---\n\n".join(
         f"[{c.get('hierarchy_path', '?')}]: {c.get('text_content', '')}"
@@ -1159,8 +1151,6 @@ async def verify_claims(
 # Stage 7 — Output Generation
 # ---------------------------------------------------------------------------
 
-_OUTPUT_SYSTEM = DEFAULT_PROMPTS["output"]
-
 
 async def generate_output(
     verified_claims: list[dict[str, str | float | bool]],
@@ -1180,11 +1170,10 @@ async def generate_output(
         A dict with keys: ``sachverhalt``, ``rechtliche_wuerdigung``,
         ``ergebnis``, ``handlungsempfehlung``, ``entwurf``, ``unsicherheiten``.
     """
+    sys_msg = _require_system_prompt(system_prompt)
     logger.info("generate_output: starting (%d verified claims)", len(verified_claims))
     client = get_shared_client()
     from app.core.config import settings as _s
-
-    sys_msg = system_prompt if system_prompt is not None else _OUTPUT_SYSTEM
 
     claims_text = "\n".join(
         f"- [{c.get('claim_type', '?')}] (verified={c.get('verified', False)}, "

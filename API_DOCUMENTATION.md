@@ -36,12 +36,16 @@ Saved modules that are unavailable must be surfaced, not replaced with a
 fallback. Session persistence and restoration are pending implementation;
 this reference introduces no new session-restoration endpoint.
 
-**Legacy backend contract:** the current code still implements `DEFAULT_MODULE`
-and returns `default_module` / `is_default` metadata. The reference below
-records those current wire behaviors where necessary. They are implementation
-work to retire in the first TODO, not instructions to preselect Sozialrecht
-or any other module. Removing fallback semantics and transitioning metadata
-must respect the additive `/api/v1` compatibility rule in §2.
+**Backend contract (D-070):** catalog responses contain neither `default_module`
+nor `is_default`, including module detail and the equivalent MCP tools. Their
+removal is the owner's explicit exception to D-039's additive `/api/v1` rule;
+clients must remove reads of these fields. No deprecated or neutral copies remain.
+Omitted/empty scope selects no legal module. Legal analysis/chat with no usable
+module profile performs deterministic preparation only and requests a selection;
+it neither borrows another module's prompts nor retrieves legal corpus data.
+GUI selection and local session persistence remain the GUI owner's work.
+See [D-070](docs/decisions/D-070-explicit-backend-module-scope.md) for the impact
+assessment, approved policies and remaining verification boundaries.
 
 ## 1. Base URLs and deployment
 
@@ -71,6 +75,8 @@ Machine-readable OpenAPI description is served by the app itself:
   in its manifest); `GET /api/v1/modules` and the `modules` key of
   `meta/version` report them. Within `/api/v1` all changes are additive
   (D-039): new keys may appear in responses, existing keys keep their shape.
+  **Authorized exception (D-070):** `default_module` and `is_default` are removed
+  from the v1 module catalog list/detail responses, without a v2 transition.
 - **Disclaimer version:** independent of the app version. Clients must fetch it
   via `GET /api/v1/meta/disclaimer/version` and echo it in `X-Disclaimer-Ack`.
 
@@ -218,7 +224,7 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 ```
 
 - `text` (required, non-empty): the normalized input document.
-- `legal_areas` (optional in the legacy backend contract; GUI/desktop clients
+- `legal_areas` (optional; GUI/desktop clients
   must send their explicit chosen/restored scope): JSON array or
   comma-separated string (the array
   form is accepted since WP-95; before, only the string form passed request
@@ -230,9 +236,11 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
   prompts.
   Each value resolves to the module that owns it (legacy key
   `schenkungsrecht` → module `erbrecht`, `verwaltungsrecht` → core procedural
-  library). The current implementation still resolves an omitted/empty list
-  through its legacy `DEFAULT_MODULE` fallback; removing this behavior is
-  part of the first blocking TODO (§0). The `calculation_check`
+  library). An omitted/empty list resolves to no legal module. After existing
+  input/privacy checks, empty scope, procedural-only scope or a selection
+  containing a module without a prompt profile produces deterministic
+  preparation and a selection-required result, without legal inference or
+  corpus retrieval. No unknown/disabled module is replaced. The `calculation_check`
   stage and the legal-regime banner run the **resolved modules'** calculators
   and regime providers: only `sozialrecht` ships them (since WP-93). A request
   whose areas resolve to no such module gets `calculation_check` with an empty
@@ -269,6 +277,20 @@ Response is a **Server-Sent Events stream** (`text/event-stream`).
 | *(all LLM stages)* | `complete` | `prompts[]` (prompt set 3.0.0, additive): `{id, version, sha256}` of each system prompt the stage sent — `classification`/`decomposition`, `construction`, `verification`, `adversarial_review`, `calculation_check`; recorded in the stage audit log (`stages[].output_snapshot`) |
 | *(final)* | — | `{"session_id", "sections": [...], "final_output": {...}, "case_run_id": "<uuid>", "disclosure": {...}, "provenance": {...}, "resolved_modules": [...], "plain": {...}}` — `resolved_modules` only when the request carried a non-empty `legal_areas`; `plain` only when it carried `plain_languages` |
 
+**Selection-required preparation (D-070):** with no usable legal module
+profile, OCR-quality and pseudonymization guards remain active; normalization
+runs deterministically. The stream emits `normalization` progress, a
+`generation` completion containing the deterministic output for case persistence, and
+`{"stage":"module_selection","status":"required","payload":{"error":
+"MODULE_SELECTION_REQUIRED","legal_areas":[]}}`, then the ordinary terminal
+summary. `final_output` contains the prepared facts and a fixed selection
+instruction, with no legal assessment, draft or calculated amounts. No
+classification, embeddings, legal retrieval or legal model calls run.
+An empty selection has empty module provenance; procedural-only scope likewise
+names no module. A mixed selection containing a profile-less module is not
+silently reduced to its usable subset. Explicit module profile inheritance is
+respected. Unknown/disabled keys still fail validation before processing.
+
 The final summary event embeds two Art. 50 (VO (EU) 2024/1689) objects:
 `disclosure` (`{version, must_display_before: "results", texts: {de, en}}`) —
 the consuming client MUST display `texts[lang]` to the natural person before
@@ -288,9 +310,8 @@ order, each `{id, version, parameter_set}`:
 | `version` | string | module semver at generation time |
 | `parameter_set` | string \| null | pinned legal-parameter set: `"<module version>+<latest valid_from>"`, e.g. `"1.2.0+2026-01-01"`; `null` for a module without parameters |
 
-Resolution follows the explicitly supplied area keys. **Legacy behavior
-pending removal in the first TODO:** no/empty `legal_areas` currently produces
-`[DEFAULT_MODULE]`; clients must not use omission to select a module. Keys
+Resolution follows the explicitly supplied area keys. No/empty `legal_areas`
+produces `[]`; omission selects no module. Keys
 served by the core procedural library (`verwaltungsrecht`) add no
 module, so a procedural-only request yields `[]`. If a field cannot be
 determined it reads `"unknown"` (never an error); if the modules cannot be
@@ -334,7 +355,7 @@ POST /api/v1/analyze
 X-Disclaimer-Ack: v3.0.0
 Content-Type: application/json
 
-{"text": "Bescheid vom Jobcenter ... Kürzung ... § 31 SGB II ..."}
+{"text": "Bescheid vom Jobcenter ... Kürzung ... § 31 SGB II ...", "legal_areas": ["sozialrecht"]}
 ```
 
 ```
@@ -502,6 +523,12 @@ attachment; `format=markdown` → `text/markdown` attachment with German
 headings (Eingabetext, Ergebnisse, Ansprüche/Claims).
 Header `Content-Disposition: attachment; filename="case_...".json|.md`.
 
+Targeted case re-evaluation and case chat use the case's recorded
+`legal_areas`; an unscoped old case does not acquire a module implicitly.
+Without a usable profile, re-evaluation yields an SSE error
+`MODULE_SELECTION_REQUIRED` before executing stages. Case chat returns the
+same deterministic selection-required `done` response as conversation chat.
+
 ### 8.4 Corpus management
 
 Legal source ingestion (scrape → chunk → embed → upsert) runs as background
@@ -517,6 +544,15 @@ Optional body `{"sources": ["sgb2", "sgbx", "weisung", "bsg", "bgb"]}`
 // 202
 {"job_id": "<uuid>", "status": "queued"}
 ```
+
+Source precedence: a one-shot `sources` list (including `[]`) overrides the
+saved runtime selection for that job; otherwise a saved runtime selection
+wins over `CORPUS_SOURCES`. With neither configured, the effective list is `[]`.
+A saved empty selection stays empty; unknown saved source keys are reported in
+logs and filtered out, never replaced by another module's sources. An empty job
+finishes with zero scraped chunks and makes no embedding calls. Existing corpus
+storage is installation-wide and is not a GUI session record. Source catalog
+recommendation metadata is not a selected module or an ingestion instruction.
 
 #### `GET /api/v1/corpus/status/{job_id}`
 
@@ -567,9 +603,10 @@ Returns conversation detail (below). Upload errors → `400`; dev-tag guard → 
 
 #### `POST /api/v1/conversations/{conversation_id}/messages` — body `{"content": "...", "legal_areas": ["<area key>", ...]}`
 
-`legal_areas` is optional in the legacy wire contract (prompt set 3.0.0,
-additive); GUI/desktop clients must pass the chosen/restored session scope.
-It selects the
+`legal_areas` is optional; GUI/desktop clients must pass the complete
+chosen/restored session scope on **every** message. The backend does not retain
+an implicit conversation module selection or restore a previous request's scope.
+It scopes corpus retrieval (including the keyword branch of hybrid search) and selects the
 module profile of the chat persona, the areas of a first-message pipeline
 run and the modules named in `provenance.modules`. Validated like
 `/analyze`: `422` `MODULE_UNKNOWN` / `MODULE_NOT_ENABLED` (same detail
@@ -581,10 +618,12 @@ pipeline stage events plus a final summary
 (the two Art. 50 objects added by WP-96, D-059; additive); otherwise chat/RAG
 token events ending with
 `{"type": "done", "full_response": "...", "disclosure": {...}, "provenance": {...}}`
-(the two Art. 50 objects as in §7.1). The legacy implementation still puts
-`[DEFAULT_MODULE]` in `provenance.modules` on both terminal events when
-`legal_areas` is omitted; removing this behavior is part of the first TODO
-(§0), not a supported GUI selection strategy. Error event:
+(the two Art. 50 objects as in §7.1). Omitted/empty scope yields
+`provenance.modules: []`. If no usable profile was selected, chat emits a
+`done` event with `selection_required: true` and deterministic `full_response`
+asking the person to select a module; no retrieval/inference occurs.
+The first-message pipeline uses the deterministic preparation path in §7.1.
+Error event:
 `{"error": "message_generation_failed", ...}`. `400` empty content, `404`
 unknown conversation.
 
@@ -636,6 +675,21 @@ the analysis result that preceded generation.
 Unverified values render as `[BITTE PRÜFEN: …]` inside `rendered_text`.
 Errors: `400` (missing/invalid `case_run_id`, unknown `doc_type`), `404`.
 
+**Template scope (D-070):** `POST /documents/generate` accepts optional
+`module_id`; generator options accepts it as a query parameter. Both resolve
+eligible template owners from the case's recorded scope. One eligible owner is
+unambiguous; multiple eligible owners require an explicit `module_id`. The
+provided id must be an eligible canonical module id in the case scope, never
+an arbitrary installed module. Generator options also returns `module_id`.
+
+`422` structured errors include `eligible_modules`: `DOCUMENT_MODULE_REQUIRED`
+(multiple eligible owners), `DOCUMENT_TEMPLATES_UNAVAILABLE` (none), or
+`DOCUMENT_MODULE_NOT_IN_SCOPE` (supplied id is not eligible). A non-string body
+`module_id` yields `400`. Unknown/disabled stored scope is surfaced with `422
+MODULE_UNKNOWN` / `MODULE_NOT_ENABLED`; no replacement occurs. Internally,
+template generators require an explicit module id and parameter-store lookups
+require an explicit nonempty domain. Dossier drafts already use explicit owners.
+
 ### 8.7 Goldsets & evaluation (Prüfstand)
 
 #### `GET /api/v1/goldset` — manifest + summarized case list (no document texts). Legacy fixture alias serving `GOLDSET_PATH` (currently the Sozialrecht v0.1.0 test corpus), not a session/module selection. Clients selecting a module use `GET /api/v1/modules/{module_id}/goldset` (§8.10).
@@ -667,7 +721,7 @@ characters, `404` unknown, `500` corrupt file.
 ```
 #### `GET /api/v1/presets/{preset_id}` — single preset; `404` unknown.
 #### `POST /api/v1/presets/suggest` — body `{"text": "<case description>"}` →
-`{"preset_id": "...", "primary_area": "sozialrecht", "secondary_areas": [], "match": "llm", "resolved_modules": [...]}`
+`{"preset_id": "...", "primary_area": "sozialrecht", "secondary_areas": [], "match": "llm", "suggestions": [...], "resolved_modules": [...]}`
 (LLM-assisted with deterministic fallback). `match` (prompt set 3.0.0,
 additive) says which path produced the suggestion: `"llm"`, or
 `"keyword_fallback"` when the model named no catalogue preset (it may
@@ -678,6 +732,25 @@ answer "no match"), failed, or returned unparseable output. `400` empty text.
 `400` missing preset_id; `404` unknown preset. `resolved_modules` (WP-95,
 shape in §7.1) covers the preset's `legal_areas` (or the primary area when
 the preset lists none).
+
+For `POST /presets/suggest`, no match now returns `preset_id: ""`,
+`primary_area` set to the existing catalog catch-all key, `secondary_areas: []`,
+`suggestions: []` and `resolved_modules: []`. This suggests no preset and selects
+no module; clients must keep the chooser unselected.
+
+Every suggest response includes `suggestions`, an array of
+`{preset_id, primary_area, secondary_areas}` alternatives. A unique best keyword
+match preserves the existing scalar fields and adds its one suggestion. All
+candidates tied for the highest positive keyword score are returned together;
+no tie is broken by privileging a module. For a tie the scalar `preset_id` is
+empty (no chosen preset), `primary_area` is the catch-all key and
+`secondary_areas` is empty; use the `suggestions` array to present alternatives.
+`resolved_modules` covers the deduplicated union of the candidates' area keys,
+not the catch-all placeholder. For example, `jobcenter testament` suggests both
+`sozialrecht-allgemein` and `erbe-mit-testament`, with neither chosen. A valid
+LLM suggestion is represented as one candidate, preserving any secondary areas.
+Explicit `/presets/apply` behavior is unchanged. Intake and preset routing remain
+suggestions; neither loads legal analysis modules.
 
 ### 8.9 Meta
 
@@ -713,15 +786,14 @@ an explicit selection or session restore (first blocking TODO, §0).
 
 #### `GET /api/v1/modules`
 
-**Current legacy response, pending the first TODO's compatible transition.**
-The `default_module` and `is_default` values below describe the existing
-backend only; clients must not use them to select, load or highlight a module.
+`default_module` and `is_default` have been removed (D-070). This response
+contains no module preference. The same applies to MCP `list_modules` and
+`get_module`, including both structured and textual JSON results.
 
 ```json
-{"default_module": "sozialrecht",
- "modules": [
+{"modules": [
    {"id": "sozialrecht", "version": "1.4.0", "tier": "verified",
-    "enabled": true, "is_default": true,
+    "enabled": true,
     "origin": "in_tree", "declared_tier": "verified",
     "title": {"de": "Sozialrecht", "en": "Social-benefits law"},
     "area_keys": ["sozialrecht"],

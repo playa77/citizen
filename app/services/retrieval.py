@@ -263,6 +263,7 @@ async def retrieve_chunks_combined_filtered(
         combined_query,
         top_k=settings.TOP_K_KEYWORD,
         question_index=0,
+        source_types=source_types,
     )
     vector_chunks = _rrf_fuse(vector_chunks, keyword_chunks)
     return vector_chunks
@@ -352,6 +353,7 @@ async def retrieve_chunks_per_area(
         keyword_query,
         top_k=settings.TOP_K_KEYWORD,
         question_index=0,
+        source_types=source_types,
     )
     all_chunks = _rrf_fuse(all_chunks, keyword_chunks)
     return all_chunks
@@ -1081,6 +1083,7 @@ async def retrieve_chunks_keyword(
     *,
     top_k: int = 5,
     question_index: int = 0,
+    source_types: tuple[str, ...] | None = None,
 ) -> list[dict[str, Any]]:
     """Retrieve legal chunks using keyword-based ``ilike`` search.
 
@@ -1096,6 +1099,9 @@ async def retrieve_chunks_keyword(
         Maximum number of keyword results to return.
     question_index :
         Index to assign to each result's ``question_index`` key.
+    source_types :
+        Explicit area source scope for hybrid search. ``None`` leaves the
+        legacy direct search unfiltered; ``()`` returns no results.
 
     Returns
     -------
@@ -1103,6 +1109,8 @@ async def retrieve_chunks_keyword(
         Chunks with the same structure as :func:`retrieve_chunks` but with
         ``distance`` set to ``0.5`` and ``method`` set to ``"keyword"``.
     """
+    if source_types == ():
+        return []
     keywords = _extract_keywords(query_text)
     if not keywords:
         logger.info("retrieve_chunks_keyword: no keywords extracted from query, skipping")
@@ -1135,6 +1143,8 @@ async def retrieve_chunks_keyword(
             .where(combined_filter, LegalSource.is_active.is_(True))
             .limit(top_k)
         )
+        if source_types is not None:
+            stmt = stmt.where(LegalSource.source_type.in_(source_types))
 
         result = await session.execute(stmt)
         rows = result.mappings().all()

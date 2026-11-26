@@ -39,7 +39,7 @@ import pytest
 from sqlalchemy import delete as sa_delete
 
 from app.core.config import get_app_version, settings
-from app.db.models import CaseRun
+from app.db.models import CaseRun, CaseRunArea
 from app.db.session import async_session_factory, engine
 from app.main import app
 from app.services.disclosure import (
@@ -112,8 +112,8 @@ async def drain_background_tasks(timeout: float = 10.0) -> None:
         await asyncio.wait(pending, timeout=timeout)
 
 
-#: The default module's provenance entry (DEFAULT_MODULE = sozialrecht).
-DEFAULT_MODULE_ENTRY_KEYS = {"id", "version", "parameter_set"}
+#: Keys shared by every explicitly selected module provenance entry.
+MODULE_ENTRY_KEYS = {"id", "version", "parameter_set"}
 
 
 def assert_valid_provenance(provenance: Any) -> None:
@@ -136,7 +136,7 @@ def assert_valid_provenance(provenance: Any) -> None:
         assert isinstance(provenance[key], str)
     assert isinstance(provenance["modules"], list)
     for entry in provenance["modules"]:
-        assert set(entry.keys()) == DEFAULT_MODULE_ENTRY_KEYS
+        assert set(entry.keys()) == MODULE_ENTRY_KEYS
         assert isinstance(entry["id"], str) and isinstance(entry["version"], str)
         assert entry["parameter_set"] is None or isinstance(entry["parameter_set"], str)
     assert provenance["spec_version"] == PROVENANCE_SPEC_VERSION == "citizen-provenance-v1.1"
@@ -267,8 +267,8 @@ class TestAnalyzeTerminalEvent:
         assert final["provenance"]["model_profile"] == settings.INFERENCE_PROFILE
         assert final["provenance"]["deployment_mode"] == settings.DEPLOYMENT_MODE
         assert final["provenance"]["app_version"] == get_app_version()
-        # No legal_areas → the request ran with DEFAULT_MODULE (v1.1).
-        assert [m["id"] for m in final["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+        # No selected scope means no legal module is named.
+        assert final["provenance"]["modules"] == []
 
     @patch("app.api.routes.analyze.run_pipeline")
     async def test_terminal_event_names_the_requested_modules(
@@ -352,16 +352,15 @@ class TestChatDoneEvent:
         mock_client = MagicMock()
         mock_client.chat_completion = AsyncMock(return_value="Das ist die Antwort.")
         monkeypatch.setattr("app.services.chat_reasoning.get_shared_client", lambda: mock_client)
-        monkeypatch.setattr(
-            "app.services.chat_reasoning.retrieve_chunks_combined",
-            AsyncMock(return_value=[]),
-        )
+        retrieval = AsyncMock(return_value=({}, []))
+        monkeypatch.setattr("app.services.chat_reasoning.retrieve_chunks_for_areas", retrieval)
 
         events: list[dict[str, Any]] = []
         async for event in generate_chat_response(
             messages=[{"role": "user", "content": "Welche Frist gilt?"}],
             document_texts=None,
             conversation_id="conv-1",
+            legal_areas=["sozialrecht"],
         ):
             assert event.startswith("data: ")
             events.append(json.loads(event[6:].strip()))
@@ -370,10 +369,14 @@ class TestChatDoneEvent:
         assert len(dones) == 1
         done = dones[0]
         assert done["full_response"] == "Das ist die Antwort."
+        retrieval.assert_awaited_once_with(
+            legal_areas=["sozialrecht"], issues=[], questions=["Welche Frist gilt?"],
+            normalized_text="Welche Frist gilt?", client=mock_client,
+        )
 
         assert_valid_disclosure(done["disclosure"])
         assert_valid_provenance(done["provenance"])
-        assert [m["id"] for m in done["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+        assert [m["id"] for m in done["provenance"]["modules"]] == ["sozialrecht"]
 
 
 # -------------------------------------------------------------------
@@ -405,7 +408,7 @@ class TestCoverageGapSurfaces:
         assert terminal["final_output"]["ergebnis"] == "Ergebnis."
         assert_valid_disclosure(terminal["disclosure"])
         assert_valid_provenance(terminal["provenance"])
-        assert [m["id"] for m in terminal["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+        assert terminal["provenance"]["modules"] == []
         # Stage events stay free of both objects.
         assert all("provenance" not in e for e in events[:-1])
 
@@ -422,7 +425,7 @@ class TestCoverageGapSurfaces:
                 messages=[{"role": "user", "content": "Stimmt die Frist?"}],
                 pipeline_output={"ergebnis": "Ergebnis."},
                 case_id="case-1",
-                legal_areas=["mietrecht"],
+                legal_areas=["sozialrecht"],
             )
         ]
         dones = [e for e in events if e.get("type") == "done"]
@@ -432,7 +435,7 @@ class TestCoverageGapSurfaces:
         assert done["full_response"] == "Antwort zum Fall."
         assert_valid_disclosure(done["disclosure"])
         assert_valid_provenance(done["provenance"])
-        assert [m["id"] for m in done["provenance"]["modules"]] == ["mietrecht"]
+        assert [m["id"] for m in done["provenance"]["modules"]] == ["sozialrecht"]
         # Token events carry neither object.
         assert all("disclosure" not in e for e in events if e.get("type") == "token")
 
@@ -450,6 +453,7 @@ class TestCoverageGapSurfaces:
             async for e in case_chat.generate_case_chat_response(
                 messages=[{"role": "user", "content": "?"}],
                 pipeline_output={},
+                legal_areas=["sozialrecht"],
             )
         ]
         assert events == [{"error": "case_chat_llm_failed", "detail": "LLM down"}]
@@ -483,6 +487,7 @@ class TestDocumentsGenerateProvenance:
             db.add(case_run)
             await db.flush()
             case_run_id = case_run.id
+            db.add(CaseRunArea(case_run_id=case_run_id, legal_area="sozialrecht", is_primary=True))
             await db.commit()
 
         try:
@@ -505,11 +510,11 @@ class TestDocumentsGenerateProvenance:
 
         # Identical provenance content as a direct helper call at the same
         # instant proves the shared-helper requirement end-to-end.
-        _, expected_provenance = build_disclosure_and_provenance(settings)
+        _, expected_provenance = build_disclosure_and_provenance(settings, ["sozialrecht"])
         assert body["provenance"] == expected_provenance.model_dump(mode="json")
 
-        # Drafts render from the default module's templates (v1.1).
-        assert [m["id"] for m in body["provenance"]["modules"]] == [settings.DEFAULT_MODULE]
+        # Drafts name their explicitly recorded case module.
+        assert [m["id"] for m in body["provenance"]["modules"]] == ["sozialrecht"]
 
         # Deliberately NO disclosure field on documents (see D-032).
         assert "disclosure" not in body
@@ -538,6 +543,7 @@ class TestBuildDisclosureAndProvenance:
         assert_valid_disclosure(disclosure.model_dump(mode="json"))
         assert_valid_provenance(provenance.model_dump(mode="json"))
         assert provenance.deployment_mode == settings.DEPLOYMENT_MODE
+        assert provenance.modules == []
 
     def test_never_raises_on_broken_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Force every extraction path into its fallback branch.
@@ -581,7 +587,7 @@ class TestBuildDisclosureAndProvenance:
 
         monkeypatch.setattr("app.modules.runtime.provenance_modules", boom)
         _, provenance = build_disclosure_and_provenance(settings)
-        # A sentinel entry, not [] — [] means "procedural library only".
+        # A sentinel entry distinguishes resolution failure from an empty scope.
         assert provenance.modules == [
             ModuleProvenance(id="unknown", version="unknown", parameter_set="unknown")
         ]
@@ -666,3 +672,42 @@ class TestOpenApiReflection:
             "must_display_before",
             "texts",
         }
+
+
+@pytest.mark.parametrize("areas", [None, [], ["verwaltungsrecht"], ["mietrecht"],
+                                   ["sozialrecht", "mietrecht"]])
+@pytest.mark.parametrize("surface", ["chat", "case_chat"])
+async def test_unusable_chat_scope_returns_selection_before_client_or_retrieval(
+    monkeypatch: pytest.MonkeyPatch, areas: list[str] | None, surface: str
+) -> None:
+    from app.services import case_chat, chat_reasoning
+    from app.services.prompts import SELECTION_REQUIRED_TEXT
+
+    service = chat_reasoning if surface == "chat" else case_chat
+    client_factory = MagicMock(side_effect=AssertionError("client must not be accessed"))
+    retrieval = AsyncMock(side_effect=AssertionError("retrieval must not run"))
+    monkeypatch.setattr(service, "get_shared_client", client_factory)
+    monkeypatch.setattr(chat_reasoning, "retrieve_chunks_for_areas", retrieval)
+    kwargs: dict[str, Any] = {"legal_areas": areas}
+    if surface == "case_chat":
+        kwargs["pipeline_output"] = {"ergebnis": "Previous scoped result"}
+    generator = (chat_reasoning.generate_chat_response if surface == "chat"
+                 else case_chat.generate_case_chat_response)
+    events = [json.loads(event[6:].strip()) async for event in generator(
+        messages=[{"role": "user", "content": "Welche Frist gilt?"}], **kwargs
+    )]
+
+    assert len(events) == 1
+    assert events[0]["type"] == "done"
+    assert events[0]["selection_required"] is True
+    assert events[0]["full_response"] == SELECTION_REQUIRED_TEXT
+    assert_valid_disclosure(events[0]["disclosure"])
+    assert_valid_provenance(events[0]["provenance"])
+    if not areas or areas == ["verwaltungsrecht"]:
+        assert events[0]["provenance"]["modules"] == []
+    else:
+        assert [m["id"] for m in events[0]["provenance"]["modules"]] == [
+            area for area in areas if area != "verwaltungsrecht"
+        ]
+    client_factory.assert_not_called()
+    retrieval.assert_not_awaited()

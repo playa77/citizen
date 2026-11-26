@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from app.core.config import settings
-from app.services.prompts import get_chat_prompt
+from app.services.prompts import ModuleSelectionRequired, get_chat_prompt
 
 # ---------------------------------------------------------------------------
 # CR-05 — chat personas follow the module profile
@@ -23,7 +23,8 @@ def test_chat_persona_follows_area() -> None:
     erb = get_chat_prompt("chat", ["erbrecht"])
     assert "deutsches Sozialrecht" in soz and "SGB" in soz
     assert "Erbrecht" in erb and "SGB II" not in erb
-    assert get_chat_prompt("chat") == soz  # default module
+    with pytest.raises(ModuleSelectionRequired):
+        get_chat_prompt("chat")
     merged = get_chat_prompt("case_chat", ["sozialrecht", "erbrecht"])
     assert "deutsches Sozialrecht sowie deutsches Erbrecht" in merged
 
@@ -36,11 +37,11 @@ async def test_generate_chat_response_uses_area_prompt_and_drops_append(
     client = MagicMock()
     client.chat_completion = AsyncMock(return_value="Antwort")
     monkeypatch.setattr(chat_reasoning, "get_shared_client", lambda: client)
-    monkeypatch.setattr(
-        chat_reasoning,
-        "retrieve_chunks_combined",
-        AsyncMock(return_value=[{"hierarchy_path": "BGB > § 1922", "text_content": "t"}]),
-    )
+    retrieve = AsyncMock(return_value=(
+        {"erbrecht": []},
+        [{"hierarchy_path": "BGB > § 1922", "text_content": "t"}],
+    ))
+    monkeypatch.setattr(chat_reasoning, "retrieve_chunks_for_areas", retrieve)
     events = [
         e
         async for e in chat_reasoning.generate_chat_response(
@@ -48,6 +49,8 @@ async def test_generate_chat_response_uses_area_prompt_and_drops_append(
         )
     ]
     system = client.chat_completion.call_args.args[0][0]["content"]
+    assert retrieve.await_args.kwargs["legal_areas"] == ["erbrecht"]
+    assert retrieve.await_args.kwargs["client"] is client
     assert system.startswith(get_chat_prompt("chat", ["erbrecht"]))
     assert "Zitiere Paragraphen mit exaktem Wortlaut" not in system
     done = json.loads(events[-1][6:])

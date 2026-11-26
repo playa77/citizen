@@ -237,6 +237,7 @@ class TestGuardrailInDocuments:
             reconciliation=reconciliation,
             claims=claims,
             user_data={"name": "Max Mustermann", "adresse": "Musterstr. 1, 12345 Berlin"},
+            module_id="sozialrecht",
         )
         assert "[BITTE PRÜFEN:" in doc.rendered_text
         # The claims_text slot should show the review placeholder
@@ -255,6 +256,7 @@ class TestGuardrailInDocuments:
             reconciliation=reconciliation,
             claims=claims,
             user_data={"name": "Max Mustermann", "adresse": "Musterstr. 1, 12345 Berlin"},
+            module_id="sozialrecht",
         )
         assert "[BITTE PRÜFEN:" in doc.rendered_text
 
@@ -273,6 +275,7 @@ class TestGuardrailInDocuments:
             bescheid_datum=date(2025, 6, 15),
             aktenzeichen="AZ-12345/2025",
             behoerde="Jobcenter Berlin Mitte",
+            module_id="sozialrecht",
         )
         assert claim_text in doc.rendered_text
         assert "[BITTE PRÜFEN:" not in doc.rendered_text
@@ -290,6 +293,7 @@ class TestGuardrailInDocuments:
             reconciliation=reconciliation,
             claims=claims,
             user_data={"name": "Max Mustermann", "adresse": "Musterstr. 1, 12345 Berlin"},
+            module_id="sozialrecht",
         )
         assert verified_text in doc.rendered_text
 
@@ -326,23 +330,23 @@ class TestSelectGenerator:
 
     def test_frist_open_widerspruch(self, frist_open: FristResult) -> None:
         """Frist still open → standard Widerspruch."""
-        assert select_generator(frist_open) == "widerspruch"
+        assert select_generator(frist_open, module_id="sozialrecht") == "widerspruch"
 
     def test_frist_open_jahresfrist(self, frist_lapsed_no_rbb: FristResult) -> None:
         """Jahresfrist (fehlerhafte RBB) still open → widerspruch_jahresfrist."""
-        assert select_generator(frist_lapsed_no_rbb) == "widerspruch_jahresfrist"
+        assert select_generator(frist_lapsed_no_rbb, module_id="sozialrecht") == "widerspruch_jahresfrist"
 
     def test_frist_lapsed(self, frist_lapsed: FristResult) -> None:
         """Frist lapsed → Überprüfungsantrag § 44."""
-        assert select_generator(frist_lapsed) == "ueberpruefungsantrag_44"
+        assert select_generator(frist_lapsed, module_id="sozialrecht") == "ueberpruefungsantrag_44"
 
     def test_kein_va(self, frist_kein_va: FristResult) -> None:
         """Not a Verwaltungsakt → Akteneinsicht (no Widerspruch possible)."""
-        assert select_generator(frist_kein_va) == "akteneinsichtsantrag_25"
+        assert select_generator(frist_kein_va, module_id="sozialrecht") == "akteneinsichtsantrag_25"
 
     def test_none_frist(self) -> None:
         """No Frist data → Akteneinsicht (safe default)."""
-        assert select_generator(None) == "akteneinsichtsantrag_25"
+        assert select_generator(None, module_id="sozialrecht") == "akteneinsichtsantrag_25"
 
     def test_frist_open_jahresfrist_after_lapse(self, today: date) -> None:
         """Jahresfrist where frist_ende has passed but it's still a 'jahr' typ."""
@@ -356,7 +360,7 @@ class TestSelectGenerator:
             explanation_de="Jahresfrist",
         )
         # GS-010: Lapsed but Jahresfrist → still widerspruch_jahresfrist
-        assert select_generator(frist) == "widerspruch_jahresfrist"
+        assert select_generator(frist, module_id="sozialrecht") == "widerspruch_jahresfrist"
 
 
 # ===========================================================================
@@ -382,6 +386,7 @@ class TestWiderspruchTemplate:
             bescheid_datum=date(2025, 6, 15),
             aktenzeichen="AZ-12345/2025",
             behoerde="Jobcenter Berlin Mitte",
+            module_id="sozialrecht",
         )
         assert doc.document_type == "widerspruch"
         assert "Widerspruch" in doc.title
@@ -400,6 +405,7 @@ class TestWiderspruchTemplate:
             reconciliation=reconciliation,
             claims=[],
             user_data=None,
+            module_id="sozialrecht",
         )
         assert doc.document_type == "widerspruch"
         assert "Bescheid" in doc.rendered_text
@@ -419,6 +425,7 @@ class TestWiderspruchTemplate:
             bescheid_datum=date(2025, 6, 1),
             aktenzeichen="AZ-TEST",
             behoerde="Testbehörde",
+            module_id="sozialrecht",
         )
         slot_keys = {s.key for s in doc.slots}
         expected = {
@@ -443,6 +450,7 @@ class TestJahresfristTemplate:
             bescheid_datum=date(2025, 1, 15),
             aktenzeichen="AZ-123/2025",
             behoerde="Jobcenter Berlin",
+            module_id="sozialrecht",
         )
         assert doc.document_type == "widerspruch_jahresfrist"
         assert "§ 66 Abs. 2 SGG" in doc.rendered_text
@@ -464,6 +472,7 @@ class TestUeberpruefungsantragTemplate:
             bescheid_datum=date(2025, 3, 1),
             aktenzeichen="AZ-456/2025",
             behoerde="Jobcenter Berlin",
+            module_id="sozialrecht",
         )
         assert doc.document_type == "ueberpruefungsantrag_44"
         assert "§ 44 SGB X" in doc.rendered_text
@@ -485,6 +494,7 @@ class TestAkteneinsichtsantragTemplate:
             bescheid_datum=date(2025, 6, 15),
             aktenzeichen="AZ-789/2025",
             behoerde="Jobcenter Berlin",
+            module_id="sozialrecht",
         )
         assert doc.document_type == "akteneinsichtsantrag_25"
         assert "§ 25 SGB X" in doc.rendered_text
@@ -518,6 +528,7 @@ class TestFooter:
             frist_result=frist_open,
             reconciliation=reconciliation,
             claims=[],
+            module_id="sozialrecht",
         )
         assert doc.rendered_text.strip().endswith("----") is False  # footer ends with profile
         assert "Rechtsinformation:" in doc.rendered_text
@@ -558,6 +569,7 @@ class TestGoldenSnapshot:
             bescheid_datum=date(2025, 6, 15),
             aktenzeichen="AZ-TEST",
             behoerde="Testbehörde",
+            module_id="sozialrecht",
         )
         doc2 = generate_document(
             doc_type="widerspruch",
@@ -568,6 +580,7 @@ class TestGoldenSnapshot:
             bescheid_datum=date(2025, 6, 15),
             aktenzeichen="AZ-TEST",
             behoerde="Testbehörde",
+            module_id="sozialrecht",
         )
         assert doc1.rendered_text == doc2.rendered_text
 
@@ -623,7 +636,7 @@ class TestGSScenarios:
         )
         # Frist should still be open
         assert frist.frist_ende >= today
-        assert select_generator(frist) == "widerspruch"
+        assert select_generator(frist, module_id="sozialrecht") == "widerspruch"
 
         doc = generate_document(
             doc_type="widerspruch",
@@ -634,6 +647,7 @@ class TestGSScenarios:
             bescheid_datum=bescheid,
             aktenzeichen="GS-003",
             behoerde="Jobcenter",
+            module_id="sozialrecht",
         )
         # Verify the correct deadline is in the document
         assert frist.frist_ende.strftime("%d.%m.%Y") in doc.rendered_text
@@ -653,13 +667,14 @@ class TestGSScenarios:
         assert frist.bekanntgabe >= aufgabe + timedelta(days=3)  # 4-day fiction
 
         doc = generate_document(
-            doc_type=select_generator(frist),
+            doc_type=select_generator(frist, module_id="sozialrecht"),
             frist_result=frist,
             reconciliation=reconciliation,
             claims=[_verified_claim("Bekanntgabe geprüft.", "exakt", True)],
             bescheid_datum=bescheid,
             aktenzeichen="GS-005",
             behoerde="Jobcenter",
+            module_id="sozialrecht",
         )
         assert frist.frist_ende.strftime("%d.%m.%Y") in doc.rendered_text
 
@@ -673,7 +688,7 @@ class TestGSScenarios:
         )
         # Jahresfrist — should still be within the 1-year period
         assert frist.frist_ende >= today
-        assert select_generator(frist) == "widerspruch_jahresfrist"
+        assert select_generator(frist, module_id="sozialrecht") == "widerspruch_jahresfrist"
 
         doc = generate_document(
             doc_type="widerspruch_jahresfrist",
@@ -683,6 +698,7 @@ class TestGSScenarios:
             bescheid_datum=bescheid,
             aktenzeichen="GS-010",
             behoerde="Jobcenter",
+            module_id="sozialrecht",
         )
         assert "§ 66 Abs. 2 SGG" in doc.rendered_text
         assert frist.frist_ende.strftime("%d.%m.%Y") in doc.rendered_text
@@ -703,6 +719,7 @@ class TestGeneratedDocumentOutput:
             frist_result=frist_open,
             reconciliation=reconciliation,
             claims=[],
+            module_id="sozialrecht",
         )
         assert isinstance(doc.document_type, str)
         assert isinstance(doc.title, str)
@@ -718,6 +735,7 @@ class TestGeneratedDocumentOutput:
             frist_result=frist_open,
             reconciliation=reconciliation,
             claims=[],
+            module_id="sozialrecht",
         )
         meta = doc.generation_metadata
         assert "app_version" in meta
@@ -733,6 +751,7 @@ class TestGeneratedDocumentOutput:
             reconciliation=reconciliation,
             claims=[],
             user_data=None,
+            module_id="sozialrecht",
         )
         assert len(doc.warnings) > 0
 
@@ -752,6 +771,7 @@ class TestEdgeCases:
             frist_result=frist_open,
             reconciliation=reconciliation,
             claims=[],
+            module_id="sozialrecht",
         )
         # The claims_text slot should be in review
         claims_slot = next((s for s in doc.slots if s.key == "claims_text"), None)
@@ -765,6 +785,7 @@ class TestEdgeCases:
             frist_result=frist_open,
             reconciliation=[],
             claims=[],
+            module_id="sozialrecht",
         )
         anspruch_slot = next((s for s in doc.slots if s.key == "anspruch_hoehe"), None)
         if anspruch_slot:
@@ -777,6 +798,7 @@ class TestEdgeCases:
             frist_result=frist_open,
             reconciliation=reconciliation,
             claims=[],
+            module_id="sozialrecht",
         )
         assert "Unbekannter Dokumenttyp" in doc.rendered_text or "unbekannt" in doc.rendered_text.lower()
 
@@ -795,6 +817,7 @@ class TestEdgeCases:
                 reconciliation=reconciliation,
                 claims=[],
                 **kw,
+                module_id="sozialrecht",
             )
             assert len(doc.rendered_text) > 100, f"Document {doc_type} too short"
             assert doc.document_type == doc_type
@@ -807,3 +830,11 @@ class TestEdgeCases:
         text, verified = _get_verified_claim_text(claims, ["regelbedarf"])
         assert text is not None
         assert verified is True
+
+
+@pytest.mark.parametrize("module_id", [None, "", "   "])
+def test_document_templates_require_an_explicit_module(module_id: str | None) -> None:
+    with pytest.raises(ValueError, match="module_id"):
+        select_generator(None, module_id=module_id)
+    with pytest.raises(ValueError, match="module_id"):
+        generate_document("widerspruch", None, [], [], module_id=module_id)

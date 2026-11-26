@@ -272,11 +272,15 @@ async def test_mcp_handshake_and_listing() -> None:
 async def test_mcp_tool_calls() -> None:
     listing = await _call("tools/call", {"name": "list_modules", "arguments": {}})
     data = listing["result"]["structuredContent"]
-    assert data["default_module"] == settings.DEFAULT_MODULE
+    assert "default_module" not in data
+    assert "is_default" not in data
+    assert data["modules"]
+    assert all("is_default" not in m and "default_module" not in m for m in data["modules"])
     module = await _call(
-        "tools/call", {"name": "get_module", "arguments": {"module_id": settings.DEFAULT_MODULE}}
+        "tools/call", {"name": "get_module", "arguments": {"module_id": "sozialrecht"}}
     )
     detail = module["result"]["structuredContent"]
+    assert "default_module" not in detail and "is_default" not in detail
     assert detail["deadlines"] and detail["errata"] and "path" not in json.dumps(detail["scope"])
     catalog = await _call("tools/call", {"name": "deadline_catalog", "arguments": {}})
     assert catalog["result"]["structuredContent"]["modules"]
