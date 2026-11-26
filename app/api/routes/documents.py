@@ -25,9 +25,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.routes.cases import get_case_endpoint
-from app.db.models import CaseRun, Claim
+from app.db.models import CaseRun, CaseRunArea, Claim
 from app.db.session import async_session_factory
 from app.fristen.results import FristResult
+from app.modules.runtime import (
+    ModuleRequestError,
+    TemplateModuleSelectionError,
+    template_module_for,
+)
 from app.services.document_generators import (
     generate_document,
     select_generator,
@@ -49,6 +54,21 @@ router = APIRouter()
 
 class DocumentGenerationError(Exception):
     """Raised when document generation fails."""
+
+
+def _template_module(legal_areas: list[str], module_id: str | None) -> str:
+    try:
+        return template_module_for(legal_areas, module_id)
+    except TemplateModuleSelectionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": exc.code, "eligible_modules": exc.eligible_modules},
+        ) from None
+    except ModuleRequestError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": exc.code, "legal_areas": exc.legal_areas},
+        ) from None
 
 
 def _extract_frist_data(case: CaseRun, case_dict: dict[str, Any]) -> FristResult | None:
@@ -211,6 +231,9 @@ async def generate_document_endpoint(
     case_run_id_str = body.get("case_run_id")
     doc_type = body.get("doc_type")
     user_data = body.get("user_data", {}) or {}
+    requested_module = body.get("module_id")
+    if requested_module is not None and not isinstance(requested_module, str):
+        raise HTTPException(status_code=400, detail="'module_id' must be a module id string.")
 
     if not case_run_id_str:
         raise HTTPException(
@@ -251,12 +274,20 @@ async def generate_document_endpoint(
         )
         result = await db.execute(stmt)
         case = result.scalar_one_or_none()
+        area_result = await db.execute(
+            select(CaseRunArea.legal_area)
+            .where(CaseRunArea.case_run_id == case_run_id)
+            .order_by(CaseRunArea.is_primary.desc(), CaseRunArea.legal_area)
+        )
+        case_areas = list(area_result.scalars().all())
 
     if case is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"CaseRun {case_run_id} nicht gefunden.",
         )
+
+    module_id = _template_module(case_areas, requested_module)
 
     # ── Build case dict (reuse endpoint logic) ────────────────────────
     try:
@@ -273,7 +304,7 @@ async def generate_document_endpoint(
 
     # ── Auto-select generator if not specified ────────────────────────
     if not doc_type:
-        doc_type = select_generator(frist_result, claims_list)
+        doc_type = select_generator(frist_result, claims_list, module_id=module_id)
 
     # ── Handle PII ────────────────────────────────────────────────────
     pii_mapping = None
@@ -293,6 +324,7 @@ async def generate_document_endpoint(
         bescheid_datum=bescheid_datum,
         aktenzeichen=aktenzeichen,
         behoerde=behoerde,
+        module_id=module_id,
     )
 
     # ── Depseudonymize ────────────────────────────────────────────────
@@ -341,6 +373,7 @@ async def generate_document_endpoint(
 @router.get("/documents/generator-options/{case_run_id}")
 async def get_generator_options_endpoint(
     case_run_id: UUID,
+    module_id: str | None = None,
 ) -> dict[str, Any]:
     """Return which document generators are available for a given case.
 
@@ -358,12 +391,20 @@ async def get_generator_options_endpoint(
         )
         result = await db.execute(stmt)
         case = result.scalar_one_or_none()
+        area_result = await db.execute(
+            select(CaseRunArea.legal_area)
+            .where(CaseRunArea.case_run_id == case_run_id)
+            .order_by(CaseRunArea.is_primary.desc(), CaseRunArea.legal_area)
+        )
+        case_areas = list(area_result.scalars().all())
 
     if case is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"CaseRun {case_run_id} nicht gefunden.",
         )
+
+    module_id = _template_module(case_areas, module_id)
 
     try:
         case_dict = await get_case_endpoint(case_run_id)
@@ -392,7 +433,7 @@ async def get_generator_options_endpoint(
     )
 
     if frist_result:
-        recommended = select_generator(frist_result)
+        recommended = select_generator(frist_result, module_id=module_id)
         available["widerspruch"] = {
             "available": frist_result.frist_ende >= date.today()
             or frist_result.frist_typ == "jahr",
@@ -413,6 +454,7 @@ async def get_generator_options_endpoint(
 
     return {
         "case_run_id": str(case_run_id),
+        "module_id": module_id,
         "recommended": recommended,
         "available": available,
         "claims": {

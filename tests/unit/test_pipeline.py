@@ -340,6 +340,7 @@ class TestPipelineState:
 
     def test_default_values(self) -> None:
         state = PipelineState(input_text=SAMPLE_INPUT)
+        assert state.legal_areas == []
         assert state.normalized_text == ""
         assert state.issues == []
         assert state.questions == []
@@ -484,7 +485,7 @@ class TestPipelineSequence:
     @pytest.mark.asyncio
     async def test_stage_sequence(self, mock_reasoning: None, mock_retrieval: None, mock_verification: None) -> None:
         """Verifies the 7 stages execute in order and produce correct SSE."""
-        state = PipelineState(input_text=SAMPLE_INPUT)
+        state = PipelineState(input_text=SAMPLE_INPUT, legal_areas=["sozialrecht"])
         events: list[str] = []
         async for event in run_pipeline(state):
             events.append(event)
@@ -512,7 +513,7 @@ class TestPipelineSequence:
     @pytest.mark.asyncio
     async def test_pipeline_mutates_state(self, mock_reasoning: None, mock_retrieval: None, mock_verification: None) -> None:
         """After the pipeline runs, each state field should be populated."""
-        state = PipelineState(input_text=SAMPLE_INPUT)
+        state = PipelineState(input_text=SAMPLE_INPUT, legal_areas=["sozialrecht"])
         async for _ in run_pipeline(state):
             pass
 
@@ -565,7 +566,7 @@ class TestPipelineTimeout:
             })(),
         )
 
-        state = PipelineState(input_text=SAMPLE_INPUT)
+        state = PipelineState(input_text=SAMPLE_INPUT, legal_areas=["sozialrecht"])
         with pytest.raises(PipelineTimeoutError, match="exceeded 1s timeout"):
             async for _ in run_pipeline(state):
                 pass
@@ -591,13 +592,134 @@ class TestPipelineTimeout:
 
 class TestStageErrors:
     @pytest.mark.asyncio
-    async def test_stage_error_recorded_in_state(self) -> None:
+    async def test_stage_error_recorded_in_state(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """If a stage fails, the error should be appended to state.errors."""
-        state = PipelineState(input_text=SAMPLE_INPUT)
+        from unittest.mock import AsyncMock
+
+        monkeypatch.setattr(
+            "app.services.reasoning.classify_issues",
+            AsyncMock(side_effect=RuntimeError("mocked classification failure")),
+        )
+        state = PipelineState(input_text=SAMPLE_INPUT, legal_areas=["sozialrecht"])
         with pytest.raises(StageExecutionError):
             async for _ in execute_stage("classification", state):
                 pass
 
-        # classification depends on app.services.reasoning which doesn't
-        # exist yet (no mock applied here) — expect ImportError.
         assert any("classification" in e for e in state.errors)
+
+
+@pytest.mark.parametrize(
+    "areas", [[], ["verwaltungsrecht"], ["mietrecht"], ["sozialrecht", "mietrecht"]]
+)
+@pytest.mark.parametrize("restore_pii", [False, True])
+async def test_unusable_scope_prepares_input_without_legal_work(
+    monkeypatch: pytest.MonkeyPatch, areas: list[str], restore_pii: bool
+) -> None:
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.core import pipeline
+    from app.services.prompts import SELECTION_REQUIRED_TEXT
+
+    legal_stage = AsyncMock(side_effect=AssertionError("legal stages must not run"))
+    combined_stage = MagicMock(side_effect=AssertionError("combined stages must not run"))
+    retrieval = AsyncMock(side_effect=AssertionError("retrieval must not run"))
+    database = MagicMock(side_effect=AssertionError("corpus must not be accessed"))
+    client_factory = MagicMock(side_effect=AssertionError("client must not be accessed"))
+    monkeypatch.setattr(pipeline, "_collect_single_stage", legal_stage)
+    monkeypatch.setattr(pipeline, "_run_classification_and_decomposition_stages", combined_stage)
+    monkeypatch.setattr(pipeline, "_run_final_stages", combined_stage)
+    monkeypatch.setattr(pipeline, "_stage_retrieval", retrieval)
+    monkeypatch.setattr(pipeline, "get_async_session", database)
+    monkeypatch.setattr("app.core.router.get_shared_client", client_factory)
+    monkeypatch.setattr(pipeline.cfg._get_settings(), "PSEUDONYMIZATION_ENABLED", restore_pii)
+    monkeypatch.setattr(pipeline.cfg._get_settings(), "OCR_QUALITY_ENABLED", False)
+    original = "Ein Testbescheid."
+    normalized = original
+    if restore_pii:
+        from app.services.pseudonymization import PiiMapping
+
+        original = "Erika Muster hat einen Testbescheid."
+        normalized = "[[PERSON_1]] hat einen Testbescheid."
+        mapping = PiiMapping(
+            person_counter=1,
+            placeholder_to_value={"[[PERSON_1]]": "Erika Muster"},
+            value_to_placeholder={"Erika Muster": "[[PERSON_1]]"},
+        )
+        monkeypatch.setattr(
+            "app.services.pseudonymization.pseudonymize",
+            MagicMock(return_value=(normalized, mapping)),
+        )
+    state = PipelineState(input_text=f"  {original}  ", legal_areas=areas)
+
+    events = [json.loads(event[6:].strip()) async for event in run_pipeline(state)]
+
+    assert state.normalized_text == normalized
+    assert state.final_output["sachverhalt"] == original
+    assert state.final_output["ergebnis"] == SELECTION_REQUIRED_TEXT
+    assert state.final_output["entwurf"] == ""
+    assert state.legal_areas == areas
+    assert state.retrieved_chunks == []
+    assert state.claims == []
+    assert state.prompt_ids == {}
+    assert [event["stage"] for event in events if event["status"] == "complete"] == [
+        "normalization", "generation"
+    ]
+    generation = next(event for event in events if event["stage"] == "generation")
+    assert generation["payload"] == {**state.final_output, "duration_ms": 0}
+    assert generation["payload"]["sachverhalt"] == original
+    assert events[-1]["payload"]["error"] == "MODULE_SELECTION_REQUIRED"
+    legal_stage.assert_not_awaited()
+    combined_stage.assert_not_called()
+    retrieval.assert_not_awaited()
+    database.assert_not_called()
+    client_factory.assert_not_called()
+
+
+@pytest.mark.parametrize("areas", [["sozialrecht"], ["erbrecht"],
+                                   ["verwaltungsrecht", "sozialrecht"]])
+async def test_targeted_reevaluation_preserves_recorded_module_scope(
+    monkeypatch: pytest.MonkeyPatch, areas: list[str]
+) -> None:
+    from app.services import case_chat
+
+    restored_scopes: list[list[str]] = []
+
+    async def fake_stage(stage_name: str, state: PipelineState):
+        restored_scopes.append(state.legal_areas)
+        yield _sse_event(stage_name, "complete", {})
+
+    monkeypatch.setattr(case_chat, "execute_stage", fake_stage)
+    saved = {"input_text": "Synthetic case text", "legal_areas": areas}
+    events = [json.loads(event[6:].strip()) async for event in case_chat.run_targeted_reevaluate(
+        "retrieval", "Zusätzliche Angabe", pipeline_state=saved
+    )]
+
+    assert restored_scopes
+    assert all(scope == areas for scope in restored_scopes)
+    assert all(scope is not areas for scope in restored_scopes)
+    assert events[-1]["type"] == "reevaluate_done"
+    assert saved["legal_areas"] == areas
+
+
+@pytest.mark.parametrize("saved_scope", [{}, {"legal_areas": []},
+                                       {"legal_areas": ["mietrecht"]}])
+async def test_targeted_reevaluation_requires_scope_before_any_stage(
+    monkeypatch: pytest.MonkeyPatch, saved_scope: dict[str, Any]
+) -> None:
+    from unittest.mock import MagicMock
+
+    from app.services import case_chat
+    from app.services.prompts import SELECTION_REQUIRED_TEXT
+
+    execute = MagicMock(side_effect=AssertionError("reevaluation must not run"))
+    client = MagicMock(side_effect=AssertionError("client must not be accessed"))
+    monkeypatch.setattr(case_chat, "execute_stage", execute)
+    monkeypatch.setattr(case_chat, "get_shared_client", client)
+    events = [json.loads(event[6:].strip()) async for event in case_chat.run_targeted_reevaluate(
+        "retrieval", "Zusätzliche Angabe",
+        pipeline_state={"input_text": "Synthetic case text", **saved_scope},
+    )]
+
+    assert events == [{"error": "MODULE_SELECTION_REQUIRED", "detail": SELECTION_REQUIRED_TEXT}]
+    execute.assert_not_called()
+    client.assert_not_called()

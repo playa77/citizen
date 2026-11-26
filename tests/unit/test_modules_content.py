@@ -91,15 +91,15 @@ class TestInstalledModules:
             assert_declared_files_exist(manifest)
 
     def test_provider_mode_enables_only_verified(self) -> None:
-        registry = load_registry(default_modules_root(), "provider", None, "sozialrecht")
+        registry = load_registry(default_modules_root(), "provider", None)
         assert registry.enabled == frozenset({"sozialrecht"})
 
     def test_dev_mode_enables_stubs(self) -> None:
-        registry = load_registry(default_modules_root(), "dev", None, "sozialrecht")
+        registry = load_registry(default_modules_root(), "dev", None)
         assert registry.enabled == frozenset({"sozialrecht", *_STUBS})
 
     def test_schenkungsrecht_alias_declared_by_erbrecht(self) -> None:
-        registry = load_registry(default_modules_root(), "dev", None, "sozialrecht")
+        registry = load_registry(default_modules_root(), "dev", None)
         resolution = registry.resolve("schenkungsrecht")
         assert resolution.module_id == "erbrecht"
         assert resolution.installed and resolution.enabled
@@ -137,12 +137,21 @@ class TestAreaTables:
         assert owner["verwaltungsrecht"] == PROCEDURAL_OWNER
         assert owner["sozialrecht"] == "sozialrecht"
 
-    def test_catch_all_and_fallback_preset(self) -> None:
+    def test_catch_all_and_keyword_order_have_no_preferred_module(self) -> None:
         tables = area_tables()
         assert tables.catch_all == "andere"
-        assert tables.fallback_preset == "sozialrecht-allgemein"
-        # default module's keyword fallback is evaluated last (v2.0.0 tie-break)
-        assert tables.preset_fallback[-1].preset_id == "sozialrecht-allgemein"
+        owner_order = list(dict.fromkeys(tables.owner[key] for key in tables.keys))
+        owners = [tables.owner[entry.primary_area] for entry in tables.preset_fallback]
+        # Module groups follow catalog order; each module retains its declared
+        # candidate order, which can interleave its own canonical and alias keys.
+        assert owners == sorted(owners, key=owner_order.index)
+        for removed in (
+            "default_module",
+            "fallback_preset",
+            "default_ingest_sources",
+            "norm_reference_source_types",
+        ):
+            assert not hasattr(tables, removed)
 
     def test_familienrecht_inherits_erbrecht_profile(self) -> None:
         profiles = area_tables().prompt_profiles
@@ -162,7 +171,7 @@ class TestAreaTables:
         from app.modules.areas import build_area_tables
 
         with pytest.raises(ModuleManifestError, match="exactly one owner"):
-            build_area_tables(tmp_path, "sozialrecht")
+            build_area_tables(tmp_path)
 
     # -- WP-94: the key set and order are intake data ------------------------
 
@@ -185,7 +194,7 @@ class TestAreaTables:
 
         self._copy_tree(tmp_path)
         self._edit_intake(tmp_path, "andere", lambda d: d["areas"]["andere"].update(order=1))
-        keys = build_area_tables(tmp_path, "sozialrecht").keys
+        keys = build_area_tables(tmp_path).keys
         assert keys[0] == "andere"
         assert keys[1:] == V2_AREA_KEYS[:-1]
 
@@ -198,11 +207,23 @@ class TestAreaTables:
         shutil.rmtree(tmp_path / "erbrecht")
         # familienrecht inherits the erbrecht prompt profile — drop it too.
         shutil.rmtree(tmp_path / "familienrecht")
-        keys = build_area_tables(tmp_path, "sozialrecht").keys
+        keys = build_area_tables(tmp_path).keys
         assert "erbrecht" not in keys and "schenkungsrecht" not in keys
         assert keys == tuple(
             k for k in V2_AREA_KEYS if k not in {"erbrecht", "schenkungsrecht", "familienrecht"}
         )
+
+    def test_tables_do_not_require_sozialrecht(self, tmp_path: Path) -> None:
+        import shutil
+
+        from app.modules.areas import build_area_tables
+
+        self._copy_tree(tmp_path)
+        shutil.rmtree(tmp_path / "sozialrecht")
+        tables = build_area_tables(tmp_path)
+        assert "sozialrecht" not in tables.keys
+        assert "erbrecht" in tables.keys
+        assert "erbrecht" in tables.prompt_profiles
 
     @pytest.mark.parametrize(
         ("order", "message"),
@@ -220,7 +241,7 @@ class TestAreaTables:
         self._copy_tree(tmp_path)
         self._edit_intake(tmp_path, "mietrecht", edit)
         with pytest.raises(ModuleManifestError, match=message):
-            build_area_tables(tmp_path, "sozialrecht")
+            build_area_tables(tmp_path)
 
     def test_key_declared_by_non_owner_is_rejected(self, tmp_path: Path) -> None:
         from app.modules.areas import build_area_tables
@@ -232,7 +253,7 @@ class TestAreaTables:
         self._edit_intake(tmp_path, "erbrecht", lambda d: d["areas"].pop("schenkungsrecht"))
         self._edit_intake(tmp_path, "mietrecht", move)
         with pytest.raises(ModuleManifestError, match="declared by 'mietrecht'"):
-            build_area_tables(tmp_path, "sozialrecht")
+            build_area_tables(tmp_path)
 
     def test_key_declared_twice_is_rejected(self, tmp_path: Path) -> None:
         from app.modules.areas import build_area_tables
@@ -242,7 +263,7 @@ class TestAreaTables:
             tmp_path, "mietrecht", lambda d: d["areas"].update(sozialrecht={"order": 999})
         )
         with pytest.raises(ModuleManifestError, match="declared by both"):
-            build_area_tables(tmp_path, "sozialrecht")
+            build_area_tables(tmp_path)
 
 
 # ---------------------------------------------------------------------------
@@ -294,11 +315,17 @@ class TestContentLoader:
 
 class TestRuntime:
     def test_request_modules(self) -> None:
-        assert request_modules(None) == ["sozialrecht"]
-        assert request_modules([]) == ["sozialrecht"]
+        assert request_modules(None) == []
+        assert request_modules([]) == []
         assert request_modules(["schenkungsrecht", "erbrecht"]) == ["erbrecht"]
         assert request_modules(["verwaltungsrecht"]) == []
         assert request_modules(["mietrecht", "sozialrecht", "nope"]) == ["mietrecht", "sozialrecht"]
+
+    @pytest.mark.parametrize("areas", [None, []])
+    def test_absent_scope_has_no_engines_or_regime(self, areas: list[str] | None) -> None:
+        module_ids = request_modules(areas)
+        assert calculators_for(module_ids) == []
+        assert regime_banner_for(module_ids, date(2026, 7, 1)) == (None, "")
 
     def test_only_sozialrecht_ships_engines(self) -> None:
         assert [mid for mid, _ in calculators_for(["sozialrecht", *_STUBS])] == ["sozialrecht"]
@@ -344,7 +371,7 @@ class TestRuntime:
         assert result.module_id == "sozialrecht"
         assert result.spec_id == "widerspruch_sgg_84"
 
-    @pytest.mark.parametrize("areas", [["erbrecht"], ["verwaltungsrecht"], ["andere"]])
+    @pytest.mark.parametrize("areas", [[], ["erbrecht"], ["verwaltungsrecht"], ["andere"]])
     async def test_no_calculator_means_no_llm_call(self, areas: list[str]) -> None:
         from app.services.calculation import check_calculations
 
@@ -411,7 +438,8 @@ class TestParameters:
 #: Files allowed to name area ids in code: registry/alias tables only.
 _ALLOWED = {
     "app/modules/registry.py",  # built-in legacy alias table (D-038)
-    "app/core/config.py",  # DEFAULT_MODULE default; goldset API alias path
+    "app/core/config.py",  # documented Sozialrecht goldset API alias path
+    "app/api/routes/goldset.py",  # explicit documented Sozialrecht compatibility alias
 }
 
 

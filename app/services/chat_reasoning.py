@@ -28,8 +28,15 @@ from app.core.config import settings
 from app.core.pipeline import PipelineState, run_pipeline
 from app.core.router import get_shared_client
 from app.services.disclosure import build_disclosure_and_provenance
-from app.services.prompts import get_chat_prompt, stage_max_tokens, stage_temperature
-from app.services.retrieval import retrieve_chunks_combined
+from app.services.prompts import (
+    SELECTION_REQUIRED_TEXT,
+    ModuleSelectionRequired,
+    get_chat_prompt,
+    require_inference_scope,
+    stage_max_tokens,
+    stage_temperature,
+)
+from app.services.retrieval import retrieve_chunks_for_areas
 from app.utils.tokens import trim_document, trim_text
 
 logger = logging.getLogger(__name__)
@@ -37,11 +44,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Chat system prompt
 # ---------------------------------------------------------------------------
-
-#: Default rendering of P-11 (default module), kept for importers. Requests
-#: render the prompt for their own areas via ``get_chat_prompt`` (CR-05).
-_CHAT_SYSTEM_PROMPT = get_chat_prompt("chat")
-
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -64,7 +66,7 @@ async def run_first_message_pipeline(
         They are joined with double newlines.
     legal_areas :
         Optional area keys (already validated by the route); empty or
-        ``None`` runs ``DEFAULT_MODULE``.
+        ``None`` permits deterministic preparation only.
     """
     combined_text = "\n\n".join(document_texts)
     state = PipelineState(input_text=combined_text, legal_areas=list(legal_areas or []))
@@ -76,7 +78,7 @@ async def run_first_message_pipeline(
     # Art. 50(1)/(2) (WP-96, closes the D-032 coverage gap C-4): this terminal
     # event carries AI-generated text, so it gets the disclosure + provenance
     # like the analyze terminal event. Without legal_areas the pipeline (and
-    # the marker) run with DEFAULT_MODULE.
+    # the marker) name no legal module.
     disclosure_info, provenance_marker = build_disclosure_and_provenance(settings, legal_areas)
     final_payload = {
         "sections": list(state.final_output.keys()),
@@ -115,6 +117,21 @@ async def generate_chat_response(
     conversation_id :
         Optional identifier for logging.
     """
+    try:
+        require_inference_scope(legal_areas)
+    except ModuleSelectionRequired:
+        disclosure, provenance = build_disclosure_and_provenance(settings, legal_areas)
+        payload = {
+            "type": "done",
+            "conversation_id": conversation_id,
+            "full_response": SELECTION_REQUIRED_TEXT,
+            "selection_required": True,
+            "disclosure": disclosure.model_dump(mode="json"),
+            "provenance": provenance.model_dump(mode="json"),
+        }
+        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        return
+
     client = get_shared_client()
     last_message = messages[-1]["content"] if messages else ""
 
@@ -126,7 +143,8 @@ async def generate_chat_response(
 
     # ── Retrieve relevant legal chunks ─────────────────────────────────
     try:
-        chunks = await retrieve_chunks_combined(
+        _, chunks = await retrieve_chunks_for_areas(
+            legal_areas=list(legal_areas or []),
             issues=[],
             questions=[search_query],
             normalized_text=document_texts[0][:1200] if document_texts else last_message[:1200],

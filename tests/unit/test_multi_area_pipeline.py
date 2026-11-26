@@ -30,10 +30,10 @@ from app.services.corpus_readiness import (
     check_preflight,
     get_area_status,
 )
-from app.services.prompts import DEFAULT_PROMPTS, get_prompts
+from app.services.prompts import get_prompts
 
 # WP-93: profiles are module data; derive the former constants.
-SOCIALRECHT_PROMPTS = DEFAULT_PROMPTS
+SOCIALRECHT_PROMPTS = get_prompts(["sozialrecht"])
 ERBRECHT_PROMPTS = get_prompts(["erbrecht"])
 
 
@@ -164,8 +164,8 @@ class TestPromptsThreading:
     def test_legal_areas_propagate(self) -> None:
         # Sanity: get_prompts(legal_areas) returns the same dict as
         # the source registry for the same area.
-        for area in ("sozialrecht", "erbrecht"):
-            assert get_prompts([area])[area == "erbrecht" and "grounded_answer" or "grounded_answer"]
+        for area, expected in (("sozialrecht", SOCIALRECHT_PROMPTS), ("erbrecht", ERBRECHT_PROMPTS)):
+            assert get_prompts([area]) == expected
         # Two distinct areas must produce non-trivial combined prompt.
         combined = get_prompts(["sozialrecht", "erbrecht"])
         assert "mehrere Rechtsgebiete" in combined["triage"]

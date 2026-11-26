@@ -96,7 +96,7 @@ from typing import Any
 
 #: Version of the prompt set as a whole (every stage, shared block, endpoint
 #: and calculator prompt). Bumped on any change to prompt text.
-PROMPT_SET_VERSION = "3.0.1"
+PROMPT_SET_VERSION = "3.1.0"
 
 
 def prompt_digest(text: str) -> str:
@@ -912,16 +912,23 @@ def _profile_registry() -> dict[str, AreaProfile]:
     return {key: by_module[str(data["key"])] for key, data in tables.prompt_profiles.items()}
 
 
-def _default_profile() -> AreaProfile:
-    from app.modules.areas import area_tables
-
-    tables = area_tables()
-    return profile_from_mapping(tables.module_profiles[tables.default_module])
+class ModuleSelectionRequired(ValueError):
+    """Legal inference needs an explicit scope with a usable module profile."""
 
 
-#: Prompt set of the default module (``DEFAULT_MODULE``, D-036) — the
-#: fallback for requests without (known) legal areas.
-DEFAULT_PROMPTS: dict[str, str] = _build_prompt_set(_default_profile())
+SELECTION_REQUIRED_TEXT = (
+    "Bitte wählen Sie ein verfügbares Rechtsmodul mit Analyseprofil aus. "
+    "Ohne diese Auswahl wird keine rechtliche Analyse oder KI-Antwort erstellt."
+)
+
+
+def require_inference_scope(legal_areas: list[str] | None) -> None:
+    """Validate availability and profiles before retrieval or inference (D-070)."""
+    from app.modules.runtime import resolve_request_areas
+
+    resolve_request_areas(list(legal_areas or []))
+    if not legal_areas or not _resolve_profiles(legal_areas):
+        raise ModuleSelectionRequired(SELECTION_REQUIRED_TEXT)
 
 
 # ---------------------------------------------------------------------------
@@ -944,9 +951,8 @@ def get_prompts(legal_areas: list[str] | None = None) -> dict[str, str]:
     Parameters
     ----------
     legal_areas :
-        A list of area keys (module ids or legacy aliases). Unknown / empty
-        values, or areas whose module ships no prompt profile, fall back to
-        the default module's prompt set (``DEFAULT_PROMPTS``).
+        Explicit area keys. Empty/unknown scope or a module without a profile
+        raises ``ModuleSelectionRequired``; no other module is borrowed.
 
     Returns
     -------
@@ -958,7 +964,7 @@ def get_prompts(legal_areas: list[str] | None = None) -> dict[str, str]:
     """
     profiles = _resolve_profiles(legal_areas)
     if not profiles:
-        return dict(DEFAULT_PROMPTS)
+        raise ModuleSelectionRequired(SELECTION_REQUIRED_TEXT)
     if len(profiles) == 1:
         return dict(_build_prompt_set(profiles[0]))
     return dict(_cached_multi_area_set(tuple(prof.key for prof in profiles)))
@@ -969,10 +975,16 @@ def _resolve_profiles(legal_areas: list[str] | None) -> list[AreaProfile]:
 
     Keys sharing a module profile collapse onto it.
     """
+    from app.modules.areas import PROCEDURAL_OWNER, area_tables
+
     registry = _profile_registry()
+
+    owners = area_tables().owner
     unique_profiles: list[AreaProfile] = []
     for area in legal_areas or []:
         profile = registry.get(area)
+        if profile is None and owners.get(area) != PROCEDURAL_OWNER:
+            raise ModuleSelectionRequired(SELECTION_REQUIRED_TEXT)
         if profile is not None and profile not in unique_profiles:
             unique_profiles.append(profile)
     return unique_profiles
@@ -981,13 +993,12 @@ def _resolve_profiles(legal_areas: list[str] | None) -> list[AreaProfile]:
 def get_chat_prompt(kind: str, legal_areas: list[str] | None = None) -> str:
     """System prompt of a chat surface (``"chat"`` P-11, ``"case_chat"`` P-12).
 
-    Area resolution is the same as :func:`get_prompts` (unknown / no areas →
-    the default module's profile; several → merged persona), so a chat about
-    an Erbrecht case no longer answers as an SGB assistant (F-05).
+    Area resolution follows :func:`get_prompts`; absent/unusable profiles
+    raise ``ModuleSelectionRequired`` before legal inference.
     """
     profiles = _resolve_profiles(legal_areas)
     if not profiles:
-        profile = _default_profile()
+        raise ModuleSelectionRequired(SELECTION_REQUIRED_TEXT)
     elif len(profiles) == 1:
         profile = profiles[0]
     else:

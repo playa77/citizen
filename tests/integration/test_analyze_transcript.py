@@ -1,16 +1,15 @@
-"""WP-97 golden SSE transcript — requests without ``legal_areas``.
+"""WP-97 golden SSE transcript for an explicitly selected Sozialrecht analysis.
 
-The P9 exit gate (roadmap v3.0.0, WP-97) requires that a request that names
-no legal areas still behaves **byte-identically** after the module refactor:
-the core/module split must not change the transport contract for the default
-path. This module pins that contract.
+D-070 requires an explicit usable scope before legal inference. This gate
+preserves the existing successful stage payloads and legal output by making
+that scope explicit. The terminal event additionally records its resolution.
 
 How the pin works
 -----------------
 ``run_pipeline`` is replaced by a deterministic stub that emits the same
 event shapes the real pipeline produces (one ``complete`` event per stage
 plus the route's terminal summary event). The raw response bytes are then
-compared against ``tests/integration/golden/analyze_transcript_no_areas.txt``
+compared against ``tests/integration/golden/analyze_transcript_sozialrecht.txt``
 — event order, JSON key order, formatting (``ensure_ascii=False``, two-space
 SSE framing) and every deterministic value are part of the comparison.
 
@@ -33,7 +32,7 @@ Re-baselining
 The golden file is written with ``UPDATE_GOLDEN=1 pytest
 tests/integration/test_analyze_transcript.py``. Re-baseline **only** for a
 deliberate contract change (a new key on the terminal event, a changed stage
-payload shape) and record it in ``DECISIONS.md`` — the transcript is the
+payload shape) and record it in the decision log — the transcript is the
 WP-97 behaviour gate, so a silent re-baseline defeats it.
 
 The ``transcript`` fixture is module-scoped and opens its own ``TestClient``
@@ -55,7 +54,7 @@ import re
 import uuid
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -64,7 +63,7 @@ from app.core.config import get_app_version, settings
 from app.main import app
 from app.modules.registry import default_modules_root, discover_modules
 
-GOLDEN_PATH = Path(__file__).parent / "golden" / "analyze_transcript_no_areas.txt"
+GOLDEN_PATH = Path(__file__).parent / "golden" / "analyze_transcript_sozialrecht.txt"
 
 _HEADERS = {
     "X-Disclaimer-Ack": settings.DISCLAIMER_VERSION,
@@ -201,14 +200,17 @@ def _stub_pipeline(state: Any) -> Any:
 
 
 def _capture_transcript() -> str:
-    """POST a request without ``legal_areas`` and return the raw SSE text."""
+    """POST a request with explicit Sozialrecht scope and return the raw SSE text."""
     with (
         patch("app.api.routes.analyze.run_pipeline", side_effect=_stub_pipeline),
+        patch("app.api.routes.analyze.check_preflight", AsyncMock(return_value={
+            "is_ready": True, "areas": {}, "missing_source_types": [], "ready_source_types": [],
+        })),
         TestClient(app) as client,
         client.stream(
             "POST",
             "/api/v1/analyze",
-            json={"text": _INPUT_TEXT},
+            json={"text": _INPUT_TEXT, "legal_areas": ["sozialrecht"]},
             headers=_HEADERS,
         ) as response,
     ):
@@ -229,6 +231,7 @@ def _normalise(text: str) -> str:
     """Replace the deliberately volatile values with their placeholders."""
     text = _UUID_RE.sub("<uuid>", text)
     text = _TIMESTAMP_RE.sub('"timestamp_utc": "<timestamp_utc>"', text)
+    text = re.sub(r'"module_version": "[^"]*"', '"module_version": "<module_version>"', text)
     text = _APP_VERSION_RE.sub('"app_version": "<app_version>"', text)
     return _MODULE_ENTRY_RE.sub(
         '{"id": "<module_id>", "version": "<module_version>", '
@@ -250,12 +253,12 @@ def _terminal_event(transcript: str) -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def transcript() -> str:
-    """The raw SSE transcript for one request without ``legal_areas``."""
+    """The raw SSE transcript for one explicitly scoped request."""
     return _capture_transcript()
 
 
 def test_transcript_is_byte_identical_to_golden(transcript: str) -> None:
-    """The pinned contract for a request that names no legal areas."""
+    """The pinned contract for an explicitly selected usable legal module."""
     normalised = _normalise(transcript)
 
     if os.environ.get("UPDATE_GOLDEN") == "1":
@@ -280,19 +283,23 @@ def test_transcript_is_byte_identical_to_golden(transcript: str) -> None:
             )
         )
         pytest.fail(
-            "analyze SSE transcript changed for requests without legal_areas "
+            "analyze SSE transcript changed for explicit Sozialrecht scope "
             "(WP-97 gate — re-baseline only for a documented contract change):\n" + diff
         )
 
 
-def test_no_resolved_modules_without_legal_areas(transcript: str) -> None:
-    """``resolved_modules`` stays absent unless the request named areas (D-057)."""
+def test_resolved_modules_names_explicit_scope(transcript: str) -> None:
+    """Only the requested module is resolved; no implicit preference is added."""
     terminal = _terminal_event(transcript)
-    assert "resolved_modules" not in terminal
+    manifest = discover_modules(default_modules_root())["sozialrecht"]
+    assert terminal["resolved_modules"] == [{
+        "legal_area": "sozialrecht", "module_id": "sozialrecht",
+        "module_version": str(manifest.version), "legacy_alias": False, "enabled": True,
+    }]
 
 
-def test_terminal_event_provenance_names_default_module(transcript: str) -> None:
-    """Provenance v1.1 names the module the default request ran with."""
+def test_terminal_event_provenance_names_explicit_module(transcript: str) -> None:
+    """Provenance v1.1 names the explicitly requested module."""
     terminal = _terminal_event(transcript)
 
     assert terminal["disclosure"]["version"] == "1.0"
@@ -305,10 +312,10 @@ def test_terminal_event_provenance_names_default_module(transcript: str) -> None
     assert provenance["app_version"] == get_app_version()
     assert provenance["timestamp_utc"].endswith("Z")
 
-    default_module = settings.DEFAULT_MODULE
-    manifest = discover_modules(default_modules_root())[default_module]
+    selected_module = "sozialrecht"
+    manifest = discover_modules(default_modules_root())[selected_module]
     modules = provenance["modules"]
-    assert [entry["id"] for entry in modules] == [default_module]
+    assert [entry["id"] for entry in modules] == [selected_module]
     assert modules[0]["version"] == str(manifest.version)
     # "<module version>+<latest valid_from>" (ARCHITECTURE.md § 6.3).
     assert modules[0]["parameter_set"].startswith(f"{manifest.version}+")

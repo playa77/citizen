@@ -218,7 +218,7 @@ def build_disclosure_and_provenance(
     """Build the Art. 50 disclosure and provenance objects from application state.
 
     Called once per response that carries AI-generated content, with the area
-    keys the content was produced for (``None``/empty → ``DEFAULT_MODULE``,
+    keys the content was produced for (``None``/empty → no legal module,
     the same rule the engines follow). No DB or LLM calls. This function must
     not raise: if any field cannot be determined (e.g. app version
     unavailable), a safe fallback string is substituted and a warning logged —

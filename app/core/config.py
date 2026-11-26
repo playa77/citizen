@@ -76,9 +76,8 @@ class Settings(BaseSettings):
     RETRIEVAL_MODE: str = "per_question"
     RETRIEVAL_KEYWORD_FALLBACK: bool = True
     TOP_K_KEYWORD: int = 5
-    # None = the DEFAULT_MODULE's ``corpus.yaml`` ``default_ingest_sources``
-    # (resolved by ``app.services.corpus.default_corpus_sources``); an explicit
-    # list overrides it. The core carries no area-specific default.
+    # Unconfigured means no ingestion sources (D-070). Runtime selection and
+    # one-shot job overrides can supply explicit sources.
     CORPUS_SOURCES: list[str] | None = None
     # 30 min timeout for full corpus scrape+embed+upsert (WP-014, increased
     # for large corpora).
@@ -159,9 +158,6 @@ class Settings(BaseSettings):
     GOLDSET_PATH: str = "modules/sozialrecht/goldset/goldset-v0.1.0.yaml"
     EVAL_RESULTS_DIR: str = "eval/results"
     # --- Modules (WP-91, D-036/D-037) ----------------------------------------
-    # Default module for requests that name none (D-036). Must be in the
-    # enabled set or startup fails.
-    DEFAULT_MODULE: str = "sozialrecht"
     # Explicit enablement list. Unset (None) → the tier rule of D-037 applies:
     # dev/self enable every installed module of tier experimental|verified,
     # provider only verified; community is never enabled implicitly.

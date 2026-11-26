@@ -87,7 +87,7 @@ async def test_check_calculations_extraction_failure() -> None:
     mock_extract = AsyncMock(return_value=None)
 
     with patch("app.services.calculation._llm_extract", mock_extract):
-        result = await check_calculations(_SAMPLE_TEXT)
+        result = await check_calculations(_SAMPLE_TEXT, module_ids=["sozialrecht"])
 
     assert result["calculations_found"] == []
     assert result["overall_assessment"]["total_discrepancies"] == 0
@@ -128,7 +128,7 @@ async def test_check_calculations_successful_pipeline() -> None:
     ]
 
     with patches[0], patches[1]:
-        result = await check_calculations(_SAMPLE_TEXT)
+        result = await check_calculations(_SAMPLE_TEXT, module_ids=["sozialrecht"])
 
     # ── calculations_found ──────────────────────────────────────────────
     calcs = result["calculations_found"]
@@ -223,7 +223,7 @@ async def test_check_calculations_explanation_fallback() -> None:
     ]
 
     with patches[0], patches[1]:
-        result = await check_calculations(_SAMPLE_TEXT)
+        result = await check_calculations(_SAMPLE_TEXT, module_ids=["sozialrecht"])
 
     # ── calculations_found ──────────────────────────────────────────────
     calcs = result["calculations_found"]

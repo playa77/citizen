@@ -9,7 +9,7 @@ Request body accepts either raw text or a reference to a previously
 ingested document. The payload is a simple JSON object:
     {
         "text": "<normalized or raw text>",
-        "legal_areas": ["<module id>"]  // optional, defaults to [] (DEFAULT_MODULE)
+        "legal_areas": ["<module id>"]  // optional, defaults to [] (no legal module)
     }
 
 When ``legal_areas`` is non-empty, the pipeline runs per-area
@@ -91,6 +91,7 @@ from app.plain.service import PlainLanguageRequestError, analysis_plain, parse_l
 from app.services.audit import AuditRecord, persist_audit_record
 from app.services.corpus_readiness import check_preflight
 from app.services.disclosure import build_disclosure_and_provenance
+from app.services.prompts import ModuleSelectionRequired, require_inference_scope
 from app.utils.text import normalize_text
 
 
@@ -269,8 +270,16 @@ async def analyze(payload: dict[str, Any] = Body(...)) -> StreamingResponse:  # 
         except ModuleRequestError as exc:
             raise module_request_http_error(exc) from None
 
-    # Pre-flight corpus check.
-    if legal_areas:
+    # Preparation-only requests consume no corpus. Keep the existing area gate
+    # above, so unknown/disabled saved selections are never silently dropped.
+    can_infer = True
+    try:
+        require_inference_scope(legal_areas)
+    except ModuleSelectionRequired:
+        can_infer = False
+
+    # Pre-flight corpus check for actual legal inference only.
+    if legal_areas and can_infer:
         async with async_session_factory() as pre_db:
             try:
                 preflight = await check_preflight(pre_db, legal_areas)

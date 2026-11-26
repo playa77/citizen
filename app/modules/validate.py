@@ -239,25 +239,6 @@ def _corpus_source_warnings(manifest: ModuleManifest, report: ValidationReport) 
                 )
 
 
-def _default_module() -> str:
-    """``DEFAULT_MODULE`` from the configuration, or its documented default.
-
-    The validator runs offline (no ``.env``, no API key); an unconfigured
-    process falls back to the environment variable, then the settings default.
-    """
-    import os
-
-    try:
-        from app.core.config import settings
-
-        return settings.DEFAULT_MODULE
-    except Exception:  # pydantic ValidationError without configuration
-        from app.core.config import Settings
-
-        default = str(Settings.model_fields["DEFAULT_MODULE"].default)
-        return os.environ.get("DEFAULT_MODULE", default)
-
-
 def _integration_check(
     manifest: ModuleManifest, report: ValidationReport, modules_root: Path
 ) -> None:
@@ -272,10 +253,7 @@ def _integration_check(
             if mid != manifest.id and m.path.resolve() != manifest.path.resolve()
         }
         installed[manifest.id] = manifest
-        default = _default_module()
-        if default not in installed:
-            default = manifest.id
-        build_area_tables_from(installed, default)
+        build_area_tables_from(installed)
 
     _check(report, "area keys (with the installed modules)", _tables)
 

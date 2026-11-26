@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 from app.services.prompts import (
-    DEFAULT_PROMPTS,
     PROMPT_SET_VERSION,
     get_prompts,
     prompt_digest,
@@ -37,7 +36,7 @@ def test_triage_cache_text_depends_on_prompt_and_version() -> None:
 def test_eval_report_records_prompt_set() -> None:
     ident = _prompt_set_identity()
     assert ident["version"] == PROMPT_SET_VERSION
-    assert set(ident["stages"]) == set(DEFAULT_PROMPTS)
+    assert set(ident["stages"]) == set(get_prompts(["sozialrecht"]))
 
 
 async def test_rescore_uses_saved_outputs_without_pipeline(tmp_path: Path) -> None:

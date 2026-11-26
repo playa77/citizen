@@ -129,7 +129,11 @@ async def get_case_endpoint(case_id: UUID) -> dict[str, Any]:
         # ran against the already-closed session, which silently reopened the
         # session and leaked its checked-out connection until garbage
         # collection (exposed by the D-032 disclosure tests).
-        areas_stmt = select(CaseRunArea).where(CaseRunArea.case_run_id == case.id)
+        areas_stmt = (
+            select(CaseRunArea)
+            .where(CaseRunArea.case_run_id == case.id)
+            .order_by(CaseRunArea.is_primary.desc(), CaseRunArea.legal_area)
+        )
         areas_res = await db.execute(areas_stmt)
         legal_areas = [
             {"legal_area": a.legal_area, "is_primary": a.is_primary}
@@ -432,6 +436,12 @@ async def reevaluate_case_endpoint(
             "stages": {},
             "user_edits": case.user_edits or {},
         }
+        areas_result = await db.execute(
+            select(CaseRunArea.legal_area)
+            .where(CaseRunArea.case_run_id == case_id)
+            .order_by(CaseRunArea.is_primary.desc(), CaseRunArea.legal_area)
+        )
+        pipeline_state["legal_areas"] = list(areas_result.scalars().all())
         for sl in case.stage_logs or []:
             pipeline_state["stages"][sl.stage_name] = {
                 "id": str(sl.id),

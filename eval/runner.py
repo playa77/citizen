@@ -411,9 +411,9 @@ def _print_aggregate(aggregate: dict[str, float | None]) -> None:
 
 
 def _prompt_set_identity() -> dict[str, Any]:
-    """Version and digests of the default stage prompts (CR-09)."""
+    """Version and digests for the adapter's explicit Sozialrecht evaluation scope (CR-09)."""
     try:
-        from app.services.prompts import DEFAULT_PROMPTS, PROMPT_SET_VERSION, prompt_identity
+        from app.services.prompts import PROMPT_SET_VERSION, get_prompts, prompt_identity
     except Exception as exc:  # pragma: no cover - import guard for partial envs
         logger.warning("prompt identity unavailable: %s", exc)
         return {}
@@ -421,7 +421,7 @@ def _prompt_set_identity() -> dict[str, Any]:
         "version": PROMPT_SET_VERSION,
         "stages": {
             stage: prompt_identity(stage, text)["sha256"]
-            for stage, text in sorted(DEFAULT_PROMPTS.items())
+            for stage, text in sorted(get_prompts(["sozialrecht"]).items())
         },
     }
 

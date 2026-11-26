@@ -31,9 +31,8 @@ Ordering rules (behaviour-preserving, pinned by tests):
 
 * per-area tables follow the declared ``order`` (v2.0.0 order preserved);
 * modules are ordered by the first area key they own;
-* the preset keyword fallback lists the default module's entries **last**
-  (the default preset is the fallback and wins only on a strictly higher
-  score — the v2.0.0 tie-break).
+* preset keyword candidates follow declared area order; tied matches are all
+  suggested and no-match results suggest none (D-070).
 """
 
 # Semantic Version: 0.3.0 | 2026-11-17 — WP-112: tables include out-of-tree modules.
@@ -84,16 +83,9 @@ class AreaTables:
     chunk_tags: tuple[tuple[str, int, int, str], ...]
     presets: tuple[dict[str, Any], ...]
     preset_fallback: tuple[PresetFallback, ...]
-    fallback_preset: str
-    default_module: str
-    norm_reference_source_types: tuple[str, ...]
-    # Default-module ``corpus.yaml`` ``default_ingest_sources``: what a fresh
-    # deployment ingests when neither ``CORPUS_SOURCES`` nor a runtime source
-    # selection is set (replaces the core's former ``["sgb2", "sgbx"]``).
-    default_ingest_sources: tuple[str, ...] = ()
     # area key → raw prompt profile mapping (inheritance resolved)
     prompt_profiles: dict[str, dict[str, Any]] = field(default_factory=dict)
-    # module id → raw prompt profile mapping, for the default fallback
+    # module id → raw prompt profile mapping, including explicit inheritance
     module_profiles: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
@@ -185,14 +177,14 @@ def _area_entry(section: dict[str, Any], key: str, owner_id: str, name: str) -> 
     return dict(entry)
 
 
-def build_area_tables(modules_dir: Path, default_module: str) -> AreaTables:
+def build_area_tables(modules_dir: Path) -> AreaTables:
     """Assemble the area tables from the modules installed under *modules_dir*."""
     # WP-112: out-of-tree modules contribute area keys too (installed ≠ enabled).
     modules, _rejected = discover_installed_modules(modules_dir)
-    return build_area_tables_from(modules, default_module)
+    return build_area_tables_from(modules)
 
 
-def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: str) -> AreaTables:
+def build_area_tables_from(modules: dict[str, ModuleManifest]) -> AreaTables:
     """Assemble the area tables from an explicit module set (WP-115 validator:
     the installed set plus a candidate module)."""
     procedural_intake = _procedural_section("intake")
@@ -205,8 +197,6 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
                 f"area key {key!r} is declared by {declared_by[key]!r} "
                 f"but owned by {owner[key]!r}"
             )
-    if default_module not in modules:
-        raise ModuleManifestError(f"DEFAULT_MODULE {default_module!r} is not installed")
 
     # Owners in order of their first area key.
     owners_in_order: list[str] = []
@@ -232,8 +222,6 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
     chunk_tags: list[tuple[str, int, int, str]] = []
     presets: list[dict[str, Any]] = []
     preset_fallback: list[PresetFallback] = []
-    default_fallback: list[PresetFallback] = []
-    fallback_preset: str | None = None
     for owner_id in owners_in_order:
         corpus_section = _section_for(owner_id, modules, "corpus")
         intake_section = _section_for(owner_id, modules, "intake")
@@ -248,14 +236,10 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
             chunk_tags.append((tag["source_type"], int(tag["from"]), int(tag["to"]), tag["area"]))
         for preset in intake_section.get("presets") or ():
             presets.append(dict(preset))
-        target = default_fallback if owner_id == default_module else preset_fallback
         for fb in intake_section.get("preset_keyword_fallback") or ():
-            target.append(
+            preset_fallback.append(
                 PresetFallback(fb["preset"], fb["primary_area"], tuple(fb.get("keywords") or ()))
             )
-        if owner_id == default_module:
-            fallback_preset = intake_section.get("fallback_preset")
-    preset_fallback.extend(default_fallback)
 
     if len(catch_all) != 1:
         raise ModuleManifestError(
@@ -264,13 +248,6 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
     preset_ids = [p["id"] for p in presets]
     if len(set(preset_ids)) != len(preset_ids):
         raise ModuleManifestError("duplicate preset ids across modules")
-    if fallback_preset is None or fallback_preset not in preset_ids:
-        raise ModuleManifestError(
-            f"default module {default_module!r} must declare a fallback_preset it ships"
-        )
-
-    default_corpus = _section_for(default_module, modules, "corpus")
-
     # Prompt profiles: one per module (inheritance resolved), mapped onto
     # every area key the module owns.
     module_profiles: dict[str, dict[str, Any]] = {}
@@ -296,8 +273,6 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
     prompt_profiles = {
         key: module_profiles[owner[key]] for key in keys if owner[key] in module_profiles
     }
-    if default_module not in module_profiles:
-        raise ModuleManifestError(f"default module {default_module!r} has no prompt profile")
 
     return AreaTables(
         keys=keys,
@@ -309,10 +284,6 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
         chunk_tags=tuple(chunk_tags),
         presets=tuple(presets),
         preset_fallback=tuple(preset_fallback),
-        fallback_preset=fallback_preset,
-        default_module=default_module,
-        norm_reference_source_types=tuple(default_corpus.get("norm_reference_source_types") or ()),
-        default_ingest_sources=tuple(default_corpus.get("default_ingest_sources") or ()),
         prompt_profiles=prompt_profiles,
         module_profiles=module_profiles,
     )
@@ -320,10 +291,8 @@ def build_area_tables_from(modules: dict[str, ModuleManifest], default_module: s
 
 @lru_cache(maxsize=1)
 def area_tables() -> AreaTables:
-    """Area tables for the configured ``DEFAULT_MODULE`` and the installed modules."""
-    from app.core.config import settings
-
-    return build_area_tables(default_modules_root(), settings.DEFAULT_MODULE)
+    """Area tables for all installed peer modules; listing is not selection."""
+    return build_area_tables(default_modules_root())
 
 
 __all__ = [

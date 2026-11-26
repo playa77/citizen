@@ -19,12 +19,16 @@ selection; returning users can explicitly choose **Restore last session** or
 start a new selection. Deployment enablement controls availability, not the
 user's session scope.
 
-The backend still implements `DEFAULT_MODULE` and requires its configured
-legacy value to belong to the enabled set. Retiring this requirement, the
-implicit request/corpus/provenance fallbacks, and the default REST/MCP metadata
-belongs to the first TODO together with GUI selection/session persistence.
-Until then, clients must send an explicit module scope and configure corpus
-sources explicitly; do not treat the legacy backend value as a startup choice.
+[D-070](docs/decisions/D-070-explicit-backend-module-scope.md) removes the
+backend module default and REST/MCP preference fields. Remove obsolete
+`DEFAULT_MODULE` entries from existing `.env` files on upgrade: unknown file
+settings are rejected. No enabled module is required merely to be a default;
+manifest, compatibility and tier/explicit-enablement checks still apply.
+Clients must pass explicit scope. Empty/unusable legal-analysis scope permits
+deterministic preparation only, with no legal retrieval/inference. Corpus
+sources must be explicitly configured; unconfigured and saved empty selections
+mean no ingestion. GUI chooser/local-session work and cross-repository
+acceptance remain with the owner and keep TODO step 1 incomplete.
 
 ---
 

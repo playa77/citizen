@@ -41,7 +41,7 @@ from app.modules.scaffold import (
 )
 from app.modules.validate import validate_module_dir
 
-DEFAULT = "sozialrecht"  # conftest DEFAULT_MODULE
+SOZIALRECHT = "sozialrecht"
 
 
 def _ep_module(tmp_path: Path, module_id: str, **manifest: Any) -> Path:
@@ -104,11 +104,11 @@ class TestEntryPointDiscovery:
         assert set(rejected) == {"broken", "nodir"}
 
     def test_in_tree_id_cannot_be_shadowed(self, tmp_path: Path) -> None:
-        module_dir = _ep_module(tmp_path, "ext_shadow", id=DEFAULT)
+        module_dir = _ep_module(tmp_path, "ext_shadow", id=SOZIALRECHT)
         modules, rejected = discover_installed_modules(
             default_modules_root(), [_ep("shadow", module_dir)]
         )
-        assert modules[DEFAULT].origin == "in_tree"
+        assert modules[SOZIALRECHT].origin == "in_tree"
         assert any("already used by an in-tree module" in r for r in rejected.values())
 
 
@@ -116,7 +116,7 @@ class TestEnablement:
     def _registry(self, tmp_path: Path, mode: str, enabled: list[str] | None) -> Any:
         module_dir = _ep_module(tmp_path, "ext_enable", tier="verified")
         return load_registry(
-            default_modules_root(), mode, enabled, DEFAULT, [_ep("ext_enable", module_dir)]
+            default_modules_root(), mode, enabled, [_ep("ext_enable", module_dir)]
         )
 
     @pytest.mark.parametrize("mode", ["dev", "self", "provider"])
@@ -125,7 +125,7 @@ class TestEnablement:
         assert "ext_enable" in registry.modules and not registry.is_enabled("ext_enable")
 
     def test_enabled_when_listed_even_in_provider(self, tmp_path: Path) -> None:
-        registry = self._registry(tmp_path, "provider", [DEFAULT, "ext_enable"])
+        registry = self._registry(tmp_path, "provider", [SOZIALRECHT, "ext_enable"])
         assert registry.is_enabled("ext_enable")
 
     def test_rejected_module_cannot_be_enabled(self) -> None:
@@ -136,8 +136,7 @@ class TestEnablement:
             load_registry(
                 default_modules_root(),
                 "dev",
-                [DEFAULT, "ext_broken"],
-                DEFAULT,
+                [SOZIALRECHT, "ext_broken"],
                 [_ep("ext_broken", boom)],
             )
 
@@ -146,9 +145,9 @@ class TestEnablement:
         (module_dir / "helper.py").write_text("from app.core.config import settings\n")
         eps = [_ep("ext_lint", module_dir)]
         # Installed but disabled: tolerated (never imported).
-        load_registry(default_modules_root(), "dev", None, DEFAULT, eps)
+        load_registry(default_modules_root(), "dev", None, eps)
         with pytest.raises(ModuleContractError, match="import lint"):
-            load_registry(default_modules_root(), "dev", [DEFAULT, "ext_lint"], DEFAULT, eps)
+            load_registry(default_modules_root(), "dev", [SOZIALRECHT, "ext_lint"], eps)
 
 
 def test_real_entry_point_via_dist_info(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -300,7 +299,7 @@ def test_cli_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     from scripts.new_module import main as new_module
     from scripts.validate_module import main as validate
 
-    assert validate(["--module", DEFAULT]) == 0
+    assert validate(["--module", SOZIALRECHT]) == 0
     assert validate(["--module", "nope_mod"]) == 2
     assert validate([]) == 2
     assert (

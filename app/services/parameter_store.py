@@ -23,8 +23,8 @@ the former ``build_legal_snapshot`` with its hard-coded SGB II keys moved to
 ``modules/sozialrecht/calculators.py``.
 
 WP-94: ``domain`` is the owning module's id (migration 013 rewrote stored
-``sgb2`` rows). An omitted ``domain`` means ``DEFAULT_MODULE`` — the core
-names no area id itself.
+``sgb2`` rows). Callers must supply an explicit nonempty ``domain``; the core
+never chooses a module namespace implicitly.
 """
 
 # Semantic Version: 0.4.0 | 2026-11-16 — WP-94: domain default is DEFAULT_MODULE
@@ -43,12 +43,10 @@ from app.db.models import LegalParameter
 
 
 def _domain(domain: str | None) -> str:
-    """Resolve an omitted parameter domain to ``DEFAULT_MODULE`` (WP-94)."""
-    if domain is not None:
-        return domain
-    from app.core.config import settings
-
-    return settings.DEFAULT_MODULE
+    """Require explicit parameter ownership; never choose a legal module."""
+    if not domain or not domain.strip():
+        raise ValueError("An explicit parameter domain is required")
+    return domain
 
 
 logger = logging.getLogger(__name__)
@@ -133,7 +131,7 @@ def param(
     on_date :
         Date for validity check.
     domain :
-        Parameter domain = module id (default ``DEFAULT_MODULE``).
+        Explicit parameter domain = module id; omission raises ``ValueError``.
     regime :
         Optional regime tag to filter by (e.g. ``"a.F._2025"`` or
         ``"n.F._2026"``).  When provided, only parameters whose regime
@@ -227,7 +225,7 @@ async def get_parameter_numeric(
     as_of_date :
         The date for which the parameter should be valid.
     domain :
-        Parameter domain = module id (default ``DEFAULT_MODULE``).
+        Explicit parameter domain = module id; omission raises ``ValueError``.
     """
     stmt = (
         select(LegalParameter)

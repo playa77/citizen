@@ -288,7 +288,7 @@ def test_case_law_declarations() -> None:
         }
         with pytest.raises((ModuleManifestError, ValueError)):
             parse_case_law_section(manifest, {"case_law": [entry]})
-    # Only verified modules are honoured; the default module declares BSG.
+    # Only verified modules are honoured; Sozialrecht explicitly declares BSG.
     assert [(s.module_id, s.source_type, s.provider) for s in case_law_specs("bsg")] == [
         ("sozialrecht", "bsg", "rii")
     ]

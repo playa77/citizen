@@ -130,6 +130,12 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
     """Replace reasoning/retrieval modules with deterministic stubs."""
     import types
 
+    async def ready_preflight(_db: object, areas: list[str]) -> dict:
+        return {"is_ready": True, "areas": {}, "missing_source_types": [],
+                "ready_source_types": []}
+
+    monkeypatch.setattr("app.api.routes.analyze.check_preflight", ready_preflight)
+
     # --- reasoning stub -------------------------------------------------
     reasoning_mod = types.ModuleType("app.services.reasoning")
 
@@ -293,9 +299,11 @@ def _mock_pipeline_for_test(monkeypatch: pytest.MonkeyPatch) -> None:
         issues: list[str],
         questions: list[str],
         chunks: list[dict],
+        *,
+        system_prompt: str | None = None,
     ):
         result = await generate_grounded_answer(
-            normalized_text, issues, questions, chunks
+            normalized_text, issues, questions, [], chunks, system_prompt=system_prompt
         )
         yield {"type": "done", "result": result}
 
@@ -519,7 +527,7 @@ class TestFullPipelineExecution:
         with client.stream(
             "POST",
             "/api/v1/analyze",
-            json={"text": SAMPLE_LEGAL_TEXT},
+            json={"text": SAMPLE_LEGAL_TEXT, "legal_areas": ["sozialrecht"]},
             headers=DISCLAIMER_HEADER,
         ) as response:
             assert response.status_code == 200
@@ -602,7 +610,7 @@ class TestDisclaimerEnforcement:
         with client.stream(
             "POST",
             "/api/v1/analyze",
-            json={"text": SAMPLE_LEGAL_TEXT},
+            json={"text": SAMPLE_LEGAL_TEXT, "legal_areas": ["sozialrecht"]},
             headers=DISCLAIMER_HEADER,
         ) as response:
             assert response.status_code == 200
@@ -655,8 +663,7 @@ class TestCaseRunAreaModuleBinding:
         with client.stream(
             "POST",
             "/api/v1/analyze",
-            # Comma-string form: the route's body type is dict[str, str], so a
-            # JSON list is rejected with 422 (pre-existing; see WP-94 notes).
+            # The existing comma-string contract remains supported alongside lists.
             json={"text": SAMPLE_LEGAL_TEXT, "legal_areas": ",".join(areas)},
             headers=DISCLAIMER_HEADER,
         ) as response:

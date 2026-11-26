@@ -339,8 +339,7 @@ def save_runtime_sources(sources: list[str]) -> None:
 
 
 def default_corpus_sources(configured: list[str] | None = None) -> list[str]:
-    """The configured ingest default: ``CORPUS_SOURCES`` if set, else the
-    ``default_ingest_sources`` of the ``DEFAULT_MODULE``'s corpus scope.
+    """Explicit ``CORPUS_SOURCES``, or no sources when unconfigured (D-070).
 
     *configured* lets callers that read a (patchable) settings object pass
     their own ``CORPUS_SOURCES``; ``None`` reads the module-level settings.
@@ -349,9 +348,7 @@ def default_corpus_sources(configured: list[str] | None = None) -> list[str]:
         configured = settings.CORPUS_SOURCES
     if configured is not None:
         return list(configured)
-    from app.modules.areas import area_tables
-
-    return list(area_tables().default_ingest_sources)
+    return []
 
 
 async def get_effective_corpus_sources() -> list[str]:
@@ -367,7 +364,7 @@ async def get_effective_corpus_sources() -> list[str]:
         unknown = set(runtime) - set(CORPUS_SOURCE_METADATA)
         if unknown:
             logger.warning("Ignoring unknown corpus sources from runtime config: %s", unknown)
-        return valid if valid else default_corpus_sources()
+        return valid
     return default_corpus_sources()
 
 

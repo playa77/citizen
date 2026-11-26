@@ -38,6 +38,7 @@ from app.services.retrieval import (
     RetrievalError,
     retrieve_chunks,
     retrieve_chunks_for_question,
+    retrieve_chunks_keyword,
 )
 
 # -------------------------------------------------------------------
@@ -127,6 +128,31 @@ async def _seed_database(
         seeded.append(chunk)
     await session.commit()
     return seeded
+
+
+async def test_keyword_retrieval_keeps_explicit_source_scope(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Hybrid fallback must not reintroduce sources outside the chosen areas."""
+    ids: dict[str, str] = {}
+    for source_type in ("bgb", "sgb2"):
+        chunk = _make_chunk_dict("Synthetischermodultest: erfundener Text ohne Rechtsaussage.")
+        chunk["source_type"] = source_type
+        chunk["source_url"] = f"https://synthetic.example/d070/{source_type}"
+        source = await _get_or_create_source(db_session, chunk)
+        row = await _get_or_create_legal_chunk(db_session, source, chunk)
+        await db_session.flush()
+        ids[source_type] = str(row.id)
+
+    async def sessions() -> AsyncGenerator[AsyncSession, None]:
+        yield db_session
+
+    monkeypatch.setattr("app.services.retrieval.get_async_session", sessions)
+    results = await retrieve_chunks_keyword(
+        "Synthetischermodultest", source_types=("bgb",),
+    )
+    assert {row["chunk_id"] for row in results} == {ids["bgb"]}
+    assert all(row["source_type"] == "bgb" for row in results)
 
 
 class MockOpenRouterClient(OpenRouterClient):

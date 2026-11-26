@@ -27,7 +27,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import date
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -440,17 +440,21 @@ async def _cleanup(events: list[dict[str, Any]]) -> None:
 
 @patch("app.api.routes.analyze.run_pipeline")
 async def test_analyze_plain_is_opt_in(
-    mock_run_pipeline: MagicMock, client: httpx.AsyncClient
+    mock_run_pipeline: MagicMock, client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async def generator(state: Any) -> AsyncGenerator[str, None]:
         state.final_output = {"ergebnis": "Vorläufige Einordnung: überwiegend rechtmäßig."}
         yield _sse({"stage": "generation", "status": "complete", "payload": {"duration_ms": 1}})
 
     mock_run_pipeline.side_effect = generator
-    plain_events = await _run_analyze(
-        client, {"text": "Testbescheid.", "plain_languages": ["de", "en"]}
+    monkeypatch.setattr(
+        "app.api.routes.analyze.check_preflight", AsyncMock(return_value={"is_ready": True})
     )
-    default_events = await _run_analyze(client, {"text": "Testbescheid."})
+    plain_events = await _run_analyze(
+        client,
+        {"text": "Testbescheid.", "legal_areas": [SOZ], "plain_languages": ["de", "en"]},
+    )
+    default_events = await _run_analyze(client, {"text": "Testbescheid.", "legal_areas": [SOZ]})
     try:
         final = plain_events[-1]
         assert final["plain"]["finding"]["category"] == "ueberwiegend_rechtmaessig"

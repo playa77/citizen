@@ -404,7 +404,7 @@ class TestParamWithRegimeFilter:
         from app.services import parameter_store as ps
 
         ps._parameter_cache = {
-            ("test.param", "sozialrecht"): [  # domain = DEFAULT_MODULE (WP-94)
+            ("test.param", "sozialrecht"): [  # explicit owning module (WP-94)
                 {
                     "value_numeric": 502.0,
                     "value_json": None,
@@ -458,7 +458,7 @@ class TestParamWithRegimeFilter:
 
             # On a date where both regimes are valid, regime filter picks
             # the right one.
-            result = param("test.param", date(2026, 8, 1), regime=REGIME_2026)
+            result = param("test.param", date(2026, 8, 1), regime=REGIME_2026, domain="sozialrecht")
             assert result["value"] == 563.0
             assert result["regime"] == REGIME_2026
             assert result["error"] is None
@@ -471,7 +471,7 @@ class TestParamWithRegimeFilter:
         try:
             from app.services.parameter_store import param
 
-            result = param("test.param", date(2026, 8, 1))
+            result = param("test.param", date(2026, 8, 1), domain="sozialrecht")
             # Should find the n.F._2026 entry (valid_from <= date and valid_to
             # is NULL, meaning open-ended).
             assert result["value"] == 563.0
@@ -487,7 +487,7 @@ class TestParamWithRegimeFilter:
 
             # A date that matches the valid window but with a regime filter
             # that doesn't exist.
-            result = param("test.param", date(2022, 6, 1), regime=REGIME_2026)
+            result = param("test.param", date(2022, 6, 1), regime=REGIME_2026, domain="sozialrecht")
             assert result["value"] is None
             assert result["error"] is not None
             assert "regime=n.F._2026" in result["error"]
@@ -502,13 +502,13 @@ class TestParamWithRegimeFilter:
 
             # 2026-07-01: the n.F._2026 entry has valid_from=2026-07-01,
             # so it should match.
-            result = param("test.param", date(2026, 7, 1), regime=REGIME_2026)
+            result = param("test.param", date(2026, 7, 1), regime=REGIME_2026, domain="sozialrecht")
             assert result["value"] == 563.0
             assert result["error"] is None
 
             # 2026-07-01: the a.F._2025 entry has valid_to=2026-06-30,
             # so it should NOT match.
-            result = param("test.param", date(2026, 7, 1), regime=REGIME_2025)
+            result = param("test.param", date(2026, 7, 1), regime=REGIME_2025, domain="sozialrecht")
             assert result["value"] is None
             assert result["error"] is not None
         finally:
@@ -518,6 +518,14 @@ class TestParamWithRegimeFilter:
         """Unknown key with regime filter → error."""
         from app.services.parameter_store import param
 
-        result = param("nonexistent.key", date(2026, 8, 1), regime=REGIME_2026)
+        result = param("nonexistent.key", date(2026, 8, 1), regime=REGIME_2026, domain="sozialrecht")
         assert result["value"] is None
         assert result["error"] is not None
+
+
+@pytest.mark.parametrize("domain", [None, "", "   "])
+def test_parameter_lookup_requires_explicit_domain(domain: str | None) -> None:
+    from app.services.parameter_store import param
+
+    with pytest.raises(ValueError, match="domain"):
+        param("test.param", date(2026, 8, 1), domain=domain)

@@ -105,7 +105,7 @@ def installed_package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterat
         f"[citizen.modules]\n{MODULE_ID} = citizen_module_{MODULE_ID}\n"
     )
     monkeypatch.syspath_prepend(str(package))
-    monkeypatch.setattr(_get_settings(), "ENABLED_MODULES", [settings.DEFAULT_MODULE, MODULE_ID])
+    monkeypatch.setattr(_get_settings(), "ENABLED_MODULES", ["sozialrecht", MODULE_ID])
     _clear_caches()
     try:
         yield package
