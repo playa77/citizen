@@ -1,0 +1,53 @@
+parameters:
+- key: attachment_monthly
+  value_json:
+    base_cents: 155500
+    first_cents: 58523
+    next_cents: 32604
+    cap_cents: 476699
+    rounding_cents: 1000
+    max_dependants: 5
+    protected_tenths:
+    - 3
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+  unit: cent
+  valid_from: 2025-07-01
+  valid_to: 2026-06-30
+  review_status: proposed
+  basis: § 850c Abs. 1–5 ZPO; Pfändungsfreigrenzenbekanntmachung 2025; §§ 899, 902
+    ZPO
+  notes: '{"retrieved_on": "2026-11-26", "sources": ["https://www.gesetze-im-internet.de/pf_ndfreigrbek_2025/",
+    "https://www.gesetze-im-internet.de/zpo/__850c.html", "https://www.gesetze-im-internet.de/zpo/__899.html",
+    "https://www.gesetze-im-internet.de/zpo/__902.html"], "quotes": ["auf den nächsten
+    vollen 10-Euro-Betrag", "auf Grund gesetzlicher Verpflichtung Unterhalt gewährt"],
+    "review": "Human legal review pending; no steward sign-off."}'
+- key: attachment_monthly
+  value_json:
+    base_cents: 158740
+    first_cents: 59742
+    next_cents: 33283
+    cap_cents: 486630
+    rounding_cents: 1000
+    max_dependants: 5
+    protected_tenths:
+    - 3
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+  unit: cent
+  valid_from: 2026-07-01
+  valid_to: 2027-06-30
+  review_status: proposed
+  basis: § 850c Abs. 1–5 ZPO; Pfändungsfreigrenzenbekanntmachung 2026; §§ 899, 902
+    ZPO
+  notes: '{"retrieved_on": "2026-11-26", "sources": ["https://www.gesetze-im-internet.de/pf_ndfreigrbek_2026/",
+    "https://www.gesetze-im-internet.de/zpo/__850c.html", "https://www.gesetze-im-internet.de/zpo/__899.html",
+    "https://www.gesetze-im-internet.de/zpo/__902.html"], "quotes": ["auf den nächsten
+    vollen 10-Euro-Betrag", "auf Grund gesetzlicher Verpflichtung Unterhalt gewährt"],
+    "review": "Human legal review pending; no steward sign-off."}'

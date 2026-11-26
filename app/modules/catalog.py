@@ -12,9 +12,23 @@ from __future__ import annotations
 
 from typing import Any
 
+import jsonschema
+
 from app.fristen.specs import DeadlineSpec, Duration
+from app.modules.content import load_section
 from app.modules.registry import ModuleManifest
 from app.modules.runtime import deadline_specs, document_templates
+
+
+def public_intake_schema(manifest: ModuleManifest) -> dict[str, Any] | None:
+    """Return validated module-owned form data, without exposing its file path."""
+    data = load_section(manifest, "intake_schema")
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise ValueError("intake_schema must be a JSON Schema mapping")
+    jsonschema.Draft202012Validator.check_schema(data)
+    return data
 
 
 def duration_dict(duration: Duration) -> dict[str, int]:

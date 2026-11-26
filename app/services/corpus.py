@@ -165,6 +165,46 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "checked_by_default": False,
         "source": "gesetze-im-internet.de",
     },
+    "zpo": {
+        "key": "zpo",
+        "name": "ZPO",
+        "full_name": "Zivilprozessordnung",
+        "description": "Zivilgerichtliches Verfahren und Zwangsvollstreckung.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "inso": {
+        "key": "inso",
+        "name": "InsO",
+        "full_name": "Insolvenzordnung",
+        "description": "Insolvenzverfahren und Schuldenbereinigung.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "rdg": {
+        "key": "rdg",
+        "name": "RDG",
+        "full_name": "Rechtsdienstleistungsgesetz",
+        "description": "Rechtsdienstleistungen und Inkassokosten.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "rvg": {
+        "key": "rvg",
+        "name": "RVG",
+        "full_name": "Rechtsanwaltsvergütungsgesetz",
+        "description": "Vergütung und Gebühren für Rechtsdienstleistungen.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
     "vwvfg": {
         "key": "vwvfg",
         "name": "VwVfG",
@@ -385,6 +425,10 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb3": "/sgb_3/",  # SGB III - Arbeitsförderung
     "sgb9": "/sgb_9/",  # SGB IX - Rehabilitation und Teilhabe
     "bgb": "/bgb/",  # BGB - Bürgerliches Gesetzbuch
+    "zpo": "/zpo/",
+    "inso": "/inso/",
+    "rdg": "/rdg/",
+    "rvg": "/rvg/",
     "vwvfg": "/vwvfg/",  # VwVfG - Verwaltungsverfahrensgesetz
     "sgg": "/sgg/",  # SGG - Sozialgerichtsgesetz
     "erbstg": "/erbstg/",  # ErbStG - Erbschaft- und Schenkungsteuergesetz
@@ -970,6 +1014,10 @@ def _infer_law_name(element: Tag, source_type: str) -> str:
         "sgb3": "SGB III",
         "sgb9": "SGB IX",
         "bgb": "BGB",
+        "zpo": "ZPO",
+        "inso": "InsO",
+        "rdg": "RDG",
+        "rvg": "RVG",
         "vwvfg": "VwVfG",
         "sgg": "SGG",
         "weisung": "Fachliche Weisung",

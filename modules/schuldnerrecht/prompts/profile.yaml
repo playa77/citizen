@@ -1,0 +1,22 @@
+display_name: Schulden und Vollstreckung in Ihrer eigenen Angelegenheit
+statutes: BGB, ZPO, RDG, RVG, InsO und DSGVO
+document_examples: einer Inkassoforderung, eines Mahnbescheids, Vollstreckungsbescheids oder einer Kontopfändung
+issue_terms:
+- Forderungsgrund und Nachweise
+- Inkassokosten (§ 13e RDG)
+- Widerspruch (§ 694 ZPO)
+- Einspruch (§§ 700, 339 ZPO)
+- Verjährung, Hemmung und Neubeginn (§§ 195, 199, 204, 212 BGB)
+- P-Konto (§§ 899, 902, 903 ZPO)
+- Verbraucherinsolvenzberatung (§§ 304, 305 InsO)
+- Datenauskunft (Art. 15 DSGVO)
+formal_examples: Dokumentart, tatsächliche Zustellung, Verfahrensstand und Zuständigkeit
+material_examples: Forderungsgrund, Nachweise, Kostenpositionen und Pfändungsschutz
+answerable_with: deutschem Schuldnerrecht zur Vorbereitung Ihrer eigenen Schuldnerberatung; keine Gläubigervertretung
+hierarchy_example: ZPO > § 694 > Abs. 1
+adversary_examples: der behauptete Gläubiger, ein Inkassounternehmen oder die Auskunftei
+result_categories:
+- Forderung prüfen – Grund, Nachweise oder Einwendungen müssen geprüft werden
+- Kosten prüfen – einzelne Kostenpositionen benötigen eine Prüfung
+- Frist prüfen – gerichtliche Dokumentart, tatsächliche Zustellung und Verfahrensstand sind zu klären
+- Beratung erforderlich – individuelle Prüfung durch eine geeignete Beratungsstelle ist erforderlich

@@ -74,9 +74,9 @@ def _module(tmp_path: Path, module_id: str, extra: dict[str, Any]) -> Path:
 
 
 class TestInstalledModules:
-    def test_sozialrecht_plus_seven_stubs(self) -> None:
+    def test_sozialrecht_plus_stubs_and_debt_foundation(self) -> None:
         modules = discover_modules(default_modules_root())
-        assert set(modules) == {"sozialrecht", *_STUBS}
+        assert set(modules) == {"sozialrecht", *_STUBS, "schuldnerrecht"}
         assert modules["sozialrecht"].tier == "verified"
 
     @pytest.mark.parametrize("module_id", _STUBS)
@@ -96,7 +96,7 @@ class TestInstalledModules:
 
     def test_dev_mode_enables_stubs(self) -> None:
         registry = load_registry(default_modules_root(), "dev", None)
-        assert registry.enabled == frozenset({"sozialrecht", *_STUBS})
+        assert registry.enabled == frozenset({"sozialrecht", *_STUBS, "schuldnerrecht"})
 
     def test_schenkungsrecht_alias_declared_by_erbrecht(self) -> None:
         registry = load_registry(default_modules_root(), "dev", None)
@@ -128,11 +128,11 @@ V2_AREA_KEYS = (
 
 class TestAreaTables:
     def test_keys_follow_v2_order(self) -> None:
-        assert area_tables().keys == V2_AREA_KEYS
+        assert area_tables().keys == (*V2_AREA_KEYS, "schuldnerrecht")
 
     def test_every_key_has_one_owner(self) -> None:
         owner = area_tables().owner
-        assert set(owner) == set(V2_AREA_KEYS)
+        assert set(owner) == {*V2_AREA_KEYS, "schuldnerrecht"}
         assert owner["schenkungsrecht"] == "erbrecht"
         assert owner["verwaltungsrecht"] == PROCEDURAL_OWNER
         assert owner["sozialrecht"] == "sozialrecht"

@@ -1,0 +1,59 @@
+format: citizen-plain-copy-v1.0
+module: schuldnerrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending.
+findings:
+  forderung_pruefen:
+    title: Forderung prüfen
+    text: Jemand verlangt Geld von Ihnen. Ob das richtig ist, muss geprüft werden.
+    next_step: Nehmen Sie alle Briefe zur Schuldner-Beratung mit.
+  kosten_pruefen:
+    title: Kosten prüfen
+    text: Die Kosten müssen geprüft werden. Citizen bestätigt diese Kosten nicht.
+    next_step: Bitten Sie um eine genaue Liste der Kosten.
+  frist_pruefen:
+    title: Frist prüfen
+    text: Ein Brief vom Gericht kann eine kurze Frist haben.
+    next_step: Heben Sie den Umschlag auf. Holen Sie sofort Hilfe.
+  beratung_erforderlich:
+    title: Sie brauchen Beratung
+    text: Ihr Fall braucht genaue Beratung. Citizen stellt keine Bescheinigung aus.
+    next_step: Gehen Sie zu einer Schuldner-Beratung. Citizen stellt keinen Insolvenz-Antrag.
+  einordnung_offen:
+    title: Ergebnis noch offen
+    text: Es fehlen Angaben. Citizen kann die Forderung noch nicht einordnen.
+    next_step: Sammeln Sie alle Briefe. Lassen Sie Briefe vom Gericht sofort prüfen.
+deadlines:
+  widerspruch_mahnbescheid:
+    title: Widerspruch gegen Mahnbescheid
+    action: Lassen Sie den Brief sofort prüfen. Zustellung im Ausland braucht besondere Beratung. Öffentliche
+      Zustellung braucht besondere Beratung.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Widerspruch kann auch später
+        noch möglich sein. Dafür darf der Vollstreckungsbescheid noch nicht verfügt sein. Lassen Sie das
+        sofort prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie das Zustellungs-Datum. Lassen
+        Sie die Berechnung prüfen. Widerspruch kann auch später noch möglich sein. Dafür darf der Vollstreckungsbescheid
+        noch nicht verfügt sein. Lassen Sie das sofort prüfen.
+      missing_input: Das bestätigte Zustellungs-Datum oder andere Angaben fehlen. Citizen nennt deshalb
+        keine sichere Frist. Holen Sie sofort Hilfe. Widerspruch kann auch später noch möglich sein. Dafür
+        darf der Vollstreckungsbescheid noch nicht verfügt sein. Lassen Sie das sofort prüfen.
+      not_applicable: Diese Frist-Regel passt nicht zum erkannten Brief. Andere Fristen können trotzdem
+        wichtig sein. Widerspruch kann auch später noch möglich sein. Dafür darf der Vollstreckungsbescheid
+        noch nicht verfügt sein. Lassen Sie das sofort prüfen.
+  einspruch_vollstreckungsbescheid:
+    title: Einspruch gegen Vollstreckungsbescheid
+    action: Lassen Sie den Brief sofort prüfen. Zustellung im Ausland braucht besondere Beratung. Öffentliche
+      Zustellung braucht besondere Beratung.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie das Zustellungs-Datum. Lassen
+        Sie die Berechnung prüfen.
+      missing_input: Das bestätigte Zustellungs-Datum oder andere Angaben fehlen. Citizen nennt deshalb
+        keine sichere Frist. Holen Sie sofort Hilfe.
+      not_applicable: Diese Frist-Regel passt nicht zum erkannten Brief. Andere Fristen können trotzdem
+        wichtig sein.

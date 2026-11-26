@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.0.0 · **Stand:** 2026-11-16
+**Version:** 3.2.0 · **Stand:** 2026-11-26
 
 **Autor:** www.github.com/playa77
 
@@ -462,7 +462,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.0.0`);
+`v3.2.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -871,8 +871,30 @@ Verfahrensbibliothek des Kerns.
 
 ---
 
+### D.5 Schulden und Vollstreckung (`schuldnerrecht`)
+
+**Geltungsbereich.** Dieses experimentelle Modul unterstützt Sie in Ihrer
+eigenen Schuldenangelegenheit. Es berechnet gerichtliche Reaktionszeiträume
+nur bei bestätigter Inlandszustellung und eindeutigem Dokumenttyp. Der
+Zwei-Wochen-Zeitraum beim Mahnbescheid ist keine absolute Ausschlussfrist;
+lassen Sie auch danach mögliche Schritte unverzüglich prüfen. Bei Auslands-
+oder öffentlicher Zustellung ist eine gesonderte Prüfung nötig.
+
+Pfändungsschutz, Verjährung und Inkassokosten werden nur im ausdrücklich
+qualifizierten Regelungsbereich und mit passenden Parametern geprüft.
+Unterhaltsvollstreckung, gerichtliche Sonderfreibeträge und ungeklärte
+Hemmungs- oder Neubeginnfälle sind nicht von der Rechenprüfung erfasst.
+Ergebnisse und Schreiben bleiben prüfbedürftig. Das Modul erstellt keinen
+Insolvenzantrag und ersetzt keine Bescheinigung einer geeigneten Stelle.
+Bei gerichtlichen Schreiben oder Kontopfändung suchen Sie zeitnah eine
+Schuldnerberatung oder anwaltliche Beratung auf.
+
+---
+
 ## Änderungshistorie
 
+- **3.2.0 (2026-11-26):** Schuldnerrecht: begrenzte Frist- und Rechenprüfungen, Entwürfe und klare Ausnahmen. Erneute Kenntnisnahme erforderlich.
+- **3.1.0 (2026-11-26):** Experimentelles Modul `schuldnerrecht` mit Terminvorbereitung und gebietsspezifischer Ergänzung; noch keine Fristen- oder Betragsberechnung. Erneute Kenntnisnahme erforderlich.
 - **3.0.0 (2026-11-16):** Erweiterte Zweckbestimmung (D-035) für den
   modularen Aufbau (Kern + Rechtsgebiets-Module): Teil A (Statement) und
   Teil C (Compliance) neu gefasst — bürgerseitige Selbsthilfe und

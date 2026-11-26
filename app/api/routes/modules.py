@@ -47,7 +47,13 @@ from app.db.models import CaseRun, CaseRunArea, LegalModule, ModuleUpdate
 from app.db.session import async_session_factory
 from app.dossier.module_content import public_dossier_checklist
 from app.modules.areas import area_tables
-from app.modules.catalog import document_types, module_deadlines, public_compliance, public_scope
+from app.modules.catalog import (
+    document_types,
+    module_deadlines,
+    public_compliance,
+    public_intake_schema,
+    public_scope,
+)
 from app.modules.content import module_path
 from app.modules.errata import Erratum, module_errata
 from app.modules.registry import ModuleManifest
@@ -229,6 +235,7 @@ async def get_module(module_id: str) -> dict[str, Any]:
         **_summary(manifest, by_source, rows),
         "core_api": manifest.core_api,
         "scope": public_scope(manifest),
+        "intake_schema": public_intake_schema(manifest),
         "legacy_aliases": list(manifest.legacy_aliases),
         "capabilities": {
             "deadlines": isinstance(raw.get("fristen"), str),

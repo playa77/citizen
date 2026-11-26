@@ -1,0 +1,92 @@
+format: citizen-debt-arithmetic-goldset-v1.0
+module: schuldnerrecht
+version: 1.0.0
+provenance: synthetic
+basis: § 850c Abs. 1–5 ZPO; §§ 899, 902 ZPO; Pfändungsfreigrenzenbekanntmachung 2026
+review_status: draft
+cases:
+- id: wage-rounded
+  extraction:
+    as_of: '2026-11-01'
+    dependants: 0
+    dependants_confirmed: true
+    special_order: false
+    calculation_type: wage_attachment
+    ordinary_claim: true
+    monthly: true
+    net_income_cents: 159999
+  expect:
+    status: provisional
+    computed_values:
+      amount_cents: 182
+      rounded_income_cents: 159000
+      fully_attachable_excess_cents: 0
+- id: wage-one-dependent
+  extraction:
+    as_of: '2026-11-01'
+    dependants: 1
+    dependants_confirmed: true
+    special_order: false
+    calculation_type: wage_attachment
+    ordinary_claim: true
+    monthly: true
+    net_income_cents: 250000
+  expect:
+    status: provisional
+    computed_values:
+      amount_cents: 15759
+- id: wage-cap
+  extraction:
+    as_of: '2026-11-01'
+    dependants: 0
+    dependants_confirmed: true
+    special_order: false
+    calculation_type: wage_attachment
+    ordinary_claim: true
+    monthly: true
+    net_income_cents: 500000
+  expect:
+    status: provisional
+    computed_values:
+      amount_cents: 242452
+      fully_attachable_excess_cents: 13370
+      rounded_income_cents: 486000
+- id: account-base
+  extraction:
+    as_of: '2026-11-01'
+    dependants: 0
+    dependants_confirmed: true
+    special_order: false
+    calculation_type: p_account
+    other_increases: false
+  expect:
+    status: provisional
+    computed_values:
+      amount_cents: 159000
+- id: account-dependent
+  extraction:
+    as_of: '2026-11-01'
+    dependants: 1
+    dependants_confirmed: true
+    special_order: false
+    calculation_type: p_account
+    actual_support: true
+    other_increases: false
+  expect:
+    status: provisional
+    computed_values:
+      amount_cents: 218742
+- id: unconfirmed-dependent
+  extraction:
+    as_of: '2026-11-01'
+    dependants: 1
+    dependants_confirmed: false
+    special_order: false
+    calculation_type: wage_attachment
+    ordinary_claim: true
+    monthly: true
+    net_income_cents: 250000
+  expect:
+    status: missing_input
+    computed_values:
+      deterministic_result: null

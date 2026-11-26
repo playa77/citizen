@@ -1,0 +1,47 @@
+parameters:
+- key: collection_rvg
+  value_json:
+    small_threshold_cents: 5000
+    small_fee_cents: 3150
+    base_threshold_cents: 50000
+    base_fee_cents: 5150
+    bands:
+    - - 200000
+      - 50000
+      - 4150
+    - - 1000000
+      - 100000
+      - 5950
+    - - 2500000
+      - 300000
+      - 5500
+    - - 5000000
+      - 500000
+      - 8600
+    - - 20000000
+      - 1500000
+      - 9950
+    - - 50000000
+      - 3000000
+      - 14000
+    rates_tenths:
+      simple: 5
+      normal: 9
+      extensive: 13
+    expenses_percent: 20
+    expenses_cap_cents: 2000
+    vat_percent: 19
+    minimum_fee_cents: 1500
+  unit: cent
+  valid_from: 2026-11-26
+  valid_to: null
+  review_status: proposed
+  basis: §§ 13e, 13f RDG; § 13 RVG; Anlage 1 VV 2300, 7002, 7008; Anlage 2 RVG; §
+    12 Abs. 1 UStG
+  notes: '{"retrieved_on": "2026-11-26", "sources": ["https://www.gesetze-im-internet.de/rdg/__13e.html",
+    "https://www.gesetze-im-internet.de/rdg/__13f.html", "https://www.gesetze-im-internet.de/rvg/__13.html",
+    "https://www.gesetze-im-internet.de/rvg/anlage_1.html", "https://www.gesetze-im-internet.de/rvg/anlage_2.html",
+    "https://www.gesetze-im-internet.de/ustg_1980/__12.html"], "quotes": ["Der Gebührensatz
+    beträgt höchstens 1,3.", "In einfachen Fällen darf nur eine Gebühr von 0,5 gefordert
+    werden", "19 Prozent der Bemessungsgrundlage"], "review": "Snapshot only. Earlier
+    mandates and disputed/titled claims require review."}'

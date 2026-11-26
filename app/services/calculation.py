@@ -15,7 +15,9 @@ modules (``app.modules.runtime.request_modules``) decide which calculators
 run; a request whose modules ship none gets an empty result.
 """
 
-# Semantic Version: 0.4.0 | 2026-11-16 — prompt set 3.0.0: cross-check scoped to
+# Semantic Version: 0.4.1 | 2026-11-26 — preserve qualified engine status and
+# report unavailable checks without a successful-arithmetic assessment.
+# 0.4.0 | 2026-11-16 — prompt set 3.0.0: cross-check scoped to
 # the document (CR-16), document truncation marked (CR-07), stage
 # temperatures/caps (CR-03/CR-04).
 # 0.3.0
@@ -501,6 +503,7 @@ def _summarise_engine_output(
                 "discrepancy_amount_eur": calc.get("discrepancy_amount_eur"),
                 "discrepancy_direction": calc.get("discrepancy_direction"),
                 "relevant_rule": calc.get("relevant_rule"),
+                **({"status": calc["status"]} if "status" in calc else {}),
             }
         )
     return summary
@@ -570,6 +573,23 @@ def _build_overall_assessment(
     referral_hint: str = "",
 ) -> dict[str, Any]:
     """Build the ``overall_assessment`` dict from the engine + LLM results."""
+    # Missing inputs are an unavailable check, not evidence that the amounts
+    # agree. Keep this outcome deterministic even if the explanation claims
+    # success. A provisional result (including a date without an amount) still
+    # counts as a result; legacy calculators without status retain their path.
+    if calculations and all(calc.get("status") == "missing_input" for calc in calculations):
+        return {
+            "total_discrepancies": 0,
+            "total_amount_eur": 0.0,
+            "direction": "keine",
+            "summary": (
+                "Eine Berechnungsprüfung war wegen fehlender oder ungeklärter "
+                "Eingaben nicht möglich. Eine Aussage zur Richtigkeit der "
+                "Berechnungen ist deshalb nicht möglich."
+            ),
+            "recommended_action": referral_hint
+            or "Lassen Sie die fehlenden Angaben und rechtlichen Voraussetzungen prüfen.",
+        }
     # Compute totals from the engine output (deterministic, not LLM-derived).
     total_discrepancies = 0
     total_amount_eur = 0.0

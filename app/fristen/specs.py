@@ -16,14 +16,14 @@ from typing import Any
 
 import yaml
 
-#: Valid trigger keys (ARCHITECTURE.md § 2.3). Only ``bekanntgabe`` has a
-#: full evaluator path today; others raise at load time so a spec that the
-#: evaluator cannot yet run never enters the registry silently.
+#: Valid trigger keys (ARCHITECTURE.md § 2.3). ``bekanntgabe`` and
+#: ``zustellung`` have evaluator paths; others raise at load time so a spec
+#: that the evaluator cannot yet run never enters the registry silently.
 TRIGGERS: frozenset[str] = frozenset(
     {"bekanntgabe", "zustellung", "zugang", "kenntnis", "ereignis"}
 )
 
-_EVALUABLE_TRIGGERS: frozenset[str] = frozenset({"bekanntgabe"})
+_EVALUABLE_TRIGGERS: frozenset[str] = frozenset({"bekanntgabe", "zustellung"})
 
 _SEVERITIES: frozenset[str] = frozenset({"low", "normal", "high", "critical"})
 
@@ -101,6 +101,9 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
             "evaluator does not support yet (evaluable: "
             f"{sorted(_EVALUABLE_TRIGGERS)})"
         )
+
+    if trigger == "zustellung" and raw.get("bekanntgabe_fiction") not in (None, "none"):
+        raise ValueError(f"{path}: service trigger must not use a Bekanntgabe fiction")
 
     severity = raw.get("severity")
     if severity not in _SEVERITIES:

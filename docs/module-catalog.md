@@ -1,14 +1,16 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.0.2 | 2026-11-25 — D-069: peer modules; startup/session TODO blocks further module implementation.
+<!-- Version: 1.1.0 | 2026-11-26 — M1 experimental foundation; owner directs backend continuation.
+     1.0.2 | 2026-11-25 — D-069: peer modules; startup/session TODO blocks further module implementation.
      1.0.1 | 2026-11-16 — M0 status row: module 1.2.0 (D-063). 1.0.0 | 2026-11-16 -->
 <!-- Companion to ARCHITECTURE.md (module contract) and docs/roadmap-v3.0.0.md
      (phase P13 delivers modules M1–M10). Decisions: D-036 (core + modules),
      D-038 (queue), D-069 (no default; startup selection/session restore first). -->
 
-**First blocking TODO:** complete module-neutral startup and session restore
-before implementing any further module. The binding checklist is
-[TODO.md](../TODO.md), step 1; decision:
+**Backend prerequisite completed; continuation authorized:** the owner's
+2026-11-26 direction permits backend module implementation to proceed. GUI
+selection/session work and combined acceptance remain separately owned and
+unverified here. See [TODO.md](../TODO.md), step 1, and
 [D-069](decisions/D-069-module-selection-and-session-restore.md).
 
 All modules are peers, including `sozialrecht`. On first GUI/desktop launch,
@@ -43,7 +45,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 | # | Module id | Title | Status | Queue rationale (necessity hypothesis — to be revised by user-need evidence, roadmap OQ-4) |
 |---|---|---|---|---|
 | M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · peer module** | first implemented module (WP-97); this gives it no startup/loading priority |
-| M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | planned | largest clientele overlap with M0; existential (Kontopfändung); 2-week deadlines; Pfändungstabelle is pure deterministic math |
+| M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | **experimental 0.2.0 · backend implemented** | Service-based court deadlines, qualified calculators, guarded drafts, intake/dossier and DE/EN/de-LS copy; deployment corpus/live evaluation pending; human review deferred (D-071) |
 | M2 | `mietrecht` | Wohnraummietrecht | planned (legacy key experimental) | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | planned (legacy key experimental) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
 | M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | planned (legacy key experimental) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
@@ -61,9 +63,8 @@ procurement) are out of scope by definition, as are lawyer-side features
 `andere` → retained as an unverified catch-all that runs the core without
 module engines (no deadlines asserted, no calculations), tier `experimental`.
 
-The first implementation task is [TODO.md](../TODO.md), step 1: remove the
-single-module fallback and implement startup selection/session restore. Only
-after it is verified may the remaining modules above be implemented. Their
+The backend part of [TODO.md](../TODO.md), step 1 is verified. The owner has
+directed backend continuation while GUI work remains separately owned. Their
 queue is implementation sequencing, not catalog preference, preselection or
 automatic loading; it may be revised when user-need evidence arrives.
 
@@ -105,10 +106,10 @@ deadlines** (→ `fristen.yaml`) · **deterministic calculators** (→
   Verjährung (§§ 195, 199 BGB; titulierte Forderungen § 197 BGB).
 - **Calculators:** Pfändungsfreigrenzen (§ 850c ZPO, annual table effective
   1 July → parameter set), P-Konto Sockelbetrag and Erhöhungsbeträge
-  (§§ 850k, 902 ZPO), Verjährungseintritt, Inkassokosten plausibility
+  (§§ 899, 902 ZPO; § 850k for conversion), Verjährungseintritt, Inkassokosten plausibility
   (statutory caps, RDG/RVG — anchor to verify).
-- **Drafts:** Widerspruch gegen Mahnbescheid (form-guidance, the official form
-  is mandatory), Bestreiten/Verjährungseinrede an Inkassounternehmen,
+- **Drafts:** Widerspruch gegen Mahnbescheid (form guidance; no blanket
+  mandatory-form claim for natural persons, §§ 692, 702 ZPO), Bestreiten/Verjährungseinrede an Inkassounternehmen,
   Antrag auf P-Konto-Bescheinigung (§ 903 ZPO), DSGVO-Auskunft (Art. 15) an
   Auskunfteien.
 - **Corpus:** ZPO (8. Buch), BGB (Verjährung, Verzug), InsO §§ 304 ff., RDG
@@ -311,14 +312,15 @@ deadlines** (→ `fristen.yaml`) · **deterministic calculators** (→
 1. Manifest valid; scope and out-of-scope written; statutory anchors verified
    against current statute text (dated).
 2. Corpus scope ingested; Rechtsstand visible via `/corpus/health`.
-3. Parameters seeded with `source_quote` and validity periods; one named
-   parameter steward (roadmap § 9).
+3. Parameters seeded with `source_quote` and validity periods. No named-person
+   approval gate; human parameter review is deferred under D-071.
 4. Every deadline spec has golden date tests incl. holiday/rollover edge cases.
 5. Every calculator is pure, parameter-backed, unit-tested to the cent.
 6. Every draft renders unbound assertions as `[BITTE PRÜFEN]`.
 7. Intake schema + dossier checklist + lawyer-question list.
 8. Plain-language copy (Bürgersprache DE + EN minimum; Leichte Sprache for
-   critical-deadline copy) reviewed by a named reviewer.
+   critical-deadline copy) implemented and automatically checked. Human review
+   is deferred until all modules are implemented (D-071); keep draft status.
 9. Goldset ≥ 15 synthetic cases, eval report published, gate thresholds met.
 10. Disclaimer addendum + deny phrases; purpose-drift lint green.
 11. Promotion recorded as a D-entry; module CHANGELOG at `1.0.0`.

@@ -1,0 +1,213 @@
+{
+  "format": "citizen-plain-eval-v1.0",
+  "module": "schuldnerrecht",
+  "languages": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "categories": [
+    "forderung_pruefen",
+    "kosten_pruefen",
+    "frist_pruefen",
+    "beratung_erforderlich",
+    "einordnung_offen"
+  ],
+  "deadline_specs": [
+    "widerspruch_mahnbescheid",
+    "einspruch_vollstreckungsbescheid"
+  ],
+  "review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "core_review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "goldset": {
+    "version": "1.0.0",
+    "path": "goldset/plain-v1.0.0.yaml"
+  },
+  "cases_passed": 28,
+  "cases_total": 28,
+  "cases": [
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-computed",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-missing_service",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-missing_document_type",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-missing_mode",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-foreign",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-public",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-not_applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-negative_collection",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-letter_not_service",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-holiday",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-widerspruch_mahnbescheid-leap",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-computed",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-missing_service",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-missing_document_type",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-missing_mode",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-foreign",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-public",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-not_applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-negative_collection",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-letter_not_service",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-holiday",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einspruch_vollstreckungsbescheid-leap",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-forderung_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-kosten_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-frist_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-beratung_erforderlich",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-einordnung_offen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-fallback",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": {},
+  "subset": null,
+  "gate_passed": true,
+  "module_version": "0.2.0",
+  "core_version": "3.5.0",
+  "git_sha": "f11d419",
+  "run_timestamp": "2026-11-26T15:21:12.340412+00:00"
+}

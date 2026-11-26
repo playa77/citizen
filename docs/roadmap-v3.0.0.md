@@ -1,6 +1,8 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.1.0 | 2026-11-26 — no default module (D-069/D-070): Sozialrecht's
+<!-- Version: 3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
+     3.1.1 | 2026-11-26 — owner directs backend continuation; GUI remains separately owned; WP-130 foundation started.
+     3.1.0 | 2026-11-26 — no default module (D-069/D-070): Sozialrecht's
      default designation superseded; WP-126 (explicit module selection and
      session restore) added as the first blocking task; D-039 exception for the
      removed catalog fields; P13 gated on WP-126.
@@ -74,6 +76,12 @@ D-020 is widened by D-035 rather than silently stretched.
 
 ### 0.4 Governing principles for every work package
 
+- **Implementation before human approval rounds (D-071).** Implement all queued
+  modules before requesting remaining human approvals or reviews. No person's
+  name or sign-off is an implementation gate. Automated checks and source
+  verification continue; review metadata remains draft/proposed until review
+  occurs. Human review, promotion and release readiness are recorded separately
+  from completed implementation.
 - **Prepares, does not advise.** D-021 invariant in every module.
 - **Explicit module selection, no default (D-069/D-070).** Only modules the
   user has selected (or explicitly restored) are in scope. An omitted or empty
@@ -239,7 +247,7 @@ PDF samples with a practitioner — **open**.
   metrics: deadline completeness (must be 100 %), checklist recall,
   chronology accuracy.
 - **Exit:** every goldset case produces a schema-valid dossier; deadline
-  completeness 100 %; owner review of two PDF samples with a practitioner.
+  completeness 100 %; human review of two PDF samples is deferred under D-071.
 
 ---
 
@@ -381,7 +389,13 @@ implementation work, including legal-area modules (D-069).
 **Goal:** ten further modules reach `verified`, each serving the same API.
 Profiles and statutory anchors: `docs/module-catalog.md`.
 
-**Gate (D-069):** no WP in this phase starts until WP-126 exits. Each
+**Owner continuation direction (2026-11-26):** backend WP-126 is complete.
+The owner instructed backend implementation to continue; GUI implementation
+and combined acceptance remain separately owned and unverified here. This
+supersedes the wait for GUI acceptance in the earlier status and sequencing
+text above and below; see D-069's backend continuation direction.
+
+**Backend gate (D-069, amended 2026-11-26):** backend continuation is authorized. Each
 module is a peer: no module is preselected, and none serves as another's
 fallback.
 
@@ -390,14 +404,14 @@ Each module is one WP with the same nine sub-WPs:
 | Sub-WP | Content |
 |---|---|
 | .1 | Scope & sources: verify statutory anchors (dated), manifest, corpus scope ingested |
-| .2 | Parameters with source quotes + named parameter steward |
+| .2 | Parameters with source quotes and validity periods; human review deferred under D-071 |
 | .3 | Deadline specs + golden date tests |
 | .4 | Calculators (pure, parameter-backed, cent-exact tests) |
 | .5 | Action-draft templates (`[BITTE PRÜFEN]` slots) |
 | .6 | Intake schema + dossier checklist + lawyer-question list |
-| .7 | Plain-language copy (DE Bürgersprache, EN; Leichte Sprache for critical) + review |
+| .7 | Plain-language copy (DE Bürgersprache, EN; Leichte Sprache for critical); human review deferred under D-071 |
 | .8 | Goldset ≥ 15 cases, published eval report, gate thresholds |
-| .9 | Compliance: disclaimer addendum, deny phrases, special regimes; promotion D-entry; module 1.0.0 |
+| .9 | Compliance: disclaimer addendum, deny phrases, special regimes; human promotion approval and release review deferred under D-071 |
 
 | WP | Module | Notes |
 |---|---|---|
@@ -411,6 +425,18 @@ Each module is one WP with the same nine sub-WPs:
 | WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-130 implementation (2026-11-26):** `schuldnerrecht` 0.2.0 implements
+domestic service-based deadlines, versioned qualified calculators, guarded
+drafts, public intake schema, dossier content, a debt-specific profile and
+DE/EN/de-LS copy. Core 3.5.0 / module API 3.3 adds the shared service-input and
+source-storage support. Twenty synthetic cases, dossier/plain reports and
+official attachment-table comparison evidence are included. See
+[D-072](decisions/D-072-wp130-backend-implementation.md) and the
+[completion plan](superpowers/plans/2026-11-26-wp130-completion.md).
+Actual deployment corpus ingestion and live-inference evaluation are not
+claimed. Human approval/reviews remain deferred under D-071; the module is
+experimental, not promoted or released.
 
 Modules may run in parallel once P11 and WP-126 exit (community stewards); the queue
 order is the maintainer's default order. A module that cannot pass its gate
@@ -494,7 +520,7 @@ decide promotion. Funding outcomes re-plan P12/P13 capacity by decision entry.
 |---|---|---|---|
 | OQ-1 | Prototype Fund: apply in class 03? Which stream (data security / software infrastructure / resilience)? | Dan | WP-140, within days |
 | OQ-2 | Consumer default inference: which local runtime/model passes the goldset gate? | maintainer | WP-124 |
-| OQ-3 | Who reviews plain-language simplifications (Beratungsstellen, legal-informatics students)? | Dan + adopters | WP-122, every .7 |
+| OQ-3 | Human review of plain-language simplifications | Later cross-module review phase | Deferred until all modules are implemented (D-071); does not block WP-122 or .7 implementation |
 | OQ-4 | Module order: confirm the necessity hypothesis with user-need evidence (adopter case statistics) | Dan + adopters | P13 order |
 | OQ-5 | NLnet generative-AI policy fit | Dan | WP-141 |
 | OQ-6 | UI repository location (D-040) — **resolved 2026-11-17 (D-067): `playa77/citizen-gui`** | Dan | WP-120 |

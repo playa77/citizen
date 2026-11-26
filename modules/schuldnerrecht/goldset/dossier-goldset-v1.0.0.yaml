@@ -1,0 +1,335 @@
+dossier_goldset:
+  id: dossier-goldset-schuldnerrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.2.0.yaml
+  base_goldset_version: 0.2.0
+  dossier_schema: citizen-dossier-v1.0
+  module: schuldnerrecht
+  provenance: synthetic
+  note: Expected chronology is hand-derived from the single explicit Datum line in every source. Missing/foreign
+    service status assertions are in the plain goldset.
+cases:
+- id: SR-001
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-02'
+    bundesland: NW
+  expected:
+    deadlines:
+    - spec_id: widerspruch_mahnbescheid
+      frist_ende: '2026-11-16'
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-002
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-11-09'
+    bundesland: NW
+    ist_verwaltungsakt: false
+  expected:
+    deadlines:
+    - spec_id: einspruch_vollstreckungsbescheid
+      frist_ende: '2026-11-23'
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-003
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-004
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: ausland
+    zustellung_tatsaechlich: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-005
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: oeffentlich
+    zustellung_tatsaechlich: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-006
+  facts:
+    document_type: mahnbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2026-12-11'
+    bundesland: NW
+  expected:
+    deadlines:
+    - spec_id: widerspruch_mahnbescheid
+      frist_ende: '2026-12-28'
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-007
+  facts:
+    document_type: vollstreckungsbescheid
+    zustellungsart: inland
+    zustellung_tatsaechlich: '2028-02-16'
+    bundesland: NW
+  expected:
+    deadlines:
+    - spec_id: einspruch_vollstreckungsbescheid
+      frist_ende: '2028-03-01'
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-008
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-009
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    - pfaendung_konto
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-010
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    - pfaendung_konto
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-011
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    - pfaendung_konto
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-012
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    - pfaendung_konto
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-013
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    - pfaendung_konto
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-014
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-015
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-016
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-017
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-018
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-019
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: SR-020
+  facts:
+    document_type: inkassoschreiben
+    ist_verwaltungsakt: false
+  expected:
+    deadlines: []
+    checklist:
+    - glaeubigerliste
+    - forderungsunterlagen
+    - zustellnachweise
+    - zahlungsnachweise
+    - einkommen_ausgaben
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date

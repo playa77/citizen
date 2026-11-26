@@ -2,8 +2,9 @@
 
 - **Date:** 2026-11-25
 - **Status:** Accepted by owner; backend verified under D-070 on 2026-11-26.
-  GUI/session implementation and combined acceptance remain pending and block
-  all further implementation work, including legal-area modules.
+  GUI/session implementation and combined acceptance remain pending with their
+  separate owner. The 2026-11-26 continuation direction below supersedes the
+  earlier gate on further backend implementation.
 - **Supersedes:** the Sozialrecht default designation in historical D-036.
   The core/module architecture, deployment-tier rules (D-037), API compatibility
   rule (D-039) and separate GUI repository (D-067) remain applicable.
@@ -67,3 +68,25 @@ policies. Backend changes are in the working tree and passed the application/dat
 checks; see its verification record for skips and existing warnings.
 GUI chooser, local session persistence and combined acceptance remain incomplete
 and are assigned to the GUI owner outside this session.
+
+## Owner approval and scope clarification — 2026-11-26
+
+The owner confirmed in this Codex chat that the GUI and roadmap work are already
+approved and instructed this agent to record approval and continue. The owner
+then explicitly clarified that GUI work is noted here, not implemented here,
+and is neither this agent's job nor owned by this agent. The initial execution
+note incorrectly assigned GUI ownership to this agent; this correction removes
+that assignment. GUI implementation remains outside this session and in the
+separate `playa77/citizen-gui` repository. Approval does not establish completed
+GUI implementation or combined acceptance. The existing D-069/D-070 design
+remains in force.
+
+### Backend continuation direction
+
+After explicitly excluding GUI implementation from this agent's ownership, the
+owner reiterated the existing approval and instructed this agent to get to work
+on the backend roadmap. This newer direction supersedes the requirement to wait
+for separately owned GUI acceptance before continuing backend P13 work. It does
+not claim that GUI implementation or combined acceptance has been verified;
+those open items remain with the GUI owner. Existing module source-review,
+testing, privacy and promotion requirements remain applicable.

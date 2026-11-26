@@ -1,0 +1,19 @@
+parameters:
+- key: limitation_rules
+  value_json:
+    ordinary_years: 3
+    titled_years: 30
+    ordinary_longstop_years: 10
+  unit: years
+  valid_from: 2026-11-26
+  valid_to: null
+  review_status: proposed
+  basis: §§ 195, 197, 199, 201, 204, 212 BGB; §§ 187, 188 BGB; § 193 BGB
+  notes: '{"retrieved_on": "2026-11-26", "sources": ["https://www.gesetze-im-internet.de/bgb/__195.html",
+    "https://www.gesetze-im-internet.de/bgb/__197.html", "https://www.gesetze-im-internet.de/bgb/__199.html",
+    "https://www.gesetze-im-internet.de/bgb/__201.html", "https://www.gesetze-im-internet.de/bgb/__204.html",
+    "https://www.gesetze-im-internet.de/bgb/__212.html", "https://www.gesetze-im-internet.de/bgb/__187.html",
+    "https://www.gesetze-im-internet.de/bgb/__188.html", "https://www.gesetze-im-internet.de/bgb/__193.html"],
+    "quotes": ["Die regelmäßige Verjährungsfrist beträgt drei Jahre.", "rechtskräftig
+    festgestellte Ansprüche", "so tritt an die Stelle eines solchen Tages der nächste
+    Werktag."], "review": "Snapshot only; no historical applicability inferred."}'

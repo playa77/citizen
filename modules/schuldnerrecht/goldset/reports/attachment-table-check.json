@@ -1,0 +1,22 @@
+{
+  "format": "citizen-debt-table-check-v1.0",
+  "checked_on": "2026-11-26",
+  "module_version": "0.2.0",
+  "scope": "Official monthly attachment tables; does not assess inference or human legal review",
+  "results": [
+    {
+      "year": 2025,
+      "official_monthly_cells": 1932,
+      "lower_and_upper_boundary_assertions": 3864,
+      "mismatches": 0,
+      "source_html_sha256": "dcee4166f92958c7bfb99aed8cb4bb91bbb4507a8385db67578c3ec72a268c7b"
+    },
+    {
+      "year": 2026,
+      "official_monthly_cells": 1974,
+      "lower_and_upper_boundary_assertions": 3948,
+      "mismatches": 0,
+      "source_html_sha256": "d20da48a6bce8c04df11b35a6b15857d9b1823b35c1b81aaf7e35fa7dd5be0c4"
+    }
+  ]
+}

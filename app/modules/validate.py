@@ -147,6 +147,11 @@ def _content_checks(manifest: ModuleManifest, report: ValidationReport) -> None:
         if data is not None and not isinstance(data, dict):
             report.errors.append(f"{key}: file is not a YAML mapping")
 
+    if isinstance(raw.get("intake_schema"), str):
+        from app.modules.catalog import public_intake_schema
+
+        _check(report, "intake_schema", lambda: public_intake_schema(manifest))
+
     if isinstance(raw.get("calculators"), str):
 
         def _calculators() -> None:

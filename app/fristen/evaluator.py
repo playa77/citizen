@@ -50,6 +50,10 @@ class FristInput:
     rbb_status: str = "korrekt"
     ist_verwaltungsakt: bool = True
     bundesland: str = "NW"
+    # D-071: service-based rules require explicit facts; never use a letter-date fiction.
+    zustellung_tatsaechlich: date | None = None
+    document_type: str | None = None
+    zustellungsart: str | None = None
 
 
 def _unit_phrase(duration: Duration) -> str:
@@ -120,6 +124,8 @@ def evaluate_spec(
     spec: DeadlineSpec, frist_input: FristInput, module_id: str | None = None
 ) -> FristResult:
     """Evaluate *spec* for *frist_input* and return the deadline result."""
+    if spec.trigger == "zustellung":
+        return _evaluate_service(spec, frist_input, module_id)
     validate_rbb_status(frist_input.rbb_status)
 
     # ── Step 1: non-applicability hook ─────────────────────────────────
@@ -217,6 +223,39 @@ def evaluate_spec(
         oq1_flag=oq1_flag,
         oq1_alternate_ende=oq1_alternate_ende,
         explanation_de=explanation_de,
+        module_id=module_id,
+        spec_id=spec.id,
+    )
+
+
+def _evaluate_service(spec: DeadlineSpec, facts: FristInput, module_id: str | None) -> FristResult:
+    """Evaluate confirmed service; missing/unsupported facts are handled by dossier status."""
+    if facts.zustellung_tatsaechlich is None:
+        raise ValueError("Service date must be explicitly confirmed")
+    for key, expected in spec.applies_when.items():
+        if getattr(facts, key, None) != expected:
+            raise ValueError(f"Service rule requires {key}={expected!r}")
+    if not spec.basis:
+        raise ValueError(f"spec {spec.id!r} declares no basis")
+    served = facts.zustellung_tatsaechlich
+    raw_end = _add_duration(served, spec.duration)
+    end = get_rollover(spec.rollover)(raw_end, facts.bundesland) if spec.rollover else raw_end
+    explanation = (
+        f"Bestätigte Zustellung am {served.strftime('%d.%m.%Y')}. "
+        f"Fristbeginn: {(served + timedelta(days=1)).strftime('%d.%m.%Y')} "
+        f"({spec.fristbeginn_basis}). Fristende rechnerisch: {raw_end.strftime('%d.%m.%Y')} "
+        f"({_unit_phrase(spec.duration)} nach Zustellung, {spec.basis})."
+    )
+    if end != raw_end and spec.rollover:
+        explanation += " " + rollover_explanation(spec.rollover, raw_end, end) + "."
+    return FristResult(
+        bekanntgabe=served,
+        frist_ende=end,
+        frist_typ=_frist_typ(spec.duration),
+        rollover_applied=end != raw_end,
+        oq1_flag=False,
+        oq1_alternate_ende=None,
+        explanation_de=explanation,
         module_id=module_id,
         spec_id=spec.id,
     )

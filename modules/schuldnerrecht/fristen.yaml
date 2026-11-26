@@ -1,0 +1,21 @@
+# D-071 / WP-130: domestic actual-service rules only; no posting fiction.
+# § 694 ZPO permits opposition until an enforcement order is issued. The
+# initial two-week period is an action window, not an absolute exclusion.
+- id: widerspruch_mahnbescheid
+  label_de: "Zwei-Wochen-Zeitraum zum Mahnbescheid"
+  trigger: zustellung
+  duration: {days: 14}
+  rollover: zpo_222
+  basis: "§ 692 Abs. 1 Nr. 3 ZPO; § 694 Abs. 1 ZPO"
+  fristbeginn_basis: "§ 222 Abs. 1 ZPO, § 187 Abs. 1 BGB"
+  severity: critical
+  applies_when: {document_type: mahnbescheid, zustellungsart: inland}
+- id: einspruch_vollstreckungsbescheid
+  label_de: "Einspruch gegen den Vollstreckungsbescheid"
+  trigger: zustellung
+  duration: {days: 14}
+  rollover: zpo_222
+  basis: "§ 700 Abs. 1 ZPO, § 339 Abs. 1 ZPO"
+  fristbeginn_basis: "§ 222 Abs. 1 ZPO, § 187 Abs. 1 BGB"
+  severity: critical
+  applies_when: {document_type: vollstreckungsbescheid, zustellungsart: inland}

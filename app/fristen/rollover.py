@@ -28,10 +28,12 @@ Roller = Callable[[date, str], date]
 #: Human-readable legal basis per rollover id, used in explanations.
 ROLLER_LABELS: dict[str, str] = {
     "sgg_64_3": "§ 64 Abs. 3 SGG",
+    "zpo_222": "§ 222 Abs. 2 ZPO",
 }
 
 _ROLLERS: dict[str, Roller] = {
     "sgg_64_3": next_workday,
+    "zpo_222": next_workday,
 }
 
 

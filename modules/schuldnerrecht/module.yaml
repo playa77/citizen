@@ -1,0 +1,46 @@
+# WP-130 implementation. Experimental; human reviews deferred under D-071.
+id: schuldnerrecht
+version: 0.2.0
+core_api: ">=3.3,<4.0"
+title:
+  de: "Schulden und Vollstreckung"
+  en: "Debt and enforcement"
+tier: experimental
+scope:
+  summary_de: "Eigene Schulden: gerichtliche Reaktionsfristen, qualifizierte Rechenprüfungen und Vorbereitung Ihrer Schuldnerberatung."
+  own_matter_only: true
+  out_of_scope:
+    - "Forderungsbeitreibung für Gläubiger"
+    - "Insolvenzantrag und Bescheinigung nach § 305 InsO"
+    - "Unterhaltsvollstreckung und individuelle gerichtliche Sonderfreibeträge"
+    - "Ungeklärte Hemmung, Neubeginn und andere Sonderfälle der Verjährung"
+corpus: corpus.yaml
+intake: intake.yaml
+intake_schema: intake-schema.yaml
+dossier: dossier.yaml
+fristen: fristen.yaml
+parameters:
+  domain: schuldnerrecht
+  files: [parameters/*.yaml]
+calculators: calculators:CALCULATORS
+prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
+documents:
+  - pruefhinweise
+  - widerspruch_mahnbescheid_hilfe
+  - forderung_bestreiten
+  - p_konto_bescheinigung_anfragen
+  - datenauskunft_art15
+goldset:
+  path: goldset/goldset-v0.2.0.yaml
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    en: copy/en/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
+errata: errata.yaml
+compliance:
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
+  purpose_drift_deny_file: compliance/deny-phrases.json
+legacy_aliases: []

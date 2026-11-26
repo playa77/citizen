@@ -1,0 +1,17 @@
+# Append without changing the relative order of existing peer modules.
+# Routing suggestions do not load modules or choose session scope.
+areas:
+  schuldnerrecht:
+    order: 110
+    keywords:
+      - mahnbescheid
+      - vollstreckungsbescheid
+      - inkasso
+      - kontopfändung
+      - pfändungsbeschluss
+      - schuldnerberatung
+      - verbraucherinsolvenz
+      - vermögensauskunft
+    synonyms:
+      - schulden
+      - zwangsvollstreckung

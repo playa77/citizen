@@ -87,6 +87,11 @@ SOURCE_TYPE_ALLOWED = (
     "kschg",
     "burlg",
     "tvg",
+    # D-071 / WP-130: additive source catalog, migration 016.
+    "zpo",
+    "inso",
+    "rdg",
+    "rvg",
 )
 
 

@@ -52,8 +52,16 @@ FACT_KEYS = (
     "rbb_status",
     "ist_verwaltungsakt",
     "bundesland",
+    "zustellung_tatsaechlich",
+    "document_type",
+    "zustellungsart",
 )
-_DATE_FACTS = ("bescheid_datum", "aufgabe_zur_post", "bekanntgabe_tatsaechlich")
+_DATE_FACTS = (
+    "bescheid_datum",
+    "aufgabe_zur_post",
+    "bekanntgabe_tatsaechlich",
+    "zustellung_tatsaechlich",
+)
 
 
 def validate_facts(raw: Any) -> dict[str, Any]:
@@ -66,6 +74,15 @@ def validate_facts(raw: Any) -> dict[str, Any]:
     if unknown:
         raise ValueError(f"unknown facts {sorted(unknown)}; allowed: {list(FACT_KEYS)}")
     facts: dict[str, Any] = {}
+    if raw.get("document_type") is not None:
+        value = raw["document_type"]
+        if not isinstance(value, str) or not value or len(value) > 64:
+            raise ValueError("facts.document_type must contain 1–64 characters")
+        facts["document_type"] = value
+    if raw.get("zustellungsart") is not None:
+        if raw["zustellungsart"] not in ("inland", "ausland", "oeffentlich"):
+            raise ValueError("facts.zustellungsart must be inland, ausland or oeffentlich")
+        facts["zustellungsart"] = raw["zustellungsart"]
     for key in _DATE_FACTS:
         if raw.get(key) is not None:
             try:
@@ -193,10 +210,20 @@ def compute_deadlines(
         "ist_verwaltungsakt": ist_va,
         "bundesland": bundesland,
     }
+    used.update(
+        {
+            key: facts[key]
+            for key in ("zustellung_tatsaechlich", "document_type", "zustellungsart")
+            if key in facts
+        }
+    )
 
     items: list[dict[str, Any]] = []
     for module in modules:
         for spec in module.specs:
+            if spec.trigger == "zustellung":
+                items.append(_service_item(module.module_id, spec, facts, bundesland))
+                continue
             if letter_date is None:
                 items.append(
                     _result_item(
@@ -245,6 +272,56 @@ def compute_deadlines(
         "items": items,
         "earliest_frist_ende": open_items[0]["frist_ende"] if open_items else None,
     }
+
+
+def _service_item(
+    module_id: str, spec: DeadlineSpec, facts: Mapping[str, Any], bundesland: str
+) -> dict[str, Any]:
+    """Select a service rule without borrowing VA assumptions or a letter date."""
+    used = {
+        key: facts.get(key)
+        for key in ("zustellung_tatsaechlich", "document_type", "zustellungsart", "bundesland")
+    }
+    required_type = spec.applies_when.get("document_type")
+    actual_type = facts.get("document_type")
+    if actual_type and required_type and actual_type != required_type:
+        return _result_item(module_id, spec, STATUS_NOT_APPLICABLE, None, [], used)
+    if (
+        not actual_type
+        or not facts.get("zustellung_tatsaechlich")
+        or not facts.get("zustellungsart")
+        or (spec.rollover is not None and not facts.get("bundesland"))
+        or any(facts.get(key) != value for key, value in spec.applies_when.items())
+    ):
+        return _result_item(
+            module_id,
+            spec,
+            STATUS_MISSING_INPUT,
+            None,
+            [
+                "Art des Schreibens, Zustelltag, Zustellungsart und Bundesland bestätigen. "
+                "Auslandszustellung und öffentliche Zustellung gesondert prüfen lassen."
+            ],
+            used,
+        )
+    served = date.fromisoformat(facts["zustellung_tatsaechlich"])
+    result = evaluate_spec(
+        spec,
+        FristInput(
+            bescheid_datum=served,
+            zustellung_tatsaechlich=served,
+            document_type=actual_type,
+            zustellungsart=facts["zustellungsart"],
+            bundesland=bundesland,
+        ),
+        module_id=module_id,
+    )
+    assumptions = (
+        []
+        if facts.get("bundesland")
+        else [f"Bundesland nicht angegeben — Feiertage für {bundesland} angenommen."]
+    )
+    return _result_item(module_id, spec, STATUS_COMPUTED, result, assumptions, used)
 
 
 def frist_result_for_drafts(section: Mapping[str, Any]) -> FristResult | None:

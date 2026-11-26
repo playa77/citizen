@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -56,12 +57,25 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
     from app.services.presets import list_presets
     from app.services.prompts import get_prompts
 
+    # WP-130 adds one peer area. Preserve every historical byte by projecting
+    # only the new catalog entry out of the original WP-93 comparison. Real
+    # intake functions still run; test_schuldnerrecht covers the new route.
+    historical_intake = SimpleNamespace(
+        _INTAKE_SYSTEM=intake._INTAKE_SYSTEM.replace(", schuldnerrecht", ""),
+        _STRICT_SUFFIX=intake._STRICT_SUFFIX,
+        _LEGAL_AREAS_ENUM=tuple(k for k in intake._LEGAL_AREAS_ENUM if k != "schuldnerrecht"),
+        _AREA_KEYWORDS={k: v for k, v in intake._AREA_KEYWORDS.items() if k != "schuldnerrecht"},
+        _fallback_areas_from_text=intake._fallback_areas_from_text,
+        _normalise_area=intake._normalise_area,
+    )
     adapter = {
         "get_prompts": get_prompts,
-        "intake": intake,
+        "intake": historical_intake,
         "presets_route": presets_route,
         "list_presets": list_presets,
-        "area_source_types": lambda: AREA_TO_SOURCE_TYPES,
+        "area_source_types": lambda: {
+            k: v for k, v in AREA_TO_SOURCE_TYPES.items() if k != "schuldnerrecht"
+        },
         "infer_bgb_area": corpus._infer_legal_area_for_bgb,
         "legal_regime": legal_regime,
         "regime_banner": regime_banner,
