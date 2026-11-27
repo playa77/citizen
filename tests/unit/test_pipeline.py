@@ -609,7 +609,7 @@ class TestStageErrors:
 
 
 @pytest.mark.parametrize(
-    "areas", [[], ["verwaltungsrecht"], ["arbeitsrecht"], ["sozialrecht", "arbeitsrecht"]]
+    "areas", [[], ["verwaltungsrecht"], ["vertragsrecht"], ["sozialrecht", "vertragsrecht"]]
 )
 @pytest.mark.parametrize("restore_pii", [False, True])
 async def test_unusable_scope_prepares_input_without_legal_work(
@@ -702,7 +702,7 @@ async def test_targeted_reevaluation_preserves_recorded_module_scope(
 
 
 @pytest.mark.parametrize("saved_scope", [{}, {"legal_areas": []},
-                                       {"legal_areas": ["arbeitsrecht"]}])
+                                       {"legal_areas": ["vertragsrecht"]}])
 async def test_targeted_reevaluation_requires_scope_before_any_stage(
     monkeypatch: pytest.MonkeyPatch, saved_scope: dict[str, Any]
 ) -> None:

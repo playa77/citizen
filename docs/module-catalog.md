@@ -47,7 +47,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 | M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · peer module** | first implemented module (WP-97); this gives it no startup/loading priority |
 | M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | **experimental 0.2.0 · backend implemented** | Service-based court deadlines, qualified calculators, guarded drafts, intake/dossier and DE/EN/de-LS copy; deployment corpus/live evaluation pending; human review deferred (D-071) |
 | M2 | `mietrecht` | Wohnraummietrecht | backend implemented 0.2.0; experimental, review pending | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
-| M3 | `arbeitsrecht` | Individualarbeitsrecht | planned (legacy key experimental) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
+| M3 | `arbeitsrecht` | Individualarbeitsrecht | experimental backend 0.2.0 (WP-132, D-074) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
 | M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | planned (legacy key experimental) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
 | M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | planned | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
 | M6 | `familienrecht` | Familienrecht (Unterhalt, Trennung, Sorge/Umgang) | planned (legacy key experimental) | high stakes; Unterhalt math deterministic; crossover UVG / SGB II |
@@ -156,6 +156,16 @@ See [D-073](decisions/D-073-wp131-tenancy-implementation.md).
   § 22 Abs. 8 SGB II), M1.
 
 ### M3 — `arbeitsrecht`
+
+**Backend implemented (WP-132, 2026-11-27):** experimental 0.2.0 on core
+3.7.0 / module API 3.5. Qualified critical dismissal deadlines, explicit
+knowledge-date registration reminders, five statutory calculator modes,
+guarded drafts, public intake and DE/EN/de-LS dossier copy. Eighteen synthetic
+cases and offline reports accompany the module. §38 individualized timing
+exceptions and non-working-day backwards targets require review; no automatic
+exclusion-clause validity or generic severance entitlement. Deployment ingestion,
+live evaluation and human promotion are not claimed. See
+[D-074](decisions/D-074-wp132-employment-implementation.md).
 
 - **Scope:** individual employment law from the employee's side:
   Kündigung, Abmahnung, Lohn, Urlaub, Arbeitszeugnis, Aufhebungsvertrag.

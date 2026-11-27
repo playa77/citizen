@@ -45,7 +45,6 @@ _REPO = Path(__file__).resolve().parents[2]
 _STUBS = (
     "erbrecht",
     "familienrecht",
-    "arbeitsrecht",
     "vertragsrecht",
     "strafrecht",
     "andere",
@@ -75,7 +74,7 @@ def _module(tmp_path: Path, module_id: str, extra: dict[str, Any]) -> Path:
 class TestInstalledModules:
     def test_sozialrecht_plus_stubs_and_debt_foundation(self) -> None:
         modules = discover_modules(default_modules_root())
-        assert set(modules) == {"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht"}
+        assert set(modules) == {"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht", "arbeitsrecht"}
         assert modules["sozialrecht"].tier == "verified"
 
     @pytest.mark.parametrize("module_id", _STUBS)
@@ -95,7 +94,7 @@ class TestInstalledModules:
 
     def test_dev_mode_enables_stubs(self) -> None:
         registry = load_registry(default_modules_root(), "dev", None)
-        assert registry.enabled == frozenset({"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht"})
+        assert registry.enabled == frozenset({"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht", "arbeitsrecht"})
 
     def test_schenkungsrecht_alias_declared_by_erbrecht(self) -> None:
         registry = load_registry(default_modules_root(), "dev", None)
@@ -162,7 +161,7 @@ class TestAreaTables:
         # a module claiming a key the procedural library already serves
         import shutil
 
-        for mid in ("sozialrecht", "mietrecht", *_STUBS):
+        for mid in ("sozialrecht", "mietrecht", "arbeitsrecht", *_STUBS):
             shutil.copytree(default_modules_root() / mid, tmp_path / mid)
         raw = yaml.safe_load((tmp_path / "andere" / "module.yaml").read_text(encoding="utf-8"))
         raw["legacy_aliases"] = ["verwaltungsrecht"]
@@ -178,7 +177,7 @@ class TestAreaTables:
     def _copy_tree(tmp_path: Path) -> None:
         import shutil
 
-        for mid in ("sozialrecht", "mietrecht", *_STUBS):
+        for mid in ("sozialrecht", "mietrecht", "arbeitsrecht", *_STUBS):
             shutil.copytree(default_modules_root() / mid, tmp_path / mid)
 
     @staticmethod
@@ -327,7 +326,7 @@ class TestRuntime:
         assert regime_banner_for(module_ids, date(2026, 7, 1)) == (None, "")
 
     def test_scoped_modules_ship_their_own_engines(self) -> None:
-        assert [mid for mid, _ in calculators_for(["sozialrecht", "mietrecht", "schuldnerrecht", *_STUBS])] == ["sozialrecht", "mietrecht", "schuldnerrecht"]
+        assert [mid for mid, _ in calculators_for(["sozialrecht", "mietrecht", "schuldnerrecht", "arbeitsrecht", *_STUBS])] == ["sozialrecht", "mietrecht", "schuldnerrecht", "arbeitsrecht"]
 
     def test_regime_banner(self) -> None:
         from citizen_modules.sozialrecht.regime import legal_regime, regime_banner

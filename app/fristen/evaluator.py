@@ -57,6 +57,7 @@ class FristInput:
     zustellungsart: str | None = None
     zugang_tatsaechlich: date | None = None
     ereignis_datum: date | None = None
+    kenntnis_datum: date | None = None
     qualifikationen: dict[str, bool] = field(default_factory=dict)
     feiertage_zusaetzlich: tuple[date, ...] = ()
     feiertagskalender_bestaetigt: bool = False
@@ -132,7 +133,7 @@ def evaluate_spec(
     """Evaluate *spec* for *frist_input* and return the deadline result."""
     if any(frist_input.qualifikationen.get(key) is not True for key in spec.requires_confirmed):
         raise ValueError("Rule requires explicitly confirmed qualifications")
-    if spec.trigger in ("zugang", "ereignis"):
+    if spec.trigger in ("zugang", "ereignis", "kenntnis"):
         return _evaluate_explicit_event(spec, frist_input, module_id)
     if spec.trigger == "zustellung":
         return _evaluate_service(spec, frist_input, module_id)
@@ -282,9 +283,13 @@ def _evaluate_explicit_event(
     spec: DeadlineSpec, facts: FristInput, module_id: str | None
 ) -> FristResult:
     """Receipt/event paths never inherit administrative dates or assumptions."""
-    start = facts.zugang_tatsaechlich if spec.trigger == "zugang" else facts.ereignis_datum
+    start = {
+        "zugang": facts.zugang_tatsaechlich,
+        "ereignis": facts.ereignis_datum,
+        "kenntnis": facts.kenntnis_datum,
+    }[spec.trigger]
     if start is None:
-        raise ValueError("Receipt/event date must be explicitly confirmed")
+        raise ValueError("Receipt/event/knowledge date must be explicitly confirmed")
     if any(getattr(facts, key, None) != value for key, value in spec.applies_when.items()):
         raise ValueError("Rule applicability must be confirmed")
     if not spec.basis:
@@ -301,7 +306,7 @@ def _evaluate_explicit_event(
         end = civil_next_workday(raw_end, facts.bundesland, facts.feiertage_zusaetzlich)
     elif spec.rollover:
         end = get_rollover(spec.rollover)(raw_end, facts.bundesland)
-    label = "Zugang" if spec.trigger == "zugang" else "Bezugsdatum"
+    label = {"zugang": "Zugang", "ereignis": "Bezugsdatum", "kenntnis": "Kenntnistag"}[spec.trigger]
     anchor = "Kalendermonatsende" if spec.anchor == "month_end" else "taggenaue Berechnung"
     explanation = (
         f"Bestätigter {label}: {start.strftime('%d.%m.%Y')}. "

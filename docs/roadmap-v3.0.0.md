@@ -1,6 +1,6 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.3.0 | 2026-11-27 — WP-131 experimental backend, explicit regional source gaps.
+<!-- Version: 3.4.0 | 2026-11-27 — WP-132 experimental employment backend and explicit timing limits.
      3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
      3.1.1 | 2026-11-26 — owner directs backend continuation; GUI remains separately owned; WP-130 foundation started.
      3.1.0 | 2026-11-26 — no default module (D-069/D-070): Sozialrecht's
@@ -418,7 +418,7 @@ Each module is one WP with the same nine sub-WPs:
 |---|---|---|
 | WP-130 | M1 `schuldnerrecht` | Pfändungstabelle parameter feed (annual, 1 July) |
 | WP-131 | M2 `mietrecht` | Experimental backend implemented; regional sources partially executable, see D-073 |
-| WP-132 | M3 `arbeitsrecht` | § 4 KSchG banner = `critical` |
+| WP-132 | M3 `arbeitsrecht` | Experimental backend implemented; critical dismissal banner, qualified §38 timing limits (D-074) |
 | WP-133 | M4 `vertragsrecht` | EUR-Lex source type for VO 261/2004 |
 | WP-134 | M5 `verkehrsrecht` | builds core OWiG procedure library |
 | WP-135 | M6 `familienrecht` | Düsseldorfer Tabelle reuse terms (OQ-7) |
@@ -426,6 +426,18 @@ Each module is one WP with the same nine sub-WPs:
 | WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-132 backend implementation (2026-11-27):** `arbeitsrecht` 0.2.0
+provides a critical receipt-based dismissal deadline, independent knowledge-date
+jobseeker reminders, statutory notice/severance/leave/compensation/minimum-wage
+checks, guarded drafts, intake/dossier and DE/EN/de-LS copy. Core 3.7.0 / module
+API 3.5 extends the existing deadline and federal corpus interfaces. Eighteen
+synthetic cases and offline reports are included. Missing qualifications refuse
+a definitive date or amount; §38 individualized hindrances and non-working-day
+backwards targets need separate review. Actual deployment corpus population,
+live-inference quality and human promotion remain unverified. See
+[D-074](decisions/D-074-wp132-employment-implementation.md) and the
+[execution record](superpowers/plans/2026-11-27-wp132-implementation.md).
 
 **WP-131 backend implementation (2026-11-27):** `mietrecht` 0.2.0 adds
 receipt/event/service-based qualified deadlines, versioned rent/cost/notice/

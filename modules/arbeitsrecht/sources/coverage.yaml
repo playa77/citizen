@@ -1,0 +1,76 @@
+revision: 2026-11-27-r1
+work_package: WP-132
+verified_on: '2026-11-27'
+status: experimental
+review_status: draft
+human_review: deferred_under_D071
+evidence: verification-2026-11-27.md
+scope: source_text_verification_only
+sources:
+  - id: kschg_4_5_10_13
+    url: https://www.gesetze-im-internet.de/kschg/KSchG.pdf
+    retrieval: official_pdf
+    topics: [dismissal_action, late_admission, monthly_earnings, extraordinary_dismissal]
+    limitation: Special consent and late admission require review; not automatic extensions.
+  - id: kschg_1a
+    url: https://www.gesetze-im-internet.de/kschg/__1a.html
+    retrieval: official_html
+    topics: [conditional_severance, residual_year_rounding]
+    limitation: Estimate never recommends letting the dismissal action period expire.
+  - id: bgb_622
+    url: https://www.gesetze-im-internet.de/bgb/__622.html
+    retrieval: official_html
+    topics: [notice_periods, seniority_thresholds, probation, tariff_exceptions]
+  - id: sgb3_38
+    url: https://www.gesetze-im-internet.de/sgb_3/__38.html
+    retrieval: official_indexed_text_after_direct_timeout
+    topics: [jobseeker_registration, knowledge_trigger, three_month_branch, three_day_branch]
+    limitation: Knowledge of termination date must be confirmed independently of receipt.
+  - id: sgb10_26
+    url: https://www.gesetze-im-internet.de/sgb_10/__26.html
+    retrieval: official_html
+    topics: [calendar_calculation, forward_weekend_holiday_rollover]
+  - id: bgb_188
+    url: https://www.gesetze-im-internet.de/bgb/__188.html
+    retrieval: official_indexed_text_after_direct_timeout
+    topics: [calendar_months, missing_numbered_day_clamping]
+  - id: burlg_3_7_11
+    url: https://www.gesetze-im-internet.de/burlg/BUrlG.pdf
+    retrieval: official_pdf
+    topics: [minimum_leave, waiting_period, partial_leave, duplicate_entitlement, compensation, earnings]
+    limitation: Statutory text alone does not establish current leave forfeiture doctrine.
+  - id: bag_9azr578_17
+    url: https://www.bundesarbeitsgericht.de/entscheidung/9-azr-578-17/
+    decision_date: '2018-05-08'
+    retrieval: official_html
+    topics: [leave_fractions, no_general_rounding]
+  - id: milov4_1
+    url: https://www.gesetze-im-internet.de/milov4/__1.html
+    retrieval: official_html
+    topics: [minimum_wage_2025]
+    parameter_coverage: {from: '2025-01-01', through: '2025-12-31', gross_eur_per_hour: '12.82'}
+  - id: milov5_1
+    url: https://www.gesetze-im-internet.de/milov5/__1.html
+    retrieval: official_html
+    topics: [minimum_wage_2026, minimum_wage_2027]
+    parameter_coverage:
+      - {from: '2026-01-01', through: '2026-12-31', gross_eur_per_hour: '13.90'}
+      - {from: '2027-01-01', through: '2027-12-31', gross_eur_per_hour: '14.60'}
+    limitation: Coverage end is an implementation review boundary, not statutory repeal.
+  - id: muschg_current_adapter
+    url: https://www.gesetze-im-internet.de/muschg_2018/BJNR122810017.html
+    retrieval: official_indexed_text_after_direct_timeout
+    runtime_key: muschg
+    official_directory: muschg_2018
+    topics: [source_identity, special_dismissal_protection]
+  - id: milog_22
+    url: https://www.gesetze-im-internet.de/milog/__22.html
+    retrieval: official_html
+    topics: [minimum_wage_applicability, exceptions, internships]
+open_review_topics:
+  - Exact individualized short §38 period where agency is not service-ready or objective hindrances exist.
+  - Backward §38 target is conservative if runtime cannot apply statutory forward end rollover.
+  - Leave forfeiture, sickness, employer cooperation and special leave regimes.
+  - Tariff or individual-contract deviations and statutory special protections.
+  - Disputed eligible remuneration and sector-specific higher wage floors.
+not_performed: [corpus_ingestion, live_inference, human_legal_review]

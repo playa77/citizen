@@ -1,0 +1,42 @@
+- id: ar_kuendigungsschutz
+  label_de: Kündigung unverzüglich prüfen lassen
+  trigger: zugang
+  duration:
+    days: 21
+  rollover: bgb_193
+  basis: §§ 4, 7 KSchG; §§ 187, 188, 193 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB; bestätigter Zugang der schriftlichen Arbeitgeberkündigung
+  severity: critical
+  applies_when:
+    document_type: kuendigung
+  requires_confirmed:
+  - schriftliche_arbeitgeberkuendigung
+  - kein_behoerdlicher_zustimmungsvorbehalt
+- id: ar_arbeitsuchend_kurz
+  label_de: Arbeitsuchendmeldung bei kurzfristiger Kenntnis
+  trigger: kenntnis
+  duration:
+    days: 3
+  rollover: bgb_193
+  basis: § 38 Abs. 1 SGB III; § 26 SGB X; §§ 187, 188 BGB; vorläufiges qualifiziertes
+    Meldeziel
+  fristbeginn_basis: Bestätigte Kenntnis des Beendigungszeitpunkts; nicht Briefdatum
+    oder Zugang
+  severity: high
+  requires_confirmed:
+  - meldepflicht_bestaetigt
+  - weniger_als_drei_monate
+- id: ar_arbeitsuchend_lang
+  label_de: 'Arbeitsuchendmeldung: bestätigtes Werktagsziel drei Monate vor Ende'
+  trigger: ereignis
+  duration:
+    months: -3
+  basis: § 38 Abs. 1 SGB III; § 26 SGB X; §§ 187, 188 BGB; vorläufiges qualifiziertes
+    Meldeziel
+  fristbeginn_basis: Bestätigtes Ende des Arbeitsverhältnisses; Rückwärtsfrist ohne
+    Verlängerung
+  severity: high
+  requires_confirmed:
+  - meldepflicht_bestaetigt
+  - mindestens_drei_monate
+  - meldeziel_werktag_bestaetigt

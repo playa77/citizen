@@ -1,0 +1,91 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Arbeitsberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung fachkundig prüfen lassen.
+
+        [BITTE PRÜFEN: Sachverhalt, Empfänger, Fristen und Nachweise]
+
+        Kündigungen unverzüglich prüfen lassen, auch bei kurzer Beschäftigung oder kleinem Betrieb. Die
+        Dreiwochenfrist kann wichtig sein. Behördliche Zustimmung kann den Fristbeginn verändern; unbekannte
+        Schutzrechte erlauben keine Entwarnung. Eine nachträgliche Klagezulassung ist keine automatische
+        Verlängerung. Arbeitsuchendmeldung und Arbeitslosmeldung getrennt klären. Ausschlussklauseln anhand
+        des konkreten Vertrags prüfen.
+
+        Keine automatische Versendung oder gerichtliche Einreichung.'
+  lohn_geltendmachung:
+    title: Offenen Lohn geltend machen – Entwurf
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung fachkundig prüfen lassen.
+
+        [BITTE PRÜFEN: Sachverhalt, Empfänger, Fristen und Nachweise]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte um Prüfung und Zahlung des folgenden offenen Entgelts:
+
+        [BITTE PRÜFEN: Zeitraum, Arbeitsstunden, Anspruchsgrundlage, Bruttobetrag und bereits geleistete
+        Zahlungen]
+
+        [BITTE PRÜFEN: konkrete Forderung, Fälligkeit, Empfänger, Form, Zugang sowie jede Stufe und Frist
+        einer wirksamen Ausschlussklausel]
+
+        Eine pauschale Zahlungsbitte wahrt nicht automatisch jede Ausschlussfrist.
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und Unterschrift]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.'
+  zeugnisberichtigung:
+    title: Zeugnisberichtigung vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung fachkundig prüfen lassen.
+
+        [BITTE PRÜFEN: Sachverhalt, Empfänger, Fristen und Nachweise]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte um Prüfung folgender konkreter Berichtigung meines Arbeitszeugnisses:
+
+        [BITTE PRÜFEN: genaue beanstandete Passage, gewünschter Wortlaut, Tatsachen und Belege]
+
+        [BITTE PRÜFEN: Ausstellungsdatum, Tätigkeiten, Beurteilungsgrundlage und mögliche Fristen]
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und Unterschrift]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.'
+  klage_checkliste:
+    title: Vorbereitung für die Rechtsantragstelle
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung fachkundig prüfen lassen.
+
+        [BITTE PRÜFEN: Sachverhalt, Empfänger, Fristen und Nachweise]
+
+        Suchen Sie bei Kündigung unverzüglich Rechtsantragstelle, Gewerkschaft oder anwaltliche Hilfe.
+
+        [BITTE PRÜFEN: zuständiges Arbeitsgericht, Öffnungszeiten, zulässiger Übermittlungsweg und rechtzeitiger
+        Eingang]
+
+        Bringen Sie Kündigung, Zugangsnachweis, Vertrag, Abrechnungen und Angaben zu besonderen Schutzrechten
+        mit.
+
+        [BITTE PRÜFEN: konkrete Anträge, richtige beklagte Partei und Anschrift]
+
+        Dieses Blatt ist keine Klageschrift und wahrt keine Frist. Im ersten Rechtszug trägt jede Partei
+        ihre eigenen Anwaltskosten grundsätzlich selbst (§ 12a ArbGG).
+
+        Keine automatische Versendung oder gerichtliche Einreichung.'

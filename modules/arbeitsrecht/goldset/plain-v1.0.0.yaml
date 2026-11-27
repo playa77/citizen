@@ -1,0 +1,289 @@
+format: citizen-plain-goldset-v1.0
+module: arbeitsrecht
+version: 1.0.0
+note: Literal expected dates; missing knowledge never borrows receipt. Provisional
+  copy checked statically.
+cases:
+- id: PL-AR-001
+  kind: deadline
+  title: 'Kündigung: drei Wochen'
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: &id001 []
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-AR-002
+  kind: deadline
+  title: Zugang unbekannt
+  facts:
+    document_type: kuendigung
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-AR-003
+  kind: deadline
+  title: Kleiner Betrieb
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-AR-004
+  kind: deadline
+  title: Kurze Beschäftigung
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-AR-005
+  kind: deadline
+  title: Behördliche Zustimmung ungeklärt
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-AR-006
+  kind: deadline
+  title: Nur mündliche Kündigung
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: false
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-AR-007
+  kind: deadline
+  title: Drei Tage ab Kenntnis
+  facts:
+    document_type: beendigung
+    kenntnis_datum: '2026-11-02'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      weniger_als_drei_monate: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_arbeitsuchend_kurz
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-05'
+- id: PL-AR-008
+  kind: deadline
+  title: Kenntnis fehlt
+  facts:
+    document_type: beendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      weniger_als_drei_monate: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_arbeitsuchend_kurz
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-AR-009
+  kind: deadline
+  title: Kurze Frist über Wochenende
+  facts:
+    document_type: beendigung
+    kenntnis_datum: '2026-11-05'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      weniger_als_drei_monate: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_arbeitsuchend_kurz
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-09'
+- id: PL-AR-010
+  kind: deadline
+  title: Drei Monate rückwärts
+  facts:
+    document_type: beendigung
+    ereignis_datum: '2027-08-31'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      mindestens_drei_monate: true
+      meldeziel_werktag_bestaetigt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_arbeitsuchend_lang
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-05-31'
+- id: PL-AR-011
+  kind: deadline
+  title: Schaltjahr Rückwärtsfrist
+  facts:
+    document_type: beendigung
+    ereignis_datum: '2028-05-31'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      mindestens_drei_monate: true
+      meldeziel_werktag_bestaetigt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_arbeitsuchend_lang
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2028-02-29'
+- id: PL-AR-013
+  kind: deadline
+  title: Abfindungsangebot
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-ar_kuendigungsschutz-not-applicable
+  kind: deadline
+  title: Andere Dokumentart
+  facts:
+    document_type: sonstiges
+  spec_id: ar_kuendigungsschutz
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-ar_arbeitsuchend_kurz-not-applicable
+  kind: deadline
+  title: Meldepflicht und Ereignis unbestätigt
+  facts:
+    document_type: sonstiges
+  spec_id: ar_arbeitsuchend_kurz
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-ar_arbeitsuchend_lang-not-applicable
+  kind: deadline
+  title: Meldepflicht und Ereignis unbestätigt
+  facts:
+    document_type: sonstiges
+  spec_id: ar_arbeitsuchend_lang
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-F-frist_pruefen
+  kind: finding
+  title: Frist prüfen
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+- id: PL-F-anspruch_pruefen
+  kind: finding
+  title: Anspruch prüfen
+  ergebnis: 'Vorläufige Einordnung: Anspruch prüfen.'
+  expect:
+    category: anspruch_pruefen
+    category_source: ergebnis
+- id: PL-F-beratung_erforderlich
+  kind: finding
+  title: Beratung erforderlich
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+- id: PL-F-einordnung_offen
+  kind: finding
+  title: Einordnung offen
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+- id: PL-F-fallback
+  kind: finding
+  title: Unbelegte Sicherheit
+  ergebnis: Alles ist garantiert sicher.
+  expect:
+    category: einordnung_offen
+    category_source: fallback
+- id: PL-weekend-target-unconfirmed
+  kind: deadline
+  title: Sonntagziel nicht qualifiziert bestätigt
+  facts:
+    document_type: beendigung
+    ereignis_datum: '2027-05-31'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      mindestens_drei_monate: true
+  spec_id: ar_arbeitsuchend_lang
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null

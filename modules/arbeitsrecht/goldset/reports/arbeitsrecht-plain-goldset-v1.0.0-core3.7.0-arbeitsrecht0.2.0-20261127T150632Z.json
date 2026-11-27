@@ -1,0 +1,171 @@
+{
+  "format": "citizen-plain-eval-v1.0",
+  "module": "arbeitsrecht",
+  "languages": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "categories": [
+    "frist_pruefen",
+    "anspruch_pruefen",
+    "beratung_erforderlich",
+    "einordnung_offen"
+  ],
+  "deadline_specs": [
+    "ar_kuendigungsschutz",
+    "ar_arbeitsuchend_kurz",
+    "ar_arbeitsuchend_lang"
+  ],
+  "review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "core_review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "goldset": {
+    "version": "1.0.0",
+    "path": "goldset/plain-v1.0.0.yaml"
+  },
+  "cases_passed": 21,
+  "cases_total": 21,
+  "cases": [
+    {
+      "case_id": "PL-AR-001",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-002",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-003",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-004",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-005",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-006",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-007",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-008",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-009",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-010",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-011",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-AR-013",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-ar_kuendigungsschutz-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-ar_arbeitsuchend_kurz-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-ar_arbeitsuchend_lang-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-frist_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-anspruch_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-beratung_erforderlich",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-einordnung_offen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-F-fallback",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-weekend-target-unconfirmed",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": {},
+  "subset": null,
+  "gate_passed": true,
+  "module_version": "0.2.0",
+  "core_version": "3.7.0",
+  "git_sha": "1aaf606",
+  "run_timestamp": "2026-11-27T15:06:32.212270+00:00"
+}

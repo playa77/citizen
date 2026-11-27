@@ -329,31 +329,80 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
     "kschg": {
         "key": "kschg",
         "name": "KSchG",
-        "full_name": "KSchG (Kündigungsschutzgesetz)",
-        "description": (
-            "Kündigungsschutzgesetz — allgemeiner und besonderer "
-            "Kündigungsschutz im Arbeitsverhältnis."
-        ),
-        "tooltip": (
-            "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
-            "wird die Quelle im Auswahlmenü als deaktiviert angezeigt."
-        ),
-        "has_scraper": False,
+        "full_name": "Kündigungsschutzgesetz (KSchG)",
+        "description": "Kündigungsschutz in Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
         "checked_by_default": False,
         "source": "gesetze-im-internet.de",
     },
     "burlg": {
         "key": "burlg",
         "name": "BUrlG",
-        "full_name": "BUrlG (Bundesurlaubsgesetz)",
-        "description": (
-            "Bundesurlaubsgesetz — Mindesturlaub, Urlaubsanspruch, " "Übertragung, Verfall."
-        ),
-        "tooltip": (
-            "Noch nicht verfügbar. Scraper ist geplant; bis dahin "
-            "wird die Quelle im Auswahlmenü als deaktiviert angezeigt."
-        ),
-        "has_scraper": False,
+        "full_name": "Bundesurlaubsgesetz (BUrlG)",
+        "description": "Bundesurlaubsgesetz zur Vorbereitung Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "tzbfg": {
+        "key": "tzbfg",
+        "name": "TzBfG",
+        "full_name": "Teilzeit- und Befristungsgesetz (TzBfG)",
+        "description": "Teilzeit und Befristung in Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "entgfg": {
+        "key": "entgfg",
+        "name": "EntgFG",
+        "full_name": "Entgeltfortzahlungsgesetz (EntgFG)",
+        "description": "Entgeltfortzahlung in Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "milog": {
+        "key": "milog",
+        "name": "MiLoG",
+        "full_name": "Mindestlohngesetz (MiLoG)",
+        "description": "Mindestlohngesetz zur Vorbereitung Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "muschg": {
+        "key": "muschg",
+        "name": "MuSchG",
+        "full_name": "Mutterschutzgesetz (MuSchG)",
+        "description": "Mutterschutzgesetz zur Vorbereitung Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "arbzg": {
+        "key": "arbzg",
+        "name": "ArbZG",
+        "full_name": "Arbeitszeitgesetz (ArbZG)",
+        "description": "Arbeitszeitgesetz zur Vorbereitung Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "arbgg": {
+        "key": "arbgg",
+        "name": "ArbGG",
+        "full_name": "Arbeitsgerichtsgesetz (ArbGG)",
+        "description": "Arbeitsgerichtsgesetz zur Vorbereitung Ihrer eigenen Arbeitsangelegenheit.",
+        "tooltip": "Amtlicher Gesetzestext; Auswahl und Ingestion erfolgen ausdrücklich.",
+        "has_scraper": True,
         "checked_by_default": False,
         "source": "gesetze-im-internet.de",
     },
@@ -454,7 +503,16 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb1": "/sgb_1/",  # SGB I - Allgemeiner Teil
     "sgb3": "/sgb_3/",  # SGB III - Arbeitsförderung
     "sgb9": "/sgb_9/",  # SGB IX - Rehabilitation und Teilhabe
-    "bgb": "/bgb/",  # BGB - Bürgerliches Gesetzbuch
+    "bgb": "/bgb/",
+    "kschg": "/kschg/",
+    "burlg": "/burlg/",
+    "tzbfg": "/tzbfg/",
+    "entgfg": "/entgfg/",
+    "milog": "/milog/",
+    "muschg": "/muschg_2018/",
+    "arbzg": "/arbzg/",
+    "arbgg": "/arbgg/",
+    # BGB - Bürgerliches Gesetzbuch
     "betrkv": "/betrkv/",
     "heizkostenv": "/heizkostenv/",
     "zpo": "/zpo/",
@@ -1149,6 +1207,14 @@ def _infer_law_name(element: Tag, source_type: str) -> str:
         "sgb3": "SGB III",
         "sgb9": "SGB IX",
         "bgb": "BGB",
+        "kschg": "KSchG",
+        "burlg": "BUrlG",
+        "tzbfg": "TzBfG",
+        "entgfg": "EntgFG",
+        "milog": "MiLoG",
+        "muschg": "MuSchG",
+        "arbzg": "ArbZG",
+        "arbgg": "ArbGG",
         "betrkv": "BetrKV",
         "heizkostenv": "HeizkostenV",
         "zpo": "ZPO",

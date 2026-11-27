@@ -1,0 +1,360 @@
+dossier_goldset:
+  id: dossier-goldset-arbeitsrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.2.0.yaml
+  base_goldset_version: 0.2.0
+  dossier_schema: citizen-dossier-v1.0
+  module: arbeitsrecht
+  provenance: synthetic
+  note: Expected dates are literal hand-derived contracts; no production evaluator generated them.
+cases:
+- id: AR-001
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: &id001 []
+  expected:
+    deadlines:
+    - spec_id: ar_kuendigungsschutz
+      frist_ende: '2026-11-23'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: AR-002
+  facts:
+    document_type: kuendigung
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-003
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_kuendigungsschutz
+      frist_ende: '2026-11-23'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: AR-004
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_kuendigungsschutz
+      frist_ende: '2026-11-23'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: AR-005
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-006
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: false
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-007
+  facts:
+    document_type: beendigung
+    kenntnis_datum: '2026-11-02'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      weniger_als_drei_monate: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_arbeitsuchend_kurz
+      frist_ende: '2026-11-05'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+    - date: '2026-11-30'
+      kind: mentioned
+- id: AR-008
+  facts:
+    document_type: beendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      weniger_als_drei_monate: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-009
+  facts:
+    document_type: beendigung
+    kenntnis_datum: '2026-11-05'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      weniger_als_drei_monate: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_arbeitsuchend_kurz
+      frist_ende: '2026-11-09'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2026-11-05'
+      kind: mentioned
+- id: AR-010
+  facts:
+    document_type: beendigung
+    ereignis_datum: '2027-08-31'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      mindestens_drei_monate: true
+      meldeziel_werktag_bestaetigt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_arbeitsuchend_lang
+      frist_ende: '2027-05-31'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2027-08-31'
+      kind: mentioned
+- id: AR-011
+  facts:
+    document_type: beendigung
+    ereignis_datum: '2028-05-31'
+    qualifikationen:
+      meldepflicht_bestaetigt: true
+      mindestens_drei_monate: true
+      meldeziel_werktag_bestaetigt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_arbeitsuchend_lang
+      frist_ende: '2028-02-29'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+    - date: '2028-05-31'
+      kind: mentioned
+- id: AR-012
+  facts:
+    document_type: lohnabrechnung
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-013
+  facts:
+    document_type: kuendigung
+    zugang_tatsaechlich: '2026-11-02'
+    qualifikationen:
+      schriftliche_arbeitgeberkuendigung: true
+      kein_behoerdlicher_zustimmungsvorbehalt: true
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: *id001
+  expected:
+    deadlines:
+    - spec_id: ar_kuendigungsschutz
+      frist_ende: '2026-11-23'
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-014
+  facts:
+    document_type: arbeitsvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-015
+  facts:
+    document_type: aufhebungsvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-016
+  facts:
+    document_type: zeugnis
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-017
+  facts:
+    document_type: arbeitsvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: AR-018
+  facts:
+    document_type: abmahnung
+  expected:
+    deadlines: []
+    checklist:
+    - arbeitsvertrag
+    - schreiben_zugang
+    - entgelt_urlaub
+    - schutz_ausschluss
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date

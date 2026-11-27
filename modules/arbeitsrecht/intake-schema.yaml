@@ -1,0 +1,231 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/arbeitsrecht-intake-v0.2.0
+title: Experimental employee own-matter intake
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+  synthetic_data_confirmed:
+    type: boolean
+  document_type:
+    enum:
+    - kuendigung
+    - beendigung
+    - abmahnung
+    - arbeitsvertrag
+    - lohnabrechnung
+    - zeugnis
+    - aufhebungsvertrag
+    - sonstiges
+  bescheid_datum:
+    type: string
+    format: date
+    description: Letter date only; never establishes receipt or knowledge.
+  zugang_tatsaechlich:
+    type: string
+    format: date
+    description: Confirmed actual receipt of the dismissal.
+  kenntnis_datum:
+    type: string
+    format: date
+    description: Confirmed date of knowledge of the termination date; distinct from receipt.
+  ereignis_datum:
+    type: string
+    format: date
+    description: Confirmed termination date.
+  as_of:
+    type:
+    - string
+    - 'null'
+    format: date
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      schriftliche_arbeitgeberkuendigung:
+        type:
+        - boolean
+        - 'null'
+        description: Confirm from evidence; unknown is null, never silently false.
+      kein_behoerdlicher_zustimmungsvorbehalt:
+        type:
+        - boolean
+        - 'null'
+        description: Confirm from evidence; unknown is null, never silently false.
+      meldepflicht_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+        description: Confirm from evidence; unknown is null, never silently false.
+      weniger_als_drei_monate:
+        type:
+        - boolean
+        - 'null'
+        description: Confirm from evidence; unknown is null, never silently false.
+      mindestens_drei_monate:
+        type:
+        - boolean
+        - 'null'
+        description: Confirm from evidence; unknown is null, never silently false.
+      meldeziel_werktag_bestaetigt:
+        type: &id001
+        - boolean
+        - 'null'
+        description: Only explicit qualified evidence confirms this; unknown is null.
+  bundesland:
+    enum:
+    - BW
+    - BY
+    - BE
+    - BB
+    - HB
+    - HH
+    - HE
+    - MV
+    - NI
+    - NW
+    - RP
+    - SL
+    - SN
+    - ST
+    - SH
+    - TH
+  feiertagskalender_bestaetigt:
+    type:
+    - boolean
+    - 'null'
+    description: Confirm from evidence; unknown is null, never silently false.
+  feiertage_zusaetzlich:
+    type: array
+    items:
+      type: string
+      format: date
+    uniqueItems: true
+  calculation_type:
+    enum:
+    - none
+    - notice
+    - severance
+    - leave
+    - leave_compensation
+    - minimum_wage
+  applicability_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  statutory_notice_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  special_regime_excluded:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  section_1a_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  statutory_leave_only_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  termination_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  no_prior_employer_leave_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  compensation_conditions_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  remuneration_basis_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  milog_coverage_confirmed:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  probation:
+    type: *id001
+    description: Only explicit qualified evidence confirms this; unknown is null.
+  employment_start:
+    type:
+    - string
+    - 'null'
+    format: date
+  employment_end:
+    type:
+    - string
+    - 'null'
+    format: date
+  received_on:
+    type:
+    - string
+    - 'null'
+    format: date
+  period_start:
+    type:
+    - string
+    - 'null'
+    format: date
+  period_end:
+    type:
+    - string
+    - 'null'
+    format: date
+  actor:
+    enum:
+    - employee
+    - employer
+    - null
+  monthly_earnings_cents:
+    type:
+    - integer
+    - 'null'
+    minimum: 0
+  earnings_13_weeks_cents:
+    type:
+    - integer
+    - 'null'
+    minimum: 0
+  eligible_pay_cents:
+    type:
+    - integer
+    - 'null'
+    minimum: 0
+  working_minutes:
+    type:
+    - integer
+    - 'null'
+    minimum: 1
+  working_days_per_week:
+    type:
+    - integer
+    - 'null'
+    minimum: 1
+    maximum: 6
+  leave_days:
+    type:
+    - number
+    - 'null'
+    minimum: 0
+    description: Confirmed days, including exact nonnegative fractions; never inferred.
+  leave_taken_days:
+    type:
+    - number
+    - 'null'
+    minimum: 0
+    description: Confirmed days, including exact nonnegative fractions; never inferred.
+allOf:
+- if:
+    properties:
+      calculation_type:
+        enum:
+        - notice
+        - severance
+        - leave
+        - leave_compensation
+        - minimum_wage
+    required:
+    - calculation_type
+  then:
+    required:
+    - as_of
+    - applicability_confirmed

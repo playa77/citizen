@@ -1,0 +1,72 @@
+format: citizen-plain-copy-v1.0
+module: arbeitsrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist prüfen
+    text: Sie haben eine Kündigung bekommen? Holen Sie sofort Hilfe. Das gilt auch bei einem kleinen Betrieb.
+      Und wenn Sie erst kurz dort arbeiten.
+    next_step: Eine Behörde muss manchmal erst zustimmen. Das kann die Frist ändern. Lassen Sie das sofort
+      prüfen.
+  anspruch_pruefen:
+    title: Anspruch prüfen
+    text: Lohn und Urlaub müssen geprüft werden. Auch ein Zeugnis kann falsch sein. Eine Rechnung allein
+      beweist keinen Anspruch.
+    next_step: Bringen Sie Ihren Vertrag und Belege mit. Im Vertrag können kurze Fristen stehen. Lassen
+      Sie jede Frist prüfen.
+  beratung_erforderlich:
+    title: Beratung suchen
+    text: Ein Aufhebungs-Vertrag kann Nachteile haben. Zum Beispiel eine Sperrzeit beim Arbeitslosen-Geld.
+    next_step: Holen Sie vor der Unterschrift Rat. Warten Sie wegen einer möglichen Abfindung keine Klage-Frist
+      ab.
+  einordnung_offen:
+    title: Noch offen
+    text: 'Es fehlen Angaben. Das bedeutet nicht: Alles ist sicher.'
+    next_step: Klären Sie die Angaben. Bei einer Kündigung brauchen Sie sofort Hilfe.
+deadlines:
+  ar_kuendigungsschutz:
+    title: Kündigung prüfen
+    action: Holen Sie sofort Rat. Auch bei einem kleinen Betrieb. Auch nach kurzer Beschäftigung. Eine
+      Behörde muss vielleicht zustimmen. Das kann die Frist ändern.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Die Regel steht hier: {basis}. Lassen Sie die
+        Rechnung und die Angaben prüfen.'
+      provisional: 'Das Datum ist vorläufig: {frist_ende}. Klären Sie die fehlenden Angaben sofort.'
+      missing_input: 'Wichtige Angaben fehlen. Wir können kein sicheres Datum nennen. Holen Sie sofort
+        Hilfe. Das bedeutet nicht: Sie haben noch Zeit.'
+      not_applicable: Diese Regel passt hier nicht. Andere Fristen können trotzdem wichtig sein. Besondere
+        Schutz-Rechte müssen geprüft werden.
+  ar_arbeitsuchend_kurz:
+    title: 'Arbeitsuchend melden: baldiges Ende'
+    action: Fragen Sie sofort die Agentur für Arbeit. Das Datum hilft nur bei der Planung. Besondere Regeln
+      können die Frist ändern. Wann haben Sie vom Ende erfahren? Das müssen Sie bestätigen. Das Brief-Datum
+      reicht nicht.
+    texts:
+      computed: 'Das vorläufige Planungs-Datum ist {frist_ende}. Die Regel steht hier: {basis}. Fragen
+        Sie früh die Agentur für Arbeit. Lassen Sie Ihre Frist prüfen.'
+      provisional: 'Das Datum ist vorläufig: {frist_ende}. Klären Sie die fehlenden Angaben sofort.'
+      missing_input: 'Wichtige Angaben fehlen. Wir können kein sicheres Datum nennen. Holen Sie sofort
+        Hilfe. Das bedeutet nicht: Sie haben noch Zeit. Besondere Regeln oder Hindernisse müssen geprüft
+        werden.'
+      not_applicable: Diese Regel passt hier nicht. Andere Fristen können trotzdem wichtig sein. Besondere
+        Schutz-Rechte müssen geprüft werden.
+  ar_arbeitsuchend_lang:
+    title: 'Arbeitsuchend melden: späteres Ende'
+    action: 'Fragen Sie sofort die Agentur für Arbeit. Das Datum hilft nur bei der Planung. Besondere
+      Regeln können die Frist ändern. Das Ziel-Datum zählt vom Ende zurück. Die Rechnung nimmt keine Verlängerung
+      an. Eine fachkundige Person muss bestätigen: Das Ziel ist ein Arbeits-Tag. Sonst nennen wir kein
+      Datum.'
+    texts:
+      computed: 'Das vorläufige Planungs-Datum ist {frist_ende}. Die Regel steht hier: {basis}. Fragen
+        Sie früh die Agentur für Arbeit. Lassen Sie Ihre Frist prüfen.'
+      provisional: 'Das Datum ist vorläufig: {frist_ende}. Klären Sie die fehlenden Angaben sofort.'
+      missing_input: 'Wichtige Angaben fehlen. Wir können kein sicheres Datum nennen. Holen Sie sofort
+        Hilfe. Das bedeutet nicht: Sie haben noch Zeit. Besondere Regeln oder Hindernisse müssen geprüft
+        werden.'
+      not_applicable: Diese Regel passt hier nicht. Andere Fristen können trotzdem wichtig sein. Besondere
+        Schutz-Rechte müssen geprüft werden.
