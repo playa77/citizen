@@ -1,0 +1,17 @@
+- id: vk_einspruch
+  label_de: Einspruch gegen Bußgeldbescheid
+  trigger: zustellung
+  duration:
+    days: 14
+  basis: § 67 Abs. 1, § 46 Abs. 1 OWiG; § 43 Abs. 1–2 StPO
+  fristbeginn_basis: § 43 Abs. 1 StPO; zwei Wochen ab wirksam bestätigter Zustellung
+  severity: critical
+  applies_when:
+    document_type: bussgeldbescheid
+    zustellungsart: inland
+  requires_confirmed:
+  - bussgeldbescheid_bestaetigt
+  - zustellung_wirksam_bestaetigt
+  - regulaerer_einspruch_bestaetigt
+  - kein_sonderregime
+  rollover: stpo_43

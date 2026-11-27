@@ -1318,7 +1318,7 @@ by the existing corpus service. Source excerpts and readiness counts do not
 establish complete state/municipality coverage. Module coverage records make
 unsupported areas explicit; calculators never assume a designation or default
 ceiling from missing records. No API route or SSE event is removed/renamed.
-The current disclaimer acknowledgement is `v3.5.0`.
+The current disclaimer acknowledgement is `v3.6.0`.
 
 
 ### WP-132 employment implementation (core 3.7.0 / module API 3.5)
@@ -1376,4 +1376,53 @@ EUR-Lex ingestion preserves article identity and official provenance, and
 rejects empty/challenge/incomplete content. Offline parser fixtures and source
 inspection do not establish successful deployment ingestion, live inference
 quality or reviewed promotion. Human review remains deferred under D-071.
-Current disclaimer acknowledgement is `v3.5.0`; prompt set is `3.6.0`.
+Current disclaimer acknowledgement is `v3.6.0`; prompt set is `3.7.0`.
+
+
+### WP-134 traffic implementation (core 3.9.0 / module API 3.7)
+
+`verkehrsrecht` 0.1.0 is an experimental peer module, requiring explicit
+selection. Public module detail exposes its intake schema, document types,
+versioned parameters and draft review metadata through existing endpoints.
+No route, error envelope or SSE event is replaced. HTTP fact envelopes stay
+additive and unchanged.
+
+The critical `vk_einspruch` rule requires `document_type: bussgeldbescheid`,
+`zustellung_tatsaechlich`, `zustellungsart: inland`, `bundesland`,
+`feiertagskalender_bestaetigt: true`, confirmed additional local holidays in
+`feiertage_zusaetzlich`, and the four declared `qualifikationen`:
+`bussgeldbescheid_bestaetigt`, `zustellung_wirksam_bestaetigt`,
+`regulaerer_einspruch_bestaetigt`, `kein_sonderregime`.
+All must be true. The service day is excluded from the 14-day objection
+period; `stpo_43` applies the current statewide and confirmed local calendar.
+Missing facts produce `missing_input`; another document type produces
+`not_applicable`. No letter/hearing date fallback or automatic longer period
+for missing instructions. A file-access request does not stop the objection
+period. Court/foreign/public-service cases need separate review.
+
+Calculator modes: `sanction_lookup`, `prosecution_limitation`,
+`driving_ban_start`, `register_retention`. The public intake schema documents
+all typed facts/confirmations. Proposed parameters cover only the bounded
+2026-11-27 to 2026-12-31 snapshot. Historical/transitional cases, unknown
+qualifications and unsupported regimes produce `unavailable`; supported
+results remain `provisional`. The sanction table covers BKat no.11.3 speed
+bands only, with confirmed tolerance, vehicle class, location and ordinary
+negligence without aggravation/repeat-offender rules. Limitation returns a
+mathematical boundary under the current six-month standard regime, never a
+finding of expiry. Ban timing uses `latest_effective_date` (never `expiry_date`) with an explicitly
+labelled summary, and separates it from actual
+custody/endorsement duration start. Register results give individual periods
+and an unadjusted input sum, never a legally effective score or permission
+to drive. Tilgung and deletion remain distinct: `overlap_end_date` is inclusive,
+`deletion_earliest_date` is the following day. §33(1) no.1 interruptions
+are accepted at most once.
+
+Corpus additions `owig`, `stvg`, `stvo`, `bkatv`, `fev`, `stpo` use the
+existing federal adapter and source identity/provenance (migration 020).
+**Coverage is partial:** the paragraph scraper omits annexes/tables, including
+BKat and point tables. Source descriptions expose that limitation; selected
+annex rules are versioned parameters, not a complete ingested corpus.
+Exact paragraph lookup matches hierarchy segments, so §1 cannot boost §10.
+No deployment ingestion, live inference or human promotion is established.
+
+Current disclaimer acknowledgement is `v3.6.0`; prompt set is `3.7.0`.

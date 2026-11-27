@@ -1,0 +1,689 @@
+goldset:
+  id: goldset-verkehrsrecht
+  version: 0.1.0
+  schema_version: 1.0.0
+  created: '2026-11-27'
+  rechtsstand: '2026-11-27'
+  evaluation_reference_date: '2026-11-27'
+  legal_area: verkehrsrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 20
+  provenance: synthetic
+  open_questions:
+  - id: VK-OQ-1
+    topic: Human review, deployed ingestion and live quality pending
+    note: Offline checks establish deterministic contracts only; annex retrieval is partial.
+cases:
+- id: VK-001
+  version: 1.0.0
+  title: Einspruch ab bestätigter Zustellung
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 02.11.2026. Gewöhnlicher inländischer Bußgeldbescheid und wirksame Zustellung sind
+      bestätigt. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Einspruch ab bestätigter Zustellung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 02.11.2026. Gewöhnlicher inländischer Bußgeldbescheid und wirksame Zustellung sind
+      bestätigt.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-002
+  version: 1.0.0
+  title: Samstag am Fristende
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 07.11.2026. Samstag am Fristende ist zu berücksichtigen. Ich bereite meine eigene
+      Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Samstag am Fristende
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 07.11.2026. Samstag am Fristende ist zu berücksichtigen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-003
+  version: 1.0.0
+  title: Neujahr und Wochenende
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 18.12.2026. Empfangsort Berlin und Kalender sind bestätigt. Ich bereite meine eigene
+      Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Neujahr und Wochenende
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 18.12.2026. Empfangsort Berlin und Kalender sind bestätigt.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-004
+  version: 1.0.0
+  title: Sächsischer Feiertag
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 04.11.2026. Empfangsort Sachsen und Feiertagskalender sind bestätigt. Ich bereite
+      meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Sächsischer Feiertag
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 04.11.2026. Empfangsort Sachsen und Feiertagskalender sind bestätigt.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-005
+  version: 1.0.0
+  title: Kein Feiertag in Berlin
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 04.11.2026. Empfangsort Berlin und Feiertagskalender sind bestätigt. Ich bereite meine
+      eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Kein Feiertag in Berlin
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 04.11.2026. Empfangsort Berlin und Feiertagskalender sind bestätigt.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-006
+  version: 1.0.0
+  title: Bestätigter örtlicher Feiertag
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 02.11.2026. Zusätzlicher Feiertag am 16.11.2026 ist als synthetische Kalenderausnahme
+      bestätigt. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Bestätigter örtlicher Feiertag
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 02.11.2026. Zusätzlicher Feiertag am 16.11.2026 ist als synthetische Kalenderausnahme
+      bestätigt.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-007
+  version: 1.0.0
+  title: Zustellung unbekannt
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Nur das Briefdatum ist bekannt. Zustelltag fehlt; keine Postfiktion einsetzen. Ich bereite meine
+      eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Zustellung unbekannt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Nur das Briefdatum ist bekannt. Zustelltag fehlt; keine Postfiktion einsetzen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-008
+  version: 1.0.0
+  title: Anhörungsbogen
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Anhörung erhalten. Betroffener muss nicht zur Sache aussagen; Personalienpflichten bleiben zu prüfen.
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Anhörungsbogen
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §55 OWiG
+      - §111 OWiG
+      - §46 OWiG
+      - §136 StPO
+    citations:
+    - norm: §55 OWiG
+      must_exist_in_corpus: true
+    - norm: §111 OWiG
+      must_exist_in_corpus: true
+    - norm: §46 OWiG
+      must_exist_in_corpus: true
+    - norm: §136 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Anhörung erhalten. Betroffener muss nicht zur Sache aussagen; Personalienpflichten bleiben zu prüfen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-009
+  version: 1.0.0
+  title: Zeugenfragebogen
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zeugenfragebogen erhalten. Keine pauschale Aussagefreiheit; §§52,55 StPO und Ladungsart gesondert
+      prüfen. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Zeugenfragebogen
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §52 StPO
+      - §55 StPO
+      - §111 OWiG
+      - §46 OWiG
+    citations:
+    - norm: §52 StPO
+      must_exist_in_corpus: true
+    - norm: §55 StPO
+      must_exist_in_corpus: true
+    - norm: §111 OWiG
+      must_exist_in_corpus: true
+    - norm: §46 OWiG
+      must_exist_in_corpus: true
+    known_traps:
+    - Zeugenfragebogen erhalten. Keine pauschale Aussagefreiheit; §§52,55 StPO und Ladungsart gesondert
+      prüfen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-010
+  version: 1.0.0
+  title: Dokumentart ungeklärt
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ein Schreiben liegt vor; unklar, ob Anhörung oder Bußgeldbescheid. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Dokumentart ungeklärt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Ein Schreiben liegt vor; unklar, ob Anhörung oder Bußgeldbescheid.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-011
+  version: 1.0.0
+  title: Zustellwirksamkeit offen
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 02.11.2026 behauptet, Wirksamkeit nicht bestätigt. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Zustellwirksamkeit offen
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 02.11.2026 behauptet, Wirksamkeit nicht bestätigt.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-012
+  version: 1.0.0
+  title: Auslandszustellung
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 02.11.2026 im Ausland; Sonderprüfung nötig. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Auslandszustellung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 02.11.2026 im Ausland; Sonderprüfung nötig.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-013
+  version: 1.0.0
+  title: Öffentliche Zustellung
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Öffentliche Zustellung; kein gewöhnlicher Inlandsfall. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Öffentliche Zustellung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Öffentliche Zustellung; kein gewöhnlicher Inlandsfall.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-014
+  version: 1.0.0
+  title: Kalender unbestätigt
+  category: vk_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung am 02.11.2026, örtlicher Feiertagskalender noch offen. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Kalender unbestätigt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §67 OWiG
+      - §43 StPO
+    citations:
+    - norm: §67 OWiG
+      must_exist_in_corpus: true
+    - norm: §43 StPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Zustellung am 02.11.2026, örtlicher Feiertagskalender noch offen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-015
+  version: 1.0.0
+  title: Register und Überliegefrist
+  category: beratung_erforderlich
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Registerauskunft nennt einen OWi-Punkt. Tilgung ist nicht Löschung; kein aktueller Punktestand allein
+      aus Summe. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Register und Überliegefrist
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §4 StVG
+      - §29 StVG
+    citations:
+    - norm: §4 StVG
+      must_exist_in_corpus: true
+    - norm: §29 StVG
+      must_exist_in_corpus: true
+    known_traps:
+    - Registerauskunft nennt einen OWi-Punkt. Tilgung ist nicht Löschung; kein aktueller Punktestand allein
+      aus Summe.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-016
+  version: 1.0.0
+  title: Fahrverbotsantritt
+  category: beratung_erforderlich
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Viermonatsanordnung nach aktueller Fassung prüfen. Wirksamkeit und Beginn der Dauer unterscheiden;
+      keine Fahrberechtigung zusagen. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Fahrverbotsantritt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §25 StVG
+    citations:
+    - norm: §25 StVG
+      must_exist_in_corpus: true
+    known_traps:
+    - Viermonatsanordnung nach aktueller Fassung prüfen. Wirksamkeit und Beginn der Dauer unterscheiden;
+      keine Fahrberechtigung zusagen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-017
+  version: 1.0.0
+  title: Geschwindigkeit mit Wiederholung
+  category: beratung_erforderlich
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Geschwindigkeitsvorwurf mit möglichem Wiederholungsfall. Tabelle allein reicht nicht; §4 Abs.2 BKatV
+      prüfen. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Geschwindigkeit mit Wiederholung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §4 BKatV
+    citations:
+    - norm: §4 BKatV
+      must_exist_in_corpus: true
+    known_traps:
+    - Geschwindigkeitsvorwurf mit möglichem Wiederholungsfall. Tabelle allein reicht nicht; §4 Abs.2 BKatV
+      prüfen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-018
+  version: 1.0.0
+  title: Unterbrechung der Verjährung
+  category: beratung_erforderlich
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Anhörungsanordnung und Bescheiderlass können die Verjährung unterbrechen. Vollständige Akte und
+      qualifiziertes Ereignis fehlen. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Unterbrechung der Verjährung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §33 OWiG
+      - §26 StVG
+    citations:
+    - norm: §33 OWiG
+      must_exist_in_corpus: true
+    - norm: §26 StVG
+      must_exist_in_corpus: true
+    known_traps:
+    - Anhörungsanordnung und Bescheiderlass können die Verjährung unterbrechen. Vollständige Akte und
+      qualifiziertes Ereignis fehlen.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-019
+  version: 1.0.0
+  title: Historisches Regime
+  category: beratung_erforderlich
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Älterer Bescheid beruft sich auf drei Monate und §25 Abs.2a StVG. Aktuelles Regime nicht rückwirkend
+      anwenden. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Historisches Regime
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §33 OWiG
+      - §26 StVG
+    citations:
+    - norm: §33 OWiG
+      must_exist_in_corpus: true
+    - norm: §26 StVG
+      must_exist_in_corpus: true
+    known_traps:
+    - Älterer Bescheid beruft sich auf drei Monate und §25 Abs.2a StVG. Aktuelles Regime nicht rückwirkend
+      anwenden.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VK-020
+  version: 1.0.0
+  title: Akteneinsicht wahrt keine Frist
+  category: beratung_erforderlich
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ich möchte Messunterlagen und Akteneinsicht beantragen. Der Antrag ersetzt keinen Einspruch und
+      stoppt keine Frist. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vk_pruefung
+      issue: Akteneinsicht wahrt keine Frist
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §49 OWiG
+    citations:
+    - norm: §49 OWiG
+      must_exist_in_corpus: true
+    known_traps:
+    - Ich möchte Messunterlagen und Akteneinsicht beantragen. Der Antrag ersetzt keinen Einspruch und
+      stoppt keine Frist.
+    actionable_next_steps:
+    - Bescheid, Umschlag, Akte, Rechtskraftbelege und Registerauskunft zur Beratung mitbringen. Bei laufender
+      Einspruchsfrist unverzüglich handeln.
+  negative_controls:
+  - Synthetischer Testfall

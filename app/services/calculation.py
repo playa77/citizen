@@ -15,7 +15,9 @@ modules (``app.modules.runtime.request_modules``) decide which calculators
 run; a request whose modules ship none gets an empty result.
 """
 
-# Semantic Version: 0.4.1 | 2026-11-26 — preserve qualified engine status and
+# Semantic Version: 0.4.2 | 2026-11-27 — WP-134: unavailable checks retain deterministic
+# refusal commentary/assessment; mixed results keep an explicit review requirement.
+# 0.4.1 | 2026-11-26 — preserve qualified engine status and
 # report unavailable checks without a successful-arithmetic assessment.
 # 0.4.0 | 2026-11-16 — prompt set 3.0.0: cross-check scoped to
 # the document (CR-16), document truncation marked (CR-07), stage
@@ -538,7 +540,10 @@ def _merge_explanations(
         entry = dict(calc)  # shallow copy
 
         # Override commentary with LLM explanation if available.
-        if commentary_by_index.get(i):
+        if commentary_by_index.get(i) and calc.get("status") not in (
+            "missing_input",
+            "unavailable",
+        ):
             entry["commentary"] = commentary_by_index[i]
 
         # Add extracted_numbers from the document_values for backward compat.
@@ -577,7 +582,9 @@ def _build_overall_assessment(
     # agree. Keep this outcome deterministic even if the explanation claims
     # success. A provisional result (including a date without an amount) still
     # counts as a result; legacy calculators without status retain their path.
-    if calculations and all(calc.get("status") == "missing_input" for calc in calculations):
+    if calculations and all(
+        calc.get("status") in ("missing_input", "unavailable") for calc in calculations
+    ):
         return {
             "total_discrepancies": 0,
             "total_amount_eur": 0.0,
@@ -624,6 +631,15 @@ def _build_overall_assessment(
         if isinstance(oa, dict):
             summary = str(oa.get("summary", "")).strip()
             recommended_action = str(oa.get("recommended_action", "")).strip()
+
+    if any(calc.get("status") in ("missing_input", "unavailable") for calc in calculations):
+        # Mixed modules may yield a result for one check and refuse another.
+        # A language-model explanation cannot promote that into overall success.
+        summary = (
+            "Nicht alle Berechnungsprüfungen waren möglich. Fehlende oder "
+            "ungeklärte Eingaben und rechtliche Voraussetzungen bleiben zu prüfen."
+        )
+        recommended_action = referral_hint or "Lassen Sie die offenen Angaben prüfen."
 
     if not summary:
         if not calculations:

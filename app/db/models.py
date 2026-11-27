@@ -106,6 +106,13 @@ SOURCE_TYPE_ALLOWED = (
     # D-075 / WP-133: contract sources, migration 019.
     "egbgb",
     "eu261",
+    # D-076 / WP-134: traffic and procedural sources, migration 020.
+    "owig",
+    "stvg",
+    "stvo",
+    "bkatv",
+    "fev",
+    "stpo",
 )
 
 

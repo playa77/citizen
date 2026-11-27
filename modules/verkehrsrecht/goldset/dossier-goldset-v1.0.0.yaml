@@ -1,0 +1,413 @@
+dossier_goldset:
+  id: dossier-goldset-verkehrsrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.1.0.yaml
+  base_goldset_version: 0.1.0
+  dossier_schema: citizen-dossier-v1.0
+  module: verkehrsrecht
+  provenance: synthetic
+  note: Literal manually derived dates, independent of the evaluator.
+cases:
+- id: VK-001
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: vk_einspruch
+      frist_ende: '2026-11-16'
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VK-002
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-07'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: vk_einspruch
+      frist_ende: '2026-11-23'
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-07'
+      kind: mentioned
+- id: VK-003
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-12-18'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: vk_einspruch
+      frist_ende: '2027-01-04'
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-12-18'
+      kind: mentioned
+- id: VK-004
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-04'
+    zustellungsart: inland
+    bundesland: SN
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: vk_einspruch
+      frist_ende: '2026-11-19'
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-04'
+      kind: mentioned
+- id: VK-005
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-04'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: vk_einspruch
+      frist_ende: '2026-11-18'
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-04'
+      kind: mentioned
+- id: VK-006
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-11-16'
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: vk_einspruch
+      frist_ende: '2026-11-17'
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+    - date: '2026-11-16'
+      kind: mentioned
+- id: VK-007
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: null
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+    bescheid_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-008
+  facts:
+    document_type: anhoerung
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-009
+  facts:
+    document_type: zeugenfragebogen
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-010
+  facts: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-011
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: null
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VK-012
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: ausland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VK-013
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: oeffentlich
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-014
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: false
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VK-015
+  facts:
+    document_type: punkte
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-016
+  facts:
+    document_type: fahrverbot
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-017
+  facts:
+    document_type: sonstiges
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-018
+  facts:
+    document_type: sonstiges
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-019
+  facts:
+    document_type: sonstiges
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VK-020
+  facts:
+    document_type: akteneinsicht
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - akte
+    - fahrverbot
+    - register
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date

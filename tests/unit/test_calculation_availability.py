@@ -89,3 +89,44 @@ def test_provisional_date_result_is_not_mistaken_for_missing_arithmetic() -> Non
         },
     )
     assert result["summary"] == "Vorläufiges Datum unter bestätigten Annahmen."
+
+
+@pytest.mark.parametrize(
+    "explanation",
+    [
+        None,
+        {
+            "overall_assessment": {
+                "summary": "Alles richtig; Sie dürfen fahren.",
+                "recommended_action": "Keine Prüfung nötig.",
+            },
+            "enriched_calculations": [{"index": 0, "commentary": "Verjährung ist eingetreten."}],
+        },
+    ],
+)
+def test_unavailable_traffic_result_cannot_be_explained_as_success(explanation):
+    entry = _entry("unavailable")
+    assessment = _build_overall_assessment(
+        [entry], explanation, referral_hint="Akte prüfen lassen."
+    )
+    assert "nicht möglich" in assessment["summary"]
+    assert assessment["recommended_action"] == "Akte prüfen lassen."
+    merged = _merge_explanations([entry], explanation)
+    assert merged[0]["commentary"] == entry["commentary"]
+
+
+def test_mixed_available_and_unavailable_checks_keep_review_requirement():
+    successful = _entry("provisional")
+    unsuccessful = _entry("unavailable")
+    result = _build_overall_assessment(
+        [successful, unsuccessful],
+        {
+            "overall_assessment": {
+                "summary": "Alle Posten sind richtig.",
+                "recommended_action": "Keine Prüfung nötig.",
+            }
+        },
+        referral_hint="Offene Angaben prüfen lassen.",
+    )
+    assert "nicht alle" in result["summary"].lower()
+    assert result["recommended_action"] == "Offene Angaben prüfen lassen."

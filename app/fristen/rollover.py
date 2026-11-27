@@ -4,10 +4,12 @@ Each entry maps a candidate deadline date to the legally effective date
 when the deadline falls on a non-workday. Ids are the ones named in module
 spec files (``rollover: …``). As with the fiction library, unimplemented
 ids raise ``NotImplementedError`` — never silently guess an offset.
+StPO §43 uses the current statewide calendar; confirmed local holidays are
+passed separately by the evaluator. D-076 records the WP-134 extension.
 
 Implemented family (identical mechanics — roll to the next workday):
 ``sgg_64_3`` (§ 64 Abs. 3 SGG), the reference case. Other procedure codes
-(``zpo_222``, ``vwgo_57``, ``stpo_43``, ``ao_108``) are deliberately NOT
+(``vwgo_57``, ``ao_108``) are deliberately NOT
 pre-registered: their exact semantics (e.g. § 108 Abs. 2 AO treats
 Saturdays as Werkstage) must land together with the module that needs
 them, with golden date tests.
@@ -21,6 +23,7 @@ from collections.abc import Callable
 from datetime import date
 
 from app.fristen.calendar import next_workday, non_workday_name, weekday_name
+from app.fristen.civil_calendar import civil_next_workday
 
 #: Callable signature shared by every rollover entry.
 Roller = Callable[[date, str], date]
@@ -30,11 +33,13 @@ ROLLER_LABELS: dict[str, str] = {
     "sgg_64_3": "§ 64 Abs. 3 SGG",
     "zpo_222": "§ 222 Abs. 2 ZPO",
     "bgb_193": "§ 193 BGB",
+    "stpo_43": "§ 43 Abs. 2 StPO",
 }
 
 _ROLLERS: dict[str, Roller] = {
     "sgg_64_3": next_workday,
     "zpo_222": next_workday,
+    "stpo_43": civil_next_workday,
 }
 
 

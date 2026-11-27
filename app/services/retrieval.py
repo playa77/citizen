@@ -46,6 +46,12 @@ _STATUTE_TO_SOURCE_TYPE: dict[str, list[str]] = {
     "SGB XII": ["sgb12"],
     "BGB": ["bgb"],
     "EGBGB": ["egbgb"],
+    "OWiG": ["owig"],
+    "StVG": ["stvg"],
+    "StVO": ["stvo"],
+    "BKatV": ["bkatv"],
+    "FeV": ["fev"],
+    "StPO": ["stpo"],
     "VO (EG) Nr. 261/2004": ["eu261"],
     "BetrKV": ["betrkv"],
     "HeizkostenV": ["heizkostenv"],
@@ -866,7 +872,7 @@ async def retrieve_chunks_by_norm_reference(
     """Look up legal chunks by §-reference extracted from *document_text*.
 
     For each extracted norm reference (e.g. ``§ 11b SGB II``), builds a
-    ``LIKE`` pattern on ``legal_chunk.hierarchy_path`` (e.g. ``%> § 11b%``)
+    segment-bounded pattern on ``legal_chunk.hierarchy_path``
     and queries ``LegalChunk`` joined with ``LegalSource``, filtered by
     *source_types* and ``is_active=True``.
 
@@ -909,16 +915,12 @@ async def retrieve_chunks_by_norm_reference(
             if not matching_src:
                 continue
 
-            # hierarchy_path looks like "SGB II > § 11b > Abs. 3"
-            # Article 1 must not boost articles 10–19; scoped EGBGB units
-            # must not retrieve identically numbered sections elsewhere.
-            if article_match:
-                hierarchy_condition = or_(
-                    LegalChunk.hierarchy_path.ilike(f"%> {unit}"),
-                    LegalChunk.hierarchy_path.ilike(f"%> {unit} > %"),
-                )
-            else:
-                hierarchy_condition = LegalChunk.hierarchy_path.ilike(f"%> {unit}%")
+            # Exact hierarchy segment boundaries prevent §1 matching §10/§1a.
+            # The same boundary preserves article and nested EGBGB identity.
+            hierarchy_condition = or_(
+                LegalChunk.hierarchy_path.ilike(f"%> {unit}"),
+                LegalChunk.hierarchy_path.ilike(f"%> {unit} > %"),
+            )
 
             stmt = (
                 select(

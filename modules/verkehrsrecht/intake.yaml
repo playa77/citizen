@@ -1,0 +1,19 @@
+areas:
+  verkehrsrecht:
+    order: 79
+    keywords:
+    - bußgeld
+    - bussgeld
+    - bußgeldbescheid
+    - blitzer
+    - geschwindigkeitsüberschreitung
+    - fahrverbot
+    - punkte
+    - fahreignungsregister
+    - zeugenfragebogen
+    - anhörungsbogen
+    - messdaten
+    synonyms:
+    - verkehrsordnungswidrigkeit
+    - verkehrsrecht
+    - verkehrsbußgeld

@@ -11,10 +11,11 @@ These tests require a live PostgreSQL instance with ``pgvector`` extension.
 Set ``SKIP_LIVE_DB=1`` to skip DB-dependent tests.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.1.1 | 2026-11-27 — stable nonzero fixture embeddings across processes.
 
 from __future__ import annotations
 
+import hashlib
 import math
 import os
 from collections.abc import AsyncGenerator, Sequence
@@ -131,7 +132,8 @@ async def _seed_database(
 
 
 async def test_keyword_retrieval_keeps_explicit_source_scope(
-    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Hybrid fallback must not reintroduce sources outside the chosen areas."""
     ids: dict[str, str] = {}
@@ -149,7 +151,8 @@ async def test_keyword_retrieval_keeps_explicit_source_scope(
 
     monkeypatch.setattr("app.services.retrieval.get_async_session", sessions)
     results = await retrieve_chunks_keyword(
-        "Synthetischermodultest", source_types=("bgb",),
+        "Synthetischermodultest",
+        source_types=("bgb",),
     )
     assert {row["chunk_id"] for row in results} == {ids["bgb"]}
     assert all(row["source_type"] == "bgb" for row in results)
@@ -171,9 +174,12 @@ class MockOpenRouterClient(OpenRouterClient):
 
 
 def _generate_deterministic_embedding(text: str) -> list[float]:
-    """Create a reproducible embedding-like vector from text."""
-    h = hash(text) & 0xFFFFFFFF
-    return [((h * (i + 1)) % 1000) / 1000.0 for i in range(_DIM)]
+    """Stable nonzero vectors close to the seeded direction, without semantic inference."""
+    digest = hashlib.sha256(text.encode("utf-8")).digest()
+    # Built-in hash() varies per process and could produce an all-zero vector.
+    # Positive bounded components keep these synthetic queries within the
+    # fixture's retrieval threshold; production embeddings remain untouched.
+    return [0.5 + digest[i % len(digest)] / 512 for i in range(_DIM)]
 
 
 # -------------------------------------------------------------------
@@ -400,3 +406,20 @@ class TestCosineDistance:
         d = _cosine_distance(a, b)
         assert isinstance(d, float)
         assert d >= -1e-9
+
+
+class TestEmbeddingFixtures:
+    def test_embedding_is_nonzero_and_independent_of_process_hash(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        query = "Was sind die Anforderungen an die Hilfebedürftigkeit?"
+        with monkeypatch.context() as patch:
+            patch.setattr("builtins.hash", lambda value: 0)
+            first = _generate_deterministic_embedding(query)
+            patch.setattr("builtins.hash", lambda value: 1)
+            second = _generate_deterministic_embedding(query)
+        assert first == second
+        assert len(first) == _DIM
+        assert sum(value * value for value in first) > 0
+        assert _cosine_distance(first, _fake_embedding()) < _THRESHOLD

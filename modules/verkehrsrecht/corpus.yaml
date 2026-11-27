@@ -1,0 +1,9 @@
+areas:
+  verkehrsrecht:
+    source_types:
+    - owig
+    - stvg
+    - stvo
+    - bkatv
+    - fev
+    - stpo

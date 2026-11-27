@@ -1,0 +1,41 @@
+format: citizen-plain-copy-v1.0
+module: verkehrsrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal and language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist prüfen
+    text: Ein Bußgeldbescheid kann eine kurze Einspruchsfrist starten. Der Zustelltag ist wichtig. Ein
+      Antrag auf Akteneinsicht stoppt die Frist nicht.
+    next_step: Heben Sie Brief, Umschlag und Belege auf. Suchen Sie rasch rechtliche Hilfe.
+  akteneinsicht_vorbereiten:
+    title: Akteneinsicht vorbereiten
+    text: Sie können Zugang zur Akte beantragen. Für Messdaten kann ein weiterer Antrag nötig sein. Lassen
+      Sie Umfang und mögliche Kosten prüfen.
+    next_step: Heben Sie Brief, Umschlag und Belege auf. Suchen Sie rasch rechtliche Hilfe.
+  beratung_erforderlich:
+    title: Beratung erforderlich
+    text: Verjährung, Fahrverbot und Punkte brauchen eigene Prüfungen. Dieses Ergebnis bestätigt nicht,
+      dass Sie fahren dürfen.
+    next_step: Heben Sie Brief, Umschlag und Belege auf. Suchen Sie rasch rechtliche Hilfe.
+  einordnung_offen:
+    title: Einordnung offen
+    text: Ihre Rolle und die Art des Briefs sind noch offen. Für Zeugen gelten andere Pflichten. Machen
+      Sie keine falschen Angaben zu Ihrer Person.
+    next_step: Heben Sie Brief, Umschlag und Belege auf. Suchen Sie rasch rechtliche Hilfe.
+deadlines:
+  vk_einspruch:
+    title: Einspruch gegen Bußgeldbescheid
+    action: Handeln Sie rasch. Meist haben Sie zwei Wochen ab wirksamer Zustellung. Der Einspruch muss
+      rechtzeitig in zulässiger Form bei der Behörde eingehen. Akteneinsicht stoppt diese Frist nicht.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Lassen Sie die bestätigten Angaben
+        prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Bestätigen Sie fehlende Angaben rasch.'
+      missing_input: Bestätigte Angaben zur Zustellung oder andere Angaben fehlen. Es gibt kein verlässliches
+        Datum. Suchen Sie rasch Hilfe.
+      not_applicable: Diese Einspruchsregel passt nicht zu diesem Brief. Andere Fristen können gelten.

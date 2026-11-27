@@ -1,0 +1,40 @@
+format: citizen-plain-copy-v1.0
+module: verkehrsrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal and language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Check the deadline
+    text: A fine notice can start a short objection period. The date of service matters. A file-access
+      request does not stop this period.
+    next_step: Keep the notice, envelope and records. Seek prompt legal advice.
+  akteneinsicht_vorbereiten:
+    title: Prepare file access
+    text: You can prepare a request for the file. Access to measurement data may need a separate request.
+      Check the conditions and possible costs.
+    next_step: Keep the notice, envelope and records. Seek prompt legal advice.
+  beratung_erforderlich:
+    title: Seek advice
+    text: Limitation, a driving ban and register points need separate checks. This result does not confirm
+      that you may drive.
+    next_step: Keep the notice, envelope and records. Seek prompt legal advice.
+  einordnung_offen:
+    title: Classification open
+    text: Your role and the type of letter are not yet clear. A witness has different duties. Never give
+      false personal details.
+    next_step: Keep the notice, envelope and records. Seek prompt legal advice.
+deadlines:
+  vk_einspruch:
+    title: Objection to a fine notice
+    action: Act promptly. Usually you have two weeks after valid service. The authority must receive the
+      objection in a valid form. A file-access request does not stop this period.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Check the confirmed facts.'
+      provisional: 'Provisional end: {frist_ende}. Confirm missing facts promptly.'
+      missing_input: Confirmed service or other facts are missing. There is no reliable date. Seek help
+        promptly.
+      not_applicable: This objection rule does not fit this letter. Other deadlines may apply.

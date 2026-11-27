@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.5.0 · **Stand:** 2026-11-27
+**Version:** 3.6.0 · **Stand:** 2026-11-27
 
 **Autor:** www.github.com/playa77
 
@@ -42,7 +42,7 @@ den Gesetzestext, rechnet Berechnungen deterministisch nach und bestimmt
 Fristen auf den Tag genau. Weitere Rechtsgebiete — Erb-, Familien- und Strafrecht — liegen als experimentelle Module vor: Sie
 ordnen Anliegen zu und beziehen die passenden Rechtsquellen ein, berechnen
 aber noch keine Fristen und keine Beträge. Die experimentellen Module
-Schuldnerrecht, Mietrecht, Arbeitsrecht und Vertragsrecht bieten begrenzte,
+Schuldnerrecht, Mietrecht, Arbeitsrecht, Vertragsrecht und Verkehrsrecht bieten begrenzte,
 qualifizierte Frist- und Rechenprüfungen mit ausdrücklichen Voraussetzungen und Grenzen (Teil D). Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
 an dem jede Änderung gemessen wird. Es gibt bekannte Grenzen, und sie stehen
 im Repo statt unter dem Teppich. Das ist der ehrliche Ist-Zustand:
@@ -463,7 +463,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.5.0`);
+`v3.6.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -958,7 +958,26 @@ Humanprüfung und Live-Evaluation stehen aus; synthetische Offlineprüfungen ers
 
 ---
 
+### D.9 Verkehrsrecht (`verkehrsrecht`)
+
+Unterstützung Ihrer eigenen Verkehrsordnungswidrigkeit und Beratungsvorbereitung.
+Ein Bußgeldbescheid erfordert rasche Prüfung von Zustellung, Einspruch, Form und zuständiger Stelle.
+Anhörung ist kein Bußgeldbescheid. Als betroffene Person müssen Sie sich nicht zur Sache äußern;
+Personalienpflichten und Zeugenpflichten sind davon verschieden. Keine falschen Angaben machen.
+Akteneinsicht und gesonderter Messdatenzugang sind qualifiziert; ein Antrag hemmt die Einspruchsfrist nicht.
+Verjährung hängt von vollständiger Akte, Unterbrechungen, Ruhen und Übergangsrecht ab.
+Aktuelle Sechsmonatsregel und Fahrverbotsregime nicht ungeprüft auf Altfälle übertragen.
+Sanktionstabellen decken nur ausdrücklich bezeichnete gewöhnliche Geschwindigkeitsfälle ab.
+Tilgung ist nicht Löschung; aus einer Punktsumme folgt keine automatische Fahrberechtigung oder Entziehung.
+Fahrverbotswirksamkeit und Beginn der Verbotsdauer unterscheiden sich. Nicht auf Grundlage dieser Ausgabe fahren.
+Unfälle, Straftaten, Alkohol/Drogen, Entziehung und internationale Fälle benötigen gesonderte Beratung.
+Entwürfe werden nicht versandt. Menschliche Prüfung und Live-Evaluation stehen aus; keine verifizierte Freigabe.
+
+---
+
 ## Änderungshistorie
+
+- **3.6.0 (2026-11-27):** Verkehrsrecht: qualifizierter Einspruch, Akteneinsicht und begrenzte Verkehrsprüfungen; aktuelle Regime und Teilabdeckung ausdrücklich gekennzeichnet. Erneute Kenntnisnahme erforderlich.
 
 - **3.5.0 (2026-11-27):** Vertragsrecht: qualifizierte Verbraucherfristen, Zinsen, Fluggast-Prüfbeträge und Entwürfe; Beweisvermutung getrennt von Klagefristen. Erneute Kenntnisnahme erforderlich.
 

@@ -27,6 +27,8 @@ module never touches the database or the core's session handling.
 
 Changes
 -------
+0.10.0 (WP-134, core 3.9.0): ``SDK_VERSION`` "3.7" — traffic/procedural
+federal corpus sources and StPO calendar rollover (D-076).
 0.9.0 (WP-133, core 3.8.0): ``SDK_VERSION`` "3.6" — official EGBGB and
 EUR-Lex article corpus support; existing calculator/deadline interfaces reused.
 0.8.0 (WP-132, core 3.7.0): ``SDK_VERSION`` "3.5" — explicit knowledge-date
@@ -56,7 +58,7 @@ stays "3.0" (core 3.0.0 shipped at the P9 exit gate, WP-97).
 0.1.0 (WP-91): ``SDK_VERSION`` only.
 """
 
-# Semantic Version: 0.9.0
+# Semantic Version: 0.10.0
 
 from __future__ import annotations
 
@@ -67,7 +69,7 @@ from typing import Any, Protocol
 
 from app.fristen.civil_calendar import civil_is_holiday as civil_is_holiday
 
-SDK_VERSION = "3.6"
+SDK_VERSION = "3.7"
 """Core module-contract version; must stay compatible with every manifest's ``core_api``."""
 
 

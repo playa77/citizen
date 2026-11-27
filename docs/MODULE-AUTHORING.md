@@ -1,6 +1,7 @@
 # Writing a Citizen module
 
-<!-- Version: 1.5.0 | 2026-11-27 — WP-133: official EU article corpus support.
+<!-- Version: 1.6.0 | 2026-11-27 — WP-134: traffic/procedural sources and StPO rollover.
+     1.5.0 | 2026-11-27 — WP-133: official EU article corpus support.
      1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
      1.3.0 | 2026-11-27 — WP-131: receipt/event deadlines, confirmed qualification/calendar facts.
      1.2.0 | 2026-11-26 — core_api 3.3: service facts/public intake schema; D-071 deferred human review.
@@ -297,3 +298,21 @@ EU identity, official source URL and document hash. Ingestion rejects challenge
 pages or incomplete article sets rather than storing them as law. An enabled
 module is not an ingestion request: operators still choose sources explicitly.
 Human review and live pipeline evaluation remain separate from offline checks.
+
+
+## 14. Traffic procedure support (module API 3.7, WP-134)
+
+The shared procedure library provides `stpo_43` rollover using the current
+statewide calendar plus explicitly confirmed local holidays through existing
+service/event fact contracts. Specs using it require an explicit state and
+`feiertagskalender_bestaetigt`; legal applicability stays in module data.
+It does not create service fictions, restore missed deadlines or extend
+substantive limitation/retention periods. OWiG objection uses actual valid
+service; hearing/questionnaire and issue dates do not substitute for it.
+
+Federal sources `owig`, `stvg`, `stvo`, `bkatv`, `fev`, `stpo` are selectable
+through existing corpus APIs. The scraper remains paragraph-only; annexes
+and tables are not covered. Declare this source limitation and version any
+selected table parameters with precise scope, dates and primary evidence.
+Never infer full source coverage from a populated source key. D-076 records
+approved boundaries; no new module code import surface is introduced.
