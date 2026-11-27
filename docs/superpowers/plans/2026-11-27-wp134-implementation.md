@@ -171,3 +171,28 @@ and opening a PR against `main`. D-076 records that scoped authorization.
 The pre-existing AGENTS.md change is excluded. No product code changed after
 the final 2,003-test run; publication adds only the authority/delivery records.
 No merge, deployment, release or live inference is included.
+
+### PR #23 CI follow-up: process-dependent retrieval fixture
+
+The reported Python3.12 integration failure was reproduced with
+`PYTHONHASHSEED=947` in the original
+`test_retrieval_returns_chunks_with_metadata`: the supposedly deterministic
+mock embedding used Python's process-randomized `hash(text)`. For this query
+and seed, the low32-bit hash is divisible by1000, so every vector component
+was zero. Pgvector then produced no usable cosine match; the unrelated
+keyword query also returned nothing. This is a synthetic fixture defect,
+not evidence that production retrieval thresholds need changing.
+
+A regression first failed for hash independence/nonzero geometry. The test
+fixture now uses SHA-256 over UTF-8 text and bounded positive components,
+remaining close to the seeded synthetic vector direction. No production
+retrieval, settings, threshold, workflow or database behavior changed.
+The complete integration suite passed53/53 with the previously failing hash
+seed. The new test is intentionally about fixture invariants, without live
+inference or provider calls. AGENTS.md remains excluded from publication.
+
+Final local follow-up verification:
+`PYTHONHASHSEED=947 .venv/bin/pytest tests/unit/ tests/integration/ tests/offline/ -q`
+passed **2,004 tests, four existing skips, 24 existing warnings in87.61s**.
+Ruff lint/format for the changed test and `git diff --check` passed. This
+supersedes the earlier2,003-test count for the PR's latest test-only follow-up.
