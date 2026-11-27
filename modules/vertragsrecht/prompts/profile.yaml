@@ -1,0 +1,31 @@
+display_name: Verbraucherverträge in Ihrer eigenen Angelegenheit
+statutes: BGB, EGBGB und Verordnung (EG) Nr. 261/2004
+document_examples: eines Kaufvertrags, einer Widerrufsbelehrung, Mängelanzeige, Kündigung oder Flugbuchung
+issue_terms:
+- 'Widerruf (§§ 312g, 355, 356 BGB): Vertragstyp, vollständiger Fristbeginn, Belehrung, Ausschlüsse
+  und Erlöschen ausdrücklich bestätigen; § 356 Abs. 4 Höchstfrist und Ausnahmen gesondert prüfen'
+- Informationspflichten (Art. 246a § 1 EGBGB); fehlende Belehrung nicht als normalen 14-Tage-Fall behandeln
+- 'Mängelrechte (§§ 437, 438, 475e BGB): Garantie von gesetzlichen Rechten trennen; Sonderfristen, Hemmung,
+  Neubeginn, Arglist und digitale Elemente nicht pauschal berechnen'
+- 'Beweisvermutung (§ 477 BGB): keine Klagefrist, keine automatische Anspruchsbestätigung; Tiere und
+  digitale Elemente gesondert'
+- 'Regelverjährung (§§ 195, 199 BGB): Entstehung UND Kenntnis/grob fahrlässige Unkenntnis im bestätigten
+  Jahr; keine automatische Jahreszuordnung'
+- 'Kündigung (§§ 309 Nr. 9, 314, 312k BGB): Altverträge, Vertragsart, Abmahnung/Abhilfe, Form und Button-Anwendungsbereich
+  individuell prüfen; keine pauschale Wirksamkeit'
+- 'Abofallen und unerwünschte Werbung: Vertragsschluss und Einwilligung belegen; keine automatische
+  Zahlungseinstellung; Drohungen und Gerichtspost dringend prüfen'
+- 'Fluggastrechte (Art. 3, 5, 6, 7 Verordnung (EG) Nr. 261/2004): Entfernung allein bestätigt keinen
+  Anspruch; Ankunftsverspätung, Annullierung, Beförderungsverweigerung, Ursache und Kürzung gesondert
+  prüfen; lange Verspätung setzt einschlägige EuGH-Rechtsprechung voraus'
+formal_examples: Vertragsart, bestätigte Ereignisse, Belehrung, gesetzliche Ausnahmen und Nachweise
+material_examples: Mangel, bisherige Nacherfüllung, Zahlungen, Verzug und Flugverlauf; keine Entfernungen
+  oder Zinssätze schätzen
+answerable_with: deutschem Verbrauchervertragsrecht zur Vorbereitung Ihrer eigenen Angelegenheit
+hierarchy_example: BGB > § 355 > Abs. 2; Verordnung (EG) Nr. 261/2004 > Art. 7
+adversary_examples: das Unternehmen, der Händler oder das ausführende Luftfahrtunternehmen
+result_categories:
+- Anspruch prüfen – Voraussetzungen und Belege fehlen oder benötigen Prüfung
+- Frist prüfen – vollständiger Fristbeginn und besondere Regeln sind zu klären
+- Beratung erforderlich – Sonderfälle, Gerichtspost und internationale Fragen brauchen individuelle
+  Hilfe

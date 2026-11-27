@@ -1,0 +1,479 @@
+dossier_goldset:
+  id: dossier-goldset-vertragsrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.2.0.yaml
+  base_goldset_version: 0.2.0
+  dossier_schema: citizen-dossier-v1.0
+  module: vertragsrecht
+  provenance: synthetic
+  note: Literal expected dates and chronology manually derived; no evaluator-generated expectations.
+cases:
+- id: VR-001
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines:
+    - spec_id: vr_widerruf
+      frist_ende: '2026-11-16'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VR-002
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-07'
+  expected:
+    deadlines:
+    - spec_id: vr_widerruf
+      frist_ende: '2026-11-23'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-07'
+      kind: mentioned
+- id: VR-003
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: null
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-004
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: null
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-005
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: null
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-006
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines:
+    - spec_id: vr_gewaehrleistung
+      frist_ende: '2028-11-02'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VR-007
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2024-02-29'
+  expected:
+    deadlines:
+    - spec_id: vr_gewaehrleistung
+      frist_ende: '2026-03-02'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2024-02-29'
+      kind: mentioned
+- id: VR-008
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: null
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-009
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: null
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-010
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: null
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-011
+  facts:
+    document_type: beweisvermutung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchsgueterkauf_bestaetigt: true
+      gefahruebergang_bestaetigt: true
+      kein_lebendes_tier: true
+      keine_digitalen_elemente: true
+      vermutung_nicht_unvereinbar: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines:
+    - spec_id: vr_vermutung
+      frist_ende: '2027-11-02'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-02'
+      kind: mentioned
+- id: VR-012
+  facts:
+    document_type: beweisvermutung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchsgueterkauf_bestaetigt: true
+      gefahruebergang_bestaetigt: true
+      kein_lebendes_tier: true
+      keine_digitalen_elemente: true
+      vermutung_nicht_unvereinbar: true
+    ereignis_datum: '2026-11-06'
+  expected:
+    deadlines:
+    - spec_id: vr_vermutung
+      frist_ende: '2027-11-06'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-06'
+      kind: mentioned
+    - date: '2027-11-06'
+      kind: mentioned
+- id: VR-013
+  facts:
+    document_type: beweisvermutung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchsgueterkauf_bestaetigt: true
+      gefahruebergang_bestaetigt: true
+      kein_lebendes_tier: null
+      keine_digitalen_elemente: true
+      vermutung_nicht_unvereinbar: true
+    ereignis_datum: '2026-11-02'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-014
+  facts:
+    document_type: regelverjaehrung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regelverjaehrung_bestaetigt: true
+      anspruch_entstanden_und_kenntnis_im_bestaetigten_jahr: true
+      jahresende_31_dezember_bestaetigt: true
+      keine_sonder_oder_hoechstfrist: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-12-31'
+  expected:
+    deadlines:
+    - spec_id: vr_verjaehrung
+      frist_ende: '2029-12-31'
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-12-31'
+      kind: mentioned
+- id: VR-015
+  facts:
+    document_type: regelverjaehrung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regelverjaehrung_bestaetigt: true
+      anspruch_entstanden_und_kenntnis_im_bestaetigten_jahr: null
+      jahresende_31_dezember_bestaetigt: true
+      keine_sonder_oder_hoechstfrist: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-12-31'
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-016
+  facts:
+    document_type: kuendigung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-017
+  facts:
+    document_type: abofalle
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-018
+  facts:
+    document_type: flug
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-019
+  facts:
+    document_type: kuendigung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: VR-020
+  facts:
+    document_type: sonstiges
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - vertrag
+    - ereignisse
+    - zahlungen
+    - sonderfaelle
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date

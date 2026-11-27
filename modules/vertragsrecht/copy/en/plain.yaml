@@ -1,0 +1,65 @@
+format: citizen-plain-copy-v1.0
+module: vertragsrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  anspruch_pruefen:
+    title: Check entitlement
+    text: Confirmed facts and exceptions need review. A calculated amount does not establish entitlement.
+      Do not stop payments automatically.
+    next_step: Collect your contract and evidence; seek urgent help with court papers.
+  frist_pruefen:
+    title: Check the period
+    text: Confirmed facts and exceptions need review. A calculated amount does not establish entitlement.
+      Do not stop payments automatically.
+    next_step: Collect your contract and evidence; seek urgent help with court papers.
+  beratung_erforderlich:
+    title: Seek advice
+    text: Confirmed facts and exceptions need review. A calculated amount does not establish entitlement.
+      Do not stop payments automatically.
+    next_step: Collect your contract and evidence; seek urgent help with court papers.
+  einordnung_offen:
+    title: Assessment open
+    text: Confirmed facts and exceptions need review. A calculated amount does not establish entitlement.
+      Do not stop payments automatically.
+    next_step: Collect your contract and evidence; seek urgent help with court papers.
+deadlines:
+  vr_widerruf:
+    title: Withdrawal period
+    action: Check the confirmed event, legal conditions and exceptions promptly.
+    texts:
+      computed: 'Calculated date: {frist_ende}. Basis: {basis}. Check applicability.'
+      provisional: 'Provisional date: {frist_ende}. Confirm missing facts promptly.'
+      missing_input: Confirmed facts are missing. No reliable date can be given; seek prompt advice.
+      not_applicable: This rule does not match. Other periods may still apply.
+  vr_gewaehrleistung:
+    title: Ordinary goods limitation
+    action: Check the confirmed event, legal conditions and exceptions promptly.
+    texts:
+      computed: 'Calculated date: {frist_ende}. Basis: {basis}. Check applicability.'
+      provisional: 'Provisional date: {frist_ende}. Confirm missing facts promptly.'
+      missing_input: Confirmed facts are missing. No reliable date can be given; seek prompt advice.
+      not_applicable: This rule does not match. Other periods may still apply.
+  vr_vermutung:
+    title: Evidence presumption period
+    action: This is not a filing deadline. It concerns evidence when a defect appears; it neither extends
+      limitation nor confirms entitlement.
+    texts:
+      computed: 'Calculated date: {frist_ende}. Basis: {basis}. Check applicability.'
+      provisional: 'Provisional date: {frist_ende}. Confirm missing facts promptly.'
+      missing_input: Confirmed facts are missing. No reliable date can be given; seek prompt advice.
+      not_applicable: This rule does not match. Other periods may still apply.
+  vr_verjaehrung:
+    title: Regular limitation
+    action: Check the confirmed event and exceptions promptly. The event must be December 31 of the
+      confirmed year. Entitlement and knowledge conditions must both have arisen in that year. Suspension,
+      restart and special limits need review.
+    texts:
+      computed: 'Calculated date: {frist_ende}. Basis: {basis}. Check applicability.'
+      provisional: 'Provisional date: {frist_ende}. Confirm missing facts promptly.'
+      missing_input: Confirmed facts are missing. No reliable date can be given; seek prompt advice.
+      not_applicable: This rule does not match. Other periods may still apply.

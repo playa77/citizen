@@ -71,6 +71,13 @@ direction permits backend step 2 to proceed (D-069, backend continuation directi
   limits remain explicit; non-working-day backwards targets require separate
   review. Verification and operational limits: [D-074](docs/decisions/D-074-wp132-employment-implementation.md).
   No deployment ingestion, live-inference or human-promotion claim (D-071).
+- [x] WP-133 experimental backend implementation: `vertragsrecht` 0.2.0,
+  core 3.8.0 / module API 3.6. Qualified consumer dates and arithmetic,
+  EGBGB/EUR-Lex article identities, guarded drafts and 20 synthetic cases.
+  §477 is not a filing deadline; direct EUR-Lex ingestion remains unverified
+  because the publisher returned challenge/empty responses. Verification and
+  limits: [D-075](docs/decisions/D-075-wp133-contract-implementation.md).
+  Human review/promotion, deployment ingestion and live inference remain pending.
 - [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing

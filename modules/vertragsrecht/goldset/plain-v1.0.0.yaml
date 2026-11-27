@@ -1,0 +1,393 @@
+format: citizen-plain-goldset-v1.0
+module: vertragsrecht
+version: 1.0.0
+cases:
+- id: PL-VR-001
+  kind: deadline
+  title: Ordentlicher Warenwiderruf
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_widerruf
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-16'
+- id: PL-VR-002
+  kind: deadline
+  title: Widerruf am Wochenende
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-07'
+  spec_id: vr_widerruf
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-VR-003
+  kind: deadline
+  title: Belehrung fehlt
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: null
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_widerruf
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-004
+  kind: deadline
+  title: Teillieferung ungeklärt
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: null
+      kein_ausschluss_oder_erloeschen: true
+      kein_sonderregime: true
+  spec_id: vr_widerruf
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-005
+  kind: deadline
+  title: Personalisierte Ware
+  facts:
+    document_type: widerruf
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchervertrag_widerruf_bestaetigt: true
+      ordnungsgemaesse_belehrung_rechtzeitig: true
+      vollstaendiger_fristevent_bestaetigt: true
+      kein_ausschluss_oder_erloeschen: null
+      kein_sonderregime: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_widerruf
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-006
+  kind: deadline
+  title: Gewöhnlicher Warenmangel
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_gewaehrleistung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2028-11-02'
+- id: PL-VR-007
+  kind: deadline
+  title: Schaltjahr bei Ablieferung
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2024-02-29'
+  spec_id: vr_gewaehrleistung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-VR-008
+  kind: deadline
+  title: Nacherfüllung und §475e
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: null
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_gewaehrleistung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-009
+  kind: deadline
+  title: Digitales Gerät
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: null
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_gewaehrleistung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-010
+  kind: deadline
+  title: Gebrauchtware verkürzt
+  facts:
+    document_type: warenmangel
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      einfacher_warenkauf_bestaetigt: true
+      ablieferung_bestaetigt: true
+      keine_sonderfristen_475e: true
+      keine_digitalen_elemente: true
+      kein_bauwerk_oder_baumaterial: true
+      keine_arglist_oder_drittrechte: true
+      keine_verkuerzung: null
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_gewaehrleistung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-011
+  kind: deadline
+  title: Beweisvermutung Kalenderjahr
+  facts:
+    document_type: beweisvermutung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchsgueterkauf_bestaetigt: true
+      gefahruebergang_bestaetigt: true
+      kein_lebendes_tier: true
+      keine_digitalen_elemente: true
+      vermutung_nicht_unvereinbar: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_vermutung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-11-02'
+- id: PL-VR-012
+  kind: deadline
+  title: Beweisvermutung endet Samstag
+  facts:
+    document_type: beweisvermutung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchsgueterkauf_bestaetigt: true
+      gefahruebergang_bestaetigt: true
+      kein_lebendes_tier: true
+      keine_digitalen_elemente: true
+      vermutung_nicht_unvereinbar: true
+    ereignis_datum: '2026-11-06'
+  spec_id: vr_vermutung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-11-06'
+- id: PL-VR-013
+  kind: deadline
+  title: Tierkauf
+  facts:
+    document_type: beweisvermutung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      verbrauchsgueterkauf_bestaetigt: true
+      gefahruebergang_bestaetigt: true
+      kein_lebendes_tier: null
+      keine_digitalen_elemente: true
+      vermutung_nicht_unvereinbar: true
+    ereignis_datum: '2026-11-02'
+  spec_id: vr_vermutung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VR-014
+  kind: deadline
+  title: Regelverjährung bestätigtes Jahr
+  facts:
+    document_type: regelverjaehrung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regelverjaehrung_bestaetigt: true
+      anspruch_entstanden_und_kenntnis_im_bestaetigten_jahr: true
+      jahresende_31_dezember_bestaetigt: true
+      keine_sonder_oder_hoechstfrist: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-12-31'
+  spec_id: vr_verjaehrung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2029-12-31'
+- id: PL-VR-015
+  kind: deadline
+  title: Kenntnisjahr offen
+  facts:
+    document_type: regelverjaehrung
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regelverjaehrung_bestaetigt: true
+      anspruch_entstanden_und_kenntnis_im_bestaetigten_jahr: null
+      jahresende_31_dezember_bestaetigt: true
+      keine_sonder_oder_hoechstfrist: true
+      keine_hemmung_oder_neubeginn: true
+    ereignis_datum: '2026-12-31'
+  spec_id: vr_verjaehrung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-vr_widerruf-not-applicable
+  kind: deadline
+  title: Andere Dokumentart
+  facts:
+    document_type: sonstiges
+  spec_id: vr_widerruf
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-vr_gewaehrleistung-not-applicable
+  kind: deadline
+  title: Andere Dokumentart
+  facts:
+    document_type: sonstiges
+  spec_id: vr_gewaehrleistung
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-vr_vermutung-not-applicable
+  kind: deadline
+  title: Andere Dokumentart
+  facts:
+    document_type: sonstiges
+  spec_id: vr_vermutung
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-vr_verjaehrung-not-applicable
+  kind: deadline
+  title: Andere Dokumentart
+  facts:
+    document_type: sonstiges
+  spec_id: vr_verjaehrung
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-anspruch_pruefen
+  kind: finding
+  title: Anspruch prüfen
+  ergebnis: 'Vorläufige Einordnung: Anspruch prüfen.'
+  expect:
+    category: anspruch_pruefen
+    category_source: ergebnis
+- id: PL-frist_pruefen
+  kind: finding
+  title: Frist prüfen
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+- id: PL-beratung_erforderlich
+  kind: finding
+  title: Beratung erforderlich
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+- id: PL-einordnung_offen
+  kind: finding
+  title: Einordnung offen
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+- id: PL-fallback
+  kind: finding
+  title: Unbelegte Sicherheit bleibt offen
+  ergebnis: Ihr Anspruch ist garantiert.
+  expect:
+    category: einordnung_offen
+    category_source: fallback

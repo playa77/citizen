@@ -1,6 +1,7 @@
 # Writing a Citizen module
 
-<!-- Version: 1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
+<!-- Version: 1.5.0 | 2026-11-27 — WP-133: official EU article corpus support.
+     1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
      1.3.0 | 2026-11-27 — WP-131: receipt/event deadlines, confirmed qualification/calendar facts.
      1.2.0 | 2026-11-26 — core_api 3.3: service facts/public intake schema; D-071 deferred human review.
      1.1.2 | 2026-11-26 — owner directs backend continuation; GUI separately owned.
@@ -287,3 +288,12 @@ An explicit-date spec must supply either a `document_type` selector or nonempty
 `requires_confirmed` qualifications. The latter supports a confirmed event that
 can arise from multiple document types without duplicating rules or suppressing
 registration reminders on a dismissal. Missing qualifications still block dates.
+
+## 13. Official EU article sources (module API 3.6, WP-133)
+
+Contract module corpus keys `egbgb` and `eu261` use the existing source catalog
+and storage. `eu261` identifies Regulation (EC) 261/2004; articles retain their
+EU identity, official source URL and document hash. Ingestion rejects challenge
+pages or incomplete article sets rather than storing them as law. An enabled
+module is not an ingestion request: operators still choose sources explicitly.
+Human review and live pipeline evaluation remain separate from offline checks.

@@ -1,6 +1,6 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.4.0 | 2026-11-27 — WP-132 experimental employment backend and explicit timing limits.
+<!-- Version: 3.5.0 | 2026-11-27 — WP-133 experimental consumer contract backend.
      3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
      3.1.1 | 2026-11-26 — owner directs backend continuation; GUI remains separately owned; WP-130 foundation started.
      3.1.0 | 2026-11-26 — no default module (D-069/D-070): Sozialrecht's
@@ -419,13 +419,25 @@ Each module is one WP with the same nine sub-WPs:
 | WP-130 | M1 `schuldnerrecht` | Pfändungstabelle parameter feed (annual, 1 July) |
 | WP-131 | M2 `mietrecht` | Experimental backend implemented; regional sources partially executable, see D-073 |
 | WP-132 | M3 `arbeitsrecht` | Experimental backend implemented; critical dismissal banner, qualified §38 timing limits (D-074) |
-| WP-133 | M4 `vertragsrecht` | EUR-Lex source type for VO 261/2004 |
+| WP-133 | M4 `vertragsrecht` | Experimental backend implemented; qualified contract checks, EGBGB/EUR-Lex article sources (D-075) |
 | WP-134 | M5 `verkehrsrecht` | builds core OWiG procedure library |
 | WP-135 | M6 `familienrecht` | Düsseldorfer Tabelle reuse terms (OQ-7) |
 | WP-136 | M7 `aufenthaltsrecht` | requires P12 i18n; strongest duty-of-care profile |
 | WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-133 backend implementation (2026-11-27):** `vertragsrecht` 0.2.0
+provides qualified consumer withdrawal, warranty, evidentiary-presumption and
+regular-limitation dates; segmented exact interest, withdrawal and passenger
+checks; guarded drafts, intake/dossier and DE/EN/de-LS copy. Core 3.8.0 / module
+API 3.6 adds EGBGB/EUR-Lex source types and nested article identity. Twenty
+synthetic cases and deterministic reports are included. §477 is not a filing
+deadline; unknown regimes and missing qualifications require review. No actual
+deployment ingestion, live-inference quality or human promotion is claimed.
+Direct EUR-Lex ingestion remains unverified due to publisher challenge/empty
+responses. See [D-075](decisions/D-075-wp133-contract-implementation.md) and the
+[execution record](superpowers/plans/2026-11-27-wp133-implementation.md).
 
 **WP-132 backend implementation (2026-11-27):** `arbeitsrecht` 0.2.0
 provides a critical receipt-based dismissal deadline, independent knowledge-date

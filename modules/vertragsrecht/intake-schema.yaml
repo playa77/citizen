@@ -1,0 +1,146 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/vertragsrecht-intake-v0.2.0
+title: Experimental consumer own-matter contract intake
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+  synthetic_data_confirmed:
+    type: boolean
+  document_type:
+    enum:
+    - widerruf
+    - warenmangel
+    - beweisvermutung
+    - regelverjaehrung
+    - kuendigung
+    - abofalle
+    - werbung
+    - flug
+    - sonstiges
+  bescheid_datum:
+    type: string
+    format: date
+    description: Document date only; never supplies receipt, delivery or an event.
+  ereignis_datum:
+    type: string
+    format: date
+    description: Confirmed complete withdrawal trigger, delivery, passing of risk, or December 31 of
+      the year in which entitlement AND knowledge conditions were met. Not merely the contract or document
+      date.
+  zugang_tatsaechlich: &id001
+    type: string
+    format: date
+  kenntnis_datum: *id001
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      verbrauchervertrag_widerruf_bestaetigt: &id002
+        type:
+        - boolean
+        - 'null'
+        description: Explicit evidence-based confirmation required. Unknown remains null.
+      ordnungsgemaesse_belehrung_rechtzeitig: *id002
+      vollstaendiger_fristevent_bestaetigt: *id002
+      kein_ausschluss_oder_erloeschen: *id002
+      kein_sonderregime: *id002
+      einfacher_warenkauf_bestaetigt: *id002
+      ablieferung_bestaetigt: *id002
+      keine_sonderfristen_475e: *id002
+      keine_digitalen_elemente: *id002
+      kein_bauwerk_oder_baumaterial: *id002
+      keine_arglist_oder_drittrechte: *id002
+      keine_verkuerzung: *id002
+      keine_hemmung_oder_neubeginn: *id002
+      verbrauchsgueterkauf_bestaetigt: *id002
+      gefahruebergang_bestaetigt: *id002
+      kein_lebendes_tier: *id002
+      vermutung_nicht_unvereinbar: *id002
+      regelverjaehrung_bestaetigt: *id002
+      anspruch_entstanden_und_kenntnis_im_bestaetigten_jahr: *id002
+      jahresende_31_dezember_bestaetigt: *id002
+      keine_sonder_oder_hoechstfrist: *id002
+  bundesland:
+    enum:
+    - BW
+    - BY
+    - BE
+    - BB
+    - HB
+    - HH
+    - HE
+    - MV
+    - NI
+    - NW
+    - RP
+    - SL
+    - SN
+    - ST
+    - SH
+    - TH
+  feiertagskalender_bestaetigt: *id002
+  feiertage_zusaetzlich:
+    type: array
+    items: *id001
+    uniqueItems: true
+  calculation_type:
+    enum:
+    - none
+    - default_interest
+    - withdrawal
+    - flight_compensation
+  as_of: *id001
+  applicability_confirmed: *id002
+  qualification_note:
+    type: string
+  default_confirmed: &id003
+    type:
+    - boolean
+    - 'null'
+  principal_constant_confirmed: *id003
+  no_compounding_confirmed: *id003
+  consumer_involved: *id003
+  payment_claim_confirmed: *id003
+  trigger_confirmed: *id003
+  exceptions_excluded_confirmed: *id003
+  calendar_confirmed: *id003
+  outer_limit_rollover_confirmed: *id003
+  intra_eu: *id003
+  eu261_scope_confirmed: *id003
+  entitlement_confirmed: *id003
+  extraordinary_circumstances_excluded_confirmed: *id003
+  reduction_confirmed: *id003
+  period_start: &id004
+    type: string
+    format: date
+  period_end: *id004
+  trigger_on: *id004
+  notice_on: *id004
+  principal_cents:
+    type: integer
+    minimum: 1
+  distance_km:
+    type: integer
+    minimum: 1
+  regime:
+    enum:
+    - goods
+    - services
+  notice_status:
+    enum:
+    - adequate
+    - absent
+    - late
+  holiday_dates:
+    type: array
+    items: *id004
+    uniqueItems: true
+  claim_basis:
+    enum:
+    - denied_boarding
+    - cancellation
+    - long_delay

@@ -1,21 +1,46 @@
-# Vertragsrecht — stub module (WP-93, D-038).
-#
-# Tier `experimental`: carries the v2.0.0 behaviour of the legacy area key
-# (intake routing, corpus mapping) — no deadline specs,
-# no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
-
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
-
 id: vertragsrecht
-version: 0.1.1
-core_api: ">=3.0,<4.0"
+version: 0.2.0
+core_api: '>=3.6,<4.0'
 title:
-  de: "Vertragsrecht"
-  en: "Contract and consumer law"
+  de: Vertragsrecht
+  en: Contract and consumer law
 tier: experimental
 scope:
-  summary_de: "Kauf-, Werk- und Darlehensverträge, Widerruf, Gewährleistung (BGB)"
+  summary_de: 'Eigene Verbraucherverträge: Widerruf, Mängelrechte, Kündigung, unerwünschte Verträge
+    und Fluggastrechte mit bestätigten Tatsachen prüfen.'
   own_matter_only: true
+  out_of_scope:
+  - Unternehmervertretung und gewerbliche Forderungsdurchsetzung
+  - Automatische Anspruchsbestätigung, Zahlungseinstellung oder Versendung
+  - Ungeklärte Sonderregime, internationales Recht und gerichtliche Verfahren
 corpus: corpus.yaml
 intake: intake.yaml
+intake_schema: intake-schema.yaml
+dossier: dossier.yaml
+fristen: fristen.yaml
+parameters:
+  domain: vertragsrecht
+  files:
+  - parameters/*.yaml
+calculators: calculators:CALCULATORS
+prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
+documents:
+- pruefhinweise
+- widerruf
+- maengelanzeige
+- kuendigung
+- fluggastforderung
+goldset:
+  path: goldset/goldset-v0.2.0.yaml
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    en: copy/en/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
+errata: errata.yaml
+compliance:
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
+  purpose_drift_deny_file: compliance/deny-phrases.json
 legacy_aliases: []

@@ -1,0 +1,75 @@
+- id: vr_widerruf
+  label_de: Ordentliche Widerrufsfrist prüfen
+  trigger: ereignis
+  duration:
+    days: 14
+  basis: §§ 355 Abs. 2, 356 Abs. 2–3 BGB; §§ 187, 188, 193 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB; ausschließlich ausdrücklich bestätigtes qualifiziertes
+    Ereignis
+  severity: high
+  applies_when:
+    document_type: widerruf
+  requires_confirmed:
+  - verbrauchervertrag_widerruf_bestaetigt
+  - ordnungsgemaesse_belehrung_rechtzeitig
+  - vollstaendiger_fristevent_bestaetigt
+  - kein_ausschluss_oder_erloeschen
+  - kein_sonderregime
+  rollover: bgb_193
+- id: vr_gewaehrleistung
+  label_de: Reguläre Verjährung einfacher Warenmängelansprüche
+  trigger: ereignis
+  duration:
+    years: 2
+  basis: § 438 Abs. 1 Nr. 3, Abs. 2 BGB; §§ 187, 188, 193 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB; ausschließlich ausdrücklich bestätigtes qualifiziertes
+    Ereignis
+  severity: high
+  applies_when:
+    document_type: warenmangel
+  requires_confirmed:
+  - einfacher_warenkauf_bestaetigt
+  - ablieferung_bestaetigt
+  - keine_sonderfristen_475e
+  - keine_digitalen_elemente
+  - kein_bauwerk_oder_baumaterial
+  - keine_arglist_oder_drittrechte
+  - keine_verkuerzung
+  - keine_hemmung_oder_neubeginn
+  rollover: bgb_193
+- id: vr_vermutung
+  label_de: Einjährige Beweisvermutung – keine Klagefrist
+  trigger: ereignis
+  duration:
+    years: 1
+  basis: § 477 Abs. 1 BGB; §§ 187, 188 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB; ausschließlich ausdrücklich bestätigtes qualifiziertes
+    Ereignis
+  severity: high
+  applies_when:
+    document_type: beweisvermutung
+  requires_confirmed:
+  - verbrauchsgueterkauf_bestaetigt
+  - gefahruebergang_bestaetigt
+  - kein_lebendes_tier
+  - keine_digitalen_elemente
+  - vermutung_nicht_unvereinbar
+- id: vr_verjaehrung
+  label_de: Regelmäßige Verjährung ab bestätigtem Jahresende
+  trigger: ereignis
+  duration:
+    months: 36
+  basis: §§ 195, 199 Abs. 1 BGB; § 193 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB; ausschließlich ausdrücklich bestätigtes qualifiziertes
+    Ereignis
+  severity: high
+  applies_when:
+    document_type: regelverjaehrung
+  requires_confirmed:
+  - regelverjaehrung_bestaetigt
+  - anspruch_entstanden_und_kenntnis_im_bestaetigten_jahr
+  - jahresende_31_dezember_bestaetigt
+  - keine_sonder_oder_hoechstfrist
+  - keine_hemmung_oder_neubeginn
+  rollover: bgb_193
+  anchor: month_end

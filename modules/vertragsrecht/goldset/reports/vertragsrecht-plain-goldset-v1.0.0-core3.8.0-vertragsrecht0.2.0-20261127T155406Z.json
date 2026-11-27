@@ -1,0 +1,190 @@
+{
+  "format": "citizen-plain-eval-v1.0",
+  "module": "vertragsrecht",
+  "languages": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "categories": [
+    "anspruch_pruefen",
+    "frist_pruefen",
+    "beratung_erforderlich",
+    "einordnung_offen"
+  ],
+  "deadline_specs": [
+    "vr_widerruf",
+    "vr_gewaehrleistung",
+    "vr_vermutung",
+    "vr_verjaehrung"
+  ],
+  "review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "core_review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "goldset": {
+    "version": "1.0.0",
+    "path": "goldset/plain-v1.0.0.yaml"
+  },
+  "cases_passed": 24,
+  "cases_total": 24,
+  "cases": [
+    {
+      "case_id": "PL-VR-001",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-002",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-003",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-004",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-005",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-006",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-007",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-008",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-009",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-010",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-011",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-012",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-013",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-014",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-VR-015",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-vr_widerruf-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-vr_gewaehrleistung-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-vr_vermutung-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-vr_verjaehrung-not-applicable",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-anspruch_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-frist_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-beratung_erforderlich",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einordnung_offen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-fallback",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": {},
+  "subset": null,
+  "gate_passed": true,
+  "module_version": "0.2.0",
+  "core_version": "3.8.0",
+  "git_sha": "d076e56",
+  "run_timestamp": "2026-11-27T15:54:06.841285+00:00"
+}

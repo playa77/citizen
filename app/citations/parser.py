@@ -18,7 +18,7 @@ quantifiers over unbounded text), so parsing stays linear in the input.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from app.citations.laws import LAW_PATTERN, normalise_law
@@ -117,7 +117,28 @@ def _statutes(text: str) -> list[Citation]:
                 article=match.group("sign").startswith("Art"),
             )
         )
-    return citations
+    # EGBGB articles can contain independently numbered sections. Joining only
+    # adjacent parsed units prevents § 1 of another article from verifying it.
+    scoped: list[Citation] = []
+    for citation in citations:
+        if (
+            scoped
+            and citation.source_type == "egbgb"
+            and not citation.article
+            and scoped[-1].article
+            and scoped[-1].law is None
+            and len(scoped[-1].paragraphs) == 1
+            and not text[scoped[-1].end : citation.start].strip()
+        ):
+            article = scoped.pop()
+            citation = replace(
+                citation,
+                start=article.start,
+                text=text[article.start : citation.end],
+                extra={"article_scope": article.paragraphs[0]},
+            )
+        scoped.append(citation)
+    return scoped
 
 
 def parse_citations(text: str) -> list[Citation]:

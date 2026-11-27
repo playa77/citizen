@@ -1,6 +1,7 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.1.0 | 2026-11-26 — M1 experimental foundation; owner directs backend continuation.
+<!-- Version: 1.2.0 | 2026-11-27 — WP-133 consumer contract backend.
+     1.1.0 | 2026-11-26 — M1 experimental foundation; owner directs backend continuation.
      1.0.2 | 2026-11-25 — D-069: peer modules; startup/session TODO blocks further module implementation.
      1.0.1 | 2026-11-16 — M0 status row: module 1.2.0 (D-063). 1.0.0 | 2026-11-16 -->
 <!-- Companion to ARCHITECTURE.md (module contract) and docs/roadmap-v3.0.0.md
@@ -48,7 +49,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 | M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | **experimental 0.2.0 · backend implemented** | Service-based court deadlines, qualified calculators, guarded drafts, intake/dossier and DE/EN/de-LS copy; deployment corpus/live evaluation pending; human review deferred (D-071) |
 | M2 | `mietrecht` | Wohnraummietrecht | backend implemented 0.2.0; experimental, review pending | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | experimental backend 0.2.0 (WP-132, D-074) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
-| M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | planned (legacy key experimental) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
+| M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | experimental backend 0.2.0 (WP-133, D-075) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
 | M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | planned | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
 | M6 | `familienrecht` | Familienrecht (Unterhalt, Trennung, Sorge/Umgang) | planned (legacy key experimental) | high stakes; Unterhalt math deterministic; crossover UVG / SGB II |
 | M7 | `aufenthaltsrecht` | Aufenthalts-, Asyl- und Staatsangehörigkeitsrecht | planned | very high necessity for M0 clientele, but very short deadlines and multilingual need → scheduled after the plain-language/i18n layer (P12) |
@@ -188,13 +189,25 @@ live evaluation and human promotion are not claimed. See
 
 ### M4 — `vertragsrecht`
 
+**Backend implemented (WP-133, 2026-11-27):** experimental 0.2.0 on core
+3.8.0 / module API 3.6. Qualified withdrawal, ordinary-goods limitation,
+evidentiary-presumption and regular-limitation dates; exact segmented interest,
+withdrawal and flight-band checks; guarded drafts, intake/dossier and DE/EN/de-LS
+copy. EGBGB/EUR-Lex article sources preserve nested identities. Source checks
+and fixtures do not prove deployment ingestion; EUR-Lex publisher challenge
+prevented a raw ingestion smoke test. Twenty synthetic cases and offline
+reports are included. §477 is not a filing deadline; special regimes and
+missing qualifications require review. See [D-075](decisions/D-075-wp133-contract-implementation.md).
+Human review/promotion and live inference remain deferred under D-071.
+
+
 - **Scope:** consumer and everyday contract law: Widerruf, Gewährleistung,
   Kündigung von Dauerschuldverhältnissen, unerlaubte Telefonwerbung/
   Abofallen, Fluggastrechte.
 - **Documents:** Rechnungen, Mahnungen, Vertragsbestätigungen, Ablehnungen
   von Gewährleistungs- oder Erstattungsansprüchen.
 - **Deadlines:** Widerruf 14 days (§ 355 Abs. 2 BGB) and maximal Widerrufsfrist
-  (§ 356 Abs. 3 BGB); Mängelverjährung (§ 438 BGB); Beweislastumkehr
+  (§ 356 Abs. 4 BGB); Mängelverjährung (§ 438 BGB); Beweislastumkehr
   (§ 477 BGB); regelmäßige Verjährung (§§ 195, 199 BGB).
 - **Calculators:** Verzugszinsen (§ 288 BGB over Basiszinssatz § 247 BGB →
   parameter), Widerrufsfrist end, Fluggast-Ausgleich (Art. 7 VO (EG)

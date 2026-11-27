@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.4.0 · **Date:** 2026-11-27
+**Version:** 3.5.0 · **Date:** 2026-11-27
 
 **Author:** www.github.com/playa77
 
@@ -37,10 +37,9 @@ Citizen today is a prototype: a domain-neutral core with legal-area modules.
 The first and so far only mature module, social-benefits law (Sozialrecht),
 reads German social-law benefit notices (Bescheide), binds every statement to
 the statutory text, recomputes benefit calculations deterministically, and
-determines deadlines to the exact day. Further legal areas — employment,
-inheritance, family, criminal and contract law — exist as experimental
+determines deadlines to the exact day. Further legal areas — inheritance, family and criminal law — exist as experimental
 modules: they route concerns and draw on the matching legal sources, but do
-not yet compute deadlines or amounts. The experimental debt and tenancy
+not yet compute deadlines or amounts. The experimental debt, tenancy, employment and contract
 modules provide bounded, qualified deadline and arithmetic checks with
 explicit prerequisites and limits (Part D). There is a versioned golden set of verified test cases against
 which every change is measured. Known limitations exist, and they live in the
@@ -434,7 +433,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.4.0`); after a version change, renewed
+prefixed with `v`, currently `v3.5.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -812,7 +811,7 @@ C.6.1.
 
 For the modules `erbrecht` (inheritance,
 including the legacy key `schenkungsrecht`), `familienrecht` (family),
-`vertragsrecht` (contract) and `andere` (catch-all),
+and `andere` (catch-all),
 D.1 and Parts A to C apply without an area-specific addendum. They compute
 neither deadlines nor amounts; anyone who has a deadline to meet should have
 it checked by a lawyer or an advice center. The general administrative
@@ -882,7 +881,26 @@ sent nor filed. Human legal and language reviews remain pending under D-071.
 
 ---
 
+### D.8 Contract and consumer law (`vertragsrecht`)
+
+Helps you prepare your own consumer matter; no business representation.
+Dates and amounts require confirmed facts, applicable legal regimes and dated parameters.
+Letter dates and distance bands alone establish neither a deadline nor entitlement.
+Withdrawal requires the correct contract, complete trigger, notice, exclusions and extinguishment review.
+Warranty, contractual guarantees and evidence presumptions are distinct; section 477 BGB is not a filing deadline.
+Special periods, digital elements, animals, buildings, fraud, suspension and restart require separate review.
+Regular limitation needs entitlement AND knowledge conditions in the confirmed year.
+Termination terms, older contracts and button duties need individual review.
+Interest arithmetic does not establish default; passenger compensation needs confirmed applicability,
+cause, arrival, rerouting and reduction facts. Drafts are not sent. Do not stop payments automatically.
+Seek prompt consumer or legal advice on court papers or approaching deadlines.
+Human review and live evaluation remain pending; synthetic offline checks do not replace them.
+
+---
+
 ## Change History
+
+- **3.5.0 (2026-11-27):** Contract module: qualified consumer dates, interest, passenger-compensation checks and drafts; evidence presumptions distinguished from filing deadlines. Renewed acknowledgement required.
 
 - **3.4.0 (2026-11-27):** Employment: qualified deadlines, arithmetic and drafts; explicit knowledge dates and jobseeker-registration limitations. Renewed acknowledgement required.
 

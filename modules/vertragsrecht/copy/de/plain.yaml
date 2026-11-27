@@ -1,0 +1,69 @@
+format: citizen-plain-copy-v1.0
+module: vertragsrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  anspruch_pruefen:
+    title: Anspruch prüfen
+    text: Bestätigte Tatsachen und Ausnahmen müssen geprüft werden. Eine Rechnung bestätigt keinen Anspruch.
+      Stellen Sie Zahlungen nicht automatisch ein.
+    next_step: Sammeln Sie Vertrag und Belege. Suchen Sie bei Gerichtspost sofort Hilfe.
+  frist_pruefen:
+    title: Frist prüfen
+    text: Bestätigte Tatsachen und Ausnahmen müssen geprüft werden. Eine Rechnung bestätigt keinen Anspruch.
+      Stellen Sie Zahlungen nicht automatisch ein.
+    next_step: Sammeln Sie Vertrag und Belege. Suchen Sie bei Gerichtspost sofort Hilfe.
+  beratung_erforderlich:
+    title: Hilfe suchen
+    text: Bestätigte Tatsachen und Ausnahmen müssen geprüft werden. Eine Rechnung bestätigt keinen Anspruch.
+      Stellen Sie Zahlungen nicht automatisch ein.
+    next_step: Sammeln Sie Vertrag und Belege. Suchen Sie bei Gerichtspost sofort Hilfe.
+  einordnung_offen:
+    title: Einordnung offen
+    text: Bestätigte Tatsachen und Ausnahmen müssen geprüft werden. Eine Rechnung bestätigt keinen Anspruch.
+      Stellen Sie Zahlungen nicht automatisch ein.
+    next_step: Sammeln Sie Vertrag und Belege. Suchen Sie bei Gerichtspost sofort Hilfe.
+deadlines:
+  vr_widerruf:
+    title: Ordentliche Widerrufsfrist prüfen
+    action: Lassen Sie das bestätigte Ereignis, Voraussetzungen und Ausnahmen rechtzeitig prüfen.
+    texts:
+      computed: 'Berechnetes Datum: {frist_ende}. Grundlage: {basis}. Voraussetzungen prüfen lassen.'
+      provisional: 'Vorläufiges Datum: {frist_ende}. Fehlende Angaben sofort bestätigen.'
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum fehlt. Holen Sie rechtzeitig
+        Rat.
+      not_applicable: Diese Regel passt nicht. Andere Fristen können gelten.
+  vr_gewaehrleistung:
+    title: Reguläre Verjährung einfacher Warenmängelansprüche
+    action: Lassen Sie das bestätigte Ereignis, Voraussetzungen und Ausnahmen rechtzeitig prüfen.
+    texts:
+      computed: 'Berechnetes Datum: {frist_ende}. Grundlage: {basis}. Voraussetzungen prüfen lassen.'
+      provisional: 'Vorläufiges Datum: {frist_ende}. Fehlende Angaben sofort bestätigen.'
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum fehlt. Holen Sie rechtzeitig
+        Rat.
+      not_applicable: Diese Regel passt nicht. Andere Fristen können gelten.
+  vr_vermutung:
+    title: Einjährige Beweisvermutung – keine Klagefrist
+    action: Dies ist keine Klagefrist. Der Zeitraum betrifft Beweise beim Auftreten eines Mangels. Er
+      verlängert keine Verjährung und bestätigt keinen Anspruch.
+    texts:
+      computed: 'Berechnetes Datum: {frist_ende}. Grundlage: {basis}. Voraussetzungen prüfen lassen.'
+      provisional: 'Vorläufiges Datum: {frist_ende}. Fehlende Angaben sofort bestätigen.'
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum fehlt. Holen Sie rechtzeitig
+        Rat.
+      not_applicable: Diese Regel passt nicht. Andere Fristen können gelten.
+  vr_verjaehrung:
+    title: Regelmäßige Verjährung ab bestätigtem Jahresende
+    action: Lassen Sie das bestätigte Ereignis, Voraussetzungen und Ausnahmen rechtzeitig prüfen. Das
+      Ereignis muss der bestätigte 31. Dezember des Jahres sein, in dem Anspruch und Kenntnisvoraussetzungen
+      vorlagen. Hemmung, Neubeginn und Sonderfristen gesondert prüfen.
+    texts:
+      computed: 'Berechnetes Datum: {frist_ende}. Grundlage: {basis}. Voraussetzungen prüfen lassen.'
+      provisional: 'Vorläufiges Datum: {frist_ende}. Fehlende Angaben sofort bestätigen.'
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum fehlt. Holen Sie rechtzeitig
+        Rat.
+      not_applicable: Diese Regel passt nicht. Andere Fristen können gelten.

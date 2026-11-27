@@ -340,7 +340,7 @@ wheels = [
 
 [[package]]
 name = "citizen"
-version = "3.6.0"
+version = "3.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

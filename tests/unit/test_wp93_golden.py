@@ -65,8 +65,8 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
         _STRICT_SUFFIX=intake._STRICT_SUFFIX,
         _LEGAL_AREAS_ENUM=tuple(k for k in intake._LEGAL_AREAS_ENUM if k != "schuldnerrecht"),
         _AREA_KEYWORDS={
-            # WP-132 appends employment keywords after the historical nine.
-            k: (v[:9] if k == "arbeitsrecht" else v)
+            # WP-132/133 append employment/contract keywords after historical entries.
+            k: (v[:9] if k == "arbeitsrecht" else v[:8] if k == "vertragsrecht" else v)
             for k, v in intake._AREA_KEYWORDS.items() if k != "schuldnerrecht"
         },
         _fallback_areas_from_text=intake._fallback_areas_from_text,
@@ -78,9 +78,9 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
         "presets_route": presets_route,
         "list_presets": list_presets,
         "area_source_types": lambda: {
-            # WP-131/132 expand tenancy/employment scope. Project only those
+            # WP-131–133 expand tenancy/employment/contract scope. Project only those
             # additions out; dedicated module tests cover their new contracts.
-            k: (("bgb",) if k in ("mietrecht", "arbeitsrecht") else v)
+            k: (("bgb",) if k in ("mietrecht", "arbeitsrecht", "vertragsrecht") else v)
             for k, v in AREA_TO_SOURCE_TYPES.items() if k != "schuldnerrecht"
         },
         "infer_bgb_area": lambda path: (
