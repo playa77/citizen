@@ -1,0 +1,86 @@
+format: citizen-plain-copy-v1.0
+module: mietrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  miete_pruefen:
+    title: Check the rent
+    text: The increase or rent needs checking. A calculated ceiling does not confirm a legally effective
+      increase.
+    next_step: Collect your lease, increase notice and evidence of the local comparative rent.
+  kosten_pruefen:
+    title: Check the costs
+    text: The statement and allocation need checking. Correct arithmetic does not establish a duty to
+      pay.
+    next_step: Check each disputed item and arrange timely access to supporting records.
+  frist_pruefen:
+    title: Check the deadline
+    text: The document type, actual receipt and other conditions need confirmation. The letter date does
+      not establish receipt.
+    next_step: Keep evidence of receipt. Seek urgent advice on termination notices and court papers.
+  beratung_erforderlich:
+    title: Seek individual advice
+    text: Your case needs individual assessment. Paying arrears within a cure period does not automatically
+      remove an ordinary termination.
+    next_step: Seek prompt tenancy or legal advice if you risk losing your home.
+  einordnung_offen:
+    title: Assessment still open
+    text: The information does not yet support an assessment. This confirms neither a claim nor its invalidity.
+    next_step: Collect the documents. Watch possible deadlines and seek advice when uncertain.
+deadlines:
+  miet_zustimmung:
+    title: Consent to a rent increase
+    action: Have the request and its conditions checked before consenting. An information request does
+      not extend the period.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Basis: {basis}. Have the conditions and calculation
+        checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the required facts and have the calculation
+        checked.
+      missing_input: Confirmed facts are missing. A reliable date cannot yet be provided. Seek urgent
+        advice.
+      not_applicable: This deadline rule does not match the confirmed facts. Other deadlines may still
+        matter.
+  miet_betriebskosten_einwendung:
+    title: Objections to an operating cost statement
+    action: Raise specific objections in time. Requesting supporting records alone does not extend the
+      period.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Basis: {basis}. Have the conditions and calculation
+        checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the required facts and have the calculation
+        checked.
+      missing_input: Confirmed facts are missing. A reliable date cannot yet be provided. Seek urgent
+        advice.
+      not_applicable: This deadline rule does not match the confirmed facts. Other deadlines may still
+        matter.
+  miet_sozialwiderspruch:
+    title: Hardship objection
+    action: Have the termination, hardship grounds, landlord notice and text form checked promptly. Later
+      objections may remain possible without proper notice.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Basis: {basis}. Have the conditions and calculation
+        checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the required facts and have the calculation
+        checked.
+      missing_input: Confirmed facts are missing. A reliable date cannot yet be provided. Seek urgent
+        advice.
+      not_applicable: This deadline rule does not match the confirmed facts. Other deadlines may still
+        matter.
+  miet_schonfrist:
+    title: Check the arrears cure period
+    action: Seek urgent advice. Check full payment or a public authority commitment and previous cure
+      periods. An ordinary termination needs separate assessment.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Basis: {basis}. Have the conditions and calculation
+        checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the required facts and have the calculation
+        checked.
+      missing_input: Confirmed facts are missing. A reliable date cannot yet be provided. Seek urgent
+        advice.
+      not_applicable: This deadline rule does not match the confirmed facts. Other deadlines may still
+        matter.

@@ -24,7 +24,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 from uuid import uuid4
 
 import httpx
@@ -164,6 +164,36 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "has_scraper": True,
         "checked_by_default": False,
         "source": "gesetze-im-internet.de",
+    },
+    "betrkv": {
+        "key": "betrkv",
+        "name": "BetrKV",
+        "full_name": "Betriebskostenverordnung",
+        "description": "Betriebskostenarten bei Wohnraummiete.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "heizkostenv": {
+        "key": "heizkostenv",
+        "name": "HeizkostenV",
+        "full_name": "Heizkostenverordnung",
+        "description": "Verteilung und Abrechnung von Heiz- und Warmwasserkosten.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "landes_mietrecht": {
+        "key": "landes_mietrecht",
+        "name": "Landes-Mietrechtsverordnungen",
+        "full_name": "Landesrechtliche Mietpreis- und Kappungsgrenzenverordnungen",
+        "description": "Explizit importierte, datierte amtliche Geltungsnachweise.",
+        "tooltip": "Kein automatischer Abruf; geprüfte amtliche Auszüge separat importieren.",
+        "has_scraper": False,
+        "checked_by_default": False,
+        "source": "Amtliche Veröffentlichungen der Länder",
     },
     "zpo": {
         "key": "zpo",
@@ -425,6 +455,8 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb3": "/sgb_3/",  # SGB III - Arbeitsförderung
     "sgb9": "/sgb_9/",  # SGB IX - Rehabilitation und Teilhabe
     "bgb": "/bgb/",  # BGB - Bürgerliches Gesetzbuch
+    "betrkv": "/betrkv/",
+    "heizkostenv": "/heizkostenv/",
     "zpo": "/zpo/",
     "inso": "/inso/",
     "rdg": "/rdg/",
@@ -587,6 +619,12 @@ async def scrape_and_chunk(
     # Dispatch weisung to dedicated PDF scraper
     if source_type == "weisung":
         return await scrape_weisungen(client=client)
+
+    if source_type == "landes_mietrecht":
+        raise ValueError(
+            "State tenancy evidence requires an explicit official snapshot import "
+            "through normalize_state_ordinance(); no automatic state scraper is available."
+        )
 
     # WP-113: case-law source types are filled from the `case_law`
     # declarations of verified modules (RII / Open Legal Data).
@@ -930,6 +968,103 @@ def _parse_law_sections(
 # ---------------------------------------------------------------------------
 
 
+# These are publication hosts, not geography or legal applicability rules.
+# Keep import provenance bounded to the named Land's official publisher;
+# municipality/validity decisions remain versioned module data.
+_STATE_PUBLICATION_HOSTS: dict[str, frozenset[str]] = {
+    "BE": frozenset({"www.berlin.de", "gesetze.berlin.de"}),
+    "BB": frozenset({"mil.brandenburg.de", "bravors.brandenburg.de"}),
+    "BW": frozenset({"mlw.baden-wuerttemberg.de", "www.landesrecht-bw.de"}),
+    "BY": frozenset({"www.gesetze-bayern.de"}),
+    "HB": frozenset({"www.transparenz.bremen.de"}),
+    "HE": frozenset({"wirtschaft.hessen.de", "verkuendung.hessen.de"}),
+    "HH": frozenset({"www.hamburg.de", "www.landesrecht-hamburg.de"}),
+    "MV": frozenset({"www.mecklenburg-vorpommern.de", "www.landesrecht-mv.de"}),
+    "NI": frozenset({"www.mw.niedersachsen.de", "www.nds-voris.de"}),
+    "NW": frozenset({"recht.nrw.de"}),
+    "RP": frozenset({"mkbwk.rlp.de", "landesrecht.rlp.de"}),
+    "SH": frozenset({"www.schleswig-holstein.de", "www.gesetze-rechtsprechung.sh.juris.de"}),
+    "SL": frozenset({"www.saarland.de", "recht.saarland.de"}),
+    "SN": frozenset({"www.recht.sachsen.de", "www.revosax.sachsen.de"}),
+    "ST": frozenset({"lv.sachsen-anhalt.de", "www.landesrecht.sachsen-anhalt.de"}),
+    "TH": frozenset({"landesrecht.thueringen.de", "infrastruktur-landwirtschaft.thueringen.de"}),
+}
+
+
+def normalize_state_ordinance(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """Adapt an explicitly selected official excerpt to the existing chunk pipeline.
+
+    This offline boundary does not fetch, embed, persist or establish current
+    municipality coverage. The caller supplies a source-checked excerpt and
+    may pass the resulting chunks to the existing embedding/upsert functions.
+    The digest proves snapshot integrity, not legal or human review.
+    """
+    required = (
+        "bundesland",
+        "title",
+        "official_url",
+        "effective_date",
+        "publication",
+        "text",
+        "sha256",
+        "snapshot_kind",
+    )
+    if any(not isinstance(record.get(key), str) or not record[key].strip() for key in required):
+        raise ValueError("State snapshot requires non-empty source, date, text and digest fields")
+    land = record["bundesland"]
+    if land not in _STATE_PUBLICATION_HOSTS:
+        raise ValueError("State snapshot has an unsupported Bundesland")
+    url = urlsplit(record["official_url"])
+    if (
+        url.scheme != "https"
+        or url.hostname not in _STATE_PUBLICATION_HOSTS[land]
+        or url.username is not None
+        or url.password is not None
+        or url.port not in (None, 443)
+    ):
+        raise ValueError("State snapshot URL must name the Land's official HTTPS publication host")
+    effective_date = date.fromisoformat(record["effective_date"])
+    if (
+        record.get("valid_to") is not None
+        and date.fromisoformat(record["valid_to"]) < effective_date
+    ):
+        raise ValueError("State snapshot validity interval is reversed")
+    if record["snapshot_kind"] != "applicability_excerpt":
+        raise ValueError("State snapshot must identify its limited applicability-excerpt coverage")
+    if hashlib.sha256(record["text"].encode("utf-8")).hexdigest() != record["sha256"]:
+        raise ValueError("State snapshot text does not match its SHA-256 evidence digest")
+    title = record["title"].strip()
+    if len(title) > 500:
+        raise ValueError("State snapshot title exceeds the storage contract")
+    # Identical text in another Land, publication or period must not collapse
+    # under the existing (source_type, version_hash) source identity constraint.
+    evidence = {key: record[key] for key in required if key != "text"}
+    evidence["valid_to"] = record.get("valid_to")
+    version_hash = _compute_version_hash(json.dumps(evidence, sort_keys=True, ensure_ascii=False))
+    return [
+        {
+            "id": str(uuid4()),
+            "source_type": "landes_mietrecht",
+            "title": title,
+            "jurisdiction": f"DE-{land}",
+            "unit_type": "statute",
+            "hierarchy_path": f"{title} > {record['publication']} > Geltungsnachweis (Auszug)",
+            "text_content": (
+                "Amtlicher Geltungsnachweis (Auszug; kein vollständiger Verordnungstext). "
+                f"Stand/Gültigkeit ab {effective_date.isoformat()}"
+                + (f" bis {record['valid_to']}" if record.get("valid_to") else "")
+                + ". "
+                + normalize_text(record["text"])
+            ),
+            "effective_date": effective_date.isoformat(),
+            "source_url": record["official_url"],
+            "version_hash": version_hash,
+            "chunk_id": str(uuid4()),
+            "legal_area": None,
+        }
+    ]
+
+
 def _extract_paragraph_nodes(soup: BeautifulSoup, source_type: str) -> list[Tag]:
     """Find all paragraph elements (<p>, <norm> <jur> etc.) carrying legal text."""
 
@@ -1014,6 +1149,8 @@ def _infer_law_name(element: Tag, source_type: str) -> str:
         "sgb3": "SGB III",
         "sgb9": "SGB IX",
         "bgb": "BGB",
+        "betrkv": "BetrKV",
+        "heizkostenv": "HeizkostenV",
         "zpo": "ZPO",
         "inso": "InsO",
         "rdg": "RDG",
@@ -1314,7 +1451,7 @@ async def _get_or_create_source(
         source = LegalSource(
             source_type=source_type,
             title=chunk.get("title", source_type.upper()),
-            jurisdiction="DE",
+            jurisdiction=chunk.get("jurisdiction", "DE"),
             effective_date=date.fromisoformat(chunk["effective_date"]),
             source_url=chunk.get("source_url", ""),
             version_hash=version_hash,

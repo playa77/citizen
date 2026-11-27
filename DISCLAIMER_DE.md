@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.2.0 · **Stand:** 2026-11-26
+**Version:** 3.3.0 · **Stand:** 2026-11-27
 
 **Autor:** www.github.com/playa77
 
@@ -40,9 +40,11 @@ Rechtsgebiets-Modulen. Das erste und bislang einzige ausgereifte Modul,
 Sozialrecht, liest deutsche Sozialrechts-Bescheide ein, bindet jede Aussage an
 den Gesetzestext, rechnet Berechnungen deterministisch nach und bestimmt
 Fristen auf den Tag genau. Weitere Rechtsgebiete — Arbeits-, Erb-, Familien-,
-Miet-, Straf- und Vertragsrecht — liegen als experimentelle Module vor: Sie
+Straf- und Vertragsrecht — liegen als experimentelle Module vor: Sie
 ordnen Anliegen zu und beziehen die passenden Rechtsquellen ein, berechnen
-aber noch keine Fristen und keine Beträge (Teil D). Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
+aber noch keine Fristen und keine Beträge. Die experimentellen Module
+Schuldnerrecht und Mietrecht bieten begrenzte, qualifizierte Frist- und
+Rechenprüfungen mit ausdrücklichen Voraussetzungen und Grenzen (Teil D). Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
 an dem jede Änderung gemessen wird. Es gibt bekannte Grenzen, und sie stehen
 im Repo statt unter dem Teppich. Das ist der ehrliche Ist-Zustand:
 funktionierend, ungeschliffen, messbar — und noch kein Produkt.
@@ -462,7 +464,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.2.0`);
+`v3.3.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -861,7 +863,7 @@ und C.6.1.
 ### D.4 Weitere experimentelle Module
 
 Für die Module `arbeitsrecht`, `erbrecht` (einschließlich des Altschlüssels
-`schenkungsrecht`), `familienrecht`, `mietrecht`, `vertragsrecht` und
+`schenkungsrecht`), `familienrecht`, `vertragsrecht` und
 `andere` (Auffangbereich) gelten D.1 und die Teile A bis C ohne
 gebietsspezifische Ergänzung. Sie berechnen weder Fristen noch Beträge; wer
 eine Frist zu wahren hat, lässt sie anwaltlich oder durch eine
@@ -891,7 +893,31 @@ Schuldnerberatung oder anwaltliche Beratung auf.
 
 ---
 
+### D.6 Wohnraummiete (`mietrecht`)
+
+**Geltungsbereich.** Dieses experimentelle Modul unterstützt Sie bei Ihrer
+eigenen Wohnraummietsache als mietende Person. Es prüft Fristen und Beträge
+nur mit bestätigten Tatsachen und passenden versionierten Parametern.
+Briefdatum und Modellschätzungen ersetzen weder Zugang noch Zustellung.
+Örtliche Mietpreis- und Kappungsgrenzenverordnungen haben unterschiedliche
+Gebiete, Zeiträume und Ausnahmen. Ungeklärte örtliche Geltung wird nicht als
+bundesweite Erlaubnis oder als Negativnachweis behandelt.
+
+Rechenprüfungen bestätigen weder die Wirksamkeit einer Mieterhöhung noch die
+Berechtigung einzelner Betriebskosten. Das Modul legt keine Minderungsquote
+fest. Ändern Sie Zahlungen nicht allein aufgrund einer automatischen
+Einschätzung. Verträge, Ausnahmen, Härtegründe und Nachweise müssen im
+Einzelfall geprüft werden. Entwürfe bleiben prüfbedürftig und werden nicht
+versandt. Bei Kündigung, Räumungsklage oder drohendem Wohnungsverlust suchen
+Sie unverzüglich Mietberatung oder anwaltliche Hilfe. Eine Schonfristzahlung
+beseitigt eine ordentliche Kündigung nicht automatisch; ein fehlender Hinweis
+auf den Härtewiderspruch kann gesonderte spätere Möglichkeiten eröffnen.
+
+---
+
 ## Änderungshistorie
+
+- **3.3.0 (2026-11-27):** Mietrecht: qualifizierte Frist- und Rechenprüfungen, örtliche Quellenlücken und Entwürfe. Erneute Kenntnisnahme erforderlich.
 
 - **3.2.0 (2026-11-26):** Schuldnerrecht: begrenzte Frist- und Rechenprüfungen, Entwürfe und klare Ausnahmen. Erneute Kenntnisnahme erforderlich.
 - **3.1.0 (2026-11-26):** Experimentelles Modul `schuldnerrecht` mit Terminvorbereitung und gebietsspezifischer Ergänzung; noch keine Fristen- oder Betragsberechnung. Erneute Kenntnisnahme erforderlich.

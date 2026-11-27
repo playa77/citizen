@@ -35,6 +35,8 @@ _SGB_SOURCE_TYPES = {1: "sgb1", 2: "sgb2", 3: "sgb3", 9: "sgb9", 10: "sgbx", 12:
 #: Canonical abbreviation → corpus source type (None: recognised, not catalogued).
 LAWS: dict[str, str | None] = {
     "BGB": "bgb",
+    "BetrKV": "betrkv",
+    "HeizkostenV": "heizkostenv",
     "SGG": "sgg",
     "VwVfG": "vwvfg",
     "ErbStG": "erbstg",

@@ -1,0 +1,193 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/mietrecht-intake-v0.2.0
+title: Experimental own-matter tenant intake schema
+description: Module-specific form schema. Existing API envelopes and privacy validation remain authoritative.
+  Legal qualification requires explicit evidence; null means unknown. Deadline facts and calculator facts
+  are distinct inputs.
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+    description: Natural person preparing their own tenant-side matter, not landlord representation.
+  synthetic_data_confirmed:
+    type: boolean
+  document_type:
+    enum:
+    - mieterhoehung
+    - betriebskostenabrechnung
+    - kuendigung
+    - raeumungsklage
+    - maengelanzeige
+    - modernisierungsankuendigung
+    - mietvertrag
+    - sonstiges
+  bescheid_datum:
+    type: string
+    format: date
+    description: Letter date only. Never establishes receipt or service.
+  zugang_tatsaechlich:
+    type: string
+    format: date
+    description: Explicitly confirmed actual receipt date, not a postal estimate.
+  ereignis_datum:
+    type: string
+    format: date
+    description: Confirmed termination date for a hardship objection, not the letter date.
+  zustellung_tatsaechlich:
+    type: string
+    format: date
+    description: Confirmed actual service date of the eviction claim; court pendency must also be confirmed.
+  zustellungsart:
+    enum:
+    - inland
+    - ausland
+    - oeffentlich
+  bundesland:
+    enum:
+    - BW
+    - BY
+    - BE
+    - BB
+    - HB
+    - HH
+    - HE
+    - MV
+    - NI
+    - NW
+    - RP
+    - SL
+    - SN
+    - ST
+    - SH
+    - TH
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      widerspruchshinweis_rechtzeitig: &id001
+        type:
+        - boolean
+        - 'null'
+        description: Confirm explicitly from qualified facts. Unknown is null; silence is never false.
+      ordentliche_kuendigung: *id001
+      zahlungsverzug: *id001
+      keine_schonfrist_letzte_zwei_jahre: *id001
+      rechtshaengigkeit_bestaetigt: *id001
+  feiertagskalender_bestaetigt: *id001
+  feiertage_zusaetzlich:
+    type: array
+    items: &id002
+      type: string
+      format: date
+    uniqueItems: true
+    description: Confirmed additional local holidays at the legally relevant place. An empty list must
+      be confirmed, not guessed.
+  calculation_type:
+    enum:
+    - none
+    - rent_increase
+    - rent_brake
+    - operating_costs
+    - ordinary_termination
+    - deposit
+  as_of: *id002
+  municipality:
+    type: string
+    minLength: 1
+    description: Exact official municipality name; not merely a postal town or district.
+  rent_regime:
+    enum:
+    - ordinary
+    - index
+    - stepped
+    - subsidised
+    - unknown
+  cost_category:
+    enum:
+    - operating
+    - heating
+  consumption_share_percent:
+    type: number
+    minimum: 0
+    maximum: 100
+  actor:
+    enum:
+    - tenant
+    - landlord
+  received_on: *id002
+  handed_over_on: *id002
+  qualification_note:
+    type: string
+    description: Evidence and source of qualification; unresolved points remain explicit.
+  base_rent_cents: &id003
+    type: integer
+    minimum: 0
+    description: Confirmed amount in integer euro cents; not inferred by a language model.
+  current_rent_cents: *id003
+  comparison_rent_cents: *id003
+  requested_rent_cents: *id003
+  total_cost_cents: *id003
+  advance_paid_cents: *id003
+  net_rent_cents: *id003
+  stated_amount_cents: *id003
+  tenant_units:
+    type: number
+    exclusiveMinimum: 0
+  total_units:
+    type: number
+    exclusiveMinimum: 0
+  applicability_confirmed: *id001
+  municipality_confirmed: *id001
+  baseline_confirmed: *id001
+  stability_confirmed: *id001
+  waiting_period_confirmed: *id001
+  subsidy_exception: *id001
+  exceptions_checked: *id001
+  new_build: *id001
+  first_after_comprehensive_modernisation: *id001
+  prior_rent_exception: *id001
+  modernisation_exception: *id001
+  allocation_confirmed: *id001
+  contract_allocation_confirmed: *id001
+  heating_70_required: *id001
+  heating_exceptions: *id001
+  ordinary_residential_confirmed: *id001
+  special_contract: *id001
+  cash_deposit_confirmed: *id001
+  tenant_consumption_units:
+    type: number
+    minimum: 0
+  total_consumption_units:
+    type: number
+    exclusiveMinimum: 0
+  nonallocable_costs_present:
+    type:
+    - boolean
+    - 'null'
+    description: Repairs, administration or other nonallocable costs present; unknown must remain null.
+allOf:
+- if:
+    required:
+    - zustellung_tatsaechlich
+  then:
+    required:
+    - document_type
+    - zustellungsart
+- if:
+    properties:
+      calculation_type:
+        enum:
+        - rent_increase
+        - rent_brake
+        - operating_costs
+        - ordinary_termination
+        - deposit
+    required:
+    - calculation_type
+  then:
+    required:
+    - as_of
+    - applicability_confirmed

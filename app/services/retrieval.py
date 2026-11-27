@@ -45,6 +45,8 @@ _STATUTE_TO_SOURCE_TYPE: dict[str, list[str]] = {
     "SGB X": ["sgbx"],
     "SGB XII": ["sgb12"],
     "BGB": ["bgb"],
+    "BetrKV": ["betrkv"],
+    "HeizkostenV": ["heizkostenv"],
     "ErbStG": ["erbstg"],
     "HöfeV": ["hoefev"],
     "VwVfG": ["vwvfg"],

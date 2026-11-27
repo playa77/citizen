@@ -1,0 +1,87 @@
+format: citizen-tenancy-source-coverage-v1
+checked_on: '2026-11-26'
+review_status: proposed
+network_budget:
+  primary_source_requests_max: 40
+  retries: 0
+  same_source_in_flight: 1
+  minimum_start_interval_seconds: 2
+  request_timeout_seconds: 20
+  additional_cached_reads: PDF line extraction only
+states:
+- bundesland: BW
+  official_url: https://mlw.baden-wuerttemberg.de/de/bauen-wohnen/wohnungsbau/mietpreisbremse
+  status: official_overview
+  notes: 2026:130 municipalities; announced2027:133. Lists not transcribed; unavailable.
+- bundesland: BY
+  official_url: https://www.gesetze-bayern.de/Content/Document/BayMiSchuV2025/true
+  status: official_consolidated_text
+  notes: Annex available; duplicate municipal names require district/AGS crosswalk
+    not implemented; unavailable.
+- bundesland: BE
+  official_url: https://www.berlin.de/sen/sbw/_assets/service/rechtsvorschriften/bereich-wohnen/abl_2025_48_auszug.pdf?ts=1765286731
+  status: executable
+  notes: Berlin complete positive coverage; separate cap expires2028-05-10 and brake2029-12-31.
+- bundesland: BB
+  official_url: https://mil.brandenburg.de/mil/de/service/rechtsgrundlagen/wohnen/
+  status: partially_executable
+  notes: 36 brake municipalities. Cap PDF labeled Kabinettbeschluss, no promulgation
+    proof; cap unavailable.
+- bundesland: HB
+  official_url: https://www.transparenz.bremen.de/metainformationen/verordnung-ueber-die-zulaessige-miethoehe-gemaess-556d-absatz-2-des-buergerlichen-gesetzbuchs-mietenbegrenzungsverordnung-vom-18-november-2025-306286?template=20_gp_ifg_meta_detail_d
+  status: blocked
+  notes: Official page indexed; direct open403; no retry; executable coverage unavailable.
+- bundesland: HH
+  official_url: https://www.hamburg.de/politik-und-verwaltung/behoerden/behoerde-fuer-stadtentwicklung-und-wohnen/themen/wohnen/mieten/mietenspiegel/mietpreisbremse-189826
+  status: partially_executable
+  notes: Whole Hamburg brake2026–2029; cap source not verified, unavailable.
+- bundesland: HE
+  official_url: https://verkuendung.hessen.de/sites/verkuendung.hessen.de/files/veroeffentlichungsplattform_plugin/published/1568/GVBl_2026_Nr_78_Regelungstext.pdf
+  status: executable
+  notes: New71-municipality annex; cap expires2031-11-19, brake2029-12-31. Earlier
+    ordinance not applied.
+- bundesland: MV
+  official_url: https://land-mv.de/seite/mietpreisbremse
+  status: partially_executable
+  notes: Rostock/Greifswald cap.2026 coastal instrument and brake amendment located,
+    exact commencement/consolidation requires further verification; no arithmetic
+    coverage.
+- bundesland: NI
+  official_url: https://www.mw.niedersachsen.de/startseite/themen/bauen_wohnen/soziales_wohnungswesen/niedersachsische_mieterschutzverordnung/niedersachsische-mieterschutzverordnung-217000.html
+  status: official_overview
+  notes: 57 listed areas include Samtgemeinden; missing constituent identifier crosswalk,
+    unavailable.
+- bundesland: NW
+  official_url: https://recht.nrw.de/gvnrw/2025-s111/
+  status: official_original_text
+  notes: 2025 promulgation cap2030; original brake expiry2025. Later brake amendment/annex
+    not verified; unavailable.
+- bundesland: RP
+  official_url: https://mkbwk.rlp.de/themen/bauen-und-wohnen/rheinland-pfaelzische-mieterschutzregelungen
+  status: partially_executable
+  notes: Positive city subsets only; district constituent lists not expanded. Worms
+    brake only, not cap. Legal portal requests timed out, no retry.
+- bundesland: SL
+  official_url: https://www.saarland.de/
+  status: unresolved
+  notes: No current official ordinance or official negative designation verified;
+    unavailable, no nationwide inference.
+- bundesland: SN
+  official_url: https://www.recht.sachsen.de/vorschrift/21416.1
+  status: executable
+  notes: Complete positive Dresden/Leipzig lists; both expire2027-06-30; other municipalities
+    unavailable.
+- bundesland: ST
+  official_url: https://lv.sachsen-anhalt.de/fileadmin/Bibliothek/Politik_und_Verwaltung/Landesvertretung/LV/Bundesrat_Erlaeuterungen_Ergebnisse/2024/Erl%C3%A4uterungen_der_Vertretung_des_Landes_Sachsen-Anhalt_beim_Bund_zum_1050._BR.pdf
+  status: historical_only
+  notes: Official2024 negative statement does not establish2026 status; unavailable.
+- bundesland: SH
+  official_url: https://www.schleswig-holstein.de/DE/landesregierung/themen/planen-bauen-wohnen/wohnen/Rechtsgrundlagen
+  status: official_source_index
+  notes: Cap law located in official index; complete current list and brake absence
+    unverified, unavailable.
+- bundesland: TH
+  official_url: https://parldok.thueringer-landtag.de/ParlDok/dokument/105146
+  status: official_amendment
+  notes: 2025 amendment locates Erfurt/Jena brake through2027; base instrument and
+    exact amendment commencement not independently captured; unavailable.

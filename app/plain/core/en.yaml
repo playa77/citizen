@@ -1,11 +1,11 @@
 # Core plain-language copy, plain English (WP-125, D-068).
-# A plain rendering of DISCLAIMER_EN.md v3.2.0 (Part B) and of the Art. 50
+# A plain rendering of DISCLAIMER_EN.md v3.3.0 (Part B) and of the Art. 50
 # disclosure 1.0; it summarises, it does not replace them.
-# Semantic Version: 1.2.0 | 2026-11-26
+# Semantic Version: 1.3.0 | 2026-11-27
 
 format: citizen-plain-core-copy-v1.0
 language: en
-disclaimer_version: v3.2.0
+disclaimer_version: v3.3.0
 disclosure_version: "1.0"
 review:
   status: draft

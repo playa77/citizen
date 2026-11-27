@@ -1011,6 +1011,27 @@ conservative reading and are listed per deadline in `assumptions`
 (Rechtsbehelfsbelehrung correct, Aufgabe zur Post = letter date, treated as a
 Verwaltungsakt, Bundesland = Fristen-core default).
 
+**Receipt/event rules (core 3.6.0 / module API 3.4).** Additive fact keys:
+`zugang_tatsaechlich` and `ereignis_datum` (explicit ISO dates),
+`qualifikationen` (up to 64 module-declared boolean confirmations, keys matching
+`[a-z][a-z0-9_]{0,63}`), `feiertagskalender_bestaetigt` (boolean), and
+`feiertage_zusaetzlich` (up to 366 ISO dates for local holidays). Null qualification values and a null calendar confirmation normalize to
+unknown/absent; they never satisfy a required confirmation. No letter date or
+Bekanntgabe fact supplies receipt/event inputs. A different explicit document
+type is `not_applicable`; missing date/type/required qualification is
+`missing_input`. BGB rollover requires explicit Bundesland and confirmed local
+holiday coverage. Backwards periods do not roll forward. Civil statewide
+calendar support begins in 2024; earlier dates require individual review.
+
+For tenancy, `miet_zustimmung` and `miet_betriebskosten_einwendung` end at the
+second/twelfth calendar month's end after confirmed receipt, with applicable
+BGB rollover. `miet_sozialwiderspruch` runs backwards from confirmed tenancy
+end and requires `widerspruchshinweis_rechtzeitig` and
+`ordentliche_kuendigung`. `miet_schonfrist` uses confirmed domestic service and
+requires `zahlungsverzug`, `keine_schonfrist_letzte_zwei_jahre` and
+`rechtshaengigkeit_bestaetigt`. These are qualified preparation checks; they
+establish neither notice validity nor cure of a separate ordinary termination.
+
 **Service-based rules (core 3.5.0 / module API 3.3).** Additive fact keys:
 `zustellung_tatsaechlich` (confirmed actual service ISO date), `document_type`
 (module-declared document slug) and `zustellungsart` (`inland`, `ausland` or
@@ -1286,3 +1307,15 @@ session-restoration APIs.
 *Generated for Citizen v2.0.0 (D-024/D-025 refactor). Guard test
 `tests/unit/test_api_documentation.py` keeps this catalog in sync with the
 live OpenAPI schema.*
+
+### WP-131 tenancy implementation (core 3.6.0)
+
+Experimental `mietrecht` 0.2.0 exposes its intake schema, drafts and source scope
+through the existing module endpoints. Source types `betrkv`, `heizkostenv`
+and `landes_mietrecht` extend the corpus catalog. State sources have
+`has_scraper: false`; explicit source-checked normalized snapshots are supported
+by the existing corpus service. Source excerpts and readiness counts do not
+establish complete state/municipality coverage. Module coverage records make
+unsupported areas explicit; calculators never assume a designation or default
+ceiling from missing records. No API route or SSE event is removed/renamed.
+The current disclaimer acknowledgement is `v3.3.0`.

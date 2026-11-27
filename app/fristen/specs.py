@@ -10,6 +10,7 @@ module's area of law — data, not code.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,7 +24,7 @@ TRIGGERS: frozenset[str] = frozenset(
     {"bekanntgabe", "zustellung", "zugang", "kenntnis", "ereignis"}
 )
 
-_EVALUABLE_TRIGGERS: frozenset[str] = frozenset({"bekanntgabe", "zustellung"})
+_EVALUABLE_TRIGGERS: frozenset[str] = frozenset({"bekanntgabe", "zustellung", "zugang", "ereignis"})
 
 _SEVERITIES: frozenset[str] = frozenset({"low", "normal", "high", "critical"})
 
@@ -72,6 +73,8 @@ class DeadlineSpec:
     # Area-specific Fristbeginn citation, e.g. "§ 64 Abs. 1 SGG, § 187 Abs. 1 BGB".
     fristbeginn_basis: str
     not_applicable: NotApplicable | None
+    anchor: str = "same_day"
+    requires_confirmed: tuple[str, ...] = ()
 
 
 def _parse_duration(raw: dict[str, Any] | None, context: str) -> Duration:
@@ -133,12 +136,39 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
     if not isinstance(applies_when, dict):
         raise ValueError(f"{path}: spec {spec_id!r} has a non-mapping applies_when")
 
+    anchor = raw.get("anchor", "same_day")
+    if anchor not in ("same_day", "month_end"):
+        raise ValueError(f"{path}: invalid anchor {anchor!r}")
+    duration = _parse_duration(raw.get("duration"), spec_id)
+    components = (duration.days, duration.months, duration.years)
+    if trigger in ("zugang", "ereignis"):
+        if sum(value != 0 for value in components) != 1:
+            raise ValueError(f"{path}: receipt/event rules require one nonzero duration component")
+        if anchor == "month_end" and (not duration.months or duration.months < 0):
+            raise ValueError(f"{path}: month_end anchor requires positive months")
+        if any(value < 0 for value in components) and (
+            trigger != "ereignis" or raw.get("rollover") is not None
+        ):
+            raise ValueError(f"{path}: backward rules require event trigger and no rollover")
+        if raw.get("bekanntgabe_fiction") not in (None, "none") or missing is not None:
+            raise ValueError(f"{path}: receipt/event rules cannot use administrative fictions/RBB")
+        if not applies_when.get("document_type"):
+            raise ValueError(f"{path}: receipt/event rules require a document_type selector")
+    elif anchor != "same_day":
+        raise ValueError(f"{path}: anchor supported only for receipt/event rules")
+    required = raw.get("requires_confirmed", [])
+    if not isinstance(required, list) or any(
+        not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
+        for key in required
+    ):
+        raise ValueError(f"{path}: invalid requires_confirmed qualification keys")
+
     return DeadlineSpec(
         id=spec_id,
         label_de=str(raw.get("label_de", "")),
         trigger=str(trigger),
         bekanntgabe_fiction=raw.get("bekanntgabe_fiction"),
-        duration=_parse_duration(raw.get("duration"), f"{spec_id}"),
+        duration=duration,
         rollover=raw.get("rollover"),
         missing_rechtsbehelfsbelehrung=missing,
         basis=raw.get("basis"),
@@ -146,6 +176,8 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
         applies_when={str(k): str(v) for k, v in applies_when.items()},
         fristbeginn_basis=str(raw.get("fristbeginn_basis", "")),
         not_applicable=not_applicable,
+        anchor=anchor,
+        requires_confirmed=tuple(required),
     )
 
 

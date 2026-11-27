@@ -1,0 +1,244 @@
+parameters:
+- key: regional_designations
+  value_json:
+    designations:
+    - bundesland: BE
+      municipalities:
+      - Berlin
+      kind: cap
+      valid_from: '2023-05-11'
+      valid_to: '2028-05-10'
+      percent: 15
+      source_url: https://www.berlin.de/politik-und-verwaltung/rundschreiben/download.php/4328558
+      basis: Kappungsgrenzenverordnung Berlin vom 14.03.2023, GVBl. S.112
+      review_status: proposed
+    - bundesland: BE
+      municipalities:
+      - Berlin
+      kind: brake
+      valid_from: '2026-01-01'
+      valid_to: '2029-12-31'
+      percent: 10
+      source_url: https://www.berlin.de/sen/sbw/_assets/service/rechtsvorschriften/bereich-wohnen/abl_2025_48_auszug.pdf?ts=1765286731
+      basis: Mietenbegrenzungsverordnung Berlin 2025, ABl. 48/2025 S.3080
+      review_status: proposed
+    - bundesland: HH
+      municipalities:
+      - Hamburg
+      kind: brake
+      valid_from: '2026-01-01'
+      valid_to: '2029-12-31'
+      percent: 10
+      source_url: https://www.hamburg.de/politik-und-verwaltung/behoerden/behoerde-fuer-stadtentwicklung-und-wohnen/themen/wohnen/mieten/mietenspiegel/mietpreisbremse-189826
+      basis: Hamburger Mietpreisbegrenzungsverordnung; amtliche Geltungsinformation
+      review_status: proposed
+    - bundesland: SN
+      municipalities:
+      - Dresden
+      - Leipzig
+      kind: cap
+      valid_from: '2025-07-01'
+      valid_to: '2027-06-30'
+      percent: 15
+      source_url: https://www.bauen-wohnen.sachsen.de/abgesenkte-kappungsgrenze-gemaess-558-abs-3-bgb-4399.html
+      basis: Sächsische Kappungsgrenzen-Verordnung 2025; amtliche Geltungsinformation
+      review_status: proposed
+    - bundesland: SN
+      municipalities:
+      - Dresden
+      - Leipzig
+      kind: brake
+      valid_from: '2026-01-01'
+      valid_to: '2027-06-30'
+      percent: 10
+      source_url: https://www.recht.sachsen.de/vorschrift/21416.1
+      basis: SächsMPBVO vom 02.12.2025, SächsGVBl. S.454
+      review_status: proposed
+    - bundesland: BB
+      municipalities:
+      - Ahrensfelde
+      - Altlandsberg
+      - Bernau bei Berlin
+      - Bestensee
+      - Biesenthal
+      - Birkenwerder
+      - Blankenfelde-Mahlow
+      - Brieselang
+      - Eichwalde
+      - Erkner
+      - Falkensee
+      - Fredersdorf-Vogelsdorf
+      - Glienicke/Nordbahn
+      - Großbeeren
+      - Grünheide (Mark)
+      - Kleinmachnow
+      - Königs Wusterhausen
+      - Leegebruch
+      - Ludwigsfelde
+      - Mühlenbecker Land
+      - Nuthetal
+      - Oranienburg
+      - Panketal
+      - Potsdam
+      - Rehfelde
+      - Schönefeld
+      - Schönwalde-Glien
+      - Schulzendorf
+      - Stahnsdorf
+      - Strausberg
+      - Teltow
+      - Werder (Havel)
+      - Wildau
+      - Woltersdorf
+      - Zeuthen
+      - Zossen
+      kind: brake
+      valid_from: '2026-01-01'
+      valid_to: '2029-12-31'
+      percent: 10
+      source_url: https://mil.brandenburg.de/sixcms/media.php/9/Mietpreisbegrenzungsverordnung.pdf
+      basis: Brandenburg Mietpreisbegrenzungsverordnung, amtliche Veröffentlichung
+      review_status: proposed
+    - bundesland: HE
+      municipalities: &id001
+      - Alsbach-Hähnlein
+      - Bad Homburg vor der Höhe
+      - Bad Nauheim
+      - Bad Soden am Taunus
+      - Bad Vilbel
+      - Bensheim
+      - Beselich
+      - Bickenbach
+      - Bischofsheim
+      - Darmstadt
+      - Dietzenbach
+      - Dreieich
+      - Egelsbach
+      - Einhausen
+      - Eltville am Rhein
+      - Erlensee
+      - Eschborn
+      - Fernwald
+      - Flörsheim am Main
+      - Frankfurt am Main
+      - Friedberg (Hessen)
+      - Friedrichsdorf
+      - Gießen
+      - Ginsheim-Gustavsburg
+      - Gladenbach
+      - Griesheim
+      - Groß-Gerau
+      - Großkrotzenburg
+      - Groß-Umstadt
+      - Hanau
+      - Heidenrod
+      - Heppenheim (Bergstraße)
+      - Heusenstamm
+      - Hochheim am Main
+      - Hofheim am Taunus
+      - Idstein
+      - Karben
+      - Kelkheim (Taunus)
+      - Kriftel
+      - Kronberg im Taunus
+      - Lampertheim
+      - Langen (Hessen)
+      - Langenselbold
+      - Liederbach am Taunus
+      - Lorsch
+      - Marburg
+      - Merenberg
+      - Mühlheim am Main
+      - Münster (Hessen)
+      - Nauheim
+      - Neu-Anspach
+      - Neu-Isenburg
+      - Neustadt (Hessen)
+      - Nidderau
+      - Niederdorfelden
+      - Obertshausen
+      - Oberursel (Taunus)
+      - Offenbach am Main
+      - Raunheim
+      - Rodenbach
+      - Rödermark
+      - Ronneburg
+      - Rüsselsheim am Main
+      - Schwalbach am Taunus
+      - Seeheim-Jugenheim
+      - Steinbach (Taunus)
+      - Walluf
+      - Wehrheim
+      - Weiterstadt
+      - Wiesbaden
+      - Zwingenberg
+      kind: brake
+      valid_from: '2026-11-20'
+      valid_to: '2029-12-31'
+      percent: 10
+      source_url: https://verkuendung.hessen.de/sites/verkuendung.hessen.de/files/veroeffentlichungsplattform_plugin/published/1568/GVBl_2026_Nr_78_Regelungstext.pdf
+      basis: Hessische MiSchuV vom 17.11.2026, GVBl. Nr.78, Anlage1
+      review_status: proposed
+    - bundesland: HE
+      municipalities: *id001
+      kind: cap
+      valid_from: '2026-11-20'
+      valid_to: '2031-11-19'
+      percent: 15
+      source_url: https://verkuendung.hessen.de/sites/verkuendung.hessen.de/files/veroeffentlichungsplattform_plugin/published/1568/GVBl_2026_Nr_78_Regelungstext.pdf
+      basis: Hessische MiSchuV vom 17.11.2026, GVBl. Nr.78, Anlage1
+      review_status: proposed
+    - bundesland: MV
+      municipalities:
+      - Rostock
+      - Greifswald
+      kind: cap
+      valid_from: '2023-10-01'
+      valid_to: '2028-09-30'
+      percent: 15
+      source_url: https://land-mv.de/sites/default/files/2026-10/Mietpreisbegrenzungs-%20und%20Kappungsgrenzen-LVO.pdf
+      basis: MietBgKaLVO M-V vom 26.08.2023, GVOBl. S.723
+      review_status: proposed
+    - bundesland: RP
+      municipalities:
+      - Landau in der Pfalz
+      - Ludwigshafen am Rhein
+      - Mainz
+      - Speyer
+      - Worms
+      kind: brake
+      valid_from: '2025-10-08'
+      valid_to: '2029-12-31'
+      percent: 10
+      source_url: https://mkbwk.rlp.de/themen/bauen-und-wohnen/rheinland-pfaelzische-mieterschutzregelungen
+      basis: Mietpreisbegrenzungsverordnung RP vom 16.09.2025; amtliche Übersicht
+      review_status: proposed
+    - bundesland: RP
+      municipalities:
+      - Landau in der Pfalz
+      - Ludwigshafen am Rhein
+      - Mainz
+      - Speyer
+      kind: cap
+      valid_from: '2024-10-01'
+      valid_to: '2029-09-30'
+      percent: 15
+      source_url: https://mkbwk.rlp.de/themen/bauen-und-wohnen/rheinland-pfaelzische-mieterschutzregelungen
+      basis: Kappungsgrenzenverordnung RP vom 13.09.2024; amtliche Übersicht
+      review_status: proposed
+  unit: rules
+  valid_from: 2026-11-26
+  valid_to: null
+  review_status: proposed
+  basis: BGB §§556d Abs.2,558 Abs.3; jeweilige Landesverordnungen
+  notes: '{"retrieved_on": "2026-11-26", "sources": ["https://land-mv.de/sites/default/files/2026-10/Mietpreisbegrenzungs-%20und%20Kappungsgrenzen-LVO.pdf",
+    "https://mil.brandenburg.de/sixcms/media.php/9/Mietpreisbegrenzungsverordnung.pdf",
+    "https://mkbwk.rlp.de/themen/bauen-und-wohnen/rheinland-pfaelzische-mieterschutzregelungen",
+    "https://verkuendung.hessen.de/sites/verkuendung.hessen.de/files/veroeffentlichungsplattform_plugin/published/1568/GVBl_2026_Nr_78_Regelungstext.pdf",
+    "https://www.bauen-wohnen.sachsen.de/abgesenkte-kappungsgrenze-gemaess-558-abs-3-bgb-4399.html",
+    "https://www.berlin.de/politik-und-verwaltung/rundschreiben/download.php/4328558",
+    "https://www.berlin.de/sen/sbw/_assets/service/rechtsvorschriften/bereich-wohnen/abl_2025_48_auszug.pdf?ts=1765286731",
+    "https://www.hamburg.de/politik-und-verwaltung/behoerden/behoerde-fuer-stadtentwicklung-und-wohnen/themen/wohnen/mieten/mietenspiegel/mietpreisbremse-189826",
+    "https://www.recht.sachsen.de/vorschrift/21416.1"], "review": "Positive-only municipality
+    coverage. Exact names, separate legal instruments and dates required. Missing
+    records mean unavailable, never default20%. See sources/coverage.yaml."}'

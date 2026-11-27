@@ -22,6 +22,7 @@ rather than hidden), Bundesland = the Fristen core default.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -55,12 +56,19 @@ FACT_KEYS = (
     "zustellung_tatsaechlich",
     "document_type",
     "zustellungsart",
+    "zugang_tatsaechlich",
+    "ereignis_datum",
+    "qualifikationen",
+    "feiertage_zusaetzlich",
+    "feiertagskalender_bestaetigt",
 )
 _DATE_FACTS = (
     "bescheid_datum",
     "aufgabe_zur_post",
     "bekanntgabe_tatsaechlich",
     "zustellung_tatsaechlich",
+    "zugang_tatsaechlich",
+    "ereignis_datum",
 )
 
 
@@ -74,6 +82,36 @@ def validate_facts(raw: Any) -> dict[str, Any]:
     if unknown:
         raise ValueError(f"unknown facts {sorted(unknown)}; allowed: {list(FACT_KEYS)}")
     facts: dict[str, Any] = {}
+    if "qualifikationen" in raw:
+        values = raw["qualifikationen"]
+        if (
+            not isinstance(values, dict)
+            or len(values) > 64
+            or any(
+                not isinstance(key, str)
+                or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
+                or (value is not None and not isinstance(value, bool))
+                for key, value in values.items()
+            )
+        ):
+            raise ValueError(
+                "facts.qualifikationen must map qualification keys to booleans or null"
+            )
+        facts["qualifikationen"] = {
+            key: value for key, value in values.items() if value is not None
+        }
+    if raw.get("feiertagskalender_bestaetigt") is not None:
+        if not isinstance(raw["feiertagskalender_bestaetigt"], bool):
+            raise ValueError("facts.feiertagskalender_bestaetigt must be boolean")
+        facts["feiertagskalender_bestaetigt"] = raw["feiertagskalender_bestaetigt"]
+    if "feiertage_zusaetzlich" in raw:
+        extra = raw["feiertage_zusaetzlich"]
+        if not isinstance(extra, list) or len(extra) > 366:
+            raise ValueError("facts.feiertage_zusaetzlich must be a list of ISO dates")
+        try:
+            facts["feiertage_zusaetzlich"] = [date.fromisoformat(str(d)).isoformat() for d in extra]
+        except ValueError as exc:
+            raise ValueError("facts.feiertage_zusaetzlich contains an invalid date") from exc
     if raw.get("document_type") is not None:
         value = raw["document_type"]
         if not isinstance(value, str) or not value or len(value) > 64:
@@ -213,7 +251,16 @@ def compute_deadlines(
     used.update(
         {
             key: facts[key]
-            for key in ("zustellung_tatsaechlich", "document_type", "zustellungsart")
+            for key in (
+                "zustellung_tatsaechlich",
+                "document_type",
+                "zustellungsart",
+                "zugang_tatsaechlich",
+                "ereignis_datum",
+                "qualifikationen",
+                "feiertagskalender_bestaetigt",
+                "feiertage_zusaetzlich",
+            )
             if key in facts
         }
     )
@@ -221,8 +268,25 @@ def compute_deadlines(
     items: list[dict[str, Any]] = []
     for module in modules:
         for spec in module.specs:
-            if spec.trigger == "zustellung":
-                items.append(_service_item(module.module_id, spec, facts, bundesland))
+            if spec.trigger in ("zugang", "ereignis", "zustellung"):
+                try:
+                    item = (
+                        _service_item(module.module_id, spec, facts, bundesland)
+                        if spec.trigger == "zustellung"
+                        else _explicit_event_item(module.module_id, spec, facts)
+                    )
+                except (ValueError, OverflowError) as exc:
+                    # Confirmed dates may still be outside the calendar/arithmetic
+                    # range; preserve a guarded dossier instead of an HTTP 500.
+                    item = _result_item(
+                        module.module_id,
+                        spec,
+                        STATUS_MISSING_INPUT,
+                        None,
+                        [f"Datum/Kalender gesondert prüfen: {exc}"],
+                        dict(facts),
+                    )
+                items.append(item)
                 continue
             if letter_date is None:
                 items.append(
@@ -280,7 +344,15 @@ def _service_item(
     """Select a service rule without borrowing VA assumptions or a letter date."""
     used = {
         key: facts.get(key)
-        for key in ("zustellung_tatsaechlich", "document_type", "zustellungsart", "bundesland")
+        for key in (
+            "zustellung_tatsaechlich",
+            "document_type",
+            "zustellungsart",
+            "bundesland",
+            "qualifikationen",
+            "feiertagskalender_bestaetigt",
+            "feiertage_zusaetzlich",
+        )
     }
     required_type = spec.applies_when.get("document_type")
     actual_type = facts.get("document_type")
@@ -292,6 +364,10 @@ def _service_item(
         or not facts.get("zustellungsart")
         or (spec.rollover is not None and not facts.get("bundesland"))
         or any(facts.get(key) != value for key, value in spec.applies_when.items())
+        or (spec.rollover == "bgb_193" and facts.get("feiertagskalender_bestaetigt") is not True)
+        or any(
+            facts.get("qualifikationen", {}).get(key) is not True for key in spec.requires_confirmed
+        )
     ):
         return _result_item(
             module_id,
@@ -300,7 +376,9 @@ def _service_item(
             None,
             [
                 "Art des Schreibens, Zustelltag, Zustellungsart und Bundesland bestätigen. "
-                "Auslandszustellung und öffentliche Zustellung gesondert prüfen lassen."
+                "Auslandszustellung und öffentliche Zustellung gesondert prüfen lassen. "
+                "Zusätzliche Voraussetzungen der Regel bestätigen: "
+                + ", ".join(spec.requires_confirmed)
             ],
             used,
         )
@@ -313,6 +391,11 @@ def _service_item(
             document_type=actual_type,
             zustellungsart=facts["zustellungsart"],
             bundesland=bundesland,
+            qualifikationen=facts.get("qualifikationen", {}),
+            feiertagskalender_bestaetigt=facts.get("feiertagskalender_bestaetigt", False),
+            feiertage_zusaetzlich=tuple(
+                date.fromisoformat(d) for d in facts.get("feiertage_zusaetzlich", [])
+            ),
         ),
         module_id=module_id,
     )
@@ -356,3 +439,60 @@ def frist_result_for_drafts(section: Mapping[str, Any]) -> FristResult | None:
             spec_id=item["spec_id"],
         )
     return None
+
+
+def _explicit_event_item(
+    module_id: str, spec: DeadlineSpec, facts: Mapping[str, Any]
+) -> dict[str, Any]:
+    date_key = "zugang_tatsaechlich" if spec.trigger == "zugang" else "ereignis_datum"
+    keys = (
+        date_key,
+        "document_type",
+        "bundesland",
+        "qualifikationen",
+        "feiertage_zusaetzlich",
+        "feiertagskalender_bestaetigt",
+    )
+    used = {key: facts.get(key) for key in keys}
+    actual_type = facts.get("document_type")
+    expected_type = spec.applies_when.get("document_type")
+    if actual_type and expected_type and actual_type != expected_type:
+        return _result_item(module_id, spec, STATUS_NOT_APPLICABLE, None, [], used)
+    missing = [key for key in (date_key, "document_type") if not facts.get(key)]
+    missing.extend(key for key, value in spec.applies_when.items() if facts.get(key) != value)
+    missing.extend(
+        key
+        for key in spec.requires_confirmed
+        if facts.get("qualifikationen", {}).get(key) is not True
+    )
+    if spec.rollover is not None and not facts.get("bundesland"):
+        missing.append("bundesland")
+    if spec.rollover == "bgb_193" and facts.get("feiertagskalender_bestaetigt") is not True:
+        missing.append("feiertagskalender_bestaetigt (einschließlich örtlicher Feiertage)")
+    if missing:
+        return _result_item(
+            module_id,
+            spec,
+            STATUS_MISSING_INPUT,
+            None,
+            ["Bitte bestätigen: " + ", ".join(missing) + "."],
+            used,
+        )
+    start = date.fromisoformat(facts[date_key])
+    result = evaluate_spec(
+        spec,
+        FristInput(
+            bescheid_datum=start,
+            document_type=actual_type,
+            zugang_tatsaechlich=start if spec.trigger == "zugang" else None,
+            ereignis_datum=start if spec.trigger == "ereignis" else None,
+            bundesland=facts.get("bundesland", ""),
+            qualifikationen=facts.get("qualifikationen", {}),
+            feiertage_zusaetzlich=tuple(
+                date.fromisoformat(d) for d in facts.get("feiertage_zusaetzlich", [])
+            ),
+            feiertagskalender_bestaetigt=facts.get("feiertagskalender_bestaetigt", False),
+        ),
+        module_id=module_id,
+    )
+    return _result_item(module_id, spec, STATUS_COMPUTED, result, [], used)

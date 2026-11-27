@@ -434,8 +434,8 @@ class TestAnalyzeModuleGate:
             [PROCEDURAL_KEY],
             ["andere"],
             ["strafrecht"],
-            ["mietrecht"],
-            [SOZIALRECHT, "mietrecht"],
+            ["arbeitsrecht"],
+            [SOZIALRECHT, "arbeitsrecht"],
         ],
     )
     @patch("app.api.routes.analyze.check_preflight", new_callable=AsyncMock)

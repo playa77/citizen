@@ -1,0 +1,659 @@
+goldset:
+  id: goldset-mietrecht
+  version: 0.2.0
+  schema_version: 1.0.0
+  created: '2026-11-26'
+  rechtsstand: '2026-11-26'
+  evaluation_reference_date: '2026-11-26'
+  legal_area: mietrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 20
+  provenance: synthetic
+  open_questions:
+  - id: MR-OQ-1
+    topic: Live pipeline and human review pending
+    note: Synthetic fixtures and deterministic reports do not establish live inference quality, complete
+      deployment ingestion or human legal review.
+cases:
+- id: MR-001
+  version: 1.0.0
+  title: Zustimmung bis zum zweiten Kalendermonatsende
+  category: mieterhoehung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mieterhöhung. Das Verlangen ging mir nachweislich zu. Ich will die Vergleichsmiete und Kappungsgrenze
+      prüfen lassen. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: mieterhoehung
+      issue: Zustimmung bis zum zweiten Kalendermonatsende
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 558b Abs. 2 BGB
+    citations:
+    - norm: § 558b Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Zugang statt Briefdatum; Kalenderende statt gleicher Tag nach zwei Monaten.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mieterhöhung
+  - Synthetischer Testfall
+- id: MR-002
+  version: 1.0.0
+  title: Zugang unbekannt
+  category: fehlender_zugang
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mieterhöhung. Auf dem Brief steht ein Datum. Wann ich das Schreiben erhalten habe, weiß ich nicht.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: fehlender_zugang
+      issue: Zugang unbekannt
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 558b Abs. 2 BGB
+    citations:
+    - norm: § 558b Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Kein Zugang aus dem Briefdatum ableiten.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mieterhöhung
+  - Synthetischer Testfall
+- id: MR-003
+  version: 1.0.0
+  title: Schaltjahr und Monatsende
+  category: schaltjahr
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mieterhöhung. Ich brauche eine Prüfung des Zugangs und der Frist, bevor ich einer Erhöhung zustimme.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: schaltjahr
+      issue: Schaltjahr und Monatsende
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 558b Abs. 2 BGB
+    citations:
+    - norm: § 558b Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Kalendermonate und mögliches Wochenende getrennt prüfen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mieterhöhung
+  - Synthetischer Testfall
+- id: MR-004
+  version: 1.0.0
+  title: Betriebskosteneinwendungen am Monatsende
+  category: betriebskosten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Betriebskostenabrechnung. Ich möchte Belegeinsicht und konkrete Einwendungen zu einzelnen Positionen
+      vorbereiten. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: betriebskosten
+      issue: Betriebskosteneinwendungen am Monatsende
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 556 Abs. 3 BGB
+    citations:
+    - norm: § 556 Abs. 3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Zwölf Monate bis Monatsende; Belegeinsicht verlängert keine Einwendungsfrist.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Betriebskostenabrechnung
+  - Synthetischer Testfall
+- id: MR-005
+  version: 1.0.0
+  title: Betriebskosten ohne Zugangsdatum
+  category: betriebskosten_zugang
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Nebenkostenabrechnung. Die Belege fehlen und der tatsächliche Zugang steht noch nicht fest. Ich
+      bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: betriebskosten_zugang
+      issue: Betriebskosten ohne Zugangsdatum
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 556 Abs. 3 BGB
+    citations:
+    - norm: § 556 Abs. 3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine verlässliche Einwendungsfrist ohne bestätigten Zugang.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Nebenkostenabrechnung
+  - Synthetischer Testfall
+- id: MR-006
+  version: 1.0.0
+  title: Härtewiderspruch mit bestätigtem Hinweis
+  category: sozialwiderspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Kündigung. Ich brauche Hilfe wegen einer besonderen Härte und habe den Hinweis auf Widerspruch,
+      Form und Frist erhalten. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: sozialwiderspruch
+      issue: Härtewiderspruch mit bestätigtem Hinweis
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 574b Abs. 2 BGB
+    citations:
+    - norm: § 574b Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Rückwärtsfrist vom bestätigten Ende; keine Vorwärtsverschiebung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Kündigung
+  - Synthetischer Testfall
+- id: MR-007
+  version: 1.0.0
+  title: Fehlender Hinweis auf Härtewiderspruch
+  category: hinweis_fehlt
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Kündigung. Ein Hinweis auf die Möglichkeit, Form und Frist eines Härtewiderspruchs fehlt. Ich bereite
+      meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: hinweis_fehlt
+      issue: Fehlender Hinweis auf Härtewiderspruch
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 574b Abs. 2 BGB
+    citations:
+    - norm: § 574b Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Fehlender Hinweis ist keine automatische Zweimonats-Ausschlussfrist; spätere Möglichkeiten prüfen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Kündigung
+  - Synthetischer Testfall
+- id: MR-008
+  version: 1.0.0
+  title: Räumung wegen Zahlungsrückstand
+  category: schonfrist
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Räumungsklage wegen Mietschulden. Die Klage wurde zugestellt. Ich brauche unverzüglich Hilfe zur
+      Sicherung meiner Wohnung. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: schonfrist
+      issue: Räumung wegen Zahlungsrückstand
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 569 Abs. 3 Nr. 2 BGB
+    citations:
+    - norm: § 569 Abs. 3 Nr. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Schonfrist nur qualifiziert; ordentliche Kündigung nicht automatisch erledigt.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Räumungsklage wegen Mietschulden
+  - Synthetischer Testfall
+- id: MR-009
+  version: 1.0.0
+  title: Wiederholte Schonfrist ungeklärt
+  category: schonfrist_wiederholung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Räumungsklage. Ich weiß nicht, ob es schon früher eine Schonfristzahlung gab. Ich bereite meine
+      eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: schonfrist_wiederholung
+      issue: Wiederholte Schonfrist ungeklärt
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 569 Abs. 3 Nr. 2 BGB
+    citations:
+    - norm: § 569 Abs. 3 Nr. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Frühere Schonfristfälle und genaue Klagevoraussetzungen nicht aus Schweigen verneinen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Räumungsklage
+  - Synthetischer Testfall
+- id: MR-010
+  version: 1.0.0
+  title: Mietpreisbremse mit unbekannter Gemeinde
+  category: mietpreisbremse_gebiet
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mietpreisbremse. Ich kenne die amtliche Gemeindezuordnung meiner neuen Wohnung noch nicht sicher.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: mietpreisbremse_gebiet
+      issue: Mietpreisbremse mit unbekannter Gemeinde
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 556d BGB
+    citations:
+    - norm: § 556d BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Unbekannte örtliche Geltung ergibt keine sichere Miethöchstgrenze.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mietpreisbremse
+  - Synthetischer Testfall
+- id: MR-011
+  version: 1.0.0
+  title: Mietpreisbremse und Vormiete
+  category: mietpreisbremse_ausnahme
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mietpreisbremse. Die Hausverwaltung verweist auf eine höhere Vormiete; die Voraussetzungen und Nachweise
+      sind noch ungeklärt. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: mietpreisbremse_ausnahme
+      issue: Mietpreisbremse und Vormiete
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 556e BGB
+    citations:
+    - norm: § 556e BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Vormietausnahme weder ungeprüft akzeptieren noch pauschal verneinen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mietpreisbremse
+  - Synthetischer Testfall
+- id: MR-012
+  version: 1.0.0
+  title: Kappungsgrenze und Modernisierung
+  category: kappungsgrenze
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mieterhöhung. Frühere Modernisierung und Betriebskostenanpassung sind im Erhöhungsverlauf enthalten.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: kappungsgrenze
+      issue: Kappungsgrenze und Modernisierung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 558 Abs. 3 BGB
+    citations:
+    - norm: § 558 Abs. 3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Dreijahresbasis und ausgenommene Erhöhungen müssen bestätigt sein.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mieterhöhung
+  - Synthetischer Testfall
+- id: MR-013
+  version: 1.0.0
+  title: Heizkosten ohne Verbrauchsanteil
+  category: heizkosten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Heizkostenabrechnung. Der Verbrauchsanteil und mögliche Ausnahmen sind für mich nicht nachvollziehbar.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: heizkosten
+      issue: Heizkosten ohne Verbrauchsanteil
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 7 HeizkostenV
+    citations:
+    - norm: § 7 HeizkostenV
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine pauschale Umlageprüfung und keine automatische Kürzungsquote.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Heizkostenabrechnung
+  - Synthetischer Testfall
+- id: MR-014
+  version: 1.0.0
+  title: Mangel und unbestätigte Minderungsquote
+  category: mangel
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mangel: Schimmel in der Wohnung. Ich habe Fotos, aber keine fachkundig geprüfte Ursache oder Minderungsquote.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: mangel
+      issue: Mangel und unbestätigte Minderungsquote
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 536 BGB
+    citations:
+    - norm: § 536 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine erfundene Minderungsquote; Zahlung nicht automatisch ändern.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - 'Mangel: Schimmel in der Wohnung'
+  - Synthetischer Testfall
+- id: MR-015
+  version: 1.0.0
+  title: Dringender Heizungsausfall
+  category: heizungsausfall
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mangel: Die Heizung ist ausgefallen. Ich möchte die Beobachtungen dokumentieren und eine angemessene
+      Abhilfefrist prüfen lassen. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: heizungsausfall
+      issue: Dringender Heizungsausfall
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 536c BGB
+    citations:
+    - norm: § 536c BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine Frist oder Ursache ohne Bestätigung behaupten; akute Gefahr und Abhilfe prüfen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - 'Mangel: Die Heizung ist ausgefallen'
+  - Synthetischer Testfall
+- id: MR-016
+  version: 1.0.0
+  title: Ordentliche Kündigung durch mietende Person
+  category: eigene_kuendigung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Kündigung meiner Wohnung. Ich will den möglichen Beendigungstermin prüfen, bevor ich eine Erklärung
+      abgebe. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: eigene_kuendigung
+      issue: Ordentliche Kündigung durch mietende Person
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 573c Abs. 1 BGB
+    citations:
+    - norm: § 573c Abs. 1 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Dritter Werktag, Zugang und Vertragsausnahmen; Samstag nicht als gewöhnliches Wochenende ausschließen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Kündigung meiner Wohnung
+  - Synthetischer Testfall
+- id: MR-017
+  version: 1.0.0
+  title: Kaution und Ratenzahlung
+  category: kaution
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mietvertrag. Ich soll eine Barkaution zahlen und möchte die Höhe sowie meine möglichen Raten prüfen
+      lassen. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: kaution
+      issue: Kaution und Ratenzahlung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 551 BGB
+    citations:
+    - norm: § 551 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Nettokaltmiete statt Warmmiete; keine Pflicht zur unqualifizierten Sofortzahlung ableiten.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mietvertrag
+  - Synthetischer Testfall
+- id: MR-018
+  version: 1.0.0
+  title: Modernisierungsankündigung
+  category: modernisierung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Modernisierungsankündigung. Ich möchte Maßnahmen, Ankündigung und mögliche Härtefragen rechtzeitig
+      prüfen lassen. Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: modernisierung
+      issue: Modernisierungsankündigung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 555c BGB
+    citations:
+    - norm: § 555c BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Nicht mit Zustimmung nach § 558b verwechseln; Sonderfristen brauchen individuelle Prüfung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Modernisierungsankündigung
+  - Synthetischer Testfall
+- id: MR-019
+  version: 1.0.0
+  title: Befristung und besonderer Wohnraum
+  category: sondervertrag
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Mietvertrag für besonderen Wohnraum. Befristung und vereinbarte Kündigungsmöglichkeiten sind ungeklärt.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: sondervertrag
+      issue: Befristung und besonderer Wohnraum
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 549 BGB
+    citations:
+    - norm: § 549 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Ordentliche Wohnraumregeln nicht ohne Qualifikation auf Sonderregime übertragen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Mietvertrag für besonderen Wohnraum
+  - Synthetischer Testfall
+- id: MR-020
+  version: 1.0.0
+  title: Auslandszustellung einer Räumungsklage
+  category: auslandszustellung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+
+      Räumungsklage. Die Zustellung erfolgte im Ausland. Ich brauche unverzüglich eine individuelle Prüfung.
+      Ich bereite meine eigene Angelegenheit als mietende Person vor.'
+  expected:
+    legal_issues:
+    - id: auslandszustellung
+      issue: Auslandszustellung einer Räumungsklage
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 569 Abs. 3 Nr. 2 BGB
+    citations:
+    - norm: § 569 Abs. 3 Nr. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Inlandszustellungsregel darf ausländische Zustellung nicht ungeprüft erfassen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und bestätigte Tatsachen zur Mietberatung mitbringen. Bei Wohnungsverlust
+      unverzüglich Hilfe suchen.
+  negative_controls:
+  - Räumungsklage
+  - Synthetischer Testfall

@@ -46,7 +46,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 |---|---|---|---|---|
 | M0 | `sozialrecht` | Sozialrecht (SGB II/X, SGG) | **verified · peer module** | first implemented module (WP-97); this gives it no startup/loading priority |
 | M1 | `schuldnerrecht` | Schulden, Inkasso, Zwangsvollstreckung, Verbraucherinsolvenz | **experimental 0.2.0 · backend implemented** | Service-based court deadlines, qualified calculators, guarded drafts, intake/dossier and DE/EN/de-LS copy; deployment corpus/live evaluation pending; human review deferred (D-071) |
-| M2 | `mietrecht` | Wohnraummietrecht | planned (legacy key experimental) | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
+| M2 | `mietrecht` | Wohnraummietrecht | backend implemented 0.2.0; experimental, review pending | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | planned (legacy key experimental) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
 | M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | planned (legacy key experimental) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
 | M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | planned | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
@@ -122,6 +122,16 @@ deadlines** (→ `fristen.yaml`) · **deterministic calculators** (→
   (Mietschulden).
 
 ### M2 — `mietrecht`
+
+**Backend implementation (2026-11-27):** 0.2.0 implements explicit qualified
+deadlines, calculators, guarded drafts, intake/dossier and multilingual copy.
+Regional data is positive-only and incomplete nationally; all16 state source
+statuses and exact unsupported coverage are recorded in
+[`sources/coverage.yaml`](../modules/mietrecht/sources/coverage.yaml).
+Unknown/expired coverage yields no amount. Twenty synthetic cases and offline
+dossier/plain reports do not establish live inference quality or deployment
+corpus population. Human review/promotion remain deferred under D-071.
+See [D-073](decisions/D-073-wp131-tenancy-implementation.md).
 
 - **Scope:** Wohnraummiete from the tenant's side: Mieterhöhung,
   Betriebskosten, Mängel/Minderung, Kündigung, Kaution, Räumung.

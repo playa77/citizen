@@ -2,6 +2,17 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 0.2.0 — 2026-11-27 (WP-131)
+
+- Implement explicit receipt/event/service deadlines, qualified cent-exact rent,
+  operating/heating cost, notice-period and deposit checks.
+- Add versioned positive regional designations with per-Land source/coverage
+  records; missing or expired coverage never establishes a default ceiling.
+- Add dedicated prompts, public intake schema, guarded drafts, dossier,
+  DE/EN/de-LS copy and synthetic evaluation fixtures.
+- Remain experimental/proposed/draft; human review deferred under D-071.
+  Deployment corpus ingestion and live-inference evaluation are not claimed.
+
 ## 0.1.1 — 2026-11-16 (WP-94)
 
 - `intake.yaml`: every area row declares `order`, its rank in the global
