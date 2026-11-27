@@ -368,7 +368,7 @@ def _service_item(
         or (spec.rollover is not None and not facts.get("bundesland"))
         or any(facts.get(key) != value for key, value in spec.applies_when.items())
         or (
-            spec.rollover in ("bgb_193", "stpo_43")
+            spec.rollover in ("bgb_193", "stpo_43", "famfg_16")
             and facts.get("feiertagskalender_bestaetigt") is not True
         )
         or any(
@@ -478,7 +478,7 @@ def _explicit_event_item(
     if spec.rollover is not None and not facts.get("bundesland"):
         missing.append("bundesland")
     if (
-        spec.rollover in ("bgb_193", "stpo_43")
+        spec.rollover in ("bgb_193", "stpo_43", "famfg_16")
         and facts.get("feiertagskalender_bestaetigt") is not True
     ):
         missing.append("feiertagskalender_bestaetigt (einschließlich örtlicher Feiertage)")

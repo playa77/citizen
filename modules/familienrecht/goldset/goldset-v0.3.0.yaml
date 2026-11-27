@@ -1,0 +1,680 @@
+goldset:
+  id: goldset-familienrecht
+  version: 0.3.0
+  schema_version: 1.0.0
+  created: '2026-11-27'
+  rechtsstand: '2026-11-27'
+  evaluation_reference_date: '2026-11-27'
+  legal_area: familienrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 20
+  provenance: synthetic
+  open_questions:
+  - id: FAM-OQ-7
+    topic: Guideline reuse and human/live review pending
+    note: No bundled table or self-retention data. Deterministic gates do not establish live quality.
+cases:
+- id: FAM-001
+  version: 1.0.0
+  title: Reguläre Beschwerde
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Förmliche schriftliche Bekanntgabe am 02.10.2026 ist bestätigt. Regulärer Endbeschluss außerhalb
+      §113 FamFG; keine Sonderfrist. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Reguläre Beschwerde
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §16 FamFG
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §16 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Förmliche schriftliche Bekanntgabe am 02.10.2026 ist bestätigt. Regulärer Endbeschluss außerhalb
+      §113 FamFG; keine Sonderfrist.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-002
+  version: 1.0.0
+  title: Wochenende
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Förmliche schriftliche Bekanntgabe am 21.10.2026; Monatsfrist endet rechnerisch am Samstag. Ich
+      bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Wochenende
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §222 ZPO
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §222 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Förmliche schriftliche Bekanntgabe am 21.10.2026; Monatsfrist endet rechnerisch am Samstag.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-003
+  version: 1.0.0
+  title: Monatsende
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Förmliche schriftliche Bekanntgabe am 31.10.2026. Folgemonat hat keinen 31. Tag. Ich bereite meine
+      eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Monatsende
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §222 ZPO
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §222 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Förmliche schriftliche Bekanntgabe am 31.10.2026. Folgemonat hat keinen 31. Tag.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-004
+  version: 1.0.0
+  title: Feiertag Sachsen
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Förmliche schriftliche Bekanntgabe am 18.10.2026; Empfangsort Sachsen. Ich bereite meine eigene
+      Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Feiertag Sachsen
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §16 FamFG
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §16 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Förmliche schriftliche Bekanntgabe am 18.10.2026; Empfangsort Sachsen.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-005
+  version: 1.0.0
+  title: Kein Feiertag Berlin
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Förmliche schriftliche Bekanntgabe am 18.10.2026; Empfangsort Berlin. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Kein Feiertag Berlin
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §16 FamFG
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §16 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Förmliche schriftliche Bekanntgabe am 18.10.2026; Empfangsort Berlin.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-006
+  version: 1.0.0
+  title: Lokaler Feiertag
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Förmliche schriftliche Bekanntgabe am 30.10.2026. Ein örtlicher Feiertag am 30.11.2026 ist zusätzlich
+      bestätigt. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Lokaler Feiertag
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §222 ZPO
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §222 ZPO
+      must_exist_in_corpus: true
+    known_traps:
+    - Förmliche schriftliche Bekanntgabe am 30.10.2026. Ein örtlicher Feiertag am 30.11.2026 ist zusätzlich
+      bestätigt.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-007
+  version: 1.0.0
+  title: Bekanntgabe offen
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Nur das Briefdatum steht fest, keine bestätigte wirksame schriftliche Bekanntgabe. Ich bereite meine
+      eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Bekanntgabe offen
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Nur das Briefdatum steht fest, keine bestätigte wirksame schriftliche Bekanntgabe.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-008
+  version: 1.0.0
+  title: Kalender offen
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Der lokale Kalender ist noch nicht bestätigt. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Kalender offen
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §16 FamFG
+    citations:
+    - norm: §16 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Der lokale Kalender ist noch nicht bestätigt.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-009
+  version: 1.0.0
+  title: Einstweilige Anordnung
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Eine einstweilige Anordnung liegt vor. Zwei Wochen können gelten, Rechtsmittel können ausgeschlossen
+      sein; unverzüglich Beratung. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Einstweilige Anordnung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+      - §57 FamFG
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    - norm: §57 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Eine einstweilige Anordnung liegt vor. Zwei Wochen können gelten, Rechtsmittel können ausgeschlossen
+      sein; unverzüglich Beratung.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-010
+  version: 1.0.0
+  title: Genehmigung
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Es geht um die Genehmigung eines Rechtsgeschäfts; keine reguläre Monatsfrist. Ich bereite meine
+      eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Genehmigung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §63 FamFG
+    citations:
+    - norm: §63 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Es geht um die Genehmigung eines Rechtsgeschäfts; keine reguläre Monatsfrist.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-011
+  version: 1.0.0
+  title: Ehesache
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ehesache, Anwaltszwang und besondere Begründungsregeln gesondert prüfen. Ich bereite meine eigene
+      Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Ehesache
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §113 FamFG
+      - §114 FamFG
+      - §117 FamFG
+    citations:
+    - norm: §113 FamFG
+      must_exist_in_corpus: true
+    - norm: §114 FamFG
+      must_exist_in_corpus: true
+    - norm: §117 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Ehesache, Anwaltszwang und besondere Begründungsregeln gesondert prüfen.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-012
+  version: 1.0.0
+  title: Familienstreitsache
+  category: fam_beschwerde
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Unterhalt ist Familienstreitsache; §113 und §117 nicht übersehen. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Familienstreitsache
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §113 FamFG
+      - §117 FamFG
+    citations:
+    - norm: §113 FamFG
+      must_exist_in_corpus: true
+    - norm: §117 FamFG
+      must_exist_in_corpus: true
+    known_traps:
+    - Unterhalt ist Familienstreitsache; §113 und §117 nicht übersehen.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-013
+  version: 1.0.0
+  title: Mindestunterhalt Alter5
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Für November2026 ist Alter5 am Monatsende bestätigt. Gesetzlicher Mindestbedarf486 Euro, qualifizierte
+      halbe Kindergeldanrechnung129,50 Euro, Rechenwert356,50 Euro; kein festgestellter Anspruch. Ich
+      bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Mindestunterhalt Alter5
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §1612a BGB
+      - §1612b BGB
+      - §1 MinUhV
+    citations:
+    - norm: §1612a BGB
+      must_exist_in_corpus: true
+    - norm: §1612b BGB
+      must_exist_in_corpus: true
+    - norm: §1 MinUhV
+      must_exist_in_corpus: true
+    known_traps:
+    - Für November2026 ist Alter5 am Monatsende bestätigt. Gesetzlicher Mindestbedarf486 Euro, qualifizierte
+      halbe Kindergeldanrechnung129,50 Euro, Rechenwert356,50 Euro; kein festgestellter Anspruch.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-014
+  version: 1.0.0
+  title: Geburtstagsmonat
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ein Kind wird im bestätigten Monat6; höhere Altersstufe ab Monatsbeginn. Mindestbedarf558 Euro,
+      nicht weiterhin486 Euro. Keine Geburtstage erfragen. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Geburtstagsmonat
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §1612a BGB
+      - §1 MinUhV
+    citations:
+    - norm: §1612a BGB
+      must_exist_in_corpus: true
+    - norm: §1 MinUhV
+      must_exist_in_corpus: true
+    known_traps:
+    - Ein Kind wird im bestätigten Monat6; höhere Altersstufe ab Monatsbeginn. Mindestbedarf558 Euro,
+      nicht weiterhin486 Euro. Keine Geburtstage erfragen.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-015
+  version: 1.0.0
+  title: UVG älteres Kind
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Alter12: zusätzlicher §1 Abs.1a-Nachweis fehlt; keine Anspruchsberechnung. Ich bereite meine eigene
+      Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: UVG älteres Kind
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §1 UhVorschG
+      - §2 UhVorschG
+    citations:
+    - norm: §1 UhVorschG
+      must_exist_in_corpus: true
+    - norm: §2 UhVorschG
+      must_exist_in_corpus: true
+    known_traps:
+    - 'Alter12: zusätzlicher §1 Abs.1a-Nachweis fehlt; keine Anspruchsberechnung.'
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-016
+  version: 1.0.0
+  title: UVG voller Abzug
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Alter5, volles Kindergeld259 Euro und vollständiger Monat sind qualifiziert bestätigt; Grundrechenwert227
+      Euro vor weiteren Bezügen, keine Anspruchszusage. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: UVG voller Abzug
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §2 UhVorschG
+      - §1 MinUhV
+    citations:
+    - norm: §2 UhVorschG
+      must_exist_in_corpus: true
+    - norm: §1 MinUhV
+      must_exist_in_corpus: true
+    known_traps:
+    - Alter5, volles Kindergeld259 Euro und vollständiger Monat sind qualifiziert bestätigt; Grundrechenwert227
+      Euro vor weiteren Bezügen, keine Anspruchszusage.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-017
+  version: 1.0.0
+  title: Rückwirkung Unterhalt
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Wirksames Auskunftsverlangen am 23.10.2026 zum Zweck der Unterhaltsgeltendmachung, Anspruch bestand
+      schon am Monatsersten; bedingter Beginn01.10.2026, keine Ausschlussfrist. Ich bereite meine eigene
+      Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Rückwirkung Unterhalt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §1613 BGB
+    citations:
+    - norm: §1613 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Wirksames Auskunftsverlangen am 23.10.2026 zum Zweck der Unterhaltsgeltendmachung, Anspruch bestand
+      schon am Monatsersten; bedingter Beginn01.10.2026, keine Ausschlussfrist.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-018
+  version: 1.0.0
+  title: Sorge und Umgang
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ich möchte Hilfe zu Sorge und Umgang. Keine automatischen Empfehlungen oder Bewertung elterlicher
+      Eignung; Beratung zuerst und Daten minimieren. Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Sorge und Umgang
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §1626 BGB
+      - §1684 BGB
+    citations:
+    - norm: §1626 BGB
+      must_exist_in_corpus: true
+    - norm: §1684 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Ich möchte Hilfe zu Sorge und Umgang. Keine automatischen Empfehlungen oder Bewertung elterlicher
+      Eignung; Beratung zuerst und Daten minimieren.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-019
+  version: 1.0.0
+  title: Tabelle und Selbstbehalt
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ich möchte eine Einkommensgruppe, Selbstbehalt oder Ehegattenunterhalt berechnen. Nicht unterstützt;
+      aktuelle externe Leitlinie und individuelle Beratung, OQ-7 offen. Ich bereite meine eigene Angelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: Tabelle und Selbstbehalt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §1603 BGB
+      - §1361 BGB
+    citations:
+    - norm: §1603 BGB
+      must_exist_in_corpus: true
+    - norm: §1361 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Ich möchte eine Einkommensgruppe, Selbstbehalt oder Ehegattenunterhalt berechnen. Nicht unterstützt;
+      aktuelle externe Leitlinie und individuelle Beratung, OQ-7 offen.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: FAM-020
+  version: 1.0.0
+  title: UVG Antrag
+  category: unterhalt_vorbereiten
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      UVG-Antrag/Rückwirkung nach §4 und vollständige Mitwirkung prüfen; keine automatische Antragstellung.
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: fam_pruefung
+      issue: UVG Antrag
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §4 UhVorschG
+    citations:
+    - norm: §4 UhVorschG
+      must_exist_in_corpus: true
+    known_traps:
+    - UVG-Antrag/Rückwirkung nach §4 und vollständige Mitwirkung prüfen; keine automatische Antragstellung.
+    actionable_next_steps:
+    - Frist und Vertretung unverzüglich prüfen; nur erforderliche Nachweise sicher zur individuellen Beratung
+      mitbringen.
+  negative_controls:
+  - Synthetischer Testfall

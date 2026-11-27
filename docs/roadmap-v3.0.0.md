@@ -1,6 +1,7 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.6.0 | 2026-11-27 — WP-134 experimental traffic backend.
+<!-- Version: 3.7.0 | 2026-11-27 — WP-135 experimental family backend.
+     3.6.0 | 2026-11-27 — WP-134 experimental traffic backend.
      3.5.0 | 2026-11-27 — WP-133 experimental consumer contract backend.
      3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
      3.1.1 | 2026-11-26 — owner directs backend continuation; GUI remains separately owned; WP-130 foundation started.
@@ -422,11 +423,20 @@ Each module is one WP with the same nine sub-WPs:
 | WP-132 | M3 `arbeitsrecht` | Experimental backend implemented; critical dismissal banner, qualified §38 timing limits (D-074) |
 | WP-133 | M4 `vertragsrecht` | Experimental backend implemented; qualified contract checks, EGBGB/EUR-Lex article sources (D-075) |
 | WP-134 | M5 `verkehrsrecht` | Experimental backend implemented; shared StPO rollover and explicit partial annex coverage (D-076) |
-| WP-135 | M6 `familienrecht` | Düsseldorfer Tabelle reuse terms (OQ-7) |
+| WP-135 | M6 `familienrecht` | Experimental statutory backend implemented; guideline reuse OQ-7 remains open (D-077) |
 | WP-136 | M7 `aufenthaltsrecht` | requires P12 i18n; strongest duty-of-care profile |
 | WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-135 backend implementation (2026-11-27):** `familienrecht` 0.3.0 on
+core 3.10.0/module API 3.8 provides qualified ordinary complaint dates, statutory
+2026 minimum/child-benefit/UVG arithmetic, conditional §1613 month start,
+guarded preparation drafts, minimised intake/dossier and DE/EN/de-LS copy.
+Twenty synthetic cases and offline deterministic reports; no live-quality or
+human-promotion claim. Urgent/special proceedings and unsupported amount
+regimes require review. OQ-7 remains open: no bundled guideline table or
+self-retention values. See [D-077](decisions/D-077-wp135-family-implementation.md).
 
 **WP-134 backend implementation (2026-11-27):** `verkehrsrecht` 0.1.0 on
 core 3.9.0/module API 3.7 provides critical qualified objection dates, selected

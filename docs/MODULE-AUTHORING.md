@@ -1,6 +1,7 @@
 # Writing a Citizen module
 
-<!-- Version: 1.6.0 | 2026-11-27 — WP-134: traffic/procedural sources and StPO rollover.
+<!-- Version: 1.7.0 | 2026-11-27 — WP-135 family sources and FamFG calendar.
+     1.6.0 | 2026-11-27 — WP-134: traffic/procedural sources and StPO rollover.
      1.5.0 | 2026-11-27 — WP-133: official EU article corpus support.
      1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
      1.3.0 | 2026-11-27 — WP-131: receipt/event deadlines, confirmed qualification/calendar facts.
@@ -316,3 +317,19 @@ and tables are not covered. Declare this source limitation and version any
 selected table parameters with precise scope, dates and primary evidence.
 Never infer full source coverage from a populated source key. D-076 records
 approved boundaries; no new module code import surface is introduced.
+
+## 15. Qualified family support (module API 3.8, WP-135)
+
+Federal source keys `famfg`, `uvg`, `minuhv` map to FamFG, UhVorschG (alias
+UVG), MinUhV; the consolidated federal adapter retains existing BGB/ZPO.
+Source enablement never selects a user's module. No deployed ingestion is
+implied by parser validation.
+
+Use `famfg_16` for qualified ordinary proceedings under §16 Abs.2 FamFG/
+§222 ZPO, with current civil/state and confirmed local holiday facts. The
+Familienrecht module deliberately requires formal domestic written notification
+and excludes §113 proceedings, urgent decisions, approvals and other special
+regimes. Unknown scope means review, not a default ordinary month or substitute
+year. Amounts require period-specific age and eligibility qualifications; do not
+convert statutory arithmetic into an award. No guideline table/self-retention
+data is bundled under unresolved OQ-7. See D-077 and the module source record.

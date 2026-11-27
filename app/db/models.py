@@ -113,6 +113,10 @@ SOURCE_TYPE_ALLOWED = (
     "bkatv",
     "fev",
     "stpo",
+    # D-077 / WP-135: family sources, migration021.
+    "famfg",
+    "uvg",
+    "minuhv",
 )
 
 

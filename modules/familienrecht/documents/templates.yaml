@@ -1,0 +1,132 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Familienrechtsberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigenes Anliegen, Aktenzeichen und Datum]
+
+
+        Dieses Blatt ist keine Erklärung an das Gericht. Verfahrensart, schriftliche Bekanntgabe, Vertretung
+        und Rechtsmittel müssen unverzüglich geprüft werden. Einstweilige Anordnungen und Sonderverfahren
+        können kürzere oder andere Regeln haben. Kindeswohl, Sorge und Umgang zuerst an qualifizierte
+        Hilfe verweisen.
+
+        [BITTE PRÜFEN: nur nötige Fakten zu Trennung, Anliegen, sicherem Kontakt und vorhandenen Unterlagen]
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung.
+
+        [BITTE PRÜFEN: Name, Datum, Vertretung, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  auskunft:
+    title: Auskunftsverlangen vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigenes Anliegen, Aktenzeichen und Datum]
+
+
+        [BITTE PRÜFEN: Anspruchsberechtigung, Vertretung und passende Rechtsgrundlage, insbesondere §1605
+        BGB für Verwandte; Ehegatten nicht ungeprüft gleich behandeln.]
+
+        [BITTE PRÜFEN: Zum Zweck der Geltendmachung meines/des wirksam vertretenen Kindes Unterhaltsanspruchs
+        bitte ich um Auskunft über Einkünfte und Vermögen und die rechtlich erforderlichen Belege.]
+
+        [BITTE PRÜFEN: berechtigter Umfang, Zeitraum, frühere Auskunft und Zugangsnachweis.]
+
+        Wirksamkeit und §1613 BGB gesondert prüfen; keine automatisch gesetzte Zahlungsfrist oder Forderung.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung.
+
+        [BITTE PRÜFEN: Name, Datum, Vertretung, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  stellungnahme:
+    title: Stellungnahme-Gliederung für die Beratung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigenes Anliegen, Aktenzeichen und Datum]
+
+
+        [BITTE PRÜFEN: 1. eigenes Anliegen; 2. zutreffende Verfahrensart; 3. geordnete belegte Ereignisse;
+        4. strittige Punkte und offene Belege; 5. Fragen an die Beratung.]
+
+        Keine Beschwerde, Begründung oder Prozesserklärung automatisch einfügen. §114 FamFG Anwaltszwang
+        und §117 FamFG Sonderregeln prüfen. Keine Vorwürfe über Elternfähigkeit, Kindeswohl oder Umgang
+        automatisch ergänzen.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung.
+
+        [BITTE PRÜFEN: Name, Datum, Vertretung, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  uvg_vorbereitung:
+    title: UVG-Antrag vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigenes Anliegen, Aktenzeichen und Datum]
+
+
+        [BITTE PRÜFEN: zuständige Unterhaltsvorschussstelle, amtliches Formular, sichere Kontaktdaten
+        und Vertretung.]
+
+        [BITTE PRÜFEN: §1-Voraussetzungen, bei 12–17 Jahren zusätzlich Abs.1a; bestätigter Monat, Altersstufe,
+        Kindergeld, vollständige Unterhalts-/Waisenbezüge und gegebenenfalls §2 Abs.4-Einkommen.]
+
+        [BITTE PRÜFEN: Datum des wirksamen Antrags, §4-Rückwirkung und zumutbare Bemühungen, vorhandene
+        Titel und Anspruchsübergang.]
+
+        Kein fertiger Antrag oder Bescheid. Drittdaten erst im erforderlichen amtlichen Verfahren ergänzen;
+        keine Anspruchszusage.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung.
+
+        [BITTE PRÜFEN: Name, Datum, Vertretung, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '

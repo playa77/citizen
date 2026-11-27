@@ -39,6 +39,10 @@ _BASELINE = Path(__file__).with_name("golden") / "wp93_v2_baseline.json"
 _D070_RETIRED_KEYS = {
     "prompts:<empty>", "prompts:mietrecht", "prompts:andere", "prompts:unknown-area",
     "prompts:mietrecht+erbrecht", "presets:suggest_system",
+    # WP-135 replaces the inherited inheritance persona with a family profile.
+    # Dedicated content/profile tests assert the new behavior; do not repin v2 bytes.
+    "prompts:familienrecht", "prompts:erbrecht+familienrecht",
+    "prompts:familienrecht+sozialrecht+schenkungsrecht",
 }
 # These two collected keys retain exact assertions for their approved changes;
 # no other baseline key or successful unique-match scalar is relaxed.
@@ -80,7 +84,7 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
         "area_source_types": lambda: {
             # WP-131–133 expand tenancy/employment/contract scope. Project only those
             # additions out; dedicated module tests cover their new contracts.
-            k: (("bgb",) if k in ("mietrecht", "arbeitsrecht", "vertragsrecht") else v)
+            k: (("bgb",) if k in ("mietrecht", "arbeitsrecht", "vertragsrecht", "familienrecht") else v)
             for k, v in AREA_TO_SOURCE_TYPES.items() if k not in {"schuldnerrecht", "verkehrsrecht"}
         },
         "infer_bgb_area": lambda path: (
@@ -102,7 +106,10 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
     baseline.pop("_meta")
     for key in _D070_RETIRED_KEYS:
         baseline.pop(key)
-    return baseline, collect(adapter)
+    current = collect(adapter)
+    for key in _D070_RETIRED_KEYS:
+        current.pop(key, None)
+    return baseline, current
 
 
 def test_same_surface(results: tuple[dict[str, Any], dict[str, Any]]) -> None:

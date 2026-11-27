@@ -250,7 +250,7 @@ def _evaluate_service(spec: DeadlineSpec, facts: FristInput, module_id: str | No
         raise ValueError(f"spec {spec.id!r} declares no basis")
     served = facts.zustellung_tatsaechlich
     raw_end = _add_duration(served, spec.duration)
-    if spec.rollover in ("bgb_193", "stpo_43"):
+    if spec.rollover in ("bgb_193", "stpo_43", "famfg_16"):
         from app.fristen.civil_calendar import civil_next_workday
 
         if not facts.feiertagskalender_bestaetigt:
@@ -298,7 +298,7 @@ def _evaluate_explicit_event(
     if spec.anchor == "month_end":
         raw_end = raw_end.replace(day=calendar.monthrange(raw_end.year, raw_end.month)[1])
     end = raw_end
-    if spec.rollover in ("bgb_193", "stpo_43"):
+    if spec.rollover in ("bgb_193", "stpo_43", "famfg_16"):
         from app.fristen.civil_calendar import civil_next_workday
 
         if not facts.feiertagskalender_bestaetigt:

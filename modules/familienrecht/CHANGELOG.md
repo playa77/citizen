@@ -1,5 +1,12 @@
 # Changelog — module `familienrecht`
 
+## 0.3.0 — 2026-11-27
+
+- WP-135 experimental statutory checks, qualified ordinary complaint dates, guarded drafts, intake/dossier and DE/EN/de-LS copy.
+- D-077, module API3.8; no bundled guideline table or self-retention data (OQ-7).
+- Human review deferred under D-071; no verified promotion or live quality claim.
+
+
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
 ## 0.2.1 — 2026-11-16 (prompt set 3.0.0, D-060)

@@ -1,0 +1,39 @@
+format: citizen-plain-copy-v1.0
+module: familienrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Check the deadline
+    text: A family-court decision may require urgent action. Special proceedings can have shorter deadlines.
+    next_step: Keep the complete decision and proof of written notification. Seek advice promptly.
+  unterhalt_vorbereiten:
+    title: Prepare maintenance questions
+    text: Statutory minimum arithmetic does not establish what is owed. Eligibility and income need review.
+    next_step: Bring the relevant month, age band and payment records to advice.
+  beratung_erforderlich:
+    title: Get individual advice
+    text: For child welfare, custody, contact or violence, seek qualified local help. No parental-fitness
+      assessment is made.
+    next_step: Use safe contact details. Avoid uploading unnecessary information about children or other
+      people.
+  einordnung_offen:
+    title: Facts need checking
+    text: The proceeding, effective notification or calculation conditions are unclear. No reliable date
+      or entitlement can be given.
+    next_step: Confirm the facts with qualified advice.
+deadlines:
+  fam_beschwerde:
+    title: Ordinary family-court complaint
+    action: The supported ordinary complaint is one month after confirmed formal written notification.
+      Urgent and special proceedings differ. Seek advice promptly; this sheet files nothing.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have the confirmed facts checked.'
+      provisional: 'Provisional end: {frist_ende}. Confirm missing facts promptly.'
+      missing_input: Required confirmed facts are missing. No reliable date is available. Seek advice
+        promptly.
+      not_applicable: This ordinary rule does not apply to this document. Other, shorter periods may apply.

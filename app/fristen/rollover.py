@@ -34,12 +34,14 @@ ROLLER_LABELS: dict[str, str] = {
     "zpo_222": "§ 222 Abs. 2 ZPO",
     "bgb_193": "§ 193 BGB",
     "stpo_43": "§ 43 Abs. 2 StPO",
+    "famfg_16": "§ 16 Abs. 2 FamFG; § 222 Abs. 2 ZPO",
 }
 
 _ROLLERS: dict[str, Roller] = {
     "sgg_64_3": next_workday,
     "zpo_222": next_workday,
     "stpo_43": civil_next_workday,
+    "famfg_16": civil_next_workday,
 }
 
 
