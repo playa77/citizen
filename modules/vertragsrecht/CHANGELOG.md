@@ -2,6 +2,13 @@
 
 Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
 
+## 0.2.0 — 2026-11-27
+
+- WP-133: experimental consumer withdrawal, warranty, termination and passenger-rights preparation.
+- Qualified deterministic periods and calculators; EGBGB/EU261 corpus mapping; guarded drafts,
+  intake schema, dossier, DE/EN/de-LS draft copy and synthetic offline fixtures.
+- Human legal/language review, live evaluation and deployment ingestion remain deferred (D-071).
+
 ## 0.1.1 — 2026-11-16 (WP-94)
 
 - `intake.yaml`: every area row declares `order`, its rank in the global

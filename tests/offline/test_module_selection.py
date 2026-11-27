@@ -63,7 +63,7 @@ def test_peer_tables_do_not_need_sozialrecht() -> None:
     assert tables.catch_all == "andere"
 
 
-@pytest.mark.parametrize("scope", [None, [], ["verwaltungsrecht"], ["vertragsrecht"], ["unknown"]])
+@pytest.mark.parametrize("scope", [None, [], ["verwaltungsrecht"], ["strafrecht"], ["unknown"]])
 def test_no_usable_profile_never_borrows_legal_prompts(scope: list[str] | None) -> None:
     from app.services.prompts import ModuleSelectionRequired, get_chat_prompt, get_prompts
 
@@ -79,7 +79,7 @@ def test_mixed_profileless_scope_is_not_silently_dropped() -> None:
     from app.services.prompts import ModuleSelectionRequired, get_prompts
 
     with pytest.raises(ModuleSelectionRequired):
-        get_prompts(["sozialrecht", "vertragsrecht"])
+        get_prompts(["sozialrecht", "strafrecht"])
 
 
 def test_inference_scope_surfaces_unavailable_modules_instead_of_replacing_them(

@@ -1,0 +1,44 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: vertrag
+  label_de: Vertrag, Bestellung, AGB, Bestellschritte und Widerrufsbelehrung
+  why_de: Vertragsart, Vertragspartner, Informationspflichten und Ausnahmen müssen geprüft werden.
+  topic: vertrag
+  required: true
+- id: ereignisse
+  label_de: Nachweise zu Zugang, Lieferung, Kenntnis, Belehrung und Erklärungen
+  why_de: Briefdatum ersetzt kein bestätigtes fristauslösendes Ereignis.
+  topic: ereignisse
+  required: true
+- id: zahlungen
+  label_de: Rechnungen, Zahlungsnachweise, Mahnungen und bisheriger Schriftwechsel
+  why_de: Forderung, Verzug und bereits abgegebene Erklärungen brauchen Belege.
+  topic: zahlungen
+  required: true
+- id: sonderfaelle
+  label_de: Mängelnachweise, Kündigungsbedingungen, Flugunterlagen und besondere Umstände
+  why_de: Sonderregeln, Hemmung, Neubeginn und Anspruchsvoraussetzungen bleiben prüfbedürftig.
+  topic: sonderfaelle
+  required: true
+questions:
+- id: fristen
+  text_de: Welche Ereignisse, Ausnahmen und Fristen sind bestätigt, und welche müssen unverzüglich geprüft
+    werden?
+  topic: fristen
+- id: rechte
+  text_de: Welche Rechte bestehen in meinem eigenen Vertrag, und welche Nachweise fehlen?
+  topic: rechte
+- id: kuendigung
+  text_de: Welche Form, Frist und Vertragsbedingungen gelten für meine Kündigung, und greift § 312k
+    BGB?
+  topic: kuendigung
+- id: flug
+  text_de: Sind Anwendungsbereich, Ursache, Ankunftsverspätung, Ersatzbeförderung und Kürzungsvoraussetzungen
+    belegt?
+  topic: flug
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

@@ -1318,7 +1318,7 @@ by the existing corpus service. Source excerpts and readiness counts do not
 establish complete state/municipality coverage. Module coverage records make
 unsupported areas explicit; calculators never assume a designation or default
 ceiling from missing records. No API route or SSE event is removed/renamed.
-The current disclaimer acknowledgement is `v3.4.0`.
+The current disclaimer acknowledgement is `v3.5.0`.
 
 
 ### WP-132 employment implementation (core 3.7.0 / module API 3.5)
@@ -1346,3 +1346,34 @@ Apply migrations before explicitly selecting and ingesting deployment corpora;
 implementation fixtures and source checks do not establish deployment readiness.
 Disclaimer acknowledgement is `v3.4.0`; prompt set is `3.5.0`. Human review and
 promotion remain deferred under D-071.
+
+
+### WP-133 contract implementation (core 3.8.0 / module API 3.6)
+
+Experimental `vertragsrecht` 0.2.0 exposes its public intake schema, four
+qualified date rules, guarded withdrawal/defect/termination/passenger drafts,
+and consumer-side dossier through the existing module endpoints. Source keys
+`egbgb` and `eu261` extend the existing catalog and PostgreSQL constraint
+(migration 019). No HTTP route, error envelope or SSE event is replaced.
+Sources still require explicit operator selection and ingestion.
+
+The `vr_vermutung` date marks a qualified ordinary-goods evidence-presumption
+period under §477 BGB; **it is not a filing deadline**. It has no §193 rollover.
+Other rules require explicitly confirmed regime, event and exception facts;
+regular limitation requires a manually confirmed relevant 31 December after
+both accrual and knowledge conditions are met. Unconfirmed facts produce
+`missing_input`, never a guessed date from the invoice or letter.
+
+Calculator modes are `default_interest`, `withdrawal`, `flight_compensation`.
+The public intake schema lists their facts and qualified confirmations.
+Results remain provisional with proposed parameters. Interest uses bounded
+dated base-rate segments and exact intermediate arithmetic. Flight distance
+alone does not establish entitlement or a lawful reduction. Withdrawal outer
+limits, late notice, service-performance extinguishment and special regimes
+need explicit qualification; unsupported cases remain unavailable/review items.
+
+EUR-Lex ingestion preserves article identity and official provenance, and
+rejects empty/challenge/incomplete content. Offline parser fixtures and source
+inspection do not establish successful deployment ingestion, live inference
+quality or reviewed promotion. Human review remains deferred under D-071.
+Current disclaimer acknowledgement is `v3.5.0`; prompt set is `3.6.0`.

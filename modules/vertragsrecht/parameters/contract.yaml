@@ -1,0 +1,47 @@
+parameters:
+- key: contract_rules
+  value_json:
+    withdrawal_days: 14
+    short_km: 1500
+    medium_km: 3500
+    flight_cents:
+    - 25000
+    - 40000
+    - 60000
+    withdrawal_outer_months: 12
+    flight_reduction_divisor: 2
+  unit: rules
+  valid_from: 2026-11-27
+  valid_to: 2026-12-31
+  review_status: proposed
+  basis: §§355,356 BGB; Art.7 VO (EG)261/2004
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/bgb/__355.html",
+    "https://www.gesetze-im-internet.de/bgb/__356.html", "https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:32004R0261:DE:HTML",
+    "https://curia.europa.eu/site/upload/docs/application/pdf/2009-11/cp090102en.pdf"], "review": "Human
+    review pending. Bounded snapshot, not an entitlement determination.", "quotes": ["Die Widerrufsfrist
+    beträgt 14 Tage.", "250 EUR bei allen Flügen über eine Entfernung von 1 500 km oder weniger"]}'
+- key: default_interest_rates
+  value_json:
+    consumer_margin_bp: 500
+    business_margin_bp: 900
+    segments:
+    - start: '2025-01-01'
+      end: '2025-06-30'
+      basis_points: 227
+    - start: '2025-07-01'
+      end: '2025-12-31'
+      basis_points: 127
+    - start: '2026-01-01'
+      end: '2026-06-30'
+      basis_points: 127
+    - start: '2026-07-01'
+      end: '2026-12-31'
+      basis_points: 152
+  unit: rules
+  valid_from: 2026-11-27
+  valid_to: 2026-12-31
+  review_status: proposed
+  basis: §§247,288 BGB; Deutsche Bundesbank
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.bundesbank.de/de/bundesbank/organisation/agb-und-regelungen/basiszinssatz-607820"],
+    "review": "Human review pending. Bounded snapshot, not an entitlement determination.", "quotes": ["fünf
+    Prozentpunkte über dem Basiszinssatz", "01.07.2026 1,52", "01.01.2026 1,27"]}'

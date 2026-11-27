@@ -42,8 +42,17 @@ def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _path_conditions(paragraph: str, absatz: str | None) -> Any:
-    unit = f"§ {_escape_like(paragraph)}"
+def _path_conditions(
+    paragraph: str,
+    absatz: str | None,
+    *,
+    article: bool = False,
+    article_scope: str | None = None,
+) -> Any:
+    sign = "Art." if article else "§"
+    unit = f"{sign} {_escape_like(paragraph)}"
+    if article_scope is not None:
+        unit = f"Art. {_escape_like(article_scope)} > {unit}"
     if absatz is not None:
         unit += f" > Abs. {_escape_like(absatz)}"
     return or_(
@@ -68,21 +77,37 @@ async def _verify_statute(session: AsyncSession, citation: Citation) -> dict[str
         return {"status": "no_law"}
     if citation.source_type is None:
         return {"status": "not_in_catalog"}
-    if citation.article:
-        # Article-structured laws are not in the § catalog today.
+    if citation.article and citation.source_type not in {"egbgb", "eu261"}:
         return {"status": "not_in_catalog"}
+    if (
+        citation.source_type == "egbgb"
+        and not citation.article
+        and not citation.extra.get("article_scope")
+    ):
+        # Sections restart within EGBGB articles; a bare section has no unique
+        # corpus identity and must not verify against an unrelated article.
+        return {"status": "not_found"}
     if await _count(session, citation.source_type) == 0:
         return {"status": "source_not_ingested"}
+    scope = citation.extra.get("article_scope")
     worst = "verified"
     details: list[dict[str, str]] = []
     single = len(citation.paragraphs) == 1
     for entry in citation.paragraphs:
         for paragraph in entry.split("–"):
-            found = await _count(session, citation.source_type, _path_conditions(paragraph, None))
+            found = await _count(
+                session,
+                citation.source_type,
+                _path_conditions(paragraph, None, article=citation.article, article_scope=scope),
+            )
             status = "verified" if found else "not_found"
             if found and single and citation.absatz is not None:
                 with_absatz = await _count(
-                    session, citation.source_type, _path_conditions(paragraph, citation.absatz)
+                    session,
+                    citation.source_type,
+                    _path_conditions(
+                        paragraph, citation.absatz, article=citation.article, article_scope=scope
+                    ),
                 )
                 status = "verified" if with_absatz else "absatz_not_found"
             details.append({"paragraph": paragraph, "status": status})

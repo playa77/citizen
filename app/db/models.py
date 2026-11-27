@@ -103,6 +103,9 @@ SOURCE_TYPE_ALLOWED = (
     "muschg",
     "arbzg",
     "arbgg",
+    # D-075 / WP-133: contract sources, migration 019.
+    "egbgb",
+    "eu261",
 )
 
 

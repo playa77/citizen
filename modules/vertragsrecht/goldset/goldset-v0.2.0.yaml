@@ -1,0 +1,640 @@
+goldset:
+  id: goldset-vertragsrecht
+  version: 0.2.0
+  schema_version: 1.0.0
+  created: '2026-11-27'
+  rechtsstand: '2026-11-27'
+  evaluation_reference_date: '2026-11-27'
+  legal_area: vertragsrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 20
+  provenance: synthetic
+  open_questions:
+  - id: VR-OQ-1
+    topic: Human review and live evaluation pending
+    note: Offline checks do not establish legal quality or complete ingestion.
+cases:
+- id: VR-001
+  version: 1.0.0
+  title: Ordentlicher Warenwiderruf
+  category: vr_widerruf
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Online gekaufte gewöhnliche Ware am 02.11.2026 vollständig erhalten. Ordnungsgemäße Belehrung
+      lag rechtzeitig vor. Verbrauchervertrag und kein Ausschluss oder Erlöschen sind ausdrücklich bestätigt.
+      Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_widerruf
+      issue: Ordentlicher Warenwiderruf
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+    citations:
+    - norm: §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Online gekaufte gewöhnliche Ware am 02.11.2026 vollständig erhalten. Ordnungsgemäße Belehrung
+      lag rechtzeitig vor. Verbrauchervertrag und kein Ausschluss oder Erlöschen sind ausdrücklich bestätigt.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-002
+  version: 1.0.0
+  title: Widerruf am Wochenende
+  category: vr_widerruf
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Vollständiger bestätigter Fristbeginn am Samstag 07.11.2026, rechtzeitige Belehrung und keine
+      Ausnahmen. Samstag am Fristende wird nach § 193 geprüft. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vr_widerruf
+      issue: Widerruf am Wochenende
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+    citations:
+    - norm: §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Vollständiger bestätigter Fristbeginn am Samstag 07.11.2026, rechtzeitige Belehrung und keine
+      Ausnahmen. Samstag am Fristende wird nach § 193 geprüft.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-003
+  version: 1.0.0
+  title: Belehrung fehlt
+  category: vr_widerruf
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Keine Widerrufsbelehrung erhalten. Kein gewöhnlicher 14-Tage-Fristablauf darf behauptet werden.
+      Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_widerruf
+      issue: Belehrung fehlt
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+    citations:
+    - norm: §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine Widerrufsbelehrung erhalten. Kein gewöhnlicher 14-Tage-Fristablauf darf behauptet werden.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-004
+  version: 1.0.0
+  title: Teillieferung ungeklärt
+  category: vr_widerruf
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Mehrere Waren in Teillieferungen bestellt. Letzter maßgeblicher Empfang noch unbekannt. Ich bereite
+      meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_widerruf
+      issue: Teillieferung ungeklärt
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+    citations:
+    - norm: §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Mehrere Waren in Teillieferungen bestellt. Letzter maßgeblicher Empfang noch unbekannt.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-005
+  version: 1.0.0
+  title: Personalisierte Ware
+  category: vr_widerruf
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Individuell angefertigte Ware; Ausschluss des Widerrufsrechts muss geprüft werden. Ich bereite
+      meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_widerruf
+      issue: Personalisierte Ware
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+    citations:
+    - norm: §§ 355 Abs. 2, 356 Abs. 2–3 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Individuell angefertigte Ware; Ausschluss des Widerrufsrechts muss geprüft werden.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-006
+  version: 1.0.0
+  title: Gewöhnlicher Warenmangel
+  category: vr_gewaehrleistung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Gewöhnliche neue Ware am 02.11.2026 geliefert, keine digitalen Elemente oder besonderen Fristen.
+      Keine Hemmung, Arglist oder Verkürzung bestätigt. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vr_gewaehrleistung
+      issue: Gewöhnlicher Warenmangel
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+    citations:
+    - norm: § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Gewöhnliche neue Ware am 02.11.2026 geliefert, keine digitalen Elemente oder besonderen Fristen.
+      Keine Hemmung, Arglist oder Verkürzung bestätigt.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-007
+  version: 1.0.0
+  title: Schaltjahr bei Ablieferung
+  category: vr_gewaehrleistung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Gewöhnliche Ware am 29.02.2024 geliefert; keine Sonderregeln. Jahrestag fällt 2026 auf Samstag,
+      § 193 ist zu prüfen. Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_gewaehrleistung
+      issue: Schaltjahr bei Ablieferung
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+    citations:
+    - norm: § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Gewöhnliche Ware am 29.02.2024 geliefert; keine Sonderregeln. Jahrestag fällt 2026 auf Samstag,
+      § 193 ist zu prüfen.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-008
+  version: 1.0.0
+  title: Nacherfüllung und §475e
+  category: vr_gewaehrleistung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Mangel kurz vor Verjährung aufgetreten und Ware zur Nacherfüllung übergeben. Sonderfristen nach
+      § 475e offen. Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_gewaehrleistung
+      issue: Nacherfüllung und §475e
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+    citations:
+    - norm: § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Mangel kurz vor Verjährung aufgetreten und Ware zur Nacherfüllung übergeben. Sonderfristen nach
+      § 475e offen.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-009
+  version: 1.0.0
+  title: Digitales Gerät
+  category: vr_gewaehrleistung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Ware mit digitalen Elementen und Bereitstellungspflichten. Kein pauschaler Zweijahresablauf. Ich
+      bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_gewaehrleistung
+      issue: Digitales Gerät
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+    citations:
+    - norm: § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Ware mit digitalen Elementen und Bereitstellungspflichten. Kein pauschaler Zweijahresablauf.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-010
+  version: 1.0.0
+  title: Gebrauchtware verkürzt
+  category: vr_gewaehrleistung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Gebrauchte Ware, abweichend vereinbarte Verjährung ungeprüft. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vr_gewaehrleistung
+      issue: Gebrauchtware verkürzt
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+    citations:
+    - norm: § 438 Abs. 1 Nr. 3, Abs. 2 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Gebrauchte Ware, abweichend vereinbarte Verjährung ungeprüft.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-011
+  version: 1.0.0
+  title: Beweisvermutung Kalenderjahr
+  category: vr_vermutung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Verbrauchsgüterkauf gewöhnlicher Ware, Gefahrübergang am 02.11.2026. Kein Tier oder digitales
+      Element. Vereinbarkeit bestätigt. Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_vermutung
+      issue: Beweisvermutung Kalenderjahr
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 477 Abs. 1 BGB
+    citations:
+    - norm: § 477 Abs. 1 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Verbrauchsgüterkauf gewöhnlicher Ware, Gefahrübergang am 02.11.2026. Kein Tier oder digitales
+      Element. Vereinbarkeit bestätigt.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-012
+  version: 1.0.0
+  title: Beweisvermutung endet Samstag
+  category: vr_vermutung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Gefahrübergang am 06.11.2026. Der Beweiszeitraum endet 06.11.2027 am Samstag, ohne Werktagsverschiebung.
+      Keine Klagefrist. Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_vermutung
+      issue: Beweisvermutung endet Samstag
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 477 Abs. 1 BGB
+    citations:
+    - norm: § 477 Abs. 1 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Gefahrübergang am 06.11.2026. Der Beweiszeitraum endet 06.11.2027 am Samstag, ohne Werktagsverschiebung.
+      Keine Klagefrist.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-013
+  version: 1.0.0
+  title: Tierkauf
+  category: vr_vermutung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Lebendes Tier: sechsmonatige Sonderregel statt gewöhnlicher Einjahresvermutung. Ich bereite meine
+      eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_vermutung
+      issue: Tierkauf
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 477 Abs. 1 BGB
+    citations:
+    - norm: § 477 Abs. 1 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - 'Lebendes Tier: sechsmonatige Sonderregel statt gewöhnlicher Einjahresvermutung.'
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-014
+  version: 1.0.0
+  title: Regelverjährung bestätigtes Jahr
+  category: vr_verjaehrung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Anspruchsentstehung und Kenntnisvoraussetzungen sind für 2026 bestätigt. Maßgebliches Jahresende
+      ist ausdrücklich der 31.12.2026. Keine Sonderfristen oder Hemmung. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: vr_verjaehrung
+      issue: Regelverjährung bestätigtes Jahr
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 195, 199 Abs. 1 BGB
+    citations:
+    - norm: §§ 195, 199 Abs. 1 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Anspruchsentstehung und Kenntnisvoraussetzungen sind für 2026 bestätigt. Maßgebliches Jahresende
+      ist ausdrücklich der 31.12.2026. Keine Sonderfristen oder Hemmung.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-015
+  version: 1.0.0
+  title: Kenntnisjahr offen
+  category: vr_verjaehrung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Anspruch möglicherweise entstanden, Kenntnis oder grob fahrlässige Unkenntnis und gemeinsames
+      maßgebliches Jahr ungeklärt. Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: vr_verjaehrung
+      issue: Kenntnisjahr offen
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - §§ 195, 199 Abs. 1 BGB
+    citations:
+    - norm: §§ 195, 199 Abs. 1 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Anspruch möglicherweise entstanden, Kenntnis oder grob fahrlässige Unkenntnis und gemeinsames
+      maßgebliches Jahr ungeklärt.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-016
+  version: 1.0.0
+  title: Abo mit Kündigungsbutton
+  category: kuendigung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Laufendes Online-Abo und fehlender Kündigungsbutton behauptet. § 312k-Anwendungsbereich, Verstoß
+      und Form konkret prüfen; keine automatische sofortige Kündigung. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: kuendigung
+      issue: Abo mit Kündigungsbutton
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 312k BGB
+    citations:
+    - norm: § 312k BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Laufendes Online-Abo und fehlender Kündigungsbutton behauptet. § 312k-Anwendungsbereich, Verstoß
+      und Form konkret prüfen; keine automatische sofortige Kündigung.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-017
+  version: 1.0.0
+  title: Abofalle und Werbung
+  category: abofalle
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Unbestellte Rechnung nach Werbeanruf. Vertragsschluss, Einwilligung und Nachweise bestreiten oder
+      klären; Gerichtspost sofort prüfen. Keine automatische Zahlungseinstellung. Ich bereite meine
+      eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: abofalle
+      issue: Abofalle und Werbung
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 312j BGB
+    citations:
+    - norm: § 312j BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Unbestellte Rechnung nach Werbeanruf. Vertragsschluss, Einwilligung und Nachweise bestreiten oder
+      klären; Gerichtspost sofort prüfen. Keine automatische Zahlungseinstellung.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-018
+  version: 1.0.0
+  title: Flug ohne bestätigte Ursache
+  category: flug
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Synthetische Annullierung. Entfernung ist bekannt, außergewöhnliche Umstände und zumutbare Maßnahmen
+      ungeklärt. Kein automatischer Anspruch aus der Entfernung. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: flug
+      issue: Flug ohne bestätigte Ursache
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - Art. 5 Verordnung (EG) Nr. 261/2004
+    citations:
+    - norm: Art. 5 Verordnung (EG) Nr. 261/2004
+      must_exist_in_corpus: true
+    known_traps:
+    - Synthetische Annullierung. Entfernung ist bekannt, außergewöhnliche Umstände und zumutbare Maßnahmen
+      ungeklärt. Kein automatischer Anspruch aus der Entfernung.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-019
+  version: 1.0.0
+  title: Außerordentliche Kündigung
+  category: kuendigung
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Dienstvertrag soll wegen wichtigen Grundes beendet werden. Abmahnung, Abhilfefrist, Kenntniszeitpunkt
+      und § 314 Abs. 3 individuell prüfen. Ich bereite meine eigene Verbraucherangelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: kuendigung
+      issue: Außerordentliche Kündigung
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 314 BGB
+    citations:
+    - norm: § 314 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Dienstvertrag soll wegen wichtigen Grundes beendet werden. Abmahnung, Abhilfefrist, Kenntniszeitpunkt
+      und § 314 Abs. 3 individuell prüfen.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: VR-020
+  version: 1.0.0
+  title: Verzugszins ungeklärt
+  category: sonstiges
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Rechnung bezahlt? Forderungshöhe, Verzugsbeginn und Verbraucherstatus sind offen. Kein Zinsbetrag
+      ohne bestätigten Verzug und zeitlich gültige Zinssätze. Ich bereite meine eigene Verbraucherangelegenheit
+      vor.'
+  expected:
+    legal_issues:
+    - id: sonstiges
+      issue: Verzugszins ungeklärt
+      assessment: Prüfbedarf; keine abschließende Anspruchsbestätigung
+      norm_chain:
+      - § 288 BGB
+    citations:
+    - norm: § 288 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Rechnung bezahlt? Forderungshöhe, Verzugsbeginn und Verbraucherstatus sind offen. Kein Zinsbetrag
+      ohne bestätigten Verzug und zeitlich gültige Zinssätze.
+    actionable_next_steps:
+    - Vollständigen Vertrag, Ereignisnachweise und Schriftwechsel zur Verbraucherberatung mitbringen.
+      Bei Gerichtspost sofort Hilfe suchen.
+  negative_controls:
+  - Synthetischer Testfall

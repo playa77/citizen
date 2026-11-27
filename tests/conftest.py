@@ -81,7 +81,7 @@ _ensure_pg_database_url()
 os.environ.setdefault("OPENROUTER_API_KEY", "sk-or-test-key-000000")
 
 # Set the disclaimer version so integration tests can send the right header.
-os.environ.setdefault("DISCLAIMER_VERSION", "v3.4.0")
+os.environ.setdefault("DISCLAIMER_VERSION", "v3.5.0")
 
 # WP-62: Dev-instance posture. Tests run with the synthetic-data-only flag
 # enabled so the startup assertion in app.main's lifespan passes whenever the

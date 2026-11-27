@@ -165,6 +165,26 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "checked_by_default": False,
         "source": "gesetze-im-internet.de",
     },
+    "egbgb": {
+        "key": "egbgb",
+        "name": "EGBGB",
+        "full_name": "Einführungsgesetz zum BGB",
+        "description": "Informationspflichten und Übergangsrecht für Verträge.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "eu261": {
+        "key": "eu261",
+        "name": "VO (EG) Nr. 261/2004",
+        "full_name": "Verordnung (EG) Nr. 261/2004 über Fluggastrechte",
+        "description": "Amtlicher Verordnungstext zu Fluggastrechten.",
+        "tooltip": "Quelle nur nach ausdrücklicher Auswahl laden; Rechtsprechung separat prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "eur-lex.europa.eu",
+    },
     "betrkv": {
         "key": "betrkv",
         "name": "BetrKV",
@@ -504,6 +524,7 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "sgb3": "/sgb_3/",  # SGB III - Arbeitsförderung
     "sgb9": "/sgb_9/",  # SGB IX - Rehabilitation und Teilhabe
     "bgb": "/bgb/",
+    "egbgb": "/bgbeg/",
     "kschg": "/kschg/",
     "burlg": "/burlg/",
     "tzbfg": "/tzbfg/",
@@ -674,6 +695,9 @@ async def scrape_and_chunk(
             f"Unknown source_type={source_type!r}. " f"Allowed: {list(CORPUS_SOURCE_METADATA)}"
         )
 
+    if source_type == "eu261":
+        return await scrape_eu261(client=client)
+
     # Dispatch weisung to dedicated PDF scraper
     if source_type == "weisung":
         return await scrape_weisungen(client=client)
@@ -738,6 +762,90 @@ async def scrape_and_chunk(
 
     logger.info("Scraped %d chunks for source_type=%s", len(chunks), source_type)
     return chunks
+
+
+_EU261_URL = "https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:32004R0261:DE:HTML"
+
+
+async def scrape_eu261(*, client: httpx.AsyncClient | None = None) -> list[dict[str, Any]]:
+    """Read the official original act; never substitute recitals or a challenge page.
+
+    This endpoint is the original 2004 publication, effective 2005-02-17, not a
+    claim of consolidated case-law coverage. Numbered paragraphs retain their
+    lettered lists, so the conditions and exceptions travel with each chunk.
+    """
+    async with _SCRAPE_SEMAPHORE:
+        if client is not None:
+            response = await _http_get_with_backoff(client, _EU261_URL)
+        else:
+            async with httpx.AsyncClient(
+                follow_redirects=True, timeout=30.0, limits=_HTTP_LIMITS
+            ) as c:
+                response = await _http_get_with_backoff(c, _EU261_URL)
+        response.raise_for_status()
+        if response.status_code != 200:
+            raise ValueError("EUR-Lex did not return the official article text")
+        soup = BeautifulSoup(response.text, "lxml")
+        nodes = soup.find_all("p")
+        article: str | None = None
+        absatz = ""
+        parts: list[str] = []
+        chunks: list[dict[str, Any]] = []
+
+        def flush() -> None:
+            if article is None or not parts:
+                return
+            text = normalize_text(" ".join(parts))
+            path = f"VO (EG) Nr. 261/2004 > Art. {article}"
+            if absatz:
+                path += f" > Abs. {absatz}"
+            chunks.append(
+                {
+                    "id": str(uuid4()),
+                    "chunk_id": str(uuid4()),
+                    "source_type": "eu261",
+                    "title": "VO (EG) Nr. 261/2004",
+                    "unit_type": "satz",
+                    "hierarchy_path": path,
+                    "text_content": text,
+                    "effective_date": "2005-02-17",
+                    "source_url": _EU261_URL,
+                    "version_hash": _compute_version_hash(text),
+                    "legal_area": None,
+                }
+            )
+
+        for node in nodes:
+            text = node.get_text(" ", strip=True)
+            heading = re.fullmatch(r"Artikel\s+(\d{1,2})", text)
+            if heading:
+                flush()
+                article, absatz, parts = heading.group(1), "", []
+                continue
+            if article is None or not text:
+                continue
+            numbered = re.match(r"\((\d+)\)\s*", text)
+            if numbered:
+                # The article caption belongs to its first paragraph, not an
+                # independent fragment that could be retrieved as a legal rule.
+                if absatz:
+                    flush()
+                    parts = []
+                absatz = numbered.group(1)
+            if text.startswith("Geschehen zu Straßburg"):
+                flush()
+                article, parts = None, []
+                break
+            parts.append(text)
+        flush()
+        articles = {
+            int(match.group(1))
+            for chunk in chunks
+            if (match := re.search(r" > Art\. (\d+)", chunk["hierarchy_path"]))
+        }
+        if articles != set(range(1, 20)):
+            raise ValueError("EUR-Lex article text missing or incomplete")
+        return chunks
 
 
 def _find_consolidated_href(soup: BeautifulSoup) -> str | None:
@@ -949,20 +1057,34 @@ def _parse_law_sections(
     chunks: list[dict[str, Any]] = []
     source_url = urljoin(_BASE, prefix)
 
+    current_article = ""
     for jnnorm in soup.find_all("div", class_="jnnorm"):
         if not isinstance(jnnorm, Tag):
             continue
 
+        if source_type == "egbgb":
+            # GiI places article headings in unclassed h2 spans; the following
+            # § nodes carry only their local number. Retain the article scope.
+            heading = jnnorm.select_one(".jnheader h2")
+            if heading:
+                match = re.match(r"Art\.?\s*(\d+[a-z]?)\b", heading.get_text(" ", strip=True))
+                if match:
+                    current_article = f"Art. {match.group(1)}"
         jnenbez_span = jnnorm.find("span", class_="jnenbez")
         if not jnenbez_span or not isinstance(jnenbez_span, Tag):
             continue
 
-        jnenbez_text = jnenbez_span.get_text(strip=True)
+        jnenbez_text = " ".join(
+            node.get_text(" ", strip=True) for node in jnnorm.find_all("span", class_="jnenbez")
+        )
+        article_match = re.search(r"Art\.?\s*(\d+[a-z]?)", jnenbez_text)
+        if source_type == "egbgb" and article_match:
+            current_article = f"Art. {article_match.group(1)}"
         para_match = _PARA_TAG_RE.search(jnenbez_text)
-        if not para_match:
+        if not para_match and not (source_type == "egbgb" and article_match):
             continue
 
-        para_label = f"§ {para_match.group(1)}"
+        para_label = f"§ {para_match.group(1)}" if para_match else ""
 
         # Collect all jurAbsatz divs within this jnnorm
         for jur_absatz in jnnorm.find_all("div", class_="jurAbsatz"):
@@ -988,7 +1110,11 @@ def _parse_law_sections(
             if abs_match:
                 absatz_label = f"Abs. {abs_match.group(1)}"
 
-            hierarchy = [law_name, para_label]
+            hierarchy = [law_name]
+            if source_type == "egbgb" and current_article:
+                hierarchy.append(current_article)
+            if para_label:
+                hierarchy.append(para_label)
             if absatz_label:
                 hierarchy.append(absatz_label)
 
@@ -1207,6 +1333,7 @@ def _infer_law_name(element: Tag, source_type: str) -> str:
         "sgb3": "SGB III",
         "sgb9": "SGB IX",
         "bgb": "BGB",
+        "egbgb": "EGBGB",
         "kschg": "KSchG",
         "burlg": "BUrlG",
         "tzbfg": "TzBfG",

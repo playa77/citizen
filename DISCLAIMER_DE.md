@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.4.0 · **Stand:** 2026-11-27
+**Version:** 3.5.0 · **Stand:** 2026-11-27
 
 **Autor:** www.github.com/playa77
 
@@ -39,12 +39,11 @@ Citizen ist heute ein Prototyp: ein rechtsgebietsneutraler Kern mit
 Rechtsgebiets-Modulen. Das erste und bislang einzige ausgereifte Modul,
 Sozialrecht, liest deutsche Sozialrechts-Bescheide ein, bindet jede Aussage an
 den Gesetzestext, rechnet Berechnungen deterministisch nach und bestimmt
-Fristen auf den Tag genau. Weitere Rechtsgebiete — Arbeits-, Erb-, Familien-,
-Straf- und Vertragsrecht — liegen als experimentelle Module vor: Sie
+Fristen auf den Tag genau. Weitere Rechtsgebiete — Erb-, Familien- und Strafrecht — liegen als experimentelle Module vor: Sie
 ordnen Anliegen zu und beziehen die passenden Rechtsquellen ein, berechnen
 aber noch keine Fristen und keine Beträge. Die experimentellen Module
-Schuldnerrecht und Mietrecht bieten begrenzte, qualifizierte Frist- und
-Rechenprüfungen mit ausdrücklichen Voraussetzungen und Grenzen (Teil D). Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
+Schuldnerrecht, Mietrecht, Arbeitsrecht und Vertragsrecht bieten begrenzte,
+qualifizierte Frist- und Rechenprüfungen mit ausdrücklichen Voraussetzungen und Grenzen (Teil D). Es gibt ein versioniertes Golden Set mit verifizierten Prüffällen,
 an dem jede Änderung gemessen wird. Es gibt bekannte Grenzen, und sie stehen
 im Repo statt unter dem Teppich. Das ist der ehrliche Ist-Zustand:
 funktionierend, ungeschliffen, messbar — und noch kein Produkt.
@@ -464,7 +463,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.4.0`);
+`v3.5.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -863,7 +862,7 @@ und C.6.1.
 ### D.4 Weitere experimentelle Module
 
 Für die Module `erbrecht` (einschließlich des Altschlüssels
-`schenkungsrecht`), `familienrecht`, `vertragsrecht` und
+`schenkungsrecht`), `familienrecht` und
 `andere` (Auffangbereich) gelten D.1 und die Teile A bis C ohne
 gebietsspezifische Ergänzung. Sie berechnen weder Fristen noch Beträge; wer
 eine Frist zu wahren hat, lässt sie anwaltlich oder durch eine
@@ -940,7 +939,28 @@ sprachliche menschliche Prüfung steht unter D-071 noch aus.
 
 ---
 
+### D.8 Vertragsrecht (`vertragsrecht`)
+
+Unterstützung Ihrer eigenen Verbraucherangelegenheit. Keine Vertretung von Unternehmen.
+Fristen und Beträge erfordern bestätigte Tatsachen, passende Rechtsregime und datierte Parameter.
+Briefdatum, Vertragsdatum und eine Entfernung allein bestätigen weder Fristbeginn noch Anspruch.
+Widerruf hängt von Vertragstyp, vollständigem Ereignis, Belehrung, Ausschlüssen und Erlöschen ab.
+Gewährleistung, Garantie und die Beweisvermutung sind getrennt: § 477 BGB ist keine Klagefrist.
+Sonderfristen (§ 475e BGB), digitale Elemente, Tiere, Bauwerke, Arglist, Hemmung und Neubeginn
+brauchen eine gesonderte Prüfung. Regelverjährung erfordert Anspruchsentstehung UND
+Kenntnisvoraussetzungen im bestätigten Jahr; ein Briefdatum genügt nicht.
+Laufzeit, Altverträge, Kündigungsbutton und wichtiger Grund werden nicht pauschal beurteilt.
+Zinsrechnung bestätigt keinen Verzug. Flugentfernung bestätigt keine Ausgleichspflicht;
+EU-Anwendungsbereich, Ursache, Ankunft, Ersatzbeförderung und Kürzungen müssen geprüft werden.
+Entwürfe bleiben prüfbedürftig und werden nicht versandt. Keine automatische Zahlungseinstellung.
+Bei Gerichtspost oder drohenden Fristen unverzüglich Verbraucherberatung oder anwaltliche Hilfe suchen.
+Humanprüfung und Live-Evaluation stehen aus; synthetische Offlineprüfungen ersetzen sie nicht.
+
+---
+
 ## Änderungshistorie
+
+- **3.5.0 (2026-11-27):** Vertragsrecht: qualifizierte Verbraucherfristen, Zinsen, Fluggast-Prüfbeträge und Entwürfe; Beweisvermutung getrennt von Klagefristen. Erneute Kenntnisnahme erforderlich.
 
 - **3.4.0 (2026-11-27):** Arbeitsrecht: qualifizierte Fristen, Rechenprüfungen und Entwürfe; ausdrückliche Kenntnisdaten und Grenzen der Arbeitsuchendmeldung. Erneute Kenntnisnahme erforderlich.
 

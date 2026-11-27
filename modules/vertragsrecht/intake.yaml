@@ -1,12 +1,3 @@
-# Intake tables of module `vertragsrecht` (WP-93; ARCHITECTURE.md § 3.8).
-# `areas` is keyed by area key (module id or a legacy alias it owns, D-038):
-# `keywords` drive the keyword fallback of the intake interview,
-# `synonyms` map free-text LLM answers back onto the area key.
-# `order` ranks the area key in the global area-key order (WP-94: replaces
-# the former LEGAL_AREA_ALLOWED tuple; unique across all owners).
-# Extracted verbatim from the v2.0.0 hard-coded tables in
-# app/services/intake.py and app/api/routes/presets.py.
-
 areas:
   vertragsrecht:
     order: 70
@@ -19,3 +10,12 @@ areas:
     - gewährleistung
     - garantie
     - widerruf
+    - abofalle
+    - kündigungsbutton
+    - flugverspätung
+    - annullierung
+    - werbeanruf
+    synonyms:
+    - verbrauchervertrag
+    - fluggastrechte
+    - abonnement

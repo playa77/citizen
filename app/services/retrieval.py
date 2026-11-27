@@ -45,6 +45,8 @@ _STATUTE_TO_SOURCE_TYPE: dict[str, list[str]] = {
     "SGB X": ["sgbx"],
     "SGB XII": ["sgb12"],
     "BGB": ["bgb"],
+    "EGBGB": ["egbgb"],
+    "VO (EG) Nr. 261/2004": ["eu261"],
     "BetrKV": ["betrkv"],
     "HeizkostenV": ["heizkostenv"],
     "ErbStG": ["erbstg"],
@@ -823,13 +825,25 @@ def _extract_norm_references(text: str) -> list[str]:
     # which can contain § references like (§ 32 SGB II))
     cleaned = re.sub(r"\s+(?:n\.F\.|a\.F\.)", "", text)
 
+    from app.citations.parser import parse_citations
+
     found: list[str] = []
+    for citation in parse_citations(cleaned):
+        if citation.source_type == "egbgb" and citation.extra.get("article_scope"):
+            for paragraph in citation.paragraphs:
+                found.append(f"Art. {citation.extra['article_scope']} § {paragraph} EGBGB")
+        elif citation.article and citation.source_type in {"egbgb", "eu261"}:
+            law = "VO (EG) Nr. 261/2004" if citation.source_type == "eu261" else citation.law
+            for article in citation.paragraphs:
+                found.append(f"Art. {article} {law}")
     for match in _NORM_REF_RE.finditer(cleaned):
         raw_para = match.group("para").strip()
         statute = match.group("statute").strip()
 
         # Skip if statute is not in our known mapping
-        if statute not in _STATUTE_TO_SOURCE_TYPE:
+        if statute not in _STATUTE_TO_SOURCE_TYPE or statute == "EGBGB":
+            # A nested EGBGB section is only identifiable with its article.
+            # Scoped references above already preserve both components.
             continue
 
         # Explode multiple paragraphs (e.g. "45/48/50")
@@ -872,11 +886,22 @@ async def retrieve_chunks_by_norm_reference(
 
     async for session in get_async_session():
         for norm in norm_refs:
+            nested_match = re.fullmatch(r"Art\. (\d+[a-z]?) § (\d+[a-z]?) (EGBGB)", norm)
+            article_match = re.fullmatch(r"Art\. (\d+[a-z]?) (.+)", norm)
             match = _NORM_REF_RE.match(norm)
-            if not match:
+            if not match and not article_match:
                 continue
-            para = match.group("para").strip()
-            statute = match.group("statute").strip()
+            if nested_match:
+                article, para, statute = nested_match.groups()
+                unit = f"Art. {article} > § {para}"
+            elif article_match:
+                para, statute = article_match.groups()
+                unit = f"Art. {para}"
+            else:
+                assert match is not None
+                para = match.group("para").strip()
+                statute = match.group("statute").strip()
+                unit = f"§ {para}"
 
             # Map statute name → source_types, intersect with requested types
             statute_src_types = _STATUTE_TO_SOURCE_TYPE.get(statute, [])
@@ -885,7 +910,15 @@ async def retrieve_chunks_by_norm_reference(
                 continue
 
             # hierarchy_path looks like "SGB II > § 11b > Abs. 3"
-            hierarchy_pattern = f"%> § {para}%"
+            # Article 1 must not boost articles 10–19; scoped EGBGB units
+            # must not retrieve identically numbered sections elsewhere.
+            if article_match:
+                hierarchy_condition = or_(
+                    LegalChunk.hierarchy_path.ilike(f"%> {unit}"),
+                    LegalChunk.hierarchy_path.ilike(f"%> {unit} > %"),
+                )
+            else:
+                hierarchy_condition = LegalChunk.hierarchy_path.ilike(f"%> {unit}%")
 
             stmt = (
                 select(
@@ -900,7 +933,7 @@ async def retrieve_chunks_by_norm_reference(
                 )
                 .join(LegalSource, LegalSource.id == LegalChunk.source_id)
                 .where(
-                    LegalChunk.hierarchy_path.ilike(hierarchy_pattern),
+                    hierarchy_condition,
                     LegalSource.is_active.is_(True),
                     LegalSource.source_type.in_(matching_src),
                 )

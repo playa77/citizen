@@ -382,3 +382,19 @@ The PostgreSQL data lives in the named Docker volume `citizen_pgdata`. To back u
 docker exec citizen-db-1 pg_dump -U citizen_user citizen_db | gzip > citizen_db_$(date +%Y%m%d).sql.gz
 ```
 
+
+### WP-133 upgrade notes (core 3.8.0)
+
+Apply the single Alembic chain through migration 019 before using the new
+`egbgb`/`eu261` corpus source keys. Update an explicitly pinned application
+`DISCLAIMER_VERSION` to `v3.5.0`; existing acknowledgements require renewal.
+Seed the proposed module parameters using the established procedure before
+calculator use; the base-rate snapshot ends on 2026-12-31 and must not be
+extrapolated. Deployment enablement never selects a module for a session.
+
+Actual ingestion and embeddings are separate operator actions. Select sources
+explicitly; inspect publisher access and resulting corpus health before use.
+EUR-Lex direct fetching returned challenge/empty responses during implementation;
+the adapter refuses these and its raw-publisher compatibility remains unverified.
+Do not bypass publisher restrictions or treat parser fixtures as populated data.
+This package authorizes no deployment, live inference or verified promotion.

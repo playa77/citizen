@@ -1,0 +1,145 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Verbraucherberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: empfangsberechtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Vertrag, Buchung oder Forderung]
+
+        [BITTE PRÜFEN: Vertragsart, Ereignisse, Anspruchsvoraussetzungen und Sonderregeln]
+
+        Sammeln Sie Vertrag, Belehrung und Nachweise. Dieses Blatt enthält keine rechtsgestaltende Erklärung
+        und wahrt keine Frist. Bei Gerichtspost unverzüglich Hilfe suchen. Die Beweisvermutung nach
+        § 477 BGB ist keine Klagefrist.
+
+        [BITTE PRÜFEN: Name, Form, Datum und nachweisbarer Zugang]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  widerruf:
+    title: Widerruf vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: empfangsberechtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Vertrag, Buchung oder Forderung]
+
+        [BITTE PRÜFEN: nur bei bestätigtem Widerrufsrecht aufnehmen: Hiermit widerrufe ich meine auf
+        den Abschluss des bezeichneten Vertrags gerichtete Erklärung.]
+
+        [BITTE PRÜFEN: vollständige Bestellung, Lieferung, Belehrung, Frist, Ausschluss und Erlöschen;
+        Waren, Dienstleistungen und digitale Inhalte unterscheiden]
+
+        [BITTE PRÜFEN: Rücksendung, Wertersatz und Versandnachweis gesondert klären; keine Pflicht ungeprüft
+        anerkennen]
+
+        [BITTE PRÜFEN: Name, Form, Datum und nachweisbarer Zugang]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  maengelanzeige:
+    title: Mangel anzeigen und Nacherfüllung verlangen
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: empfangsberechtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Vertrag, Buchung oder Forderung]
+
+        [BITTE PRÜFEN: konkret beobachteter Mangel, Übergabe, Auftreten und Belege]
+
+        [BITTE PRÜFEN: nur nach Bestätigung aufnehmen: Ich verlange Nacherfüllung durch die konkret
+        bezeichnete Nachbesserung oder Ersatzlieferung.]
+
+        [BITTE PRÜFEN: Wahlrecht, Verhältnismäßigkeit, Sonderregeln und angemessene Frist mit konkretem
+        Datum]
+
+        Keine automatische Rücktrittserklärung oder Zahlungseinstellung. Garantie, Verjährung und Beweisvermutung
+        sind verschieden.
+
+        [BITTE PRÜFEN: Name, Form, Datum und nachweisbarer Zugang]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  kuendigung:
+    title: Vertragskündigung vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: empfangsberechtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Vertrag, Buchung oder Forderung]
+
+        [BITTE PRÜFEN: nur nach Bestätigung aufnehmen: Hiermit kündige ich den bezeichneten Vertrag
+        zum rechtlich geprüften Termin.]
+
+        [BITTE PRÜFEN: Vertragsbeginn, Laufzeit, Verlängerung, Kündigungsfrist und Form; Altvertrag
+        und § 309 Nr. 9 BGB]
+
+        [BITTE PRÜFEN: ordentliche oder außerordentliche Kündigung; wichtiger Grund, Abmahnung, Abhilfe
+        und Frist nach § 314 BGB]
+
+        [BITTE PRÜFEN: § 312k BGB nur bei bestätigtem Anwendungsbereich und konkretem Button-Verstoß;
+        kein pauschales sofortiges Kündigungsrecht]
+
+        [BITTE PRÜFEN: Name, Form, Datum und nachweisbarer Zugang]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  fluggastforderung:
+    title: Fluggastforderung vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: empfangsberechtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Vertrag, Buchung oder Forderung]
+
+        [BITTE PRÜFEN: Buchung, ausführendes Luftfahrtunternehmen, Strecke, Flugdaten, tatsächliche
+        Ankunft und Belege]
+
+        [BITTE PRÜFEN: Anwendungsbereich, qualifizierte Anspruchsgrundlage, außergewöhnliche Umstände,
+        zumutbare Maßnahmen und Ersatzbeförderung]
+
+        [BITTE PRÜFEN: nur nach bestätigtem Anspruch aufnehmen: Ich mache eine Ausgleichszahlung in
+        Höhe des überprüften Betrags geltend.]
+
+        [BITTE PRÜFEN: Entfernung, Kürzungsgründe und Betrag; lange Verspätung erfordert einschlägige
+        EuGH-Rechtsprechung]
+
+        Ausgleich, Betreuung und Erstattung getrennt prüfen; keine automatische Anspruchsbestätigung.
+
+        [BITTE PRÜFEN: Name, Form, Datum und nachweisbarer Zugang]
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
