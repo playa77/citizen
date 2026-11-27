@@ -1318,7 +1318,7 @@ by the existing corpus service. Source excerpts and readiness counts do not
 establish complete state/municipality coverage. Module coverage records make
 unsupported areas explicit; calculators never assume a designation or default
 ceiling from missing records. No API route or SSE event is removed/renamed.
-The current disclaimer acknowledgement is `v3.6.0`.
+The current disclaimer acknowledgement is `v3.7.0`.
 
 
 ### WP-132 employment implementation (core 3.7.0 / module API 3.5)
@@ -1376,7 +1376,7 @@ EUR-Lex ingestion preserves article identity and official provenance, and
 rejects empty/challenge/incomplete content. Offline parser fixtures and source
 inspection do not establish successful deployment ingestion, live inference
 quality or reviewed promotion. Human review remains deferred under D-071.
-Current disclaimer acknowledgement is `v3.6.0`; prompt set is `3.7.0`.
+Current disclaimer acknowledgement is `v3.7.0`; prompt set is `3.8.0`.
 
 
 ### WP-134 traffic implementation (core 3.9.0 / module API 3.7)
@@ -1425,4 +1425,62 @@ annex rules are versioned parameters, not a complete ingested corpus.
 Exact paragraph lookup matches hierarchy segments, so §1 cannot boost §10.
 No deployment ingestion, live inference or human promotion is established.
 
-Current disclaimer acknowledgement is `v3.6.0`; prompt set is `3.7.0`.
+Current disclaimer acknowledgement is `v3.7.0`; prompt set is `3.8.0`.
+
+### WP-135 family implementation (core 3.10.0 / module API 3.8)
+
+`familienrecht` 0.3.0 is an experimental peer module. Existing REST/MCP
+module-detail surfaces expose its intake schema, source scope, calculators,
+drafts and plain copy. No new endpoint or module-selection default is added.
+
+The `fam_beschwerde` rule computes one calendar month only for
+`document_type=famfg_regulaerer_endbeschluss`, confirmed domestic formal
+written notification in `zustellung_tatsaechlich`, and all qualifications:
+`regulaerer_endbeschluss_bestaetigt`, `zustellung_wirksam_bestaetigt`,
+`kein_113_verfahren_bestaetigt`, `kein_sonderregime`. Confirm `bundesland`,
+`feiertagskalender_bestaetigt` and any `feiertage_zusaetzlich`.
+`famfg_16` uses §16 Abs.2 FamFG/§222 ZPO and the current civil calendar.
+No issue-date fiction or automatic substitute year is used. Informal/failed
+notification, §113 matrimonial/contentious family matters, urgent decisions,
+transaction approvals and other special regimes are outside this rule;
+`not_applicable` or `missing_input` is not a finding that no deadline exists.
+§§57,63 Abs.2–3,114,117 FamFG need prompt individual review as appropriate.
+
+The existing calculator projection exposes `family_checks`, with
+`minimum_maintenance`, `uvg_amount`, `retroactive_maintenance` or `none`.
+All calculated values remain `provisional` with `review_status=proposed`.
+Unknown facts/regimes or missing parameter coverage yield `unavailable` and
+`deterministic_result=null`; no fallback parameters or entitlement findings.
+`as_of` selects the bounded 2026 `maintenance_rules` parameter row.
+
+Amount checks require `period_month=YYYY-MM-01`, `age_at_month_end` for that
+month, explicit applicability/current-regime/age/minority/full-benefit
+confirmations and calculation-specific qualifications in the intake schema.
+No child name or birth date is needed. `minimum_maintenance` returns
+`minimum_cents`, `child_benefit_credit_cents` and `amount_cents` only for
+the qualified statutory 100% minimum/one-parent-care regime. UVG uses the
+full credit plus `maintenance_received_cents` and `orphan_received_cents`
+from the same month, floored at zero. It additionally requires complete
+eligibility/income qualifications, stable age band/full-month eligibility,
+no §2 Abs.4 deductions, and §1 Abs.1a confirmation for ages12–17. Partial
+months, unsupported income deductions and in-month UVG age transitions refuse.
+These are arithmetic checks, not awards or eligibility decisions.
+
+`retroactive_maintenance` returns only `conditional_start_date` from a
+qualified `event_on` and `event_basis=information_request|default|lis_pendens`.
+The minor-child regime, legal effectiveness, claim existing at month start
+and absence of special retroactivity must be confirmed. It is not a filing
+or limitation deadline. Other maintenance regimes require separate review.
+
+Corpus additions `famfg`, `uvg` (canonical citation `UhVorschG`, alias `UVG`)
+and `minuhv` (`MinUhV`) use the existing federal parser, citation mappings and
+migration 021. All remain unchecked by default. Real source snapshots were
+parsed offline; this does not establish deployed corpus population.
+No Düsseldorfer Tabelle, income-group or self-retention data is bundled
+(OQ-7); spousal/shared-care/adult-child awards remain outside calculation scope.
+
+Drafts `pruefhinweise`, `auskunft`, `stellungnahme`, `uvg_vorbereitung` retain
+`[BITTE PRÜFEN]`, meet no deadline and send nothing automatically. Custody,
+contact and child welfare remain referral-first; minimise third-party data.
+Current disclaimer acknowledgement is `v3.7.0`; prompt set is `3.8.0`.
+Human review/promotion and live-inference quality remain pending (D-071).

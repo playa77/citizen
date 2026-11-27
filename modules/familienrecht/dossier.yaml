@@ -1,0 +1,48 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: beschluss
+  label_de: Vollständiger Beschluss, Belehrung, Umschlag und Bekanntgabenachweis
+  why_de: Verfahrensart, Frist und Vertretung müssen zuerst geklärt werden.
+  topic: beschluss
+  required: true
+- id: unterhalt
+  label_de: Berechnungsmonat, Altersstufe, Titel und geordnete Einkommens-/Zahlungsnachweise
+  why_de: Anspruch, Leistungsfähigkeit und schon geleistete Zahlungen getrennt prüfen.
+  topic: unterhalt
+  required: true
+- id: uvg
+  label_de: UVG-Antrag, Bescheide, Kindergeld-/Unterhalts-/Waisenbezüge und SGBII-Nachweise
+  why_de: Voraussetzungen, Anrechnung, Rückwirkung und Anspruchsübergang klären.
+  topic: uvg
+  required: true
+- id: datenschutz
+  label_de: Nur nötige Unterlagen sicher zur Beratung mitbringen; Drittdaten schwärzen
+  why_de: Keine unnötigen Namen, Geburtstage, Diagnosen oder sensiblen Kindernarrative hochladen.
+  topic: datenschutz
+  required: true
+questions:
+- id: frist
+  text_de: Welche Frist, Verfahrensart, Form, Stelle und Vertretung gelten für mich?
+  topic: frist
+- id: unterhalt
+  text_de: Welche Einkünfte, Rangverhältnisse, Betreuung, Titel und Selbstbehalte müssen individuell geprüft
+    werden?
+  topic: unterhalt
+- id: rueckwirkung
+  text_de: Welches wirksame Ereignis ist für §1613 BGB belegt und bestand mein Anspruch am Monatsersten?
+  topic: rueckwirkung
+- id: uvg
+  text_de: Sind alle UVG-Voraussetzungen, §1 Abs.1a, §2-Abzüge und §4-Antrag/Rückwirkung geklärt?
+  topic: uvg
+- id: schutz
+  text_de: Welche sichere Beratungsstelle hilft mir bei Kindeswohl, Sorge, Umgang oder Gewalt?
+  topic: schutz
+- id: trennung
+  text_de: Welche Unterlagen brauche ich für Trennung, Scheidung, Versorgungsausgleich und Verfahrenskostenhilfe?
+  topic: trennung
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

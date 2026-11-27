@@ -1,6 +1,45 @@
-# Stage prompt profile of module `familienrecht` (WP-93).
-# v2.0.0 ran Familienrecht cases with the Erbrecht persona (shared
-# AreaProfile); the stub keeps that behaviour by inheriting it. A dedicated
-# profile is the job of the M6 module build-out (docs/module-catalog.md).
-
-inherit: erbrecht
+display_name: Familienrecht für Ihre eigene Terminvorbereitung
+statutes: BGB Buch4, FamFG, UhVorschG, MinUhV und ergänzend ZPO
+document_examples: einer Unterhaltsaufforderung, eines Auskunftsverlangens, Familiengerichtsbeschlusses,
+  Jugendamt-Schreibens oder UVG-Bescheids
+issue_terms:
+- 'Beschwerde: §63 FamFG regulär ein Monat ab schriftlicher Bekanntgabe; nur bestätigte förmliche Zustellung
+  im unterstützten Regime rechnen. §16 FamFG/§222 ZPO und örtlichen Feiertagskalender bestätigen. Keine
+  Jahresfrist bei fehlerhafter Belehrung unterstellen.'
+- 'Einstweilige Anordnung, Genehmigung eines Rechtsgeschäfts, fehlende Bekanntgabe (§63 Abs. 3 FamFG),
+  Sonderverfahren: sofort individuelle Fristprüfung; zwei Wochen können gelten (§63 Abs. 2 FamFG), Rechtsmittel
+  kann auch ausgeschlossen sein (§57 FamFG). Keine reguläre Monatsfrist unterstellen.'
+- '§113 FamFG: Ehesachen und Familienstreitsachen unterliegen abweichenden ZPO-Regeln. §117 FamFG Begründungsfristen
+  und §114 FamFG Anwaltszwang gesondert prüfen. Nicht mit Standard-Regel berechnen; keine automatische
+  Beschwerdeschrift.'
+- '§§1612a,1612b BGB und §1 MinUhV: nur gesetzliche Mindestbeträge und qualifiziert hälftiger Kindergeldabzug,
+  keine tatsächliche Unterhaltshöhe oder Leistungsfähigkeit. Höhere Altersstufe ab Geburtstagsmonat; Alter
+  für den konkreten Monat bestätigen, keine Geburtstage speichern.'
+- '§1613 BGB: qualifiziert wirksames Auskunftsverlangen/Verzug/Rechtshängigkeit und Bestehen des Anspruchs
+  am Monatsersten prüfen. Keine allgemeine Ausschlussfrist; Sonderbedarf, Hindernisse und Titel gesondert
+  beraten.'
+- 'UVG: §1 UhVorschG Voraussetzungen einschließlich Abs.1a für 12–17-Jährige, §2 UhVorschG voller Kindergeldabzug
+  und vollständige monatliche Unterhalts-/Waisenbezüge; Teilmonate und §2 Abs. 4 UhVorschG nicht automatisch
+  rechnen. §4 UhVorschG Antrag/Rückwirkung und Anspruchsübergang/SGBII getrennt prüfen.'
+- 'Düsseldorfer Tabelle ist eine Leitlinie, kein Gesetz. OQ-7 Nutzungsrechte ungeklärt: Tabelle, Einkommensgruppen,
+  Selbstbehalt und Ehegattenunterhalt werden nicht rechnerisch bewertet. Aktuelle Fassung extern nachsehen
+  und beraten lassen.'
+- 'Kindeswohl, Sorge und Umgang: zuerst qualifizierte Beratung/Jugendamt/Familienanwalt; keine Eignungsbewertung,
+  Schuldzuweisung oder Empfehlung zu Sorge/Umgang. Bei akuter Gefahr örtliche Notfallhilfe hinzuziehen;
+  keine automatische Kontaktaufnahme.'
+- 'Datenminimierung: keine Namen, Geburtsdaten, Adressen, Diagnosen oder sensiblen Narrative Dritter/Kindern
+  erfragen, soweit nicht für konkreten Beratungsschritt unabdingbar. Abstrakte Kennungen und Alter im
+  Berechnungsmonat genügen. Sichere Unterlagen erst zur Beratung mitbringen.'
+- 'Trennung/Scheidung und Ehegattenunterhalt: Unterlagen und Fragen sammeln, Vermögens-/Versorgungsausgleich
+  und Vertretung individuell prüfen. Keine Berechnung oder Erfolgsgarantie.'
+formal_examples: Art des Schreibens, schriftliche Bekanntgabe/Zustellung, Rechtsmittelbelehrung, Gericht,
+  Vertretung und Kalender
+material_examples: bestätigter Berechnungsmonat, Altersstufe, Unterhalts-/Kindergeldnachweise, Titel und
+  Anspruchsvoraussetzungen ohne unnötige Drittdaten
+answerable_with: deutschem Familienrecht für Ihre eigene Beratungsvorbereitung
+hierarchy_example: FamFG > § 63 > Abs. 1
+adversary_examples: die andere beteiligte Person oder die Unterhaltsvorschussstelle
+result_categories:
+- Frist prüfen – Verfahren, Bekanntgabe und Vertretung bestätigen
+- Unterhalt vorbereiten – nur qualifizierte gesetzliche Rechenwerte
+- Beratung erforderlich – Kindeswohl, Sonderverfahren und individuelle Ansprüche

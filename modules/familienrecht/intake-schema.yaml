@@ -1,0 +1,184 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/familienrecht-intake-v0.3.0
+title: Own-matter family preparation; no unnecessary third-party identifiers
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+  document_type:
+    enum:
+    - famfg_regulaerer_endbeschluss
+    - einstweilige_anordnung
+    - genehmigung_rechtsgeschaeft
+    - ehesache
+    - familienstreitsache
+    - unterhaltsaufforderung
+    - auskunftsverlangen
+    - jugendamt
+    - uvg_bescheid
+    - sonstiges
+  zustellungsart:
+    enum:
+    - inland
+    - ausland
+    - oeffentlich
+  bundesland:
+    enum:
+    - BB
+    - BE
+    - BW
+    - BY
+    - HB
+    - HE
+    - HH
+    - MV
+    - NI
+    - NW
+    - RP
+    - SH
+    - SL
+    - SN
+    - ST
+    - TH
+  calculation_type:
+    enum:
+    - none
+    - minimum_maintenance
+    - uvg_amount
+    - retroactive_maintenance
+  age_at_month_end:
+    type: integer
+    minimum: 0
+    maximum: 17
+  period_month:
+    type: string
+    pattern: ^2026-(0[1-9]|1[0-2])-01$
+  event_basis:
+    enum:
+    - information_request
+    - default
+    - lis_pendens
+  as_of:
+    type: string
+    format: date
+  zustellung_tatsaechlich:
+    type: string
+    format: date
+  event_on:
+    type: string
+    format: date
+  maintenance_received_cents:
+    type: integer
+    minimum: 0
+  orphan_received_cents:
+    type: integer
+    minimum: 0
+  feiertage_zusaetzlich:
+    type: array
+    maxItems: 366
+    items:
+      type: string
+      format: date
+  synthetic_data_confirmed:
+    type:
+    - boolean
+    - 'null'
+  feiertagskalender_bestaetigt:
+    type:
+    - boolean
+    - 'null'
+  applicability_confirmed:
+    type:
+    - boolean
+    - 'null'
+  current_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+  age_for_period_confirmed:
+    type:
+    - boolean
+    - 'null'
+  minor_entire_month_confirmed:
+    type:
+    - boolean
+    - 'null'
+  separate_households_confirmed:
+    type:
+    - boolean
+    - 'null'
+  one_parent_care_confirmed:
+    type:
+    - boolean
+    - 'null'
+  full_child_benefit_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_special_credit_confirmed:
+    type:
+    - boolean
+    - 'null'
+  uvg_eligibility_confirmed:
+    type:
+    - boolean
+    - 'null'
+  full_month_eligibility_confirmed:
+    type:
+    - boolean
+    - 'null'
+  stable_age_band_entire_month_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_section2_4_deductions_confirmed:
+    type:
+    - boolean
+    - 'null'
+  complete_income_confirmed:
+    type:
+    - boolean
+    - 'null'
+  additional_12_17_conditions_confirmed:
+    type:
+    - boolean
+    - 'null'
+  minor_child_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+  event_legally_effective_confirmed:
+    type:
+    - boolean
+    - 'null'
+  claim_existed_month_start_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_special_retroactivity_confirmed:
+    type:
+    - boolean
+    - 'null'
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      regulaerer_endbeschluss_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      zustellung_wirksam_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      kein_113_verfahren_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      kein_sonderregime:
+        type:
+        - boolean
+        - 'null'

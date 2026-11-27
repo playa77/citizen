@@ -1,0 +1,39 @@
+format: citizen-plain-copy-v1.0
+module: familienrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist prüfen
+    text: Ein Beschluss kann eine kurze Frist auslösen. Bei Eilverfahren können andere Regeln gelten.
+    next_step: Heben Sie Beschluss und Umschlag auf. Lassen Sie Frist und Vertretung rasch prüfen.
+  unterhalt_vorbereiten:
+    title: Unterhalt vorbereiten
+    text: Der gesetzliche Mindestbetrag ist noch kein Anspruch. Einkommen, Betreuung und Zahlungen müssen
+      geprüft werden.
+    next_step: Bringen Sie den Monat, die Altersstufe und Zahlungsbelege zur Beratung mit.
+  beratung_erforderlich:
+    title: Beratung suchen
+    text: Bei Kindeswohl, Sorge, Umgang oder Gewalt brauchen Sie qualifizierte Hilfe. Hier wird keine
+      Elternfähigkeit bewertet.
+    next_step: Nutzen Sie sichere Kontaktdaten. Laden Sie keine unnötigen Daten von Kindern oder anderen
+      Personen hoch.
+  einordnung_offen:
+    title: Angaben fehlen
+    text: Verfahren, wirksame Bekanntgabe oder Rechenbedingungen sind offen. Ein verlässliches Datum oder
+      ein Anspruch steht nicht fest.
+    next_step: Klären Sie die fehlenden Angaben mit der Beratung.
+deadlines:
+  fam_beschwerde:
+    title: Reguläre Beschwerde prüfen
+    action: Nur im bestätigten regulären Verfahren gilt hier ein Monat ab förmlicher schriftlicher Bekanntgabe.
+      Eil- und Sonderverfahren können anders sein. Holen Sie rasch Hilfe. Dieses Blatt reicht nichts ein.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Lassen Sie die Angaben prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Bestätigen Sie fehlende Angaben rasch.'
+      missing_input: Bestätigte Angaben fehlen. Es gibt kein verlässliches Datum. Holen Sie rasch Hilfe.
+      not_applicable: Diese reguläre Regel passt nicht. Andere, kürzere Fristen können gelten.

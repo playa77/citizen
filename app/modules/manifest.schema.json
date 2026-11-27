@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://citizen.dev/schemas/module-manifest-3.7.json",
-  "x-core-api": "3.7",
+  "$id": "https://citizen.dev/schemas/module-manifest-3.8.json",
+  "x-core-api": "3.8",
   "title": "Citizen module manifest",
-  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.7 (3.0 plus the optional `errata` key, WP-110, in 3.1, and the optional `plain_language` key, WP-122, in 3.2, public intake_schema/service deadline support in 3.3, and receipt/event deadline semantics/civil calendar SDK in 3.4, explicit knowledge-date deadlines in 3.5, official EU article corpus support in 3.6, traffic/procedural corpus and StPO rollover in 3.7; additive, so every 3.0/3.1/3.2 manifest stays valid). The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
+  "description": "Schema for modules/<module_id>/module.yaml (ARCHITECTURE.md § 2.2). Versioned with the core_api contract; this revision is core_api 3.8 (3.0 plus the optional `errata` key, WP-110, in 3.1, and the optional `plain_language` key, WP-122, in 3.2, public intake_schema/service deadline support in 3.3, and receipt/event deadline semantics/civil calendar SDK in 3.4, explicit knowledge-date deadlines in 3.5, official EU article corpus support in 3.6, traffic/procedural corpus and StPO rollover in 3.7, family corpus and FamFG rollover in 3.8; additive, so every 3.0/3.1/3.2 manifest stays valid). The registry additionally refuses an enabled module whose core_api range does not admit the running SDK version, and (since WP-93) any manifest that declares a file missing from, or outside of, its module directory. Content sections are optional: stub modules (tier experimental) ship only the sections they carry.",
   "type": "object",
   "required": ["id", "version", "core_api", "title", "tier"],
   "additionalProperties": false,

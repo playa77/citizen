@@ -415,3 +415,18 @@ source availability does not establish complete sanction/point coverage.
 Traffic parameters expire after 2026-12-31 without fallback; proposed status
 and human review remain pending. No live-inference result or deployment
 readiness claim accompanies this package.
+
+### WP-135 upgrade notes (core 3.10.0)
+
+Run `alembic upgrade head` on the existing PostgreSQL 16/pgvector database:
+migration 021 adds `famfg`, `uvg`, `minuhv`; downgrade refuses while these
+source records exist. Existing data is retained. Obtain renewed disclaimer
+acknowledgement `v3.7.0`; prompt set 3.8.0 and module API 3.8 identify the change.
+The experimental Familienrecht module follows existing deployment tier rules;
+enablement does not select or load it. Its three new federal sources plus
+BGB/ZPO require explicit source selection and deployment ingestion to support
+retrieval. No deployment population or embeddings were performed in this work.
+Bounded 2026 proposed parameters do not cover 2027 or establish entitlement.
+No guideline table/self-retention data is bundled while OQ-7 remains open.
+Sorge/Umgang and Kindeswohl need individual referral; human review and live
+quality gates remain deferred, not passed. See D-077 and the module README.

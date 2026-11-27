@@ -1,0 +1,38 @@
+format: citizen-plain-copy-v1.0
+module: familienrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Handeln Sie schnell
+    text: Sie haben Post vom Gericht. Es kann sehr wenig Zeit bleiben. Holen Sie schnell Hilfe.
+    next_step: Heben Sie Beschluss und Umschlag auf. Lassen Sie Frist und Vertretung rasch prüfen.
+  unterhalt_vorbereiten:
+    title: Unterhalt vorbereiten
+    text: Unterhalt ist Geld zum Leben. Die Rechnung zeigt nur einen Teil. Lassen Sie Ihren Fall prüfen.
+    next_step: Bringen Sie den Monat, die Altersstufe und Zahlungsbelege zur Beratung mit.
+  beratung_erforderlich:
+    title: Beratung suchen
+    text: Es geht um die Sicherheit eines Kindes? Holen Sie Hilfe vor Ort. Hier wird nicht über Eltern
+      entschieden.
+    next_step: Nutzen Sie sichere Kontaktdaten. Laden Sie keine unnötigen Daten von Kindern oder anderen
+      Personen hoch.
+  einordnung_offen:
+    title: Angaben fehlen
+    text: Verfahren, wirksame Bekanntgabe oder Rechenbedingungen sind offen. Ein verlässliches Datum oder
+      ein Anspruch steht nicht fest.
+    next_step: Klären Sie die fehlenden Angaben mit der Beratung.
+deadlines:
+  fam_beschwerde:
+    title: Reguläre Beschwerde prüfen
+    action: Nur im bestätigten regulären Verfahren gilt hier ein Monat ab förmlicher schriftlicher Bekanntgabe.
+      Eil- und Sonderverfahren können anders sein. Holen Sie rasch Hilfe. Dieses Blatt reicht nichts ein.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Lassen Sie die Angaben prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Bestätigen Sie fehlende Angaben rasch.'
+      missing_input: Bestätigte Angaben fehlen. Es gibt kein verlässliches Datum. Holen Sie rasch Hilfe.
+      not_applicable: Diese reguläre Regel passt nicht. Andere, kürzere Fristen können gelten.

@@ -1,6 +1,7 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.3.0 | 2026-11-27 — WP-134 traffic backend.
+<!-- Version: 1.4.0 | 2026-11-27 — WP-135 family backend; OQ-7 remains open.
+     1.3.0 | 2026-11-27 — WP-134 traffic backend.
      1.2.0 | 2026-11-27 — WP-133 consumer contract backend.
      1.1.0 | 2026-11-26 — M1 experimental foundation; owner directs backend continuation.
      1.0.2 | 2026-11-25 — D-069: peer modules; startup/session TODO blocks further module implementation.
@@ -52,7 +53,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | experimental backend 0.2.0 (WP-132, D-074) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
 | M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | experimental backend 0.2.0 (WP-133, D-075) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
 | M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | experimental backend 0.1.0 (WP-134, D-076) | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
-| M6 | `familienrecht` | Familienrecht (Unterhalt, Trennung, Sorge/Umgang) | planned (legacy key experimental) | high stakes; Unterhalt math deterministic; crossover UVG / SGB II |
+| M6 | `familienrecht` | Familienrecht (Unterhalt, Trennung, Sorge/Umgang) | experimental backend 0.3.0 (WP-135, D-077) | high stakes; Unterhalt math deterministic; crossover UVG / SGB II |
 | M7 | `aufenthaltsrecht` | Aufenthalts-, Asyl- und Staatsangehörigkeitsrecht | planned | very high necessity for M0 clientele, but very short deadlines and multilingual need → scheduled after the plain-language/i18n layer (P12) |
 | M8 | `steuerrecht` | Einkommensteuer privater Personen + AO-Verfahren | planned | Steuerbescheid Einspruch is common; StBerG constraint shapes scope (own matter only) |
 | M9 | `erbrecht` | Erbrecht (incl. Schenkung, ErbSt) | planned (legacy key experimental) | Ausschlagungsfrist; Pflichtteil math; lower urgency than M1–M7 |
@@ -249,6 +250,17 @@ are parameters. Accident settlement remains stage 2. See
 
 ### M6 — `familienrecht`
 
+**Backend implemented (WP-135, 2026-11-27):** experimental 0.3.0 on
+core 3.10.0/module API 3.8. Qualified ordinary complaint dates only after
+confirmed formal domestic notification outside §113 proceedings; statutory
+minimum/child-benefit and UVG arithmetic for 2026; conditional §1613 month
+start; guarded drafts, minimised intake/dossier and DE/EN/de-LS copy with
+20 synthetic cases. Custody/contact and child welfare are referral-first.
+OQ-7 remains open: no bundled guideline table, income groups, self-retention
+or spousal-maintenance calculation. Partial UVG months/special deductions,
+unknown eligibility and special family procedures require review. No deployed
+ingestion, live quality or human promotion is claimed. See [D-077](decisions/D-077-wp135-family-implementation.md).
+
 - **Scope:** Trennung/Scheidung preparation, Kindes- und Ehegattenunterhalt,
   Sorge- und Umgangsrecht (information only), Unterhaltsvorschuss.
 - **Documents:** Unterhaltsaufforderung, Auskunftsverlangen, Beschlüsse des
@@ -262,7 +274,7 @@ are parameters. Accident settlement remains stage 2. See
   (§ 1612b BGB), Selbstbehalt, UVG amounts.
 - **Drafts:** Auskunftsverlangen, Stellungnahme-Gliederung, UVG-Antrag
   preparation.
-- **Corpus:** BGB Buch 4, FamFG, UVG, MindUhV.
+- **Corpus:** BGB Buch 4, FamFG, UhVorschG (UVG), MinUhV; supporting ZPO.
 - **Compliance:** data of third parties (children, ex-partner) — strict
   minimisation; Art. 9 data likely; Kindeswohl topics are referral-first.
 - **Crossovers:** M0 (Unterhalt als Einkommen, § 33 SGB II Anspruchsübergang).

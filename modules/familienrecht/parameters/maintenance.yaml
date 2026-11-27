@@ -1,0 +1,24 @@
+parameters:
+- key: maintenance_rules
+  value_json:
+    age_bands:
+    - min: 0
+      max: 5
+      minimum_cents: 48600
+    - min: 6
+      max: 11
+      minimum_cents: 55800
+    - min: 12
+      max: 17
+      minimum_cents: 65300
+    child_benefit_cents: 25900
+  unit: rules
+  valid_from: 2026-01-01
+  valid_to: 2026-12-31
+  review_status: proposed
+  basis: §1 MinUhV; §§1612a,1612b,1613 BGB; §§1,2 UhVorschG; §66 EStG
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/minuhv/__1.html",
+    "https://www.gesetze-im-internet.de/bgb/__1612a.html", "https://www.gesetze-im-internet.de/bgb/__1612b.html",
+    "https://www.gesetze-im-internet.de/estg/__66.html", "https://www.gesetze-im-internet.de/uhvorschg/__2.html"],
+    "quotes": ["486 Euro", "558 Euro", "653 Euro", "259 Euro"], "coverage": "2026 only; statutory arithmetic,
+    no guideline table, eligibility or income adjudication. Human review pending."}'

@@ -1,0 +1,193 @@
+{
+  "format": "citizen-plain-eval-v1.0",
+  "module": "familienrecht",
+  "languages": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "categories": [
+    "frist_pruefen",
+    "unterhalt_vorbereiten",
+    "beratung_erforderlich",
+    "einordnung_offen"
+  ],
+  "deadline_specs": [
+    "fam_beschwerde"
+  ],
+  "review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "core_review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "goldset": {
+    "version": "1.0.0",
+    "path": "goldset/plain-v1.0.0.yaml"
+  },
+  "cases_passed": 25,
+  "cases_total": 25,
+  "cases": [
+    {
+      "case_id": "PL-FAM-001",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-002",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-003",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-004",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-005",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-006",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-007",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-008",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-009",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-010",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-011",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-012",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-013",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-014",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-015",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-016",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-017",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-018",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-019",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FAM-020",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-frist_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-unterhalt_vorbereiten",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-beratung_erforderlich",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-einordnung_offen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-fallback",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": {},
+  "subset": null,
+  "gate_passed": true,
+  "module_version": "0.3.0",
+  "core_version": "3.10.0",
+  "git_sha": "db57937",
+  "run_timestamp": "2026-11-27T19:21:47.405121+00:00"
+}

@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.6.0 · **Stand:** 2026-11-27
+**Version:** 3.7.0 · **Stand:** 2026-11-27
 
 **Autor:** www.github.com/playa77
 
@@ -463,7 +463,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.6.0`);
+`v3.7.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -862,7 +862,7 @@ und C.6.1.
 ### D.4 Weitere experimentelle Module
 
 Für die Module `erbrecht` (einschließlich des Altschlüssels
-`schenkungsrecht`), `familienrecht` und
+`schenkungsrecht`) und
 `andere` (Auffangbereich) gelten D.1 und die Teile A bis C ohne
 gebietsspezifische Ergänzung. Sie berechnen weder Fristen noch Beträge; wer
 eine Frist zu wahren hat, lässt sie anwaltlich oder durch eine
@@ -975,7 +975,31 @@ Entwürfe werden nicht versandt. Menschliche Prüfung und Live-Evaluation stehen
 
 ---
 
+### D.10 Familienrecht (`familienrecht`)
+
+Unterstützung Ihrer eigenen Familienangelegenheit und Beratungsvorbereitung.
+Reguläre Beschwerdedaten werden nur bei bestätigtem Endbeschluss außerhalb
+§113 FamFG, förmlicher schriftlicher Bekanntgabe und bestätigtem Kalender berechnet.
+Eil-/Sonderverfahren, fehlende Bekanntgabe und Auslandsfälle brauchen unverzüglich
+individuelle Prüfung. Zwei Wochen oder andere Regeln können gelten; Rechtsmittel
+können ausgeschlossen sein. Anwaltszwang und besondere Begründungsfristen prüfen.
+Rechenwerte sind nur qualifizierte gesetzliche Mindest-/UVG-Arithmetik für 2026,
+keine Anspruchsentscheidung, Einkommensbewertung oder vollstreckbare Festsetzung.
+Wechselmodell, Volljährige, Ehegattenunterhalt, Selbstbehalt, Teilmonate und
+UVG-Sonderabzüge sind nicht automatisch berechnet. §1613 beschreibt bedingte
+Rückwirkung, keine allgemeine Ausschlussfrist. OQ-7 bleibt offen: keine gebündelte
+Düsseldorfer Tabelle oder Leitlinienwerte. Kindeswohl, Sorge und Umgang sind
+Information und Verweisung an qualifizierte Hilfe, keine Elternbewertung.
+Minimieren Sie Daten von Kindern und anderen Personen; sichere Unterlagen erst
+zur Beratung mitbringen. Entwürfe wahren keine Frist und werden nicht versandt.
+Menschliche Prüfung und Live-Evaluation stehen aus; keine verifizierte Freigabe.
+
+---
+
 ## Änderungshistorie
+
+- **3.7.0 (2026-11-27):** Familienrecht: qualifizierte reguläre Beschwerde und gesetzliche Rechenwerte; Kindeswohl-Verweisung, Datenminimierung und offene Leitlinienrechte. Erneute Kenntnisnahme erforderlich.
+
 
 - **3.6.0 (2026-11-27):** Verkehrsrecht: qualifizierter Einspruch, Akteneinsicht und begrenzte Verkehrsprüfungen; aktuelle Regime und Teilabdeckung ausdrücklich gekennzeichnet. Erneute Kenntnisnahme erforderlich.
 

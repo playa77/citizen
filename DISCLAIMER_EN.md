@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.6.0 · **Date:** 2026-11-27
+**Version:** 3.7.0 · **Date:** 2026-11-27
 
 **Author:** www.github.com/playa77
 
@@ -433,7 +433,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.6.0`); after a version change, renewed
+prefixed with `v`, currently `v3.7.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -810,7 +810,7 @@ C.6.1.
 ### D.4 Further Experimental Modules
 
 For the modules `erbrecht` (inheritance,
-including the legacy key `schenkungsrecht`), `familienrecht` (family),
+including the legacy key `schenkungsrecht`),
 and `andere` (catch-all),
 D.1 and Parts A to C apply without an area-specific addendum. They compute
 neither deadlines nor amounts; anyone who has a deadline to meet should have
@@ -915,7 +915,31 @@ Drafts are not sent. Human review and live evaluation remain pending; no verifie
 
 ---
 
+### D.10 Family Law (`familienrecht`)
+
+Support for your own family matter and advice appointment preparation.
+Ordinary complaint dates require a confirmed final decision outside §113 FamFG,
+confirmed formal written notification and a confirmed holiday calendar.
+Urgent/special proceedings, missing notification and international cases need
+immediate individual review. Two weeks or other rules may apply; appeals may
+be excluded. Check representation requirements and separate grounds deadlines.
+Figures are qualified statutory minimum-maintenance/UVG arithmetic for 2026,
+not entitlement decisions, income assessments or enforceable awards. Shared care,
+adult children, spousal maintenance, self-retention, partial months and special
+UVG income deductions are not calculated automatically. §1613 gives conditional
+retroactivity, not a general filing deadline. OQ-7 remains open: no bundled
+Düsseldorfer Tabelle or guideline values. Child welfare, custody and contact are
+information and referral first; no parental-fitness assessment is made.
+Minimise children's and other people's data; bring necessary records securely
+to advice. Drafts meet no deadline and are not sent automatically.
+Human review and live evaluation remain pending; no verified promotion is claimed.
+
+---
+
 ## Change History
+
+- **3.7.0 (2026-11-27):** Family law: qualified ordinary complaints and statutory arithmetic; child-welfare referrals, data minimisation and unresolved guideline reuse. Renewed acknowledgement required.
+
 
 - **3.6.0 (2026-11-27):** Traffic law: qualified objection, file access and bounded traffic checks; current regimes and partial coverage are explicit. Renewed acknowledgement required.
 

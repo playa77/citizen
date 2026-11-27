@@ -1,0 +1,320 @@
+format: citizen-plain-goldset-v1.0
+module: familienrecht
+version: 1.0.0
+cases:
+- id: PL-FAM-001
+  kind: deadline
+  title: Reguläre Beschwerde
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-02'
+- id: PL-FAM-002
+  kind: deadline
+  title: Wochenende
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-21'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-FAM-003
+  kind: deadline
+  title: Monatsende
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-31'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-30'
+- id: PL-FAM-004
+  kind: deadline
+  title: Feiertag Sachsen
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: SN
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-19'
+- id: PL-FAM-005
+  kind: deadline
+  title: Kein Feiertag Berlin
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-18'
+- id: PL-FAM-006
+  kind: deadline
+  title: Lokaler Feiertag
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-30'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-11-30'
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-12-01'
+- id: PL-FAM-007
+  kind: deadline
+  title: Bekanntgabe offen
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: null
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-FAM-008
+  kind: deadline
+  title: Kalender offen
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-21'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: false
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: fam_beschwerde
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-FAM-009
+  kind: deadline
+  title: Einstweilige Anordnung
+  facts:
+    document_type: einstweilige_anordnung
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-010
+  kind: deadline
+  title: Genehmigung
+  facts:
+    document_type: genehmigung_rechtsgeschaeft
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-011
+  kind: deadline
+  title: Ehesache
+  facts:
+    document_type: ehesache
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-012
+  kind: deadline
+  title: Familienstreitsache
+  facts:
+    document_type: familienstreitsache
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-013
+  kind: deadline
+  title: Mindestunterhalt Alter5
+  facts:
+    document_type: unterhaltsaufforderung
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-014
+  kind: deadline
+  title: Geburtstagsmonat
+  facts:
+    document_type: unterhaltsaufforderung
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-015
+  kind: deadline
+  title: UVG älteres Kind
+  facts:
+    document_type: uvg_bescheid
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-016
+  kind: deadline
+  title: UVG voller Abzug
+  facts:
+    document_type: uvg_bescheid
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-017
+  kind: deadline
+  title: Rückwirkung Unterhalt
+  facts:
+    document_type: auskunftsverlangen
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-018
+  kind: deadline
+  title: Sorge und Umgang
+  facts:
+    document_type: jugendamt
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-019
+  kind: deadline
+  title: Tabelle und Selbstbehalt
+  facts:
+    document_type: sonstiges
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-FAM-020
+  kind: deadline
+  title: UVG Antrag
+  facts:
+    document_type: uvg_bescheid
+  spec_id: fam_beschwerde
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-frist_pruefen
+  kind: finding
+  title: Frist prüfen
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+- id: PL-unterhalt_vorbereiten
+  kind: finding
+  title: Unterhalt vorbereiten
+  ergebnis: 'Vorläufige Einordnung: Unterhalt vorbereiten.'
+  expect:
+    category: unterhalt_vorbereiten
+    category_source: ergebnis
+- id: PL-beratung_erforderlich
+  kind: finding
+  title: Beratung erforderlich
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+- id: PL-einordnung_offen
+  kind: finding
+  title: Einordnung offen
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+- id: PL-fallback
+  kind: finding
+  title: Unbelegte Zusage bleibt offen
+  ergebnis: Unterhalt garantiert.
+  expect:
+    category: einordnung_offen
+    category_source: fallback

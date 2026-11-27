@@ -84,6 +84,12 @@ direction permits backend step 2 to proceed (D-069, backend continuation directi
   guarded drafts and 20 synthetic cases. Annex/table retrieval remains partial;
   no complete BKat coverage, live quality or human promotion is claimed.
   Verification and limits: [D-076](docs/decisions/D-076-wp134-traffic-implementation.md).
+- [x] WP-135 experimental backend implementation: `familienrecht` 0.3.0,
+  core 3.10.0/module API 3.8. Qualified ordinary complaint, statutory 2026
+  minimum/UVG checks, conditional retroactivity, guarded drafts and 20 synthetic
+  cases. OQ-7 guideline reuse stays open; no bundled table/self-retention or
+  spousal award calculation. Limits and verification: [D-077](docs/decisions/D-077-wp135-family-implementation.md).
+  Human review/promotion, deployment ingestion and live quality remain pending.
 - [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing

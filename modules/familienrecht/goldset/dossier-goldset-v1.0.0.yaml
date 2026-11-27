@@ -1,0 +1,381 @@
+dossier_goldset:
+  id: dossier-goldset-familienrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.3.0.yaml
+  base_goldset_version: 0.3.0
+  dossier_schema: citizen-dossier-v1.0
+  module: familienrecht
+  provenance: synthetic
+  note: Literal independently derived dates; no live inference.
+cases:
+- id: FAM-001
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: fam_beschwerde
+      frist_ende: '2026-11-02'
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-02'
+      kind: mentioned
+- id: FAM-002
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-21'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: fam_beschwerde
+      frist_ende: '2026-11-23'
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-21'
+      kind: mentioned
+- id: FAM-003
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-31'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: fam_beschwerde
+      frist_ende: '2026-11-30'
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-31'
+      kind: mentioned
+- id: FAM-004
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: SN
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: fam_beschwerde
+      frist_ende: '2026-11-19'
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-18'
+      kind: mentioned
+- id: FAM-005
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: fam_beschwerde
+      frist_ende: '2026-11-18'
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-18'
+      kind: mentioned
+- id: FAM-006
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-30'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-11-30'
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines:
+    - spec_id: fam_beschwerde
+      frist_ende: '2026-12-01'
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-30'
+      kind: mentioned
+    - date: '2026-11-30'
+      kind: mentioned
+- id: FAM-007
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: null
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-008
+  facts:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellung_tatsaechlich: '2026-10-21'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: false
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      regulaerer_endbeschluss_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      kein_113_verfahren_bestaetigt: true
+      kein_sonderregime: true
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-009
+  facts:
+    document_type: einstweilige_anordnung
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-010
+  facts:
+    document_type: genehmigung_rechtsgeschaeft
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-011
+  facts:
+    document_type: ehesache
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-012
+  facts:
+    document_type: familienstreitsache
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-013
+  facts:
+    document_type: unterhaltsaufforderung
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-014
+  facts:
+    document_type: unterhaltsaufforderung
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-015
+  facts:
+    document_type: uvg_bescheid
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-016
+  facts:
+    document_type: uvg_bescheid
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-017
+  facts:
+    document_type: auskunftsverlangen
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-23'
+      kind: mentioned
+    - date: '2026-10-01'
+      kind: mentioned
+- id: FAM-018
+  facts:
+    document_type: jugendamt
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-019
+  facts:
+    document_type: sonstiges
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: FAM-020
+  facts:
+    document_type: uvg_bescheid
+  expected:
+    deadlines: []
+    checklist:
+    - beschluss
+    - unterhalt
+    - uvg
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date

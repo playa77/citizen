@@ -1,28 +1,46 @@
-# Familienrecht — stub module (WP-93, D-038).
-#
-# Tier `experimental`: carries the v2.0.0 behaviour of the legacy area key
-# (intake routing, corpus mapping, prompt profile) — no deadline specs,
-# no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
-
-# Semantic Version: 0.2.1 | 2026-11-16 — rendered prompts change with the
-# inherited erbrecht profile (prompt set 3.0.0, D-060); no file content change.
-# 0.2.0 | 2026-11-16 — WP-96: compliance declaration
-# (purpose-drift deny phrases).
-# 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
-
 id: familienrecht
-version: 0.2.1
-core_api: ">=3.0,<4.0"
+version: 0.3.0
+core_api: '>=3.8,<4.0'
 title:
-  de: "Familienrecht"
-  en: "Family law"
+  de: Familienrecht
+  en: Family law
 tier: experimental
 scope:
-  summary_de: "Unterhalt, Scheidungsfolgen, Sorge- und Umgangsrecht (BGB Buch 4)"
+  summary_de: Eigene Trennung, Unterhalt und Familienverfahren für Beratung vorbereiten; Sorge und Umgang
+    nur Information und Verweisung.
   own_matter_only: true
+  out_of_scope:
+  - Kindeswohl-/Sorgerechtsentscheidungen und Prognosen zur elterlichen Eignung
+  - Verbindliche Unterhaltsbemessung, Wechselmodell, Volljährigen- oder Ehegattenberechnung
+  - Düsseldorfer Tabelle, Einkommensgruppen und Selbstbehaltwerte (OQ-7)
+  - Unbestätigte Verfahrensregime, Ausland und historische Parameter
 corpus: corpus.yaml
 intake: intake.yaml
+intake_schema: intake-schema.yaml
+dossier: dossier.yaml
+fristen: fristen.yaml
+parameters:
+  domain: familienrecht
+  files:
+  - parameters/*.yaml
+calculators: calculators:CALCULATORS
 prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
+documents:
+- pruefhinweise
+- auskunft
+- stellungnahme
+- uvg_vorbereitung
+goldset:
+  path: goldset/goldset-v0.3.0.yaml
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    en: copy/en/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
+errata: errata.yaml
 compliance:
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
   purpose_drift_deny_file: compliance/deny-phrases.json
 legacy_aliases: []

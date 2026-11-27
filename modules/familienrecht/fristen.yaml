@@ -1,0 +1,17 @@
+- id: fam_beschwerde
+  label_de: Reguläre Beschwerde gegen bestätigten FamFG-Endbeschluss
+  trigger: zustellung
+  duration:
+    months: 1
+  basis: §63 Abs.1,3; §16 Abs.2 FamFG; §222 ZPO
+  fristbeginn_basis: § 63 Abs. 3 FamFG; bestätigte förmliche schriftliche Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: famfg_regulaerer_endbeschluss
+    zustellungsart: inland
+  requires_confirmed:
+  - regulaerer_endbeschluss_bestaetigt
+  - zustellung_wirksam_bestaetigt
+  - kein_113_verfahren_bestaetigt
+  - kein_sonderregime
+  rollover: famfg_16
