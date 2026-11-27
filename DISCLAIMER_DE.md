@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.3.0 · **Stand:** 2026-11-27
+**Version:** 3.4.0 · **Stand:** 2026-11-27
 
 **Autor:** www.github.com/playa77
 
@@ -464,7 +464,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.3.0`);
+`v3.4.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -862,7 +862,7 @@ und C.6.1.
 
 ### D.4 Weitere experimentelle Module
 
-Für die Module `arbeitsrecht`, `erbrecht` (einschließlich des Altschlüssels
+Für die Module `erbrecht` (einschließlich des Altschlüssels
 `schenkungsrecht`), `familienrecht`, `vertragsrecht` und
 `andere` (Auffangbereich) gelten D.1 und die Teile A bis C ohne
 gebietsspezifische Ergänzung. Sie berechnen weder Fristen noch Beträge; wer
@@ -913,9 +913,36 @@ Sie unverzüglich Mietberatung oder anwaltliche Hilfe. Eine Schonfristzahlung
 beseitigt eine ordentliche Kündigung nicht automatisch; ein fehlender Hinweis
 auf den Härtewiderspruch kann gesonderte spätere Möglichkeiten eröffnen.
 
+### D.7 Arbeitsrecht (`arbeitsrecht`)
+
+Dieses experimentelle Modul unterstützt Sie bei Ihrer eigenen Angelegenheit
+als beschäftigte Person. Es ersetzt keine individuelle arbeitsrechtliche
+Prüfung. Bei Kündigung suchen Sie unverzüglich Beratung, Gewerkschaft,
+Rechtsantragstelle oder anwaltliche Hilfe. Die Dreiwochenfrist kann auch bei
+kurzer Beschäftigung und kleinem Betrieb wichtig sein. Erforderliche
+behördliche Zustimmung kann den Fristbeginn verändern. Fehlende Angaben
+bedeuten keine Entwarnung; nachträgliche Klagezulassung ist keine automatische
+Verlängerung.
+
+Zugang, Kenntnis des Beendigungszeitpunkts und tatsächliche Beendigung sind
+verschiedene Tatsachen. Kontaktieren Sie die Agentur für Arbeit frühzeitig;
+Arbeitsuchendmeldung und Arbeitslosmeldung sind getrennt zu klären.
+Arbeitsuchendmeldungsdaten sind vorläufige Planungshilfen; besondere
+Verfahrensregeln und Hinderungsgründe werden nicht abschließend entschieden.
+Vertragliche oder tarifliche Ausschlussklauseln werden nicht automatisch auf
+Wirksamkeit, Stufen oder Fristdauer geprüft. Rechenwerte begründen keine
+Ansprüche. Eine Abfindungsschätzung empfiehlt niemals, eine Klagefrist
+verstreichen zu lassen. Sonderregime benötigen gesonderte Prüfung.
+Aufhebungsverträge können Sperrzeitrisiken haben; das Modul entscheidet keine
+Sanktion und empfiehlt keine Unterschrift. Alle Entwürfe bleiben prüfbedürftig
+und werden weder versandt noch bei Gericht eingereicht. Rechtliche und
+sprachliche menschliche Prüfung steht unter D-071 noch aus.
+
 ---
 
 ## Änderungshistorie
+
+- **3.4.0 (2026-11-27):** Arbeitsrecht: qualifizierte Fristen, Rechenprüfungen und Entwürfe; ausdrückliche Kenntnisdaten und Grenzen der Arbeitsuchendmeldung. Erneute Kenntnisnahme erforderlich.
 
 - **3.3.0 (2026-11-27):** Mietrecht: qualifizierte Frist- und Rechenprüfungen, örtliche Quellenlücken und Entwürfe. Erneute Kenntnisnahme erforderlich.
 

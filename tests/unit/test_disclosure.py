@@ -674,8 +674,8 @@ class TestOpenApiReflection:
         }
 
 
-@pytest.mark.parametrize("areas", [None, [], ["verwaltungsrecht"], ["arbeitsrecht"],
-                                   ["sozialrecht", "arbeitsrecht"]])
+@pytest.mark.parametrize("areas", [None, [], ["verwaltungsrecht"], ["vertragsrecht"],
+                                   ["sozialrecht", "vertragsrecht"]])
 @pytest.mark.parametrize("surface", ["chat", "case_chat"])
 async def test_unusable_chat_scope_returns_selection_before_client_or_retrieval(
     monkeypatch: pytest.MonkeyPatch, areas: list[str] | None, surface: str

@@ -58,6 +58,7 @@ FACT_KEYS = (
     "zustellungsart",
     "zugang_tatsaechlich",
     "ereignis_datum",
+    "kenntnis_datum",
     "qualifikationen",
     "feiertage_zusaetzlich",
     "feiertagskalender_bestaetigt",
@@ -69,6 +70,7 @@ _DATE_FACTS = (
     "zustellung_tatsaechlich",
     "zugang_tatsaechlich",
     "ereignis_datum",
+    "kenntnis_datum",
 )
 
 
@@ -257,6 +259,7 @@ def compute_deadlines(
                 "zustellungsart",
                 "zugang_tatsaechlich",
                 "ereignis_datum",
+                "kenntnis_datum",
                 "qualifikationen",
                 "feiertagskalender_bestaetigt",
                 "feiertage_zusaetzlich",
@@ -268,7 +271,7 @@ def compute_deadlines(
     items: list[dict[str, Any]] = []
     for module in modules:
         for spec in module.specs:
-            if spec.trigger in ("zugang", "ereignis", "zustellung"):
+            if spec.trigger in ("zugang", "ereignis", "kenntnis", "zustellung"):
                 try:
                     item = (
                         _service_item(module.module_id, spec, facts, bundesland)
@@ -444,7 +447,11 @@ def frist_result_for_drafts(section: Mapping[str, Any]) -> FristResult | None:
 def _explicit_event_item(
     module_id: str, spec: DeadlineSpec, facts: Mapping[str, Any]
 ) -> dict[str, Any]:
-    date_key = "zugang_tatsaechlich" if spec.trigger == "zugang" else "ereignis_datum"
+    date_key = {
+        "zugang": "zugang_tatsaechlich",
+        "ereignis": "ereignis_datum",
+        "kenntnis": "kenntnis_datum",
+    }[spec.trigger]
     keys = (
         date_key,
         "document_type",
@@ -486,6 +493,7 @@ def _explicit_event_item(
             document_type=actual_type,
             zugang_tatsaechlich=start if spec.trigger == "zugang" else None,
             ereignis_datum=start if spec.trigger == "ereignis" else None,
+            kenntnis_datum=start if spec.trigger == "kenntnis" else None,
             bundesland=facts.get("bundesland", ""),
             qualifikationen=facts.get("qualifikationen", {}),
             feiertage_zusaetzlich=tuple(

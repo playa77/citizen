@@ -96,6 +96,13 @@ SOURCE_TYPE_ALLOWED = (
     "betrkv",
     "heizkostenv",
     "landes_mietrecht",
+    # D-074 / WP-132: federal employment sources, migration 018.
+    "tzbfg",
+    "entgfg",
+    "milog",
+    "muschg",
+    "arbzg",
+    "arbgg",
 )
 
 

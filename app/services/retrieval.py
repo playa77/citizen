@@ -54,6 +54,12 @@ _STATUTE_TO_SOURCE_TYPE: dict[str, list[str]] = {
     "KSchG": ["kschg"],
     "BUrlG": ["burlg"],
     "TVG": ["tvg"],
+    "TzBfG": ["tzbfg"],
+    "EntgFG": ["entgfg"],
+    "MiLoG": ["milog"],
+    "MuSchG": ["muschg"],
+    "ArbZG": ["arbzg"],
+    "ArbGG": ["arbgg"],
 }
 
 # Regex to extract norm references like "§ 11b SGB II" or "§§ 45/48/50 SGB X"

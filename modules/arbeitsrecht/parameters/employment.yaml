@@ -1,0 +1,81 @@
+parameters:
+- review_status: proposed
+  unit: rules
+  valid_to: null
+  key: employment_rules
+  value_json:
+    ordinary_days: 28
+    probation_days: 14
+    probation_max_months: 6
+    employer_notice_months:
+    - - 2
+      - 1
+    - - 5
+      - 2
+    - - 8
+      - 3
+    - - 10
+      - 4
+    - - 12
+      - 5
+    - - 15
+      - 6
+    - - 20
+      - 7
+    months_per_year: 12
+    severance_round_after_months: 6
+    severance_divisor: 2
+    minimum_weeks: 4
+    max_workdays: 6
+    waiting_months: 6
+    partial_exit_last_month: 6
+    round_numerator: 1
+    round_denominator: 2
+    reference_weeks: 13
+  valid_from: 2026-11-27
+  basis: §622 BGB; §1a KSchG; §§3–7,11 BUrlG
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/bgb/__622.html",
+    "https://www.gesetze-im-internet.de/kschg/__1a.html", "https://www.gesetze-im-internet.de/burlg/__3.html",
+    "https://www.gesetze-im-internet.de/burlg/__5.html", "https://www.gesetze-im-internet.de/burlg/__11.html"],
+    "quotes": ["vier Wochen zum Fünfzehnten", "0,5 Monatsverdienste", "mindestens
+    24 Werktage"], "review": "Human review pending; no general-rule snapshot inferred
+    before retrieval. Leave below half-day remains fractional; money half-up."}'
+- review_status: proposed
+  unit: rules
+  valid_to: 2025-12-31
+  key: minimum_wage
+  value_json:
+    hourly_rate_cents: 1282
+    minutes_per_hour: 60
+  valid_from: 2025-01-01
+  basis: §1 MiLoG; MiLoV4 (2025), MiLoV5 (2026/2027)
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/milov4/__1.html"],
+    "quote": "12,82 Euro", "review": "Proposed; exact gross lower bound rounded upward
+    to cents, coverage and remuneration confirmed separately. Future validity not
+    extrapolated beyond 2027."}'
+- review_status: proposed
+  unit: rules
+  valid_to: 2026-12-31
+  key: minimum_wage
+  value_json:
+    hourly_rate_cents: 1390
+    minutes_per_hour: 60
+  valid_from: 2026-01-01
+  basis: §1 MiLoG; MiLoV4 (2025), MiLoV5 (2026/2027)
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/milov5/__1.html"],
+    "quote": "13,90 Euro", "review": "Proposed; exact gross lower bound rounded upward
+    to cents, coverage and remuneration confirmed separately. Future validity not
+    extrapolated beyond 2027."}'
+- review_status: proposed
+  unit: rules
+  valid_to: 2027-12-31
+  key: minimum_wage
+  value_json:
+    hourly_rate_cents: 1460
+    minutes_per_hour: 60
+  valid_from: 2027-01-01
+  basis: §1 MiLoG; MiLoV4 (2025), MiLoV5 (2026/2027)
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/milov5/__1.html"],
+    "quote": "14,60 Euro", "review": "Proposed; exact gross lower bound rounded upward
+    to cents, coverage and remuneration confirmed separately. Future validity not
+    extrapolated beyond 2027."}'

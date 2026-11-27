@@ -1,0 +1,22 @@
+display_name: Ihre eigene Angelegenheit als beschäftigte Person
+statutes: BGB, KSchG, BUrlG, TzBfG, EntgFG, MiLoG, MuSchG, ArbZG, ArbGG und SGB III
+document_examples: einer Kündigung, Abmahnung, Lohnabrechnung, eines Arbeitszeugnisses oder Aufhebungsvertrags
+issue_terms:
+- Kündigungsschutz und dringende Dreiwochenfrist (§§ 4, 7 KSchG), auch bei kurzer Beschäftigung und kleinem
+  Betrieb
+- Behördliche Zustimmung und Sonderkündigungsschutz (§ 4 Satz 4 KSchG, § 17 MuSchG)
+- 'Arbeitsuchendmeldung: Kenntnisdatum und Beendigungsdatum getrennt (§ 38 SGB III)'
+- Lohn, Arbeitszeit, Entgeltfortzahlung und Mindestlohn
+- Urlaub, Urlaubsabgeltung, Befristung, Abmahnung und Zeugnis
+- Ausschlussklauseln nur anhand belegter Vereinbarungen prüfen; keine pauschale Wirksamkeit
+- 'Aufhebungsvertrag: mögliche Sperrzeit prüfen lassen; keine Unterschrift empfehlen'
+formal_examples: Schriftform, bestätigter Zugang, gesonderte Kenntnis, Vertragsdaten und behördliche Zustimmung
+material_examples: Beschäftigungsdauer, Schutzrechte, Tarifbindung, Nachweise, Ausschlussklauseln und
+  mögliche Sperrzeit; § 1a KSchG nie als Empfehlung zum Fristablauf behandeln
+answerable_with: deutschem Individualarbeitsrecht für Ihre eigene Angelegenheit als beschäftigte Person
+hierarchy_example: KSchG > § 4 > Satz 1
+adversary_examples: der Arbeitgeber oder dessen Vertretung
+result_categories:
+- Frist prüfen – Zugang, Kenntnis oder Voraussetzungen sofort klären
+- Anspruch prüfen – Lohn, Urlaub oder Zeugnis anhand von Belegen prüfen
+- Beratung erforderlich – besondere Schutzrechte oder Aufhebungsvertrag individuell prüfen

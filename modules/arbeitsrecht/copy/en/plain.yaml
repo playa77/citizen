@@ -1,0 +1,70 @@
+format: citizen-plain-copy-v1.0
+module: arbeitsrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Check the deadline
+    text: Receipt, knowledge and special protections need confirmation. A small employer or short service
+      does not remove the need for urgent review.
+    next_step: Have the dismissal checked immediately. Required administrative consent can change when
+      the period starts.
+  anspruch_pruefen:
+    title: Check the claim
+    text: Wages, leave and references need evidence and applicable rules. Arithmetic does not establish
+      entitlement.
+    next_step: Collect the contract and records. Have specific exclusion clauses, validity and every stage
+      checked.
+  beratung_erforderlich:
+    title: Seek individual advice
+    text: Special protections and termination agreements need individual review. Unemployment benefits
+      and a suspension period may be affected.
+    next_step: Get advice before signing. Never let a dismissal deadline expire because of a severance
+      estimate.
+  einordnung_offen:
+    title: Assessment open
+    text: The information does not yet support an assessment. This gives no reassurance.
+    next_step: Clarify missing facts. Seek immediate help for a dismissal.
+deadlines:
+  ar_kuendigungsschutz:
+    title: Review the dismissal
+    action: Seek immediate advice on dismissal, including with small employers or short service. Administrative
+      consent can change when the period starts.
+    texts:
+      computed: 'The calculated date is {frist_ende}. Basis: {basis}. Have the conditions and calculation
+        checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the missing facts promptly.
+      missing_input: Confirmed facts are missing. A reliable date cannot be given. Seek urgent advice;
+        this gives no reassurance.
+      not_applicable: This rule does not match the confirmed facts. Other deadlines and special protections
+        may still matter.
+  ar_arbeitsuchend_kurz:
+    title: Jobseeker registration after short notice
+    action: Contact the employment agency promptly. This is a preliminary planning aid; special procedural
+      rules and impediments need checking. Confirmed knowledge of the termination date is required; receipt
+      and letter dates cannot replace it.
+    texts:
+      computed: 'The preliminary planning date is {frist_ende}. Basis: {basis}. Contact the employment
+        agency early and have your individual deadline checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the missing facts promptly.
+      missing_input: Confirmed facts are missing. A reliable date cannot be given. Seek urgent advice;
+        this gives no reassurance. Special procedural rules and impediments need checking.
+      not_applicable: This rule does not match the confirmed facts. Other deadlines and special protections
+        may still matter.
+  ar_arbeitsuchend_lang:
+    title: Jobseeker registration before termination
+    action: Contact the employment agency promptly. This is a preliminary planning aid; special procedural
+      rules and impediments need checking. The backwards target assumes no extension to a later working
+      day. A qualified person must confirm the target is a working day; otherwise no date is given.
+    texts:
+      computed: 'The preliminary planning date is {frist_ende}. Basis: {basis}. Contact the employment
+        agency early and have your individual deadline checked.'
+      provisional: The provisional date is {frist_ende}. Confirm the missing facts promptly.
+      missing_input: Confirmed facts are missing. A reliable date cannot be given. Seek urgent advice;
+        this gives no reassurance. Special procedural rules and impediments need checking.
+      not_applicable: This rule does not match the confirmed facts. Other deadlines and special protections
+        may still matter.

@@ -26,7 +26,7 @@ TEXT = (
 )
 
 
-@pytest.mark.parametrize("scope", [[], ["verwaltungsrecht"], ["mietrecht"], ["sozialrecht", "mietrecht"]])
+@pytest.mark.parametrize("scope", [[], ["verwaltungsrecht"], ["vertragsrecht"], ["sozialrecht", "vertragsrecht"]])
 def test_preparation_keeps_privacy_and_reload_snapshot_without_legal_work(
     monkeypatch: pytest.MonkeyPatch, scope: list[str],
 ) -> None:

@@ -1,6 +1,7 @@
 # Writing a Citizen module
 
-<!-- Version: 1.3.0 | 2026-11-27 — WP-131: receipt/event deadlines, confirmed qualification/calendar facts.
+<!-- Version: 1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
+     1.3.0 | 2026-11-27 — WP-131: receipt/event deadlines, confirmed qualification/calendar facts.
      1.2.0 | 2026-11-26 — core_api 3.3: service facts/public intake schema; D-071 deferred human review.
      1.1.2 | 2026-11-26 — owner directs backend continuation; GUI separately owned.
      1.1.1 | 2026-11-25 — D-069: startup/session TODO before further module implementation.
@@ -270,3 +271,19 @@ confirmed local holidays at the legally relevant place. The SDK
 including Gregorian Easter; local holidays remain an explicit input. This
 calendar does not alter the historical administrative calendar path. No letter
 date, postal fiction or Rechtsbehelfsbelehrung supplies a receipt/event date.
+
+
+## 12. Knowledge-date deadlines (module API 3.5, WP-132)
+
+Specs may use `trigger: kenntnis`; callers provide explicit `kenntnis_datum`
+through the normal chronology facts contract. Neither receipt nor a letter or
+event date can substitute. Require `core_api: ">=3.5,<4.0"` for this capability.
+Applicability and special regimes remain module-owned qualification facts.
+Arbeitsrecht keeps the dismissal banner critical even when dates are missing;
+jobseeker dates have explicit conservative-planning limits. Do not encode a
+knowledge date as administrative notification or as receipt to bypass validation.
+
+An explicit-date spec must supply either a `document_type` selector or nonempty
+`requires_confirmed` qualifications. The latter supports a confirmed event that
+can arise from multiple document types without duplicating rules or suppressing
+registration reminders on a dismissal. Missing qualifications still block dates.

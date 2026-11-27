@@ -1,21 +1,45 @@
-# Arbeitsrecht — stub module (WP-93, D-038).
-#
-# Tier `experimental`: carries the v2.0.0 behaviour of the legacy area key
-# (intake routing, corpus mapping) — no deadline specs,
-# no calculators, no goldset. Enabled in dev/self, disabled in provider (D-037).
-
-# Semantic Version: 0.1.1 | 2026-11-16 — WP-94: intake rows declare `order`
-
 id: arbeitsrecht
-version: 0.1.1
-core_api: ">=3.0,<4.0"
+version: 0.2.0
+core_api: '>=3.5,<4.0'
 title:
-  de: "Arbeitsrecht"
-  en: "Employment law"
+  de: Arbeitsrecht
+  en: Employment law
 tier: experimental
 scope:
-  summary_de: "Kündigung, Abmahnung, Lohn, Arbeitsvertrag (BGB, KSchG)"
+  summary_de: 'Ihre eigene Angelegenheit als beschäftigte Person: Kündigung, Lohn, Urlaub und Vorbereitung
+    Ihrer Beratung.'
   own_matter_only: true
+  out_of_scope:
+  - Arbeitgebervertretung und kollektive Streitigkeiten
+  - Automatische Wirksamkeitsprüfung von Ausschlussklauseln
+  - Sonderregime ohne bestätigte Anwendbarkeit
 corpus: corpus.yaml
 intake: intake.yaml
+intake_schema: intake-schema.yaml
+dossier: dossier.yaml
+fristen: fristen.yaml
+parameters:
+  domain: arbeitsrecht
+  files:
+  - parameters/*.yaml
+calculators: calculators:CALCULATORS
+prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
+documents:
+- pruefhinweise
+- lohn_geltendmachung
+- zeugnisberichtigung
+- klage_checkliste
+goldset:
+  path: goldset/goldset-v0.2.0.yaml
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    en: copy/en/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
+errata: errata.yaml
+compliance:
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
+  purpose_drift_deny_file: compliance/deny-phrases.json
 legacy_aliases: []

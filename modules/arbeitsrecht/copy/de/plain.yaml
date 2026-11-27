@@ -1,0 +1,73 @@
+format: citizen-plain-copy-v1.0
+module: arbeitsrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist prüfen
+    text: Zugang, Kenntnis und besondere Schutzrechte sind zu klären. Auch ein kleiner Betrieb oder kurze
+      Beschäftigung schließt die dringende Prüfung nicht aus.
+    next_step: Lassen Sie die Kündigung unverzüglich prüfen. Eine erforderliche behördliche Zustimmung
+      kann den Fristbeginn verändern.
+  anspruch_pruefen:
+    title: Anspruch prüfen
+    text: Lohn, Urlaub und Zeugnis benötigen belegte Tatsachen und passende Regeln. Ein Rechenergebnis
+      bestätigt keinen Anspruch.
+    next_step: Sammeln Sie Vertrag und Nachweise. Lassen Sie konkrete Ausschlussklauseln, ihre Wirksamkeit
+      und alle Stufen prüfen.
+  beratung_erforderlich:
+    title: Beratung erforderlich
+    text: Besondere Schutzrechte und Aufhebungsverträge brauchen individuelle Prüfung. Es können Folgen
+      für Arbeitslosengeld und eine Sperrzeit entstehen.
+    next_step: Holen Sie vor einer Unterschrift Rat. Lassen Sie keine Klagefrist wegen einer Abfindungsschätzung
+      verstreichen.
+  einordnung_offen:
+    title: Einordnung offen
+    text: Die Angaben reichen noch nicht für eine Einordnung. Das bedeutet keine Entwarnung.
+    next_step: Klären Sie die fehlenden Angaben. Bei Kündigung sofort Hilfe suchen.
+deadlines:
+  ar_kuendigungsschutz:
+    title: Kündigung prüfen
+    action: Bei Kündigung sofort Rat suchen. Auch kleine Betriebe und kurze Beschäftigung brauchen Fristprüfung.
+      Behördliche Zustimmung kann den Fristbeginn verändern.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie Voraussetzungen
+        und Berechnung prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die fehlenden Angaben unverzüglich.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann nicht genannt werden. Holen
+        Sie unverzüglich Rat; das ist keine Entwarnung.
+      not_applicable: Diese Regel passt nicht zu den bestätigten Angaben. Andere Fristen und besondere
+        Schutzrechte können trotzdem wichtig sein.
+  ar_arbeitsuchend_kurz:
+    title: Arbeitsuchendmeldung bei kurzfristiger Kenntnis
+    action: Kontaktieren Sie die Agentur für Arbeit unverzüglich. Die Berechnung ist eine vorläufige Planungshilfe;
+      besondere Verfahrensregeln und Hinderungsgründe müssen geprüft werden. Bestätigte Kenntnis des Enddatums
+      ist nötig; Briefdatum und Zugang ersetzen sie nicht.
+    texts:
+      computed: 'Der vorläufige Planungstermin ist {frist_ende}. Grundlage: {basis}. Kontaktieren Sie
+        die Agentur für Arbeit frühzeitig und lassen Sie die individuelle Frist prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die fehlenden Angaben unverzüglich.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann nicht genannt werden. Holen
+        Sie unverzüglich Rat; das ist keine Entwarnung. Besondere Verfahrensregeln und Hinderungsgründe
+        müssen geprüft werden.
+      not_applicable: Diese Regel passt nicht zu den bestätigten Angaben. Andere Fristen und besondere
+        Schutzrechte können trotzdem wichtig sein.
+  ar_arbeitsuchend_lang:
+    title: Arbeitsuchendmeldung vor dem Ende
+    action: Kontaktieren Sie die Agentur für Arbeit unverzüglich. Die Berechnung ist eine vorläufige Planungshilfe;
+      besondere Verfahrensregeln und Hinderungsgründe müssen geprüft werden. Der rückwärts berechnete
+      Zieltermin nimmt keine Verlängerung auf einen späteren Werktag an. Das Ziel muss qualifiziert als
+      Werktag bestätigt sein; andernfalls wird kein Datum angegeben.
+    texts:
+      computed: 'Der vorläufige Planungstermin ist {frist_ende}. Grundlage: {basis}. Kontaktieren Sie
+        die Agentur für Arbeit frühzeitig und lassen Sie die individuelle Frist prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die fehlenden Angaben unverzüglich.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann nicht genannt werden. Holen
+        Sie unverzüglich Rat; das ist keine Entwarnung. Besondere Verfahrensregeln und Hinderungsgründe
+        müssen geprüft werden.
+      not_applicable: Diese Regel passt nicht zu den bestätigten Angaben. Andere Fristen und besondere
+        Schutzrechte können trotzdem wichtig sein.

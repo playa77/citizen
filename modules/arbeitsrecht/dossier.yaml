@@ -1,0 +1,42 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: arbeitsvertrag
+  label_de: Arbeitsvertrag, Nachträge und anwendbare Tarifregelungen
+  why_de: Vertragsbedingungen und besondere Regeln müssen gesondert geprüft werden.
+  topic: vertrag
+  required: true
+- id: schreiben_zugang
+  label_de: Vollständige Schreiben, Umschläge und Nachweise zu Zugang und Kenntnis
+  why_de: Briefdatum, Zugang, Kenntnis und Beendigung sind verschiedene Tatsachen.
+  topic: fristen
+  required: true
+- id: entgelt_urlaub
+  label_de: Abrechnungen, Arbeitszeitnachweise, Urlaubskonto und Zahlungsbelege
+  why_de: Beträge und offene Zeiträume benötigen Nachweise.
+  topic: entgelt
+  required: true
+- id: schutz_ausschluss
+  label_de: Unterlagen zu besonderen Schutzrechten und Ausschlussklauseln
+  why_de: Behördliche Zustimmung, Befristung und vertragliche Fristen brauchen individuelle Prüfung.
+  topic: schutz
+  required: true
+questions:
+- id: kuendigung_dringen
+  text_de: Welche Schritte muss ich wegen der Kündigung sofort unternehmen, auch bei kurzer Beschäftigung
+    oder kleinem Betrieb?
+  topic: fristen
+- id: sonderrechte
+  text_de: Ist eine behördliche Zustimmung erforderlich, und wann beginnt eine mögliche Klagefrist?
+  topic: schutz
+- id: ausschluss
+  text_de: Welche Ausschlussklausel ist belegt, wirksam und in welcher Form und Stufe einzuhalten?
+  topic: entgelt
+- id: aufhebung
+  text_de: Welche Folgen hätte ein Aufhebungsvertrag, insbesondere für Sperrzeit und Ansprüche?
+  topic: vertrag
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 1.0
+    chronology_accuracy_min: 1.0

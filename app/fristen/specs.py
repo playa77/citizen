@@ -24,7 +24,9 @@ TRIGGERS: frozenset[str] = frozenset(
     {"bekanntgabe", "zustellung", "zugang", "kenntnis", "ereignis"}
 )
 
-_EVALUABLE_TRIGGERS: frozenset[str] = frozenset({"bekanntgabe", "zustellung", "zugang", "ereignis"})
+_EVALUABLE_TRIGGERS: frozenset[str] = frozenset(
+    {"bekanntgabe", "zustellung", "zugang", "ereignis", "kenntnis"}
+)
 
 _SEVERITIES: frozenset[str] = frozenset({"low", "normal", "high", "critical"})
 
@@ -141,7 +143,7 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
         raise ValueError(f"{path}: invalid anchor {anchor!r}")
     duration = _parse_duration(raw.get("duration"), spec_id)
     components = (duration.days, duration.months, duration.years)
-    if trigger in ("zugang", "ereignis"):
+    if trigger in ("zugang", "ereignis", "kenntnis"):
         if sum(value != 0 for value in components) != 1:
             raise ValueError(f"{path}: receipt/event rules require one nonzero duration component")
         if anchor == "month_end" and (not duration.months or duration.months < 0):
@@ -152,8 +154,13 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
             raise ValueError(f"{path}: backward rules require event trigger and no rollover")
         if raw.get("bekanntgabe_fiction") not in (None, "none") or missing is not None:
             raise ValueError(f"{path}: receipt/event rules cannot use administrative fictions/RBB")
-        if not applies_when.get("document_type"):
-            raise ValueError(f"{path}: receipt/event rules require a document_type selector")
+        # A confirmed event may be established by different document types.
+        # Existing explicit qualifications can gate such a rule instead of a
+        # single document label (e.g. registration following dismissal/contract).
+        if not applies_when.get("document_type") and not raw.get("requires_confirmed"):
+            raise ValueError(
+                f"{path}: explicit-date rules require a document_type selector or qualifications"
+            )
     elif anchor != "same_day":
         raise ValueError(f"{path}: anchor supported only for receipt/event rules")
     required = raw.get("requires_confirmed", [])

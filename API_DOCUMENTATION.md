@@ -1318,4 +1318,31 @@ by the existing corpus service. Source excerpts and readiness counts do not
 establish complete state/municipality coverage. Module coverage records make
 unsupported areas explicit; calculators never assume a designation or default
 ceiling from missing records. No API route or SSE event is removed/renamed.
-The current disclaimer acknowledgement is `v3.3.0`.
+The current disclaimer acknowledgement is `v3.4.0`.
+
+
+### WP-132 employment implementation (core 3.7.0 / module API 3.5)
+
+Experimental `arbeitsrecht` 0.2.0 exposes its public intake schema, three deadline
+specs, five qualified calculator modes, guarded drafts and employee-side dossier.
+Chronology `facts` add optional `kenntnis_datum` (ISO date): explicitly confirmed
+knowledge of the termination date. It is distinct from `zugang_tatsaechlich`
+(receipt), `ereignis_datum` (termination) and the letter date. Missing knowledge
+never borrows another date. Module specs can now execute the `kenntnis` trigger.
+Existing receipt/event/service/administrative semantics and error envelopes remain.
+
+The §4 KSchG rule is `critical` and stays visible with `missing_input` when
+receipt, calendar or qualifications are unconfirmed. Small employers and short
+service do not suppress this warning. Required administrative consent needs
+separate assessment. Jobseeker-registration dates are preliminary planning aids:
+no automatic decision about lateness, agency hindrances, benefits or Sperrzeit.
+The long branch requires confirmation of a working-day reporting target; otherwise
+no date is emitted rather than omitting a legally required end rollover.
+
+Corpus types `tzbfg`, `entgfg`, `milog`, `muschg`, `arbzg` and `arbgg` extend the
+existing catalog and PostgreSQL constraint (migration 018). Existing `kschg` and
+`burlg` now support official federal ingestion. None is selected automatically.
+Apply migrations before explicitly selecting and ingesting deployment corpora;
+implementation fixtures and source checks do not establish deployment readiness.
+Disclaimer acknowledgement is `v3.4.0`; prompt set is `3.5.0`. Human review and
+promotion remain deferred under D-071.

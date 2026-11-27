@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.3.0 · **Date:** 2026-11-27
+**Version:** 3.4.0 · **Date:** 2026-11-27
 
 **Author:** www.github.com/playa77
 
@@ -434,7 +434,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.3.0`); after a version change, renewed
+prefixed with `v`, currently `v3.4.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -810,7 +810,7 @@ C.6.1.
 
 ### D.4 Further Experimental Modules
 
-For the modules `arbeitsrecht` (employment), `erbrecht` (inheritance,
+For the modules `erbrecht` (inheritance,
 including the legacy key `schenkungsrecht`), `familienrecht` (family),
 `vertragsrecht` (contract) and `andere` (catch-all),
 D.1 and Parts A to C apply without an area-specific addendum. They compute
@@ -858,9 +858,33 @@ Curing arrears does not automatically remove an ordinary termination.
 Missing notice of hardship objection rights may permit later objections
 and requires separate assessment.
 
+### D.7 Employment law (`arbeitsrecht`)
+
+This experimental module helps you prepare your own matter as an employee.
+It does not replace individual employment-law advice. Seek immediate advice,
+your trade union, a court application office or a lawyer after dismissal.
+The three-week period can matter even with short service or a small employer.
+Required administrative consent can change when the period starts. Missing
+facts give no reassurance; late admission of a claim is not an automatic
+extension.
+
+Receipt, knowledge of the termination date and termination itself are
+separate facts. Contact the employment agency early; jobseeker and unemployed
+registration are separate duties. Jobseeker dates are preliminary planning
+aids; special procedural rules and impediments are not conclusively decided.
+Contractual or collective exclusion clauses are not automatically assessed
+for validity, stages or duration. Arithmetic does not establish entitlement.
+A severance estimate never recommends letting a dismissal deadline expire.
+Special regimes need separate assessment. Termination agreements may affect
+unemployment benefits and cause a suspension period; the module decides no
+sanction and recommends no signature. Drafts need checking and are neither
+sent nor filed. Human legal and language reviews remain pending under D-071.
+
 ---
 
 ## Change History
+
+- **3.4.0 (2026-11-27):** Employment: qualified deadlines, arithmetic and drafts; explicit knowledge dates and jobseeker-registration limitations. Renewed acknowledgement required.
 
 - **3.3.0 (2026-11-27):** Tenancy: qualified deadline/calculation checks, explicit local source gaps and draft documents. Renewed acknowledgement required.
 

@@ -64,7 +64,11 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
         _INTAKE_SYSTEM=intake._INTAKE_SYSTEM.replace(", schuldnerrecht", ""),
         _STRICT_SUFFIX=intake._STRICT_SUFFIX,
         _LEGAL_AREAS_ENUM=tuple(k for k in intake._LEGAL_AREAS_ENUM if k != "schuldnerrecht"),
-        _AREA_KEYWORDS={k: v for k, v in intake._AREA_KEYWORDS.items() if k != "schuldnerrecht"},
+        _AREA_KEYWORDS={
+            # WP-132 appends employment keywords after the historical nine.
+            k: (v[:9] if k == "arbeitsrecht" else v)
+            for k, v in intake._AREA_KEYWORDS.items() if k != "schuldnerrecht"
+        },
         _fallback_areas_from_text=intake._fallback_areas_from_text,
         _normalise_area=intake._normalise_area,
     )
@@ -74,13 +78,14 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
         "presets_route": presets_route,
         "list_presets": list_presets,
         "area_source_types": lambda: {
-            # WP-131 extends only the tenancy scope. Preserve the historical
-            # corpus comparison while new tenancy contracts test the expansion.
-            k: (("bgb",) if k == "mietrecht" else v)
+            # WP-131/132 expand tenancy/employment scope. Project only those
+            # additions out; dedicated module tests cover their new contracts.
+            k: (("bgb",) if k in ("mietrecht", "arbeitsrecht") else v)
             for k, v in AREA_TO_SOURCE_TYPES.items() if k != "schuldnerrecht"
         },
         "infer_bgb_area": lambda path: (
-            None if "§" in path and 535 <= int(path.split("§")[-1].strip()) <= 580
+            None if "§" in path and (535 <= int(path.split("§")[-1].strip()) <= 580
+                     or 611 <= int(path.split("§")[-1].strip()) <= 630)
             else corpus._infer_legal_area_for_bgb(path)
         ),
         "legal_regime": legal_regime,

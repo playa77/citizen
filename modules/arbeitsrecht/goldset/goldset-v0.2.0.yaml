@@ -1,0 +1,559 @@
+goldset:
+  id: goldset-arbeitsrecht
+  version: 0.2.0
+  schema_version: 1.0.0
+  created: '2026-11-27'
+  rechtsstand: '2026-11-27'
+  evaluation_reference_date: '2026-11-27'
+  legal_area: arbeitsrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 18
+  provenance: synthetic
+  open_questions:
+  - id: AR-OQ-1
+    topic: Human and live review pending
+    note: Offline synthetic checks do not establish legal review, complete ingestion or live inference
+      quality.
+cases:
+- id: AR-001
+  version: 1.0.0
+  title: 'Kündigung: drei Wochen'
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Kündigung erhalten am 02.11.2026. Schriftliche Arbeitgeberkündigung; kein behördlicher Zustimmungsvorbehalt.
+      Ich bereite meine eigene Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: 'Kündigung: drei Wochen'
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 4 KSchG
+    citations:
+    - norm: § 4 KSchG
+      must_exist_in_corpus: true
+    known_traps:
+    - Zugang statt Briefdatum; drei Kalenderwochen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-002
+  version: 1.0.0
+  title: Zugang unbekannt
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Kündigung mit Briefdatum, aber unbekanntem tatsächlichem Zugang. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: Zugang unbekannt
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 4 KSchG
+    citations:
+    - norm: § 4 KSchG
+      must_exist_in_corpus: true
+    known_traps:
+    - Kein Datum aus dem Briefdatum ableiten.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-003
+  version: 1.0.0
+  title: Kleiner Betrieb
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Kündigung in einem Betrieb mit vier Beschäftigten; Zugang 02.11.2026. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: Kleiner Betrieb
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - §§ 4, 7 KSchG
+    citations:
+    - norm: §§ 4, 7 KSchG
+      must_exist_in_corpus: true
+    known_traps:
+    - Kleiner Betrieb unterdrückt keine dringende Dreiwochenwarnung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-004
+  version: 1.0.0
+  title: Kurze Beschäftigung
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Kündigung nach zwei Monaten Beschäftigung; Zugang 02.11.2026. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: Kurze Beschäftigung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - §§ 4, 7 KSchG
+    citations:
+    - norm: §§ 4, 7 KSchG
+      must_exist_in_corpus: true
+    known_traps:
+    - Kurze Beschäftigung unterdrückt keine dringende Fristprüfung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-005
+  version: 1.0.0
+  title: Behördliche Zustimmung ungeklärt
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Kündigung während Schwangerschaft; behördliche Zustimmung ist ungeklärt. Ich bereite meine eigene
+      Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: Behördliche Zustimmung ungeklärt
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 17 MuSchG
+    citations:
+    - norm: § 17 MuSchG
+      must_exist_in_corpus: true
+    known_traps:
+    - § 4 Satz 4 KSchG prüfen, keine Standardfrist mit scheinbarer Sicherheit.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-006
+  version: 1.0.0
+  title: Nur mündliche Kündigung
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Eine Kündigung wurde nur mündlich ausgesprochen. Ich bereite meine eigene Angelegenheit als beschäftigte
+      Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: Nur mündliche Kündigung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 623 BGB
+    citations:
+    - norm: § 623 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Schriftform und tatsächlichen Sachverhalt prüfen, keine automatische Fristentwarnung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-007
+  version: 1.0.0
+  title: Drei Tage ab Kenntnis
+  category: ar_arbeitsuchend_kurz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Am 02.11.2026 Kenntnis vom Ende am 30.11.2026; Schreiben später erhalten. Ich bereite meine eigene
+      Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_arbeitsuchend_kurz
+      issue: Drei Tage ab Kenntnis
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 38 SGB III
+    citations:
+    - norm: § 38 SGB III
+      must_exist_in_corpus: true
+    known_traps:
+    - Kenntnis ist nicht Zugang.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-008
+  version: 1.0.0
+  title: Kenntnis fehlt
+  category: ar_arbeitsuchend_kurz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Beendigungsschreiben erhalten; wann ich vom Enddatum erfuhr, ist unbekannt. Ich bereite meine eigene
+      Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_arbeitsuchend_kurz
+      issue: Kenntnis fehlt
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 38 SGB III
+    citations:
+    - norm: § 38 SGB III
+      must_exist_in_corpus: true
+    known_traps:
+    - Nicht auf Empfangsdatum zurückfallen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-009
+  version: 1.0.0
+  title: Kurze Frist über Wochenende
+  category: ar_arbeitsuchend_kurz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Am 05.11.2026 Kenntnis vom baldigen Ende; Feiertagskalender bestätigt. Ich bereite meine eigene
+      Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_arbeitsuchend_kurz
+      issue: Kurze Frist über Wochenende
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 38 SGB III
+    citations:
+    - norm: § 38 SGB III
+      must_exist_in_corpus: true
+    known_traps:
+    - Sonntag 08.11.2026 wird Montag 09.11.2026.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-010
+  version: 1.0.0
+  title: Drei Monate rückwärts zum bestätigten Werktag
+  category: ar_arbeitsuchend_lang
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Befristung endet bestätigt am 31.08.2027; Kenntnis weit vorher. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_arbeitsuchend_lang
+      issue: Drei Monate rückwärts
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 38 SGB III
+    citations:
+    - norm: § 38 SGB III
+      must_exist_in_corpus: true
+    known_traps:
+    - Vorläufiges Ziel 31.05.2027 ist ein bestätigter Werktag; keine individuelle §38-Endentscheidung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-011
+  version: 1.0.0
+  title: Schaltjahr Rückwärtsfrist
+  category: ar_arbeitsuchend_lang
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Arbeitsverhältnis endet bestätigt am 31.05.2028. Ich bereite meine eigene Angelegenheit als beschäftigte
+      Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_arbeitsuchend_lang
+      issue: Schaltjahr Rückwärtsfrist
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 38 SGB III
+    citations:
+    - norm: § 38 SGB III
+      must_exist_in_corpus: true
+    known_traps:
+    - 'Drei Monate zurück: Schaltjahr-Februar.'
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-012
+  version: 1.0.0
+  title: Vertragliche Ausschlussfrist
+  category: anspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Offener Lohn; im Vertrag steht eine zweistufige Ausschlussklausel. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: anspruch
+      issue: Vertragliche Ausschlussfrist
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 611a BGB
+    citations:
+    - norm: § 611a BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine pauschale automatische Wirksamkeit, Dauer oder Form erfinden.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-013
+  version: 1.0.0
+  title: Abfindungsangebot
+  category: ar_kuendigungsschutz
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Kündigung mit Abfindungsangebot; ich erwäge eine Klage. Ich bereite meine eigene Angelegenheit als
+      beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: ar_kuendigungsschutz
+      issue: Abfindungsangebot
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 1a KSchG
+    citations:
+    - norm: § 1a KSchG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine Empfehlung, wegen einer Schätzung die Klagefrist verstreichen zu lassen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-014
+  version: 1.0.0
+  title: Urlaub bei Vertragsende
+  category: anspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Resturlaub und Urlaubsabgeltung bei Beendigung sind ungeklärt. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: anspruch
+      issue: Urlaub bei Vertragsende
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 7 BUrlG
+    citations:
+    - norm: § 7 BUrlG
+      must_exist_in_corpus: true
+    known_traps:
+    - Anwendbarkeit und Teilurlaub unterscheiden; keine automatische Abgeltung im laufenden Verhältnis.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-015
+  version: 1.0.0
+  title: Aufhebungsvertrag
+  category: anspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Mir liegt ein Aufhebungsvertrag zur Unterschrift vor. Ich bereite meine eigene Angelegenheit als
+      beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: anspruch
+      issue: Aufhebungsvertrag
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 159 SGB III
+    citations:
+    - norm: § 159 SGB III
+      must_exist_in_corpus: true
+    known_traps:
+    - Sperrzeitrisiko prüfen; keine Unterschrift oder konkrete Sanktion empfehlen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-016
+  version: 1.0.0
+  title: Zeugnisberichtigung
+  category: anspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Im Arbeitszeugnis fehlen belegte Tätigkeiten; ich möchte Berichtigung vorbereiten. Ich bereite meine
+      eigene Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: anspruch
+      issue: Zeugnisberichtigung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 630 BGB
+    citations:
+    - norm: § 630 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Konkrete Passage, Tatsachen und gewünschte Berichtigung bestätigen.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-017
+  version: 1.0.0
+  title: Mindestlohn und Sonderregime
+  category: anspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Mindestlohnvergleich für ein Praktikum; Ausnahme ist nicht geklärt. Ich bereite meine eigene Angelegenheit
+      als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: anspruch
+      issue: Mindestlohn und Sonderregime
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 22 MiLoG
+    citations:
+    - norm: § 22 MiLoG
+      must_exist_in_corpus: true
+    known_traps:
+    - Ohne bestätigte Anwendbarkeit keine pauschale Entgeltberechnung.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AR-018
+  version: 1.0.0
+  title: Abmahnung
+  category: anspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 02.11.2026
+
+      Abmahnung wegen angeblicher Verspätung; meine Arbeitszeitbelege widersprechen. Ich bereite meine
+      eigene Angelegenheit als beschäftigte Person vor.'
+  expected:
+    legal_issues:
+    - id: anspruch
+      issue: Abmahnung
+      assessment: Prüfbedarf; keine abschließende Rechtsberatung
+      norm_chain:
+      - § 314 BGB
+    citations:
+    - norm: § 314 BGB
+      must_exist_in_corpus: true
+    known_traps:
+    - Keinen allgemeinen dreiwöchigen Abmahnungswiderspruch erfinden.
+    actionable_next_steps:
+    - Vollständige Unterlagen und Nachweise zur Beratung mitbringen. Bei Kündigung unverzüglich Hilfe
+      suchen.
+  negative_controls:
+  - Synthetischer Testfall

@@ -1,15 +1,13 @@
-# Changelog — module `arbeitsrecht`
+# Arbeitsrecht changelog
 
-Module semver (ARCHITECTURE.md § 6.2), independent of the core version.
+## 0.2.0 — 2026-11-27
 
-## 0.1.1 — 2026-11-16 (WP-94)
+- WP-132: experimental employee-side intake, guarded drafts, appointment dossier,
+  critical dismissal warning and separate jobseeker knowledge/event facts.
+- Added versioned deterministic calculation contracts, federal corpus declarations,
+  DE/EN/de-LS draft copy and 18 synthetic cases with literal offline expectations.
+- Source and calculation limitations remain explicit; human reviews deferred (D-071).
 
-- `intake.yaml`: every area row declares `order`, its rank in the global
-  area-key order (replaces the core's former `LEGAL_AREA_ALLOWED` tuple,
-  D-057). Values keep the v2.0.0 order; no behaviour change.
+## 0.1.1 — 2026-11-16
 
-## 0.1.0 — 2026-11-16 (WP-93)
-
-- Stub module at tier `experimental` (D-038): carries the v2.0.0 legacy
-  area behaviour extracted from the core — intake keywords/synonyms, corpus
-  source-type mapping. No engines, no goldset.
+- Declared intake order for the experimental routing stub (WP-94).
