@@ -1,0 +1,51 @@
+id: aufenthaltsrecht
+version: 0.1.0
+core_api: '>=3.9,<4.0'
+title:
+  de: Aufenthaltsrecht
+  en: Residence and asylum preparation
+tier: experimental
+scope:
+  summary_de: Eigene Aufenthaltsangelegenheit und Einbürgerung vorbereiten; Asyl nur Information, Fristschutz
+    und dringende Verweisung.
+  own_matter_only: true
+  out_of_scope:
+  - Asylbegründungen, Glaubwürdigkeitsbewertung und Schutzprognosen
+  - Behördliche Migrationsbewertung und Hilfe in fremden Angelegenheiten
+  - Unbestätigte Übergangs-/Sonderregime, Status-, Arbeits- oder Reisegarantien
+  - Automatische landesrechtliche Vorverfahrensauswahl und historische Berechnung
+corpus: corpus.yaml
+intake: intake.yaml
+intake_schema: intake-schema.yaml
+dossier: dossier.yaml
+fristen: fristen.yaml
+parameters:
+  domain: aufenthaltsrecht
+  files:
+  - parameters/*.yaml
+calculators: calculators:CALCULATORS
+prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
+documents:
+- pruefhinweise
+- verlaengerung
+- akteneinsicht
+- fristbitte
+goldset:
+  path: goldset/goldset-v0.1.0.yaml
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    en: copy/en/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+    ar: copy/ar/plain.yaml
+    fa: copy/fa/plain.yaml
+    uk: copy/uk/plain.yaml
+    tr: copy/tr/plain.yaml
+    ru: copy/ru/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
+errata: errata.yaml
+compliance:
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
+  purpose_drift_deny_file: compliance/deny-phrases.json
+legacy_aliases: []

@@ -72,7 +72,7 @@ def _module(tmp_path: Path, module_id: str, extra: dict[str, Any]) -> Path:
 class TestInstalledModules:
     def test_sozialrecht_plus_stubs_and_debt_foundation(self) -> None:
         modules = discover_modules(default_modules_root())
-        assert set(modules) == {"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht"}
+        assert set(modules) == {"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", "aufenthaltsrecht"}
         assert modules["sozialrecht"].tier == "verified"
 
     @pytest.mark.parametrize("module_id", _STUBS)
@@ -92,7 +92,7 @@ class TestInstalledModules:
 
     def test_dev_mode_enables_stubs(self) -> None:
         registry = load_registry(default_modules_root(), "dev", None)
-        assert registry.enabled == frozenset({"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht"})
+        assert registry.enabled == frozenset({"sozialrecht", *_STUBS, "schuldnerrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", "aufenthaltsrecht"})
 
     def test_schenkungsrecht_alias_declared_by_erbrecht(self) -> None:
         registry = load_registry(default_modules_root(), "dev", None)
@@ -124,11 +124,11 @@ V2_AREA_KEYS = (
 
 class TestAreaTables:
     def test_keys_follow_v2_order(self) -> None:
-        assert area_tables().keys == (*V2_AREA_KEYS[:7], "verkehrsrecht", *V2_AREA_KEYS[7:], "schuldnerrecht")
+        assert area_tables().keys == (*V2_AREA_KEYS[:7], "verkehrsrecht", V2_AREA_KEYS[7], "aufenthaltsrecht", *V2_AREA_KEYS[8:], "schuldnerrecht")
 
     def test_every_key_has_one_owner(self) -> None:
         owner = area_tables().owner
-        assert set(owner) == {*V2_AREA_KEYS, "schuldnerrecht", "verkehrsrecht"}
+        assert set(owner) == {*V2_AREA_KEYS, "schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht"}
         assert owner["schenkungsrecht"] == "erbrecht"
         assert owner["verwaltungsrecht"] == PROCEDURAL_OWNER
         assert owner["sozialrecht"] == "sozialrecht"
@@ -159,7 +159,7 @@ class TestAreaTables:
         # a module claiming a key the procedural library already serves
         import shutil
 
-        for mid in ("sozialrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", *_STUBS):
+        for mid in ("sozialrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", "aufenthaltsrecht", *_STUBS):
             shutil.copytree(default_modules_root() / mid, tmp_path / mid)
         raw = yaml.safe_load((tmp_path / "andere" / "module.yaml").read_text(encoding="utf-8"))
         raw["legacy_aliases"] = ["verwaltungsrecht"]
@@ -175,7 +175,7 @@ class TestAreaTables:
     def _copy_tree(tmp_path: Path) -> None:
         import shutil
 
-        for mid in ("sozialrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", *_STUBS):
+        for mid in ("sozialrecht", "mietrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", "aufenthaltsrecht", *_STUBS):
             shutil.copytree(default_modules_root() / mid, tmp_path / mid)
 
     @staticmethod
@@ -192,7 +192,7 @@ class TestAreaTables:
         self._edit_intake(tmp_path, "andere", lambda d: d["areas"]["andere"].update(order=1))
         keys = build_area_tables(tmp_path).keys
         assert keys[0] == "andere"
-        assert keys[1:] == (*V2_AREA_KEYS[:7], "verkehrsrecht", *V2_AREA_KEYS[7:-1])
+        assert keys[1:] == (*V2_AREA_KEYS[:7], "verkehrsrecht", V2_AREA_KEYS[7], "aufenthaltsrecht", *V2_AREA_KEYS[8:-1])
 
     def test_uninstalled_module_drops_its_keys(self, tmp_path: Path) -> None:
         import shutil
@@ -206,7 +206,7 @@ class TestAreaTables:
         keys = build_area_tables(tmp_path).keys
         assert "erbrecht" not in keys and "schenkungsrecht" not in keys
         assert keys == tuple(
-            k for k in (*V2_AREA_KEYS[:7], "verkehrsrecht", *V2_AREA_KEYS[7:])
+            k for k in (*V2_AREA_KEYS[:7], "verkehrsrecht", V2_AREA_KEYS[7], "aufenthaltsrecht", *V2_AREA_KEYS[8:])
             if k not in {"erbrecht", "schenkungsrecht", "familienrecht"}
         )
 
@@ -325,7 +325,7 @@ class TestRuntime:
         assert regime_banner_for(module_ids, date(2026, 7, 1)) == (None, "")
 
     def test_scoped_modules_ship_their_own_engines(self) -> None:
-        assert [mid for mid, _ in calculators_for(["sozialrecht", "mietrecht", "schuldnerrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", *_STUBS])] == ["sozialrecht", "mietrecht", "schuldnerrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht"]
+        assert [mid for mid, _ in calculators_for(["sozialrecht", "mietrecht", "schuldnerrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", "aufenthaltsrecht", *_STUBS])] == ["sozialrecht", "mietrecht", "schuldnerrecht", "arbeitsrecht", "vertragsrecht", "verkehrsrecht", "familienrecht", "aufenthaltsrecht"]
 
     def test_regime_banner(self) -> None:
         from citizen_modules.sozialrecht.regime import legal_regime, regime_banner

@@ -1,6 +1,6 @@
 # Writing a Citizen module
 
-<!-- Version: 1.7.0 | 2026-11-27 — WP-135 family sources and FamFG calendar.
+<!-- Version: 1.8.0 | 2026-11-27 — WP-136 residence sources and opt-in safety qualifications.
      1.6.0 | 2026-11-27 — WP-134: traffic/procedural sources and StPO rollover.
      1.5.0 | 2026-11-27 — WP-133: official EU article corpus support.
      1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
@@ -333,3 +333,40 @@ regimes. Unknown scope means review, not a default ordinary month or substitute
 year. Amounts require period-specific age and eligibility qualifications; do not
 convert statutory arithmetic into an award. No guideline table/self-retention
 data is bundled under unresolved OQ-7. See D-077 and the module source record.
+
+## 16. Residence preparation and safety qualifications (module API 3.9, WP-136)
+
+D-078 adds the federal `aufenthg`, `asylg`, `aufenthv`, `beschv`,
+`freizuegg_eu`, `stag`, `vwgo` source types and `vwgo_57` civil-calendar
+rollover. Preserve letter suffixes in section identity; numeric BGB range tags
+are separate from the stored statute identifier.
+
+Deadline specs can declare `excludes_confirmed: [qualification_key, ...]`.
+The default is empty. Any excluded true fact blocks direct evaluation and
+returns `missing_input` without a date in the dossier. A key cannot be both
+required and excluded. Keep mutually incompatible legal regimes in module data.
+
+Static deadline-copy entries can opt into `referral_when_not_applicable: true`.
+For critical not-applicable items the renderer adds `referral_required: true`;
+the existing banner pointer selects it only after actionable missing/computed
+items. Other modules preserve their existing behavior. Use explicit translated
+remedy titles; a lawsuit and interim application must be distinguishable.
+
+M7 interim applications use the existing `ereignis_datum` for independently
+confirmed effective notification (Bekanntgabe), not the lawsuit's formal
+service date. Existing domestic service-mode and notification qualifications
+must also be confirmed. Do not silently copy one anchor into the other.
+
+M7 static copy includes `ar`, `fa`, `uk`, `tr`, `ru` and matching core
+AI/privacy/disclaimer summaries. Dates retain the existing ISO fallback.
+All are drafts pending human review; automated script-aware sentence and selected
+discouragement checks do not verify translation quality or GUI/RTL behavior.
+
+M7 calculator processing remains pure on explicit inputs. In the LLM-driven
+path its existing `cross_check` hook accepts only a single explicit
+`CITIZEN_RESIDENCE_FACTS:` JSON object embedded in the source, with allowlisted
+intake calculator facts and `own_matter_confirmed: true`. Dates, cent integers
+and explicit boolean confirmations are validated. A model-produced claim of
+confirmation alone returns unavailable; unknown/sensitive fields are rejected
+and are not forwarded as extracted summary. This is preparation input, not an
+independent legal verification or eligibility decision.

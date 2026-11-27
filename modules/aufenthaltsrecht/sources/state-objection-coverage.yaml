@@ -1,0 +1,54 @@
+version: 1.0.0
+checked_on: '2026-11-27'
+status: individual_evidence_required
+note: No state rule is inferred from location. Confirm the concrete remedy with dated Land-law evidence
+  and the decision notice; otherwise no definitive date.
+states:
+  BB:
+    automatic_selection: unavailable
+    review_status: proposed
+  BE:
+    automatic_selection: unavailable
+    review_status: proposed
+  BW:
+    automatic_selection: unavailable
+    review_status: proposed
+  BY:
+    automatic_selection: unavailable
+    review_status: proposed
+  HB:
+    automatic_selection: unavailable
+    review_status: proposed
+  HE:
+    automatic_selection: unavailable
+    review_status: proposed
+  HH:
+    automatic_selection: unavailable
+    review_status: proposed
+  MV:
+    automatic_selection: unavailable
+    review_status: proposed
+  NI:
+    automatic_selection: unavailable
+    review_status: proposed
+  NW:
+    automatic_selection: unavailable
+    review_status: proposed
+  RP:
+    automatic_selection: unavailable
+    review_status: proposed
+  SH:
+    automatic_selection: unavailable
+    review_status: proposed
+  SL:
+    automatic_selection: unavailable
+    review_status: proposed
+  SN:
+    automatic_selection: unavailable
+    review_status: proposed
+  ST:
+    automatic_selection: unavailable
+    review_status: proposed
+  TH:
+    automatic_selection: unavailable
+    review_status: proposed

@@ -1,0 +1,180 @@
+- id: auf_klage
+  label_de: Klage nach Widerspruchsbescheid
+  trigger: zustellung
+  duration:
+    months: 1
+  basis: §74 Abs.1 Satz1 VwGO; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §57 VwGO; §187 Abs.1 BGB; bestätigte wirksame Zustellung/Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: auslaender_widerspruchsbescheid
+    zustellungsart: inland
+  requires_confirmed:
+  - wirksame_zustellung_bestaetigt
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - vorverfahren_abgeschlossen_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - direktklage_land_bestaetigt
+  - widerspruch_land_bestaetigt
+- id: auf_direktklage
+  label_de: Direktklage nach bestätigtem Landesrecht
+  trigger: zustellung
+  duration:
+    months: 1
+  basis: §74 Abs.1 Satz2 VwGO; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §57 VwGO; §187 Abs.1 BGB; bestätigte wirksame Zustellung/Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: auslaender_direktklage
+    zustellungsart: inland
+  requires_confirmed:
+  - wirksame_zustellung_bestaetigt
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - direktklage_land_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - vorverfahren_abgeschlossen_bestaetigt
+  - widerspruch_land_bestaetigt
+- id: auf_widerspruch
+  label_de: Widerspruch bei bestätigter Statthaftigkeit
+  trigger: zustellung
+  duration:
+    months: 1
+  basis: §70 Abs.1,2 VwGO; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §57 VwGO; §187 Abs.1 BGB; bestätigte wirksame Zustellung/Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: auslaender_widerspruch
+    zustellungsart: inland
+  requires_confirmed:
+  - wirksame_zustellung_bestaetigt
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - widerspruch_land_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - direktklage_land_bestaetigt
+  - vorverfahren_abgeschlossen_bestaetigt
+- id: asyl_klage
+  label_de: Asylklage im bestätigten Zweiwochenregime
+  trigger: zustellung
+  duration:
+    days: 14
+  basis: §74 Abs.1 Satz1 AsylG; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §57 VwGO; §187 Abs.1 BGB; bestätigte wirksame Zustellung/Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: asyl_zwei_wochen
+    zustellungsart: inland
+  requires_confirmed:
+  - wirksame_zustellung_bestaetigt
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - asyl_neues_recht_bestaetigt
+  - zweiwochenfrist_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - eilrechtsschutz_34a_bestaetigt
+  - eilrechtsschutz_36_bestaetigt
+  - wochenklage_bestaetigt
+- id: asyl_36_klage
+  label_de: Asylklage im bestätigten §36-Wochenregime
+  trigger: zustellung
+  duration:
+    days: 7
+  basis: §74 Abs.1 AsylG; Art.67 Abs.7 Buchst.a VO(EU)2024/1348; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §57 VwGO; §187 Abs.1 BGB; bestätigte wirksame Zustellung/Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: asyl_36
+    zustellungsart: inland
+  requires_confirmed:
+  - wirksame_zustellung_bestaetigt
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - asyl_neues_recht_bestaetigt
+  - wochenklage_bestaetigt
+  - eilrechtsschutz_36_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - eilrechtsschutz_34a_bestaetigt
+  - zweiwochenfrist_bestaetigt
+- id: asyl_36_eil
+  label_de: Eilantrag im bestätigten §36-Regime
+  trigger: ereignis
+  duration:
+    days: 7
+  basis: §36 Abs.2 AsylG; §80 Abs.5 VwGO; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §36 Abs.2 / §34a Abs.3 AsylG; §187 Abs.1 BGB; bestätigte wirksame Bekanntgabe in
+    ereignis_datum
+  severity: critical
+  applies_when:
+    document_type: asyl_36
+    zustellungsart: inland
+  requires_confirmed:
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - asyl_neues_recht_bestaetigt
+  - eilrechtsschutz_36_bestaetigt
+  - wirksame_bekanntgabe_bestaetigt
+  - inlaendische_bekanntgabe_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - eilrechtsschutz_34a_bestaetigt
+  - zweiwochenfrist_bestaetigt
+- id: asyl_34a_klage
+  label_de: Asylklage im bestätigten §34a-Regime
+  trigger: zustellung
+  duration:
+    days: 7
+  basis: §74 Abs.1 Satz2 AsylG; §34a Abs.3 AsylG; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §57 VwGO; §187 Abs.1 BGB; bestätigte wirksame Zustellung/Bekanntgabe
+  severity: critical
+  applies_when:
+    document_type: asyl_34a
+    zustellungsart: inland
+  requires_confirmed:
+  - wirksame_zustellung_bestaetigt
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - asyl_neues_recht_bestaetigt
+  - wochenklage_bestaetigt
+  - eilrechtsschutz_34a_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - eilrechtsschutz_36_bestaetigt
+  - zweiwochenfrist_bestaetigt
+- id: asyl_34a_eil
+  label_de: Eilantrag im bestätigten §34a-Regime
+  trigger: ereignis
+  duration:
+    days: 7
+  basis: §34a Abs.3 AsylG; §80 Abs.5 VwGO; §57 Abs.2 VwGO; §222 ZPO
+  fristbeginn_basis: §36 Abs.2 / §34a Abs.3 AsylG; §187 Abs.1 BGB; bestätigte wirksame Bekanntgabe in
+    ereignis_datum
+  severity: critical
+  applies_when:
+    document_type: asyl_34a
+    zustellungsart: inland
+  requires_confirmed:
+  - rbb_richtig_bestaetigt
+  - aktuelles_regime_bestaetigt
+  - kein_sonderregime
+  - asyl_neues_recht_bestaetigt
+  - eilrechtsschutz_34a_bestaetigt
+  - wirksame_bekanntgabe_bestaetigt
+  - inlaendische_bekanntgabe_bestaetigt
+  rollover: vwgo_57
+  excludes_confirmed:
+  - eilrechtsschutz_36_bestaetigt
+  - zweiwochenfrist_bestaetigt

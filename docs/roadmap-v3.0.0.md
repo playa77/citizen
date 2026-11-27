@@ -1,6 +1,6 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.7.0 | 2026-11-27 — WP-135 experimental family backend.
+<!-- Version: 3.8.0 | 2026-11-27 — WP-136 experimental residence backend.
      3.6.0 | 2026-11-27 — WP-134 experimental traffic backend.
      3.5.0 | 2026-11-27 — WP-133 experimental consumer contract backend.
      3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
@@ -424,10 +424,20 @@ Each module is one WP with the same nine sub-WPs:
 | WP-133 | M4 `vertragsrecht` | Experimental backend implemented; qualified contract checks, EGBGB/EUR-Lex article sources (D-075) |
 | WP-134 | M5 `verkehrsrecht` | Experimental backend implemented; shared StPO rollover and explicit partial annex coverage (D-076) |
 | WP-135 | M6 `familienrecht` | Experimental statutory backend implemented; guideline reuse OQ-7 remains open (D-077) |
-| WP-136 | M7 `aufenthaltsrecht` | requires P12 i18n; strongest duty-of-care profile |
+| WP-136 | M7 `aufenthaltsrecht` | Experimental backend; eight-language static copy, strongest duty-of-care; GUI/RTL separate (D-078) |
 | WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-136 backend implementation (2026-11-27):** `aufenthaltsrecht` 0.1.0
+on core 3.11.0/module API 3.9 provides qualified current-law dates, separate
+lawsuit/interim notification anchors, contradictory-fact exclusions and urgent
+referral for unsupported procedures. Conditional title/residence/budget checks,
+guarded drafts, minimised dossier and DE/EN/de-LS/AR/FA/UK/TR/RU static copy.
+Human legal/language review, live quality, deployment ingestion and separately
+owned GUI/RTL acceptance remain pending. State-law automation, asylum transition
+and other unsupported regimes require individual review. See
+[D-078](decisions/D-078-wp136-residence-implementation.md).
 
 **WP-135 backend implementation (2026-11-27):** `familienrecht` 0.3.0 on
 core 3.10.0/module API 3.8 provides qualified ordinary complaint dates, statutory

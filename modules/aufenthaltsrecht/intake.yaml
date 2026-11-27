@@ -1,0 +1,15 @@
+areas:
+  aufenthaltsrecht:
+    order: 81
+    keywords:
+    - aufenthalt
+    - ausländerbehörde
+    - asyl
+    - bamf
+    - duldung
+    - einbürgerung
+    - fiktionsbescheinigung
+    synonyms:
+    - ausländerrecht
+    - migrationsrecht
+    - asylrecht

@@ -1,0 +1,131 @@
+{
+  "retrieved_on": "2026-11-27",
+  "purpose": "Public primary-law inspection only; no embeddings or corpus ingestion",
+  "snapshots": [
+    {
+      "snapshot": "asylvfg_1992___34a.html.html",
+      "url": "https://www.gesetze-im-internet.de/asylvfg_1992/__34a.html",
+      "sha256": "02b6b4de007e61e5fb6025c307fb127a17a1373c4d1feac2375201c80b4133bd"
+    },
+    {
+      "snapshot": "asylvfg_1992___36.html.html",
+      "url": "https://www.gesetze-im-internet.de/asylvfg_1992/__36.html",
+      "sha256": "f134abbc6fc67ef15536bc30442ad540bd2403eb7d6497675d0f4516027920e5"
+    },
+    {
+      "snapshot": "asylvfg_1992___74.html.html",
+      "url": "https://www.gesetze-im-internet.de/asylvfg_1992/__74.html",
+      "sha256": "1852cc8cfe4391de4bebcf0a171cf0c14dc2d1bfb70309919888b277a315348d"
+    },
+    {
+      "snapshot": "asylvfg_1992___87d.html.html",
+      "url": "https://www.gesetze-im-internet.de/asylvfg_1992/__87d.html",
+      "sha256": "52f198e86583f03c1b93ed3c3dfe10559765dc9482eccbf65ea9a3dcf988385b"
+    },
+    {
+      "snapshot": "asylvfg_1992___87e.html.html",
+      "url": "https://www.gesetze-im-internet.de/asylvfg_1992/__87e.html",
+      "sha256": "10f68de9cad618a41795376fe97c3e3e20be35ae601bbaa1a860101937ba9e10"
+    },
+    {
+      "snapshot": "asylvfg_1992_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/asylvfg_1992/index.html",
+      "sha256": "9cc5e98b0bb782cec94816b7ed0ab49b0585d63618c72bd20ed6c5ec8c44ec1a"
+    },
+    {
+      "snapshot": "aufenthg_2004___2.html.html",
+      "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+      "sha256": "a9168f7f8f1442e530c126425595e13683b1884a03164c99f7361500b8f49103"
+    },
+    {
+      "snapshot": "aufenthg_2004___51.html.html",
+      "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__51.html",
+      "sha256": "ef017b34b82ecf7c6872dfbee3ba682fb66bb91fd1a73e6f36a36b5861060fae"
+    },
+    {
+      "snapshot": "aufenthg_2004___81.html.html",
+      "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+      "sha256": "b5b8a8ad85d4a4241b1d37c12b5879ca4bac7b7d54150b8975d7bc56d0b15488"
+    },
+    {
+      "snapshot": "aufenthg_2004_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/aufenthg_2004/index.html",
+      "sha256": "368dc78c399ebe42e2f5f0b791a83552e62a74e56cbc6a0b1ce7e4a05493c7e9"
+    },
+    {
+      "snapshot": "aufenthv_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/aufenthv/index.html",
+      "sha256": "2ce29a50e9cb3326001f88a9abf6165946f561b6abc8bdfadfa68326f1ff059e"
+    },
+    {
+      "snapshot": "beschv_2013_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/beschv_2013/index.html",
+      "sha256": "90390dfa68f6f786d4f6eadddcd49cfb15fb12a6324387d3d84e05a99389e169"
+    },
+    {
+      "snapshot": "bgb___187.html.html",
+      "url": "https://www.gesetze-im-internet.de/bgb/__187.html",
+      "sha256": "8a1f3c70ceb349b44b3f995bf7d3ffc26d7a2b512ea77c384eb87c44cd961369"
+    },
+    {
+      "snapshot": "bgb___188.html.html",
+      "url": "https://www.gesetze-im-internet.de/bgb/__188.html",
+      "sha256": "b80b9e0feb801a7e7b984b5294e37bba247080a1122b7af59d4dab21ebbd807e"
+    },
+    {
+      "snapshot": "freiz_gg_eu_2004_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/freiz_gg_eu_2004/index.html",
+      "sha256": "b2fc188ceaf82867fa562babb0a15da18e406c3b7800a82de87e4082ce68e2fa"
+    },
+    {
+      "snapshot": "stag___10.html.html",
+      "url": "https://www.gesetze-im-internet.de/stag/__10.html",
+      "sha256": "40d94ffe2b24f6a85ee75934b3bf894ae23b3c51e2f6f8216f2f1e91a7e82ba3"
+    },
+    {
+      "snapshot": "stag___12b.html.html",
+      "url": "https://www.gesetze-im-internet.de/stag/__12b.html",
+      "sha256": "135dfe3f5afc3214d12a1f4e9c25d4854abb0ecb8c0ca2097ca8853dc29e1b8b"
+    },
+    {
+      "snapshot": "stag_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/stag/index.html",
+      "sha256": "fafee2c08d5ed0a29c2e0f0be90ba211a47541d12e6030c0514a21efba320b7f"
+    },
+    {
+      "snapshot": "vwgo___57.html.html",
+      "url": "https://www.gesetze-im-internet.de/vwgo/__57.html",
+      "sha256": "2baad9120c9190411a68e3074e18b735cd4e2f3d9624e1a543cae2f8743bf7ea"
+    },
+    {
+      "snapshot": "vwgo___58.html.html",
+      "url": "https://www.gesetze-im-internet.de/vwgo/__58.html",
+      "sha256": "fe017905bc95583294908fdf4929ba46122a76d5625a9d49726d4ccfda5fe2fe"
+    },
+    {
+      "snapshot": "vwgo___70.html.html",
+      "url": "https://www.gesetze-im-internet.de/vwgo/__70.html",
+      "sha256": "23ddcb1ea030b0421f2bbbf63f8c77a890e6b3bb77c6b8396fd16288b24c2ccb"
+    },
+    {
+      "snapshot": "vwgo___73.html.html",
+      "url": "https://www.gesetze-im-internet.de/vwgo/__73.html",
+      "sha256": "dfc4653806ce62b4fa855da4a419c1bdedbebede314c1d6656b2d0dfaf374876"
+    },
+    {
+      "snapshot": "vwgo___74.html.html",
+      "url": "https://www.gesetze-im-internet.de/vwgo/__74.html",
+      "sha256": "69feb78da542840f39d24755811d8d9f9b199515484894e9c190a1c2030b8d74"
+    },
+    {
+      "snapshot": "vwgo_index.html.html",
+      "url": "https://www.gesetze-im-internet.de/vwgo/index.html",
+      "sha256": "0a19168060b66a055b8f3df82ec3f125a9f5300f32d99c81b2b5f20a20d69844"
+    },
+    {
+      "snapshot": "zpo___222.html.html",
+      "url": "https://www.gesetze-im-internet.de/zpo/__222.html",
+      "sha256": "bc7f8c65105881711e1aacbcbe49110d777ae7ce7d4e5d14dee6c829b1011583"
+    }
+  ]
+}

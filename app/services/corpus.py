@@ -273,6 +273,76 @@ CORPUS_SOURCE_METADATA: dict[str, dict[str, object]] = {
         "checked_by_default": False,
         "source": "gesetze-im-internet.de",
     },
+    "aufenthg": {
+        "key": "aufenthg",
+        "name": "AufenthG",
+        "full_name": "AufenthG",
+        "description": "Aufenthaltstitel und Verlängerung; keine individuelle Statusentscheidung.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "asylg": {
+        "key": "asylg",
+        "name": "AsylG",
+        "full_name": "AsylG",
+        "description": "Asylverfahren und Fristschutz; Übergangsrecht gesondert prüfen.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "aufenthv": {
+        "key": "aufenthv",
+        "name": "AufenthV",
+        "full_name": "AufenthV",
+        "description": "Aufenthaltsverordnung; nur Paragraphen, Anlagen nicht vollständig erfasst.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "beschv": {
+        "key": "beschv",
+        "name": "BeschV",
+        "full_name": "BeschV",
+        "description": "Beschäftigungsverordnung; keine automatische Arbeitserlaubnis.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "freizuegg_eu": {
+        "key": "freizuegg_eu",
+        "name": "FreizügG/EU",
+        "full_name": "FreizügG/EU",
+        "description": "Freizügigkeit; vom Aufenthaltsgesetz getrennt prüfen.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "stag": {
+        "key": "stag",
+        "name": "StAG",
+        "full_name": "StAG",
+        "description": "Staatsangehörigkeit und Einbürgerungsvorbereitung.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
+    "vwgo": {
+        "key": "vwgo",
+        "name": "VwGO",
+        "full_name": "VwGO",
+        "description": "Verwaltungsgerichtliche Verfahren und Fristen.",
+        "tooltip": "Nur nach ausdrücklicher Quellenauswahl laden; Abdeckung prüfen.",
+        "has_scraper": True,
+        "checked_by_default": False,
+        "source": "gesetze-im-internet.de",
+    },
     "eu261": {
         "key": "eu261",
         "name": "VO (EG) Nr. 261/2004",
@@ -631,6 +701,13 @@ _SOURCE_TYPE_PREFIX: dict[str, str] = {
     "famfg": "/famfg/",
     "uvg": "/uhvorschg/",
     "minuhv": "/minuhv/",
+    "aufenthg": "/aufenthg_2004/",
+    "asylg": "/asylvfg_1992/",
+    "aufenthv": "/aufenthv/",
+    "beschv": "/beschv_2013/",
+    "freizuegg_eu": "/freiz_gg_eu_2004/",
+    "stag": "/stag/",
+    "vwgo": "/vwgo/",
     "stpo": "/stpo/",
     "kschg": "/kschg/",
     "burlg": "/burlg/",
@@ -715,8 +792,9 @@ def _infer_legal_area_for_bgb(hierarchy_path: str) -> str | None:
     return None
 
 
-# Regex for paragraph references, e.g. "§ 31"
+# Numeric range tag for BGB area classification; section identities use _SECTION_TAG_RE.
 _PARA_TAG_RE = re.compile(r"§\s*(\d+)")
+_SECTION_TAG_RE = re.compile(r"§\s*(\d+[a-z]?)\b", re.IGNORECASE)
 
 # Regex for Absatz references, e.g. "Abs. 1", "Abs. 2", "Abs. 3"
 _ABSATZ_RE = re.compile(r"Abs\.\s*(\d+)")
@@ -1113,7 +1191,7 @@ def _split_weisung_into_paragraphs(
             continue
 
         # Extract paragraph number
-        para_match = _PARA_TAG_RE.search(norm_text)
+        para_match = _SECTION_TAG_RE.search(norm_text)
         para_label = f"§ {para_match.group(1)}" if para_match else "Allgemein"
 
         hierarchy = ["Fachliche Weisung", para_label]
@@ -1187,7 +1265,7 @@ def _parse_law_sections(
         article_match = re.search(r"Art\.?\s*(\d+[a-z]?)", jnenbez_text)
         if source_type == "egbgb" and article_match:
             current_article = f"Art. {article_match.group(1)}"
-        para_match = _PARA_TAG_RE.search(jnenbez_text)
+        para_match = _SECTION_TAG_RE.search(jnenbez_text)
         if not para_match and not (source_type == "egbgb" and article_match):
             continue
 
@@ -1394,7 +1472,7 @@ def _parse_paragraph_element(
     law_name = _infer_law_name(element, source_type)
 
     # Extract paragraph number from text itself (e.g. "§ 31")
-    para_match = _PARA_TAG_RE.search(text)
+    para_match = _SECTION_TAG_RE.search(text)
     para_label = f"§ {para_match.group(1)}" if para_match else "Unbekannt"
 
     # Extract Absatz (Abs./Absatz X)
@@ -1447,6 +1525,13 @@ def _infer_law_name(element: Tag, source_type: str) -> str:
         "bkatv": "BKatV",
         "fev": "FeV",
         "famfg": "FamFG",
+        "aufenthg": "AufenthG",
+        "asylg": "AsylG",
+        "aufenthv": "AufenthV",
+        "beschv": "BeschV",
+        "freizuegg_eu": "FreizügG/EU",
+        "stag": "StAG",
+        "vwgo": "VwGO",
         "uvg": "UhVorschG",
         "minuhv": "MinUhV",
         "stpo": "StPO",

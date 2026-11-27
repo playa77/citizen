@@ -1,0 +1,672 @@
+dossier_goldset:
+  id: dossier-goldset-aufenthaltsrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.1.0.yaml
+  base_goldset_version: 0.1.0
+  dossier_schema: citizen-dossier-v1.0
+  module: aufenthaltsrecht
+  provenance: synthetic
+  note: Literal dates; no live inference.
+cases:
+- id: AUF-001
+  facts:
+    document_type: auslaender_widerspruchsbescheid
+    zustellung_tatsaechlich: '2026-10-31'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      vorverfahren_abgeschlossen_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: auf_klage
+      frist_ende: '2026-11-30'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-31'
+      kind: mentioned
+- id: AUF-002
+  facts:
+    document_type: auslaender_widerspruchsbescheid
+    zustellung_tatsaechlich: '2026-10-21'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      vorverfahren_abgeschlossen_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: auf_klage
+      frist_ende: '2026-11-23'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-21'
+      kind: mentioned
+- id: AUF-003
+  facts:
+    document_type: auslaender_direktklage
+    zustellung_tatsaechlich: '2026-12-01'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      direktklage_land_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: auf_direktklage
+      frist_ende: '2027-01-04'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-12-01'
+      kind: mentioned
+- id: AUF-004
+  facts:
+    document_type: auslaender_widerspruch
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: SN
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      widerspruch_land_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: auf_widerspruch
+      frist_ende: '2026-11-19'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-18'
+      kind: mentioned
+- id: AUF-005
+  facts:
+    document_type: auslaender_widerspruch
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      widerspruch_land_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: auf_widerspruch
+      frist_ende: '2026-11-18'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-18'
+      kind: mentioned
+- id: AUF-006
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: asyl_klage
+      frist_ende: '2026-11-27'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-007
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-10-30'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-11-13'
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+  expected:
+    deadlines:
+    - spec_id: asyl_klage
+      frist_ende: '2026-11-16'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-10-30'
+      kind: mentioned
+- id: AUF-008
+  facts:
+    document_type: asyl_36
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_36_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  expected:
+    deadlines:
+    - spec_id: asyl_36_klage
+      frist_ende: '2026-11-20'
+    - spec_id: asyl_36_eil
+      frist_ende: '2026-11-20'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-009
+  facts:
+    document_type: asyl_34a
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_34a_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  expected:
+    deadlines:
+    - spec_id: asyl_34a_klage
+      frist_ende: '2026-11-20'
+    - spec_id: asyl_34a_eil
+      frist_ende: '2026-11-20'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-010
+  facts:
+    document_type: asyl_34a
+    zustellung_tatsaechlich: '2026-11-14'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_34a_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-14'
+  expected:
+    deadlines:
+    - spec_id: asyl_34a_klage
+      frist_ende: '2026-11-23'
+    - spec_id: asyl_34a_eil
+      frist_ende: '2026-11-23'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-14'
+      kind: mentioned
+- id: AUF-011
+  facts:
+    document_type: asyl_altrecht
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-012
+  facts:
+    document_type: asyl_flughafen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-013
+  facts:
+    document_type: asyl_unbekannt
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-014
+  facts:
+    document_type: titel
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-015
+  facts:
+    document_type: duldung
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-016
+  facts:
+    document_type: einbuergerung
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-017
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+    bescheid_datum: '2026-11-01'
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+- id: AUF-018
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: false
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-019
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: false
+      zweiwochenfrist_bestaetigt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-020
+  facts:
+    document_type: auslaender_widerspruch
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      widerspruch_land_bestaetigt: false
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-021
+  facts:
+    document_type: asyl_36
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: oeffentlich
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_36_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-022
+  facts:
+    document_type: asyl_34a
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_34a_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-023
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+      wochenklage_bestaetigt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+- id: AUF-024
+  facts:
+    document_type: asyl_36
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_36_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-11'
+    bekanntgabe_tatsaechlich: '2026-11-11'
+  expected:
+    deadlines:
+    - spec_id: asyl_36_klage
+      frist_ende: '2026-11-20'
+    - spec_id: asyl_36_eil
+      frist_ende: '2026-11-18'
+    checklist:
+    - bescheid
+    - titel
+    - vorbereitung
+    - datenschutz
+    chronology:
+    - date: '2026-11-27'
+      kind: document_date
+    - date: '2026-11-13'
+      kind: mentioned
+    - date: '2026-11-11'
+      kind: mentioned

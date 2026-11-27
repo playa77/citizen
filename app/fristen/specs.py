@@ -77,6 +77,7 @@ class DeadlineSpec:
     not_applicable: NotApplicable | None
     anchor: str = "same_day"
     requires_confirmed: tuple[str, ...] = ()
+    excludes_confirmed: tuple[str, ...] = ()
 
 
 def _parse_duration(raw: dict[str, Any] | None, context: str) -> Duration:
@@ -163,12 +164,17 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
             )
     elif anchor != "same_day":
         raise ValueError(f"{path}: anchor supported only for receipt/event rules")
-    required = raw.get("requires_confirmed", [])
-    if not isinstance(required, list) or any(
-        not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
-        for key in required
-    ):
-        raise ValueError(f"{path}: invalid requires_confirmed qualification keys")
+    qualifications: dict[str, tuple[str, ...]] = {}
+    for field_name in ("requires_confirmed", "excludes_confirmed"):
+        values = raw.get(field_name, [])
+        if not isinstance(values, list) or any(
+            not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
+            for key in values
+        ):
+            raise ValueError(f"{path}: invalid {field_name} qualification keys")
+        qualifications[field_name] = tuple(values)
+    if set(qualifications["requires_confirmed"]) & set(qualifications["excludes_confirmed"]):
+        raise ValueError(f"{path}: conflicting required and excluded qualifications")
 
     return DeadlineSpec(
         id=spec_id,
@@ -184,7 +190,8 @@ def _parse_spec(raw: dict[str, Any], path: Path) -> DeadlineSpec:
         fristbeginn_basis=str(raw.get("fristbeginn_basis", "")),
         not_applicable=not_applicable,
         anchor=anchor,
-        requires_confirmed=tuple(required),
+        requires_confirmed=qualifications["requires_confirmed"],
+        excludes_confirmed=qualifications["excludes_confirmed"],
     )
 
 

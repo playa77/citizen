@@ -1,0 +1,117 @@
+format: citizen-plain-copy-v1.0
+module: aufenthaltsrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist sofort prüfen
+    text: Bei BAMF-Bescheiden oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Klage und
+      Eilantrag können getrennt nötig sein.
+    next_step: Bescheid, Belehrung und Zugangsnachweis sicher zur Beratung mitbringen.
+  aufenthalt_vorbereiten:
+    title: Aufenthalt vorbereiten
+    text: Ein Termin ist kein belegter Antragseingang. Rechenergebnisse geben keinen sicheren Status und
+      keine Reise- oder Arbeitserlaubnis.
+    next_step: Titel, Ablaufdatum und belegten Antragseingang individuell prüfen lassen.
+  beratung_erforderlich:
+    title: Beratung erforderlich
+    text: Asyl-Übergangsrecht, Einbürgerung und Lebensunterhalt brauchen individuelle Prüfung. Wir verfassen
+      keine Asylbegründung und bewerten keine Glaubwürdigkeit.
+    next_step: Keine Verfolgungsgeschichte, Religion, Diagnosen oder unnötige Drittdaten hochladen.
+  einordnung_offen:
+    title: Einordnung offen
+    text: Verfahren oder Voraussetzungen sind unklar. Ein unbekanntes Datum bedeutet keine Sicherheit.
+    next_step: Bei kurzen Fristen sofort qualifizierte Hilfe suchen.
+deadlines:
+  auf_klage:
+    title: Klage nach Widerspruchsbescheid
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  auf_direktklage:
+    title: Direktklage
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  auf_widerspruch:
+    title: Widerspruch bei bestätigtem Landesrecht
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  asyl_klage:
+    title: 'Asylklage: zwei Wochen'
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  asyl_36_klage:
+    title: Asylklage nach §36
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  asyl_36_eil:
+    title: Eilantrag nach §36
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  asyl_34a_klage:
+    title: Asylklage nach §34a
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true
+  asyl_34a_eil:
+    title: Eilantrag nach §34a
+    action: Nur für das bestätigte Verfahren und die richtige Belehrung. Klage und Eilantrag getrennt
+      prüfen. Sofort qualifizierte Hilfe suchen.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Sofort prüfen lassen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Fakten sofort prüfen lassen.'
+      missing_input: Bestätigte Fakten fehlen. Kein verlässliches Datum. Sofort qualifizierte Hilfe suchen.
+      not_applicable: Diese Regel passt nicht. Andere kurze Fristen sind möglich. Sofort qualifizierte
+        Hilfe suchen.
+    referral_when_not_applicable: true

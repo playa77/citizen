@@ -1,0 +1,14 @@
+parameters:
+- key: residence_rules
+  value_json:
+    standard_residence_years: 5
+  unit: rules
+  valid_from: 2026-11-27
+  valid_to: 2026-12-31
+  review_status: proposed
+  basis: §10 Abs.1 StAG; §81 Abs.4 und §2 Abs.3 AufenthG
+  notes: '{"retrieved_on": "2026-11-27", "sources": ["https://www.gesetze-im-internet.de/stag/__10.html",
+    "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html", "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html"],
+    "quotes": ["seit fünf Jahren", "vor Ablauf seines Aufenthaltstitels", "einschließlich ausreichenden
+    Krankenversicherungsschutzes"], "coverage": "Current verified regime only; no entitlement or automatic
+    income/benefit classification; proposed pending human review."}'

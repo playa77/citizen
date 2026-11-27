@@ -1376,7 +1376,7 @@ EUR-Lex ingestion preserves article identity and official provenance, and
 rejects empty/challenge/incomplete content. Offline parser fixtures and source
 inspection do not establish successful deployment ingestion, live inference
 quality or reviewed promotion. Human review remains deferred under D-071.
-Current disclaimer acknowledgement is `v3.7.0`; prompt set is `3.8.0`.
+Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
 
 
 ### WP-134 traffic implementation (core 3.9.0 / module API 3.7)
@@ -1425,7 +1425,7 @@ annex rules are versioned parameters, not a complete ingested corpus.
 Exact paragraph lookup matches hierarchy segments, so §1 cannot boost §10.
 No deployment ingestion, live inference or human promotion is established.
 
-Current disclaimer acknowledgement is `v3.7.0`; prompt set is `3.8.0`.
+Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
 
 ### WP-135 family implementation (core 3.10.0 / module API 3.8)
 
@@ -1482,5 +1482,97 @@ No Düsseldorfer Tabelle, income-group or self-retention data is bundled
 Drafts `pruefhinweise`, `auskunft`, `stellungnahme`, `uvg_vorbereitung` retain
 `[BITTE PRÜFEN]`, meet no deadline and send nothing automatically. Custody,
 contact and child welfare remain referral-first; minimise third-party data.
-Current disclaimer acknowledgement is `v3.7.0`; prompt set is `3.8.0`.
+Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
 Human review/promotion and live-inference quality remain pending (D-071).
+
+### WP-136 residence/asylum preparation (core 3.11.0 / module API 3.9)
+
+Experimental peer `aufenthaltsrecht` 0.1.0 requires explicit request/session
+selection; deployment enablement never selects it. The existing module detail
+and plain-copy endpoints expose its intake schema, templates and language list.
+No endpoint, envelope, error or SSE event is replaced.
+
+Eight critical rules use existing confirmed domestic service/event facts and
+`vwgo_57` rollover (§57 Abs.2 VwGO/§222 ZPO), including confirmed local holidays:
+
+| Spec | `document_type` | Duration | Additional `qualifikationen` |
+|---|---|---|---|
+| `auf_klage` | `auslaender_widerspruchsbescheid` | 1 month | `vorverfahren_abgeschlossen_bestaetigt` |
+| `auf_direktklage` | `auslaender_direktklage` | 1 month | `direktklage_land_bestaetigt` |
+| `auf_widerspruch` | `auslaender_widerspruch` | 1 month | `widerspruch_land_bestaetigt` |
+| `asyl_klage` | `asyl_zwei_wochen` | 14 days | `asyl_neues_recht_bestaetigt`, `zweiwochenfrist_bestaetigt` |
+| `asyl_36_klage` | `asyl_36` | 7 days | `asyl_neues_recht_bestaetigt`, `wochenklage_bestaetigt`, `eilrechtsschutz_36_bestaetigt` |
+| `asyl_36_eil` | `asyl_36` | 7 days | `asyl_neues_recht_bestaetigt`, `eilrechtsschutz_36_bestaetigt` |
+| `asyl_34a_klage` | `asyl_34a` | 7 days | `asyl_neues_recht_bestaetigt`, `wochenklage_bestaetigt`, `eilrechtsschutz_34a_bestaetigt` |
+| `asyl_34a_eil` | `asyl_34a` | 7 days | `asyl_neues_recht_bestaetigt`, `eilrechtsschutz_34a_bestaetigt` |
+
+Every rule requires `rbb_richtig_bestaetigt`, `aktuelles_regime_bestaetigt`,
+`kein_sonderregime`. Lawsuit/objection rules also require
+`wirksame_zustellung_bestaetigt`. Interim applications instead require
+`wirksame_bekanntgabe_bestaetigt`, `inlaendische_bekanntgabe_bestaetigt` and
+use `ereignis_datum` for independently confirmed effective notification;
+`zustellungsart=inland` remains required. A later lawsuit service date must
+never replace that notification date.
+These are qualified confirmations, never model-inferred booleans. Missing facts
+return `missing_input` without a definitive date; unmatched documents return
+`not_applicable`. Critical multilingual action text retains urgent referral in
+both cases. Klage and Eilantrag are separate items, not substitutes.
+
+Current §36 AsylG interim relief is in **Abs.2**, and §34a in **Abs.3** as
+verified 2026-11-27. §87e/EU transition, old-law, airport/border and unidentified
+regimes require individual review. No generic annual replacement period is
+applied to defective asylum notices. State-law objection availability is not
+automatically resolved: all states require concrete dated evidence and
+qualification. Letter dates never replace actual confirmed service.
+
+`residence_checks` accepts `title_expiry`, `residence_period`,
+`livelihood_budget` or `none`. The public intake schema specifies exact input
+and qualification keys. `residence_rules` is proposed, valid 2026-11-27 through
+2026-12-31. Results are `provisional` or `unavailable`, never eligibility or
+status decisions. Title checks compare proven receipt with expiry (including
+the last valid day); future receipt, late applications and Schengen visas
+require review. Residence arithmetic returns the five-year anniversary only
+for confirmed uninterrupted lawful ordinary residence. Budget arithmetic uses
+whole cents with insurance entered separately from other need; no guessed
+threshold or implicit Sozialrecht load. `budget_balance_cents` may be negative.
+
+Templates: `pruefhinweise`, `verlaengerung`, `akteneinsicht`, `fristbitte`.
+All retain `[BITTE PRÜFEN]` and draft/provenance markers; no asylum narrative or
+automatic filing. `fristbitte` is limited to confirmed extendable authority
+periods, never statutory lawsuit/interim-application periods.
+
+Corpus additions: `aufenthg`, `asylg`, `aufenthv`, `beschv`, `freizuegg_eu`,
+`stag`, `vwgo`, via existing federal adapter and migration 022. No deployment
+population or complete annex/state/EU coverage is claimed.
+
+The module supplies `de`, `de-LS`, `en`, `ar`, `fa`, `uk`, `tr`, `ru` copy.
+Core disclaimer/AI/privacy endpoints additionally accept `ar,fa,uk,tr,ru` through
+their existing `lang` parameter. Additional-language dates use ISO `YYYY-MM-DD`;
+`bcp47` matches the language key, `register` is `plain`, and all copy has
+`review_status=draft`. No implicit translation/fallback or GUI/RTL acceptance.
+The deterministic sentence/duty-of-care checks include these scripts and
+selected discouraging phrases; they do not replace fluent human review.
+
+Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
+
+The approved WP-136 safety supplement adds optional `excludes_confirmed` to
+module deadline specs. A true excluded fact rejects direct evaluation; dossier
+results are `missing_input` without a date. M7 declares incompatible two-week,
+one-week and interim-procedure confirmations in this data, rather than choosing
+the longer deadline from conflicting input.
+
+Plain deadline-copy entries may opt into `referral_when_not_applicable: true`.
+An opted-in critical not-applicable result exposes `referral_required: true`;
+the existing `banner` module/spec pointer can select that item without inventing
+a date. Missing-input and computed/provisional critical items retain priority.
+Other modules' behavior is unchanged. M7 opts in to retain urgent referral for
+unsupported procedures, including old-law, airport and unknown asylum cases.
+
+In M7's LLM-driven calculator path, confirmations must come from one explicit
+`CITIZEN_RESIDENCE_FACTS:` JSON object in the source, containing the allowlisted
+calculator fields from its intake schema and `own_matter_confirmed: true`.
+The module cross-check validates types and replaces the model's extracted dict
+with these explicit source inputs. With no valid block, results are unavailable;
+model-generated booleans never establish confirmation. Unknown/sensitive fields
+are rejected and excluded from the extracted summary sent to explanation.
+This introduces no endpoint; pure calculator calls still take explicit facts.

@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.7.0 · **Date:** 2026-11-27
+**Version:** 3.8.0 · **Date:** 2026-11-27
 
 **Author:** www.github.com/playa77
 
@@ -433,7 +433,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.7.0`); after a version change, renewed
+prefixed with `v`, currently `v3.8.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -936,8 +936,19 @@ Human review and live evaluation remain pending; no verified promotion is claime
 
 ---
 
+### `aufenthaltsrecht` — Residence and asylum preparation
+
+The experimental `aufenthaltsrecht` module supports preparation of your own matter only. Asylum support is limited to information, deadline protection and urgent referral. It does not draft asylum narratives, assess credibility or predict protection outcomes. It is not intended for authority-side migration decisions.
+
+For BAMF decisions, short deadlines or threatened removal, seek qualified asylum/migration advice or legal help immediately. A lawsuit and interim application may both be needed. An unknown deadline does not mean safety. Current AsylG and transitional law require individual confirmation; do not assume older section 36 references still apply.
+
+Date and budget arithmetic does not establish residence status, continuation effects, work/travel rights, secured livelihood or naturalisation eligibility. State law, exceptions and conditions require individual review. An appointment booking is not proof of application receipt. Do not upload persecution narratives, religion, diagnoses, passport numbers or unnecessary third-party data.
+
+Drafts preserve no deadline. An extension request cannot extend statutory lawsuit/interim-application periods. Human legal/language review remains pending, including AR/FA/UK/TR/RU drafts. No complete source coverage, live-inference quality or GUI accessibility is claimed.
+
 ## Change History
 
+- **3.8.0 (2026-11-27):** Residence/asylum preparation: qualified deadline protection, sensitive-data limits and multilingual drafts; renewed acknowledgement required.
 - **3.7.0 (2026-11-27):** Family law: qualified ordinary complaints and statutory arithmetic; child-welfare referrals, data minimisation and unresolved guideline reuse. Renewed acknowledgement required.
 
 

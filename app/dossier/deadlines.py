@@ -326,6 +326,20 @@ def compute_deadlines(
                 ist_verwaltungsakt=ist_va,
                 bundesland=bundesland,
             )
+            if any(
+                facts.get("qualifikationen", {}).get(key) is True for key in spec.excludes_confirmed
+            ):
+                items.append(
+                    _result_item(
+                        module.module_id,
+                        spec,
+                        STATUS_MISSING_INPUT,
+                        None,
+                        ["Widersprüchliche Qualifikationen; individuelle Prüfung erforderlich."],
+                        used,
+                    )
+                )
+                continue
             result = evaluate_spec(spec, frist_input, module_id=module.module_id)
             status = STATUS_NOT_APPLICABLE if not ist_va else base_status
             items.append(
@@ -368,12 +382,13 @@ def _service_item(
         or (spec.rollover is not None and not facts.get("bundesland"))
         or any(facts.get(key) != value for key, value in spec.applies_when.items())
         or (
-            spec.rollover in ("bgb_193", "stpo_43", "famfg_16")
+            spec.rollover in ("bgb_193", "stpo_43", "famfg_16", "vwgo_57")
             and facts.get("feiertagskalender_bestaetigt") is not True
         )
         or any(
             facts.get("qualifikationen", {}).get(key) is not True for key in spec.requires_confirmed
         )
+        or any(facts.get("qualifikationen", {}).get(key) is True for key in spec.excludes_confirmed)
     ):
         return _result_item(
             module_id,
@@ -475,10 +490,15 @@ def _explicit_event_item(
         for key in spec.requires_confirmed
         if facts.get("qualifikationen", {}).get(key) is not True
     )
+    missing.extend(
+        "Widersprüchliche Qualifikation: " + key
+        for key in spec.excludes_confirmed
+        if facts.get("qualifikationen", {}).get(key) is True
+    )
     if spec.rollover is not None and not facts.get("bundesland"):
         missing.append("bundesland")
     if (
-        spec.rollover in ("bgb_193", "stpo_43", "famfg_16")
+        spec.rollover in ("bgb_193", "stpo_43", "famfg_16", "vwgo_57")
         and facts.get("feiertagskalender_bestaetigt") is not True
     ):
         missing.append("feiertagskalender_bestaetigt (einschließlich örtlicher Feiertage)")
@@ -497,6 +517,7 @@ def _explicit_event_item(
         FristInput(
             bescheid_datum=start,
             document_type=actual_type,
+            zustellungsart=facts.get("zustellungsart"),
             zugang_tatsaechlich=start if spec.trigger == "zugang" else None,
             ereignis_datum=start if spec.trigger == "ereignis" else None,
             kenntnis_datum=start if spec.trigger == "kenntnis" else None,

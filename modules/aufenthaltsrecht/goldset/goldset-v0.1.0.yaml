@@ -1,0 +1,786 @@
+goldset:
+  id: goldset-aufenthaltsrecht
+  version: 0.1.0
+  schema_version: 1.0.0
+  created: '2026-11-27'
+  rechtsstand: '2026-11-27'
+  evaluation_reference_date: '2026-11-27'
+  legal_area: aufenthaltsrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 24
+  provenance: synthetic
+  open_questions:
+  - id: AUF-REVIEW
+    topic: Human review and live evaluation pending
+    note: No deployed corpus, transition coverage, state-rule completeness or live-quality claim.
+cases:
+- id: AUF-001
+  version: 1.0.0
+  title: Monatsende nach Widerspruchsbescheid
+  category: auf_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 31.10.2026.
+
+      Monatsende nach Widerspruchsbescheid. Ich bereite meine eigene Angelegenheit vor. Verfahren und
+      individuelle Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Monatsende nach Widerspruchsbescheid
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §74 VwGO
+    citations:
+    - norm: §74 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-002
+  version: 1.0.0
+  title: Monatsfrist Wochenende
+  category: auf_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 21.10.2026.
+
+      Monatsfrist Wochenende. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Monatsfrist Wochenende
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §57 VwGO
+    citations:
+    - norm: §57 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-003
+  version: 1.0.0
+  title: Direktklage Jahreswechsel
+  category: auf_direktklage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 01.12.2026.
+
+      Direktklage Jahreswechsel. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Direktklage Jahreswechsel
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §74 VwGO
+    citations:
+    - norm: §74 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-004
+  version: 1.0.0
+  title: Widerspruch Sachsen Feiertag
+  category: auf_widerspruch
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 18.10.2026.
+
+      Widerspruch Sachsen Feiertag. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Widerspruch Sachsen Feiertag
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §70 VwGO
+    citations:
+    - norm: §70 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-005
+  version: 1.0.0
+  title: Widerspruch Berlin kein Feiertag
+  category: auf_widerspruch
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 18.10.2026.
+
+      Widerspruch Berlin kein Feiertag. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Widerspruch Berlin kein Feiertag
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §70 VwGO
+    citations:
+    - norm: §70 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-006
+  version: 1.0.0
+  title: Asyl zwei Wochen
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Asyl zwei Wochen. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl zwei Wochen
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §74 AsylG
+    citations:
+    - norm: §74 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-007
+  version: 1.0.0
+  title: Asyl lokaler Feiertag
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 30.10.2026.
+
+      Asyl lokaler Feiertag. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl lokaler Feiertag
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §57 VwGO
+    citations:
+    - norm: §57 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-008
+  version: 1.0.0
+  title: Asyl 36 Klage und Eilantrag
+  category: asyl_36_eil
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Asyl 36 Klage und Eilantrag. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl 36 Klage und Eilantrag
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §36 AsylG
+    citations:
+    - norm: §36 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-009
+  version: 1.0.0
+  title: Asyl 34a Klage und Eilantrag
+  category: asyl_34a_eil
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Asyl 34a Klage und Eilantrag. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl 34a Klage und Eilantrag
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §34a AsylG
+    citations:
+    - norm: §34a AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-010
+  version: 1.0.0
+  title: Asyl 34a Wochenende
+  category: asyl_34a_eil
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 14.11.2026.
+
+      Asyl 34a Wochenende. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl 34a Wochenende
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §34a AsylG
+    citations:
+    - norm: §34a AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-011
+  version: 1.0.0
+  title: Altrecht nicht automatisch
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Altrecht nicht automatisch. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Altrecht nicht automatisch
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §87e AsylG
+    citations:
+    - norm: §87e AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-012
+  version: 1.0.0
+  title: Flughafenverfahren nicht automatisch
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Flughafenverfahren nicht automatisch. Ich bereite meine eigene Angelegenheit vor. Verfahren und
+      individuelle Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Flughafenverfahren nicht automatisch
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §74 AsylG
+    citations:
+    - norm: §74 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-013
+  version: 1.0.0
+  title: Unbekannte Asylregel
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Unbekannte Asylregel. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Unbekannte Asylregel
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §87e AsylG
+    citations:
+    - norm: §87e AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-014
+  version: 1.0.0
+  title: Titel und Antrag keine Klage
+  category: auf_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Titel und Antrag keine Klage. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Titel und Antrag keine Klage
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §81 AufenthG
+    citations:
+    - norm: §81 AufenthG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-015
+  version: 1.0.0
+  title: Duldung individuelle Prüfung
+  category: auf_direktklage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Duldung individuelle Prüfung. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Duldung individuelle Prüfung
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §81 AufenthG
+    citations:
+    - norm: §81 AufenthG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-016
+  version: 1.0.0
+  title: Einbürgerung nur Vorbereitung
+  category: auf_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Einbürgerung nur Vorbereitung. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Einbürgerung nur Vorbereitung
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §10 StAG
+    citations:
+    - norm: §10 StAG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-017
+  version: 1.0.0
+  title: Zustellung fehlt kein Briefdatum
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Zustellung fehlt kein Briefdatum. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Zustellung fehlt kein Briefdatum
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §74 AsylG
+    citations:
+    - norm: §74 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-018
+  version: 1.0.0
+  title: Belehrung ungeklärt keine Ersatzfrist
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Belehrung ungeklärt keine Ersatzfrist. Ich bereite meine eigene Angelegenheit vor. Verfahren und
+      individuelle Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Belehrung ungeklärt keine Ersatzfrist
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §58 VwGO
+    citations:
+    - norm: §58 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-019
+  version: 1.0.0
+  title: Übergangsrecht ungeklärt
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Übergangsrecht ungeklärt. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Übergangsrecht ungeklärt
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §87e AsylG
+    citations:
+    - norm: §87e AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-020
+  version: 1.0.0
+  title: Landesrecht ungeklärt
+  category: auf_widerspruch
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Landesrecht ungeklärt. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Landesrecht ungeklärt
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §70 VwGO
+    citations:
+    - norm: §70 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-021
+  version: 1.0.0
+  title: Öffentliche Zustellung gesondert
+  category: asyl_36_eil
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Öffentliche Zustellung gesondert. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Öffentliche Zustellung gesondert
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §36 AsylG
+    citations:
+    - norm: §36 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-022
+  version: 1.0.0
+  title: Kalender fehlt
+  category: asyl_34a_eil
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Kalender fehlt. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Kalender fehlt
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §57 VwGO
+    citations:
+    - norm: §57 VwGO
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-023
+  version: 1.0.0
+  title: Widersprüchliche Asylregime
+  category: asyl_klage
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Asyl zwei Wochen. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle Voraussetzungen
+      müssen qualifiziert geprüft werden. Keine Statuszusage. Zugleich sind Einwochen- und Zweiwochenregime
+      behauptet; kein Datum berechnen.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl zwei Wochen
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §74 AsylG
+    citations:
+    - norm: §74 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: AUF-024
+  version: 1.0.0
+  title: Bekanntgabe vor förmlicher Zustellung
+  category: asyl_36_eil
+  difficulty: hoch
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 27.11.2026
+
+      Belegter Zugang am 13.11.2026.
+
+      Asyl 36 Klage und Eilantrag. Ich bereite meine eigene Angelegenheit vor. Verfahren und individuelle
+      Voraussetzungen müssen qualifiziert geprüft werden. Keine Statuszusage. Wirksame Bekanntgabe am
+      11.11.2026 unabhängig bestätigt; Zustellung am 13.11.2026.'
+  expected:
+    legal_issues:
+    - id: auf_pruefung
+      issue: Asyl 36 Klage und Eilantrag
+      assessment: Prüfbedarf; sofortige qualifizierte Hilfe bei kurzen Fristen
+      norm_chain:
+      - §36 AsylG
+    citations:
+    - norm: §36 AsylG
+      must_exist_in_corpus: true
+    known_traps:
+    - Keine unbestätigte Regel oder Frist erfinden. Klage und Eilantrag getrennt prüfen.
+    actionable_next_steps:
+    - Bei Asyl oder drohender Abschiebung sofort qualifizierte Hilfe suchen. Nur nötige Belege sicher
+      zur Beratung mitbringen.
+  negative_controls:
+  - Synthetischer Testfall

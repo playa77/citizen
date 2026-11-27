@@ -90,6 +90,13 @@ direction permits backend step 2 to proceed (D-069, backend continuation directi
   cases. OQ-7 guideline reuse stays open; no bundled table/self-retention or
   spousal award calculation. Limits and verification: [D-077](docs/decisions/D-077-wp135-family-implementation.md).
   Human review/promotion, deployment ingestion and live quality remain pending.
+- [x] WP-136 experimental backend implementation: `aufenthaltsrecht` 0.1.0,
+  core 3.11.0/module API 3.9. Qualified current-law dates, separate interim
+  notification, conflict guards and referral without a date; conditional arithmetic,
+  guarded drafts, minimised dossier and eight language variants. Limits and
+  verification: [D-078](docs/decisions/D-078-wp136-residence-implementation.md).
+  State-law automation, unsupported/transition regimes, human review/promotion,
+  deployment ingestion, live quality and GUI/RTL acceptance remain pending.
 - [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing

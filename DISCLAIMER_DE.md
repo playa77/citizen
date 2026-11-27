@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.7.0 · **Stand:** 2026-11-27
+**Version:** 3.8.0 · **Stand:** 2026-11-27
 
 **Autor:** www.github.com/playa77
 
@@ -463,7 +463,7 @@ Operationen werden nur ausgeführt, wenn jede Anfrage die Bestätigung der
 Kenntnisnahme mit der aktuell gültigen Fassungsnummer trägt (Header
 `X-Disclaimer-Ack`, abfragbar über `GET /api/v1/meta/disclaimer/version`; sie
 entspricht der Fassung dieses Dokuments mit vorangestelltem `v`, derzeit
-`v3.7.0`);
+`v3.8.0`);
 bei Fassungsänderungen wird eine erneute Bestätigung verlangt. Die
 bestätigte Fassung wird je Analyse-Lauf zusammen mit Zeitpunkt und
 Anwendungsversion im lokalen Audit-Protokoll festgehalten. Maßgeblich ist
@@ -996,8 +996,19 @@ Menschliche Prüfung und Live-Evaluation stehen aus; keine verifizierte Freigabe
 
 ---
 
+### `aufenthaltsrecht` — Aufenthaltsrecht
+
+Das experimentelle Modul `aufenthaltsrecht` dient ausschließlich der Vorbereitung Ihrer eigenen Angelegenheit. Asylverfahren werden nur mit Information, Fristschutz und dringender Verweisung begleitet. Es erstellt keine Asylbegründung, Glaubwürdigkeitsbewertung oder Schutzprognose und unterstützt keine Migrationsentscheidungen der Behörden.
+
+Bei BAMF-Bescheiden, kurzen Fristen oder drohender Abschiebung suchen Sie sofort qualifizierte Asyl-/Migrationsberatung oder anwaltliche Hilfe. Klage und Eilantrag können getrennt nötig sein. Unbekannte Fristen bedeuten keine Sicherheit. Die aktuelle AsylG-Fassung und das Übergangsrecht müssen individuell bestätigt werden; alte §36-Verweise nicht ungeprüft übernehmen.
+
+Datums- und Budgetarithmetik stellt weder Aufenthaltsstatus noch Fiktionswirkung, Arbeits-/Reiserecht, gesicherten Lebensunterhalt oder Einbürgerungsberechtigung fest. Landesrecht, Ausnahmen und Voraussetzungen bleiben individuell zu prüfen. Terminbuchung ist kein belegter Antragseingang. Keine Verfolgungsnarrative, Religion, Diagnosen, Passnummern oder unnötigen Daten Dritter hochladen.
+
+Entwürfe wahren keine Frist. Eine Fristverlängerungsbitte verlängert keine gesetzliche Klage-/Eilantragsfrist. Menschliche Rechts- und Sprachprüfung stehen aus; auch AR/FA/UK/TR/RU-Texte sind Entwürfe. Keine Aussage über vollständige Quellenabdeckung, Live-Inferenzqualität oder GUI-Zugänglichkeit.
+
 ## Änderungshistorie
 
+- **3.8.0 (2026-11-27):** Aufenthaltsrecht: qualifizierter Fristschutz, sensible Daten und mehrsprachige Entwürfe; erneute Kenntnisnahme erforderlich.
 - **3.7.0 (2026-11-27):** Familienrecht: qualifizierte reguläre Beschwerde und gesetzliche Rechenwerte; Kindeswohl-Verweisung, Datenminimierung und offene Leitlinienrechte. Erneute Kenntnisnahme erforderlich.
 
 
