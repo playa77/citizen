@@ -1,6 +1,7 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.2.0 | 2026-11-27 — WP-133 consumer contract backend.
+<!-- Version: 1.3.0 | 2026-11-27 — WP-134 traffic backend.
+     1.2.0 | 2026-11-27 — WP-133 consumer contract backend.
      1.1.0 | 2026-11-26 — M1 experimental foundation; owner directs backend continuation.
      1.0.2 | 2026-11-25 — D-069: peer modules; startup/session TODO blocks further module implementation.
      1.0.1 | 2026-11-16 — M0 status row: module 1.2.0 (D-063). 1.0.0 | 2026-11-16 -->
@@ -50,7 +51,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 | M2 | `mietrecht` | Wohnraummietrecht | backend implemented 0.2.0; experimental, review pending | housing is existential; very high volume; strong deterministic layer (Kappungsgrenze, Mietpreisbremse, Nebenkosten); crossover with § 22 SGB II |
 | M3 | `arbeitsrecht` | Individualarbeitsrecht | experimental backend 0.2.0 (WP-132, D-074) | 3-week Klagefrist is the most consequential short deadline citizens miss; crossover with SGB III Sperrzeit / SGB II |
 | M4 | `vertragsrecht` | Verbraucher- und Vertragsrecht | experimental backend 0.2.0 (WP-133, D-075) | everyday volume (Widerruf, Gewährleistung, Abo-Fallen, Fluggastrechte) |
-| M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | planned | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
+| M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | experimental backend 0.1.0 (WP-134, D-076) | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
 | M6 | `familienrecht` | Familienrecht (Unterhalt, Trennung, Sorge/Umgang) | planned (legacy key experimental) | high stakes; Unterhalt math deterministic; crossover UVG / SGB II |
 | M7 | `aufenthaltsrecht` | Aufenthalts-, Asyl- und Staatsangehörigkeitsrecht | planned | very high necessity for M0 clientele, but very short deadlines and multilingual need → scheduled after the plain-language/i18n layer (P12) |
 | M8 | `steuerrecht` | Einkommensteuer privater Personen + AO-Verfahren | planned | Steuerbescheid Einspruch is common; StBerG constraint shapes scope (own matter only) |
@@ -220,13 +221,23 @@ Human review/promotion and live inference remain deferred under D-071.
 
 ### M5 — `verkehrsrecht`
 
+**Backend implemented (WP-134, 2026-11-27):** experimental 0.1.0 on core
+3.9.0/module API 3.7. Critical qualified actual-service objection, StPO
+rollover, selected speed table, current-regime limitation/ban/register checks,
+guarded drafts, intake/dossier and DE/EN/de-LS copy. Twenty synthetic cases;
+human review/promotion and live inference remain deferred. Paragraph corpus
+support is partial: annexes/tables are not ingested; selected table entries
+are parameters. Accident settlement remains stage 2. See
+[D-076](decisions/D-076-wp134-traffic-implementation.md).
+
+
 - **Scope:** Bußgeldverfahren (traffic), Fahreignungsregister (Punkte),
   Fahrverbot; stage 2: Verkehrsunfall-Schadensregulierung.
 - **Documents:** Anhörungsbogen, Zeugenfragebogen, Bußgeldbescheid,
   Punkte-Mitteilung, (stage 2) Schreiben der Haftpflichtversicherung.
 - **Deadlines:** Einspruch gegen Bußgeldbescheid 2 weeks after Zustellung
   (§ 67 OWiG); Verfolgungsverjährung (§ 26 Abs. 3 StVG); Fahrverbot
-  Antrittsfrist (§ 25 Abs. 2a StVG).
+  Antrittsfrist (current § 25 Abs. 2–3 StVG; former paragraph 2a is stale).
 - **Calculators:** Regelsatz/Punkte/Fahrverbot lookup (BKatV +
   Bußgeldkatalog → parameter set), Verjährungsprüfung, Punktestand/
   Tilgungsfristen (§ 29 StVG).

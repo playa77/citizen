@@ -1,4 +1,4 @@
-# Semantic Version: 0.10.0 | 2026-11-27 — WP-133: DISCLAIMER_VERSION v3.5.0.
+# Semantic Version: 0.11.0 | 2026-11-27 — WP-134: DISCLAIMER_VERSION v3.6.0.
 # 0.7.0 | 2026-11-17 — WP-111: UPDATE_TRUST_FILE (update-channel trust anchors).
 # 0.6.0 | 2026-11-16 — CR-03: STAGE_MAX_TOKENS (per-stage
 # output caps, empty by default).
@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     ENABLE_PROGRESS_STREAM: bool = True  # Whether to stream model output during analysis progress
     # Ack version = "v" + DISCLAIMER_DE/EN.md document version (WP-96, D-059);
     # bump together with the documents, never on its own.
-    DISCLAIMER_VERSION: str = "v3.5.0"
+    DISCLAIMER_VERSION: str = "v3.6.0"
     PSEUDONYMIZATION_ENABLED: bool = True  # WP-30 — pseudonymize PII before LLM calls
     # WP-42 — OCR quality gate
     OCR_QUALITY_ENABLED: bool = True

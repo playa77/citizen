@@ -1,0 +1,350 @@
+format: citizen-plain-goldset-v1.0
+module: verkehrsrecht
+version: 1.0.0
+cases:
+- id: PL-VK-001
+  kind: deadline
+  title: Einspruch ab bestätigter Zustellung
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-16'
+- id: PL-VK-002
+  kind: deadline
+  title: Samstag am Fristende
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-07'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+- id: PL-VK-003
+  kind: deadline
+  title: Neujahr und Wochenende
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-12-18'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-01-04'
+- id: PL-VK-004
+  kind: deadline
+  title: Sächsischer Feiertag
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-04'
+    zustellungsart: inland
+    bundesland: SN
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-19'
+- id: PL-VK-005
+  kind: deadline
+  title: Kein Feiertag in Berlin
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-04'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-18'
+- id: PL-VK-006
+  kind: deadline
+  title: Bestätigter örtlicher Feiertag
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-11-16'
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-17'
+- id: PL-VK-007
+  kind: deadline
+  title: Zustellung unbekannt
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: null
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+    bescheid_datum: '2026-11-02'
+  spec_id: vk_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VK-008
+  kind: deadline
+  title: Anhörungsbogen
+  facts:
+    document_type: anhoerung
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-009
+  kind: deadline
+  title: Zeugenfragebogen
+  facts:
+    document_type: zeugenfragebogen
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-010
+  kind: deadline
+  title: Dokumentart ungeklärt
+  facts: {}
+  spec_id: vk_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VK-011
+  kind: deadline
+  title: Zustellwirksamkeit offen
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: null
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VK-012
+  kind: deadline
+  title: Auslandszustellung
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: ausland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VK-013
+  kind: deadline
+  title: Öffentliche Zustellung
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: oeffentlich
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VK-014
+  kind: deadline
+  title: Kalender unbestätigt
+  facts:
+    document_type: bussgeldbescheid
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: false
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      bussgeldbescheid_bestaetigt: true
+      zustellung_wirksam_bestaetigt: true
+      regulaerer_einspruch_bestaetigt: true
+      kein_sonderregime: true
+  spec_id: vk_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-VK-015
+  kind: deadline
+  title: Register und Überliegefrist
+  facts:
+    document_type: punkte
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-016
+  kind: deadline
+  title: Fahrverbotsantritt
+  facts:
+    document_type: fahrverbot
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-017
+  kind: deadline
+  title: Geschwindigkeit mit Wiederholung
+  facts:
+    document_type: sonstiges
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-018
+  kind: deadline
+  title: Unterbrechung der Verjährung
+  facts:
+    document_type: sonstiges
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-019
+  kind: deadline
+  title: Historisches Regime
+  facts:
+    document_type: sonstiges
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-VK-020
+  kind: deadline
+  title: Akteneinsicht wahrt keine Frist
+  facts:
+    document_type: akteneinsicht
+  spec_id: vk_einspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+- id: PL-frist_pruefen
+  kind: finding
+  title: Frist prüfen
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+- id: PL-akteneinsicht_vorbereiten
+  kind: finding
+  title: Akteneinsicht vorbereiten
+  ergebnis: 'Vorläufige Einordnung: Akteneinsicht vorbereiten.'
+  expect:
+    category: akteneinsicht_vorbereiten
+    category_source: ergebnis
+- id: PL-beratung_erforderlich
+  kind: finding
+  title: Beratung erforderlich
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+- id: PL-einordnung_offen
+  kind: finding
+  title: Einordnung offen
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+- id: PL-fallback
+  kind: finding
+  title: Unbelegte Zusage bleibt offen
+  ergebnis: Sie dürfen garantiert fahren.
+  expect:
+    category: einordnung_offen
+    category_source: fallback

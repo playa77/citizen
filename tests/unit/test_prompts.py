@@ -24,8 +24,8 @@ REGISTRY = {area: get_prompts([area]) for area in area_tables().prompt_profiles}
 
 
 @pytest.mark.parametrize(
-    "areas", [None, [], ["verkehrsrecht"], ["xxx_nonexistent_xxx"], ["verwaltungsrecht"],
-              ["sozialrecht", "verkehrsrecht"]],
+    "areas", [None, [], ["not_installed"], ["xxx_nonexistent_xxx"], ["verwaltungsrecht"],
+              ["sozialrecht", "not_installed"]],
 )
 def test_unusable_scope_requires_explicit_selection(areas: list[str] | None) -> None:
     with pytest.raises(ModuleSelectionRequired):

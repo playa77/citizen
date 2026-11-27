@@ -78,6 +78,12 @@ direction permits backend step 2 to proceed (D-069, backend continuation directi
   because the publisher returned challenge/empty responses. Verification and
   limits: [D-075](docs/decisions/D-075-wp133-contract-implementation.md).
   Human review/promotion, deployment ingestion and live inference remain pending.
+- [x] WP-134 experimental backend implementation: `verkehrsrecht` 0.1.0,
+  core 3.9.0 / module API 3.7. Qualified objection dates, shared StPO rollover,
+  selected speed-table and current-regime limitation/ban/register checks,
+  guarded drafts and 20 synthetic cases. Annex/table retrieval remains partial;
+  no complete BKat coverage, live quality or human promotion is claimed.
+  Verification and limits: [D-076](docs/decisions/D-076-wp134-traffic-implementation.md).
 - [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing

@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.5.0 · **Date:** 2026-11-27
+**Version:** 3.6.0 · **Date:** 2026-11-27
 
 **Author:** www.github.com/playa77
 
@@ -39,7 +39,7 @@ reads German social-law benefit notices (Bescheide), binds every statement to
 the statutory text, recomputes benefit calculations deterministically, and
 determines deadlines to the exact day. Further legal areas — inheritance, family and criminal law — exist as experimental
 modules: they route concerns and draw on the matching legal sources, but do
-not yet compute deadlines or amounts. The experimental debt, tenancy, employment and contract
+not yet compute deadlines or amounts. The experimental debt, tenancy, employment, contract and traffic
 modules provide bounded, qualified deadline and arithmetic checks with
 explicit prerequisites and limits (Part D). There is a versioned golden set of verified test cases against
 which every change is measured. Known limitations exist, and they live in the
@@ -433,7 +433,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.5.0`); after a version change, renewed
+prefixed with `v`, currently `v3.6.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -898,7 +898,26 @@ Human review and live evaluation remain pending; synthetic offline checks do not
 
 ---
 
+### D.9 Traffic law (`verkehrsrecht`)
+
+Support for your own traffic administrative-offence matter and advice appointment.
+A fine notice needs prompt checks of service, objection, form and the receiving authority.
+A hearing questionnaire is not a fine notice. An affected person need not comment on the allegation;
+duties concerning personal particulars and witness duties differ. Never give false information.
+File access and separate measurement-data access are qualified; a request does not stop the objection period.
+Limitation depends on the complete file, interruptions, suspension and transitional law.
+Do not apply the current six-month rule or driving-ban regime to older cases without review.
+Sanction tables cover only expressly identified ordinary speeding cases.
+Retention expiry is not deletion; a points sum establishes neither driving entitlement nor automatic withdrawal.
+A driving ban taking effect differs from its duration starting. Do not drive on the basis of this output.
+Accidents, crimes, alcohol/drugs, licence withdrawal and international cases need separate advice.
+Drafts are not sent. Human review and live evaluation remain pending; no verified promotion is claimed.
+
+---
+
 ## Change History
+
+- **3.6.0 (2026-11-27):** Traffic law: qualified objection, file access and bounded traffic checks; current regimes and partial coverage are explicit. Renewed acknowledgement required.
 
 - **3.5.0 (2026-11-27):** Contract module: qualified consumer dates, interest, passenger-compensation checks and drafts; evidence presumptions distinguished from filing deadlines. Renewed acknowledgement required.
 

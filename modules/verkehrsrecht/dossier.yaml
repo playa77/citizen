@@ -1,0 +1,50 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: bescheid
+  label_de: Vollständiges Schreiben, Rechtsbehelfsbelehrung, Umschlag und Zustellnachweis
+  why_de: Dokumentart und wirksame Zustellung bestimmen die Einspruchsfrist.
+  topic: bescheid
+  required: true
+- id: akte
+  label_de: Aktenzeichen, Akteneinsicht, Messunterlagen und bekannte Verfahrensereignisse
+  why_de: Ohne vollständige Akte können Unterbrechung und Beweisfragen offen bleiben.
+  topic: akte
+  required: true
+- id: fahrverbot
+  label_de: Rechtskraftnachweise, Fahrverbotsanordnung und Verwahrungs-/Vermerkbeleg
+  why_de: Wirksamkeit und Beginn der Verbotsdauer sind verschieden.
+  topic: fahrverbot
+  required: true
+- id: register
+  label_de: Aktuelle Registerauskunft, frühere Entscheidungen und Probezeitangaben
+  why_de: Tatzeit, Rechtskraft, Tilgung und Maßnahmenstufen brauchen getrennte Prüfung.
+  topic: register
+  required: true
+questions:
+- id: frist
+  text_de: Wann wurde mir wirksam zugestellt, welche Form und welche Stelle gelten für meinen Einspruch?
+  topic: frist
+- id: akte
+  text_de: Welche Akten und Messdaten kann ich erhalten, und wie sichere ich daneben meine Einspruchsfrist?
+  topic: akte
+- id: verjaehrung
+  text_de: Welche personenbezogenen Unterbrechungen, Ruhezeiten und Übergangsregeln ergeben sich aus der
+    vollständigen Akte?
+  topic: verjaehrung
+- id: fahrverbot
+  text_de: Wann wird mein Fahrverbot wirksam und wann beginnt die Verbotsdauer; welche Anordnung ist bestätigt?
+  topic: fahrverbot
+- id: register
+  text_de: Welche Einträge, Tatdaten, Rechtskraftdaten und Maßnahmenstufen sind für meinen Punktestand
+    maßgeblich?
+  topic: register
+- id: rechte
+  text_de: Bin ich betroffene Person oder Zeuge, welche Personalien muss ich angeben und welche Aussageverweigerungsrechte
+    bestehen?
+  topic: rechte
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

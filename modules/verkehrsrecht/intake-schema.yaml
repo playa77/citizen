@@ -1,0 +1,273 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/verkehrsrecht-intake-v0.1.0
+title: Experimental own-matter traffic-offence intake
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+  synthetic_data_confirmed:
+    type: boolean
+  document_type:
+    enum:
+    - bussgeldbescheid
+    - anhoerung
+    - zeugenfragebogen
+    - punkte
+    - fahrverbot
+    - akteneinsicht
+    - sonstiges
+  zustellungsart:
+    enum:
+    - inland
+    - ausland
+    - oeffentlich
+  bundesland:
+    enum:
+    - BB
+    - BE
+    - BW
+    - BY
+    - HB
+    - HE
+    - HH
+    - MV
+    - NI
+    - NW
+    - RP
+    - SH
+    - SL
+    - SN
+    - ST
+    - TH
+  feiertagskalender_bestaetigt:
+    type: boolean
+  feiertage_zusaetzlich:
+    type: array
+    items:
+      type: string
+      format: date
+    maxItems: 366
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      bussgeldbescheid_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      zustellung_wirksam_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      regulaerer_einspruch_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      kein_sonderregime:
+        type:
+        - boolean
+        - 'null'
+  calculation_type:
+    enum:
+    - sanction_lookup
+    - prosecution_limitation
+    - driving_ban_start
+    - register_retention
+    - none
+  vehicle_class:
+    enum:
+    - bkat_11_3
+    - other
+    - null
+  location:
+    enum:
+    - inside
+    - outside
+    - null
+  excess_kmh:
+    type:
+    - integer
+    - 'null'
+    minimum: 1
+  offence_regime:
+    enum:
+    - stvg_24_1_standard
+    - other
+    - null
+  regime:
+    enum:
+    - stvg_25_2
+    - stvg_25_3_1
+    - other
+    - null
+  bescheid_datum:
+    type:
+    - string
+    - 'null'
+    format: date
+    description: Document date only; never establishes actual service.
+  zustellung_tatsaechlich:
+    type:
+    - string
+    - 'null'
+    format: date
+  as_of:
+    type:
+    - string
+    - 'null'
+    format: date
+  offence_on:
+    type:
+    - string
+    - 'null'
+    format: date
+  final_on:
+    type:
+    - string
+    - 'null'
+    format: date
+  custody_on:
+    type:
+    - string
+    - 'null'
+    format: date
+  applicability_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  current_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  tolerance_deducted_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  ordinary_negligence_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_aggravation_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_repeat_offence_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  offence_completed_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  complete_file_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_suspension_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_court_proceeding_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  finality_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  ordered_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  custody_or_endorsement_required_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_multiple_bans_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  complete_register_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_special_register_rules_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  no_probationary_license_confirmed:
+    type:
+    - boolean
+    - 'null'
+    description: Explicit qualified confirmation required; unknown stays null.
+  interruptions:
+    type:
+    - array
+    - 'null'
+    maxItems: 100
+    items:
+      type: object
+      additionalProperties: false
+      required:
+      - date
+      - basis
+      - qualified_confirmed
+      properties:
+        date:
+          type: string
+          format: date
+        basis:
+          enum:
+          - owig_33_1_1
+          - owig_33_1_9
+        qualified_confirmed:
+          type:
+          - boolean
+          - 'null'
+  records:
+    type:
+    - array
+    - 'null'
+    maxItems: 100
+    items:
+      type: object
+      additionalProperties: false
+      required:
+      - record_id
+      - final_on
+      - points
+      - owi_classification_confirmed
+      properties:
+        record_id:
+          type: string
+          minLength: 1
+        final_on:
+          type: string
+          format: date
+        points:
+          enum:
+          - 1
+          - 2
+        owi_classification_confirmed:
+          type:
+          - boolean
+          - 'null'

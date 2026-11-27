@@ -1,0 +1,141 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Verkehrsrechtsberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und Anschrift]
+
+
+        Betreff: [BITTE PRÜFEN: Aktenzeichen, Schreiben und Datum]
+
+
+        [BITTE PRÜFEN: Dokumentart, Zustellung, Vorwurf, Rolle, Rechtskraft und vollständige Akte]
+
+        Dieses Blatt enthält keine Prozesserklärung und wahrt keine Frist. Einspruch, Akteneinsicht, Verjährung
+        und Fahrverbot getrennt prüfen. Bei Bußgeldbescheid unverzüglich Rat suchen. Keine Aussage über
+        Schuld, Verjährungseintritt oder Fahrberechtigung.
+
+
+        [BITTE PRÜFEN: Name, Datum, zulässige Form und rechtzeitiger nachweisbarer Eingang bei der zuständigen
+        Stelle]
+
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  einspruch:
+    title: Einspruch vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und Anschrift]
+
+
+        Betreff: [BITTE PRÜFEN: Aktenzeichen, Schreiben und Datum]
+
+
+        [BITTE PRÜFEN: nur nach Prüfung von Bescheid, eigener Betroffenheit, Form und Frist aufnehmen:
+        Hiermit lege ich gegen den oben bezeichneten Bußgeldbescheid Einspruch ein.]
+
+        [BITTE PRÜFEN: keine Beschränkung oder Sachverhaltseinlassung ungeprüft ergänzen.]
+
+        Die zuständige Verwaltungsbehörde muss den formgerechten Einspruch rechtzeitig erhalten. Ein späterer
+        Verfahrensausgang kann auch nachteiliger sein (§66 Abs.2 OWiG). Keine einfache E-Mail als ausreichend
+        voraussetzen.
+
+
+        [BITTE PRÜFEN: Name, Datum, zulässige Form und rechtzeitiger nachweisbarer Eingang bei der zuständigen
+        Stelle]
+
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  akteneinsicht:
+    title: Akteneinsicht und Messdatenzugang vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und Anschrift]
+
+
+        Betreff: [BITTE PRÜFEN: Aktenzeichen, Schreiben und Datum]
+
+
+        [BITTE PRÜFEN: als betroffene Person beantrage ich nach §49 OWiG Einsicht in die Akten bzw. verfügbare
+        Kopien.]
+
+        [BITTE PRÜFEN: konkret benötigte Messunterlagen, Messprotokoll, Beweismittel und gegebenenfalls
+        gesonderter Zugang zu nicht bei der Akte befindlichen Messdaten samt Begründung.]
+
+        Untersuchungszweck, Drittinteressen, tatsächlicher Umfang und mögliche Kosten bleiben zu prüfen.
+        Kein uneingeschränkter Messdatenanspruch wird behauptet. Der Antrag hemmt die Einspruchsfrist
+        nicht. Er ersetzt keinen Einspruch.
+
+
+        [BITTE PRÜFEN: Name, Datum, zulässige Form und rechtzeitiger nachweisbarer Eingang bei der zuständigen
+        Stelle]
+
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '
+  anhoerung:
+    title: 'Anhörung: Rechte und Rückmeldung vorbereiten'
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und Anschrift]
+
+
+        Betreff: [BITTE PRÜFEN: Aktenzeichen, Schreiben und Datum]
+
+
+        [BITTE PRÜFEN: Bin ich betroffene Person oder Zeuge? Rolle und Ladungsart zuerst klären.]
+
+        Als betroffene Person müssen Sie sich nicht zur Sache äußern. Daraus folgt keine Befreiung von
+        Pflichten zu Personalien (§ 111 OWiG). Keine falschen Angaben machen. Für Zeugen gelten andere
+        Pflichten; Zeugnis- und Auskunftsverweigerung nach §§52,55 StPO individuell prüfen.
+
+        [BITTE PRÜFEN: ausschließlich rechtlich geprüfte, tatsächlich zutreffende Rückmeldung aufnehmen.
+        Keine Benennung einer anderen Person und kein Schuldeingeständnis automatisch ergänzen.]
+
+        Ein Anhörungsbogen startet nicht die Einspruchsfrist des §67 OWiG. Verfahrenshandlungen können
+        jedoch Verjährung unterbrechen; Empfangsdatum ist dafür nicht stets maßgeblich.
+
+
+        [BITTE PRÜFEN: Name, Datum, zulässige Form und rechtzeitiger nachweisbarer Eingang bei der zuständigen
+        Stelle]
+
+
+        Keine automatische Versendung oder gerichtliche Einreichung.
+
+        '

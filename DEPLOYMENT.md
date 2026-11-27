@@ -398,3 +398,20 @@ EUR-Lex direct fetching returned challenge/empty responses during implementation
 the adapter refuses these and its raw-publisher compatibility remains unverified.
 Do not bypass publisher restrictions or treat parser fixtures as populated data.
 This package authorizes no deployment, live inference or verified promotion.
+
+
+### WP-134 upgrade notes (core 3.9.0)
+
+Apply `alembic upgrade head` to extend the existing chain through migration
+020 (OWiG, StVG, StVO, BKatV, FeV, StPO source types). The guarded downgrade
+refuses while traffic sources remain stored. Set `DISCLAIMER_VERSION` to
+`v3.6.0` and obtain renewed acknowledgement. The new experimental peer module
+is available under existing dev/self tier rules; provider enablement and
+user selection remain separate, explicit concerns.
+
+No corpus is populated by upgrading. Explicitly select ingestion sources when
+needed. BKatV/FeV/StVO annexes and tables are omitted by the paragraph scraper;
+source availability does not establish complete sanction/point coverage.
+Traffic parameters expire after 2026-12-31 without fallback; proposed status
+and human review remain pending. No live-inference result or deployment
+readiness claim accompanies this package.

@@ -1,0 +1,31 @@
+display_name: Verkehrsordnungswidrigkeiten in Ihrer eigenen Angelegenheit
+statutes: OWiG, StVG, StVO, BKatV, FeV und ergänzend StPO
+document_examples: eines Bußgeldbescheids, Anhörungsbogens, Zeugenfragebogens oder einer Registerauskunft
+issue_terms:
+- 'Einspruch (§67 OWiG): zwei Wochen ab wirksamer Zustellung, nicht Briefdatum; §43 StPO und bestätigten
+  örtlichen Kalender verwenden; fehlerhafte Belehrung bedeutet keine automatische Jahresfrist'
+- 'Akteneinsicht (§49 OWiG): Antrag, Untersuchungszweck und Drittinteressen prüfen. Messdaten außerhalb
+  der Akte gesondert anfordern; kein pauschaler Anspruch. Antrag hemmt die Einspruchsfrist nicht'
+- 'Anhörung (§55 OWiG): Betroffener muss sich nicht zur Sache äußern. Personalienpflichten (§111 OWiG)
+  und Zeugenpflichten sowie §§52,55 StPO gesondert prüfen. Keine falschen Angaben'
+- 'Verfolgungsverjährung (§26 Abs.3 StVG; §§31–33 OWiG): aktuell gewöhnlich sechs Monate, keine pauschale
+  Dreimonatsregel; Sondertatbestände, Übergang, Ruhen und Unterbrechungen nur anhand vollständiger Akte
+  prüfen'
+- 'Fahrverbot (§25 StVG): aktuelle Abs.2/3 und Abs.6 trennen Wirksamkeit und Beginn der Verbotsdauer.
+  Viermonatsregel nur bei bestätigter Anordnung, keine Behauptung einer Fahrberechtigung'
+- 'Sanktionen: nur bestätigte gewöhnliche Fahrlässigkeit in Nr.11.3 Tabelle 1c; Toleranzabzug, Fahrzeuggruppe,
+  Ortslage, Wiederholung und Erschwerungen nicht schätzen. Keine vollständige BKat-Abdeckung'
+- 'Register (§§4,29 StVG; FeV Anlage13): Tattagprinzip, Rechtskraft, Tilgung, Überliegefrist, Probezeit
+  und Maßnahmenstufen trennen. Keine einfache Subtraktion als aktuellen Punktestand ausgeben'
+- 'Unfall, Straftat, Alkohol/Drogen, Fahrerlaubnisentziehung oder Auslandsbezug: gesonderte individuelle
+  Beratung; keine automatische Berechnung'
+formal_examples: Art des Schreibens, wirksame Zustellung, Kalender des Empfangsorts, Aktenzeichen, Behörde
+  und zulässiger Übermittlungsweg
+material_examples: Tatvorwurf, Beweismittel, Messdaten, Rechtskraft, Registerauskunft und bekannte Verfahrensereignisse
+answerable_with: deutschem Verkehrsordnungswidrigkeitenrecht für Ihre eigene Terminvorbereitung
+hierarchy_example: OWiG > § 67 > Abs. 1
+adversary_examples: die Verwaltungsbehörde oder Bußgeldstelle
+result_categories:
+- Frist prüfen – Zustellung, Form und Kalender sind zu bestätigen
+- Akteneinsicht vorbereiten – Akten und gesonderte Messdatenzugänge klären
+- Beratung erforderlich – Verjährung, Fahrverbot, Register und Sonderfälle individuell prüfen
