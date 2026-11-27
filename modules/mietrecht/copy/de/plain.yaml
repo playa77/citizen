@@ -1,0 +1,88 @@
+format: citizen-plain-copy-v1.0
+module: mietrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  miete_pruefen:
+    title: Miete prüfen
+    text: Mieterhöhung oder Miethöhe benötigt eine Prüfung. Eine Rechenobergrenze bestätigt keine wirksame
+      Mieterhöhung.
+    next_step: Sammeln Sie Mietvertrag, Erhöhungsschreiben und Nachweise zur Vergleichsmiete.
+  kosten_pruefen:
+    title: Kosten prüfen
+    text: Abrechnung und Umlage benötigen eine Prüfung. Eine rechnerisch passende Summe bestätigt keine
+      Zahlungspflicht.
+    next_step: Prüfen Sie einzelne Positionen und organisieren Sie rechtzeitig Belegeinsicht.
+  frist_pruefen:
+    title: Frist prüfen
+    text: Dokumentart, tatsächlicher Zugang und weitere Voraussetzungen müssen geklärt werden. Das Briefdatum
+      genügt dafür nicht.
+    next_step: Bewahren Sie Zugangsnachweise auf. Lassen Sie Kündigungen und Gerichtsschreiben unverzüglich
+      prüfen.
+  beratung_erforderlich:
+    title: Beratung erforderlich
+    text: Ihr Fall benötigt eine individuelle Prüfung. Eine Schonfristzahlung beseitigt eine ordentliche
+      Kündigung nicht automatisch.
+    next_step: Suchen Sie bei drohendem Wohnungsverlust unverzüglich Mietberatung oder anwaltliche Hilfe.
+  einordnung_offen:
+    title: Einordnung noch offen
+    text: Die Angaben reichen noch nicht für eine Einordnung. Das bestätigt weder eine Forderung noch
+      ihre Unwirksamkeit.
+    next_step: Sammeln Sie Unterlagen. Beachten Sie mögliche Fristen und suchen Sie bei Unsicherheit Rat.
+deadlines:
+  miet_zustimmung:
+    title: Zustimmung zur Mieterhöhung
+    action: Lassen Sie das Verlangen und seine Voraussetzungen vor einer Zustimmung prüfen. Eine Anfrage
+      verlängert die Frist nicht.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Voraussetzungen
+        und die Berechnung prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die nötigen Angaben und lassen
+        Sie die Berechnung prüfen.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann noch nicht genannt werden.
+        Holen Sie unverzüglich Rat.
+      not_applicable: Diese Fristregel passt nicht zu den bestätigten Angaben. Andere Fristen können trotzdem
+        wichtig sein.
+  miet_betriebskosten_einwendung:
+    title: Einwendungen zur Betriebskostenabrechnung
+    action: Benennen Sie konkrete Einwendungen rechtzeitig. Eine Belegeinsichtsanfrage allein verlängert
+      die Frist nicht.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Voraussetzungen
+        und die Berechnung prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die nötigen Angaben und lassen
+        Sie die Berechnung prüfen.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann noch nicht genannt werden.
+        Holen Sie unverzüglich Rat.
+      not_applicable: Diese Fristregel passt nicht zu den bestätigten Angaben. Andere Fristen können trotzdem
+        wichtig sein.
+  miet_sozialwiderspruch:
+    title: Widerspruch wegen besonderer Härte
+    action: Lassen Sie Kündigung, Härtegründe, Hinweis und Textform unverzüglich prüfen. Bei fehlendem
+      Hinweis können spätere Möglichkeiten bestehen.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Voraussetzungen
+        und die Berechnung prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die nötigen Angaben und lassen
+        Sie die Berechnung prüfen.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann noch nicht genannt werden.
+        Holen Sie unverzüglich Rat.
+      not_applicable: Diese Fristregel passt nicht zu den bestätigten Angaben. Andere Fristen können trotzdem
+        wichtig sein.
+  miet_schonfrist:
+    title: Schonfristzahlung prüfen
+    action: Holen Sie unverzüglich Rat. Prüfen Sie vollständige Zahlung oder Verpflichtung einer öffentlichen
+      Stelle und frühere Schonfristfälle. Eine ordentliche Kündigung bleibt gesondert prüfbedürftig.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Voraussetzungen
+        und die Berechnung prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die nötigen Angaben und lassen
+        Sie die Berechnung prüfen.
+      missing_input: Bestätigte Angaben fehlen. Ein verlässliches Datum kann noch nicht genannt werden.
+        Holen Sie unverzüglich Rat.
+      not_applicable: Diese Fristregel passt nicht zu den bestätigten Angaben. Andere Fristen können trotzdem
+        wichtig sein.

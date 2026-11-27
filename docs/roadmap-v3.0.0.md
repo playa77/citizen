@@ -1,6 +1,7 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
+<!-- Version: 3.3.0 | 2026-11-27 — WP-131 experimental backend, explicit regional source gaps.
+     3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
      3.1.1 | 2026-11-26 — owner directs backend continuation; GUI remains separately owned; WP-130 foundation started.
      3.1.0 | 2026-11-26 — no default module (D-069/D-070): Sozialrecht's
      default designation superseded; WP-126 (explicit module selection and
@@ -416,7 +417,7 @@ Each module is one WP with the same nine sub-WPs:
 | WP | Module | Notes |
 |---|---|---|
 | WP-130 | M1 `schuldnerrecht` | Pfändungstabelle parameter feed (annual, 1 July) |
-| WP-131 | M2 `mietrecht` | Landesverordnungen sourcing (Kappungsgrenze, Mietpreisbremse) |
+| WP-131 | M2 `mietrecht` | Experimental backend implemented; regional sources partially executable, see D-073 |
 | WP-132 | M3 `arbeitsrecht` | § 4 KSchG banner = `critical` |
 | WP-133 | M4 `vertragsrecht` | EUR-Lex source type for VO 261/2004 |
 | WP-134 | M5 `verkehrsrecht` | builds core OWiG procedure library |
@@ -425,6 +426,18 @@ Each module is one WP with the same nine sub-WPs:
 | WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-131 backend implementation (2026-11-27):** `mietrecht` 0.2.0 adds
+receipt/event/service-based qualified deadlines, versioned rent/cost/notice/
+deposit checks, guarded drafts, public intake, dossier and DE/EN/de-LS copy.
+Core 3.6.0 / module API 3.4 extends existing deadline/corpus boundaries; no new
+service, dependency or frontend. Twenty synthetic cases and offline gates are
+included. State-source coverage is positive-only and incomplete nationwide;
+missing/expired/ambiguous data refuses arithmetic rather than guessing a
+local designation. Actual deployment ingestion and live evaluation are not
+claimed. See [D-073](decisions/D-073-wp131-tenancy-implementation.md) and its
+[verification record](superpowers/plans/2026-11-26-wp131-implementation.md).
+Remain experimental; review/promotion deferred under D-071.
 
 **WP-130 implementation (2026-11-26):** `schuldnerrecht` 0.2.0 implements
 domestic service-based deadlines, versioned qualified calculators, guarded

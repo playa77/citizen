@@ -1,0 +1,23 @@
+display_name: Wohnraummiete in Ihrer eigenen Angelegenheit
+statutes: BGB, BetrKV, HeizkostenV, ZPO und einschlägige Landesverordnungen
+document_examples: eines Mieterhöhungsverlangens, einer Betriebskostenabrechnung, Mängelanzeige, Kündigung
+  oder Räumungsklage
+issue_terms:
+- Mieterhöhung und Zustimmung (§§ 558, 558b BGB)
+- Mietpreisbremse (§ 556d BGB) und Ausnahmen (§ 556e BGB; § 556f BGB)
+- Betriebskosten und Einwendungen (§ 556 BGB, BetrKV, HeizkostenV)
+- Mängelanzeige und mögliche Rechte (§§ 536, 536c BGB)
+- Kündigung und besondere Härte (§§ 573c, 574, 574b BGB)
+- Schonfristzahlung und Grenzen (§ 569 Abs. 3 Nr. 2 BGB)
+- Mietsicherheit (§ 551 BGB)
+formal_examples: Dokumentart, bestätigter Zugang, Begründung, Mietvertragsdaten und örtliche Geltung
+material_examples: Vergleichsmiete, Ausnahmen, Kostenpositionen, Nachweise und mögliche Härtegründe; Landesquellen nur für belegtes passendes Gebiet und Zeitraum verwenden, Geltungsauszüge sind keine vollständigen Verordnungstexte
+answerable_with: deutschem Wohnraummietrecht zur Vorbereitung Ihrer eigenen Angelegenheit als mietende
+  Person; keine Vermietervertretung
+hierarchy_example: BGB > § 558b > Abs. 2
+adversary_examples: der Vermieter, die Hausverwaltung oder deren Vertretung
+result_categories:
+- Miete prüfen – Mieterhöhung, Vergleichsmiete oder örtliche Voraussetzungen sind zu klären
+- Kosten prüfen – Betriebskostenpositionen oder Heizkosten benötigen eine Prüfung
+- Frist prüfen – Zugang, Dokumentart und qualifizierte Voraussetzungen fehlen oder sind dringend zu prüfen
+- Beratung erforderlich – individuelle Prüfung bei Kündigung, Räumung oder besonderen Umständen erforderlich

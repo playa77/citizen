@@ -1,0 +1,88 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: mietvertrag
+  label_de: Mietvertrag mit Nachträgen, Miethöhe und Angaben zur Wohnung
+  why_de: Damit können Mietart, Vertragsbedingungen und vereinbarte Kosten geprüft werden.
+  topic: vertrag
+  required: true
+- id: schreiben_zugang
+  label_de: Vollständige Schreiben mit Anlagen, Umschlägen und Nachweisen zum tatsächlichen Zugang
+  why_de: Das Briefdatum ersetzt keinen Nachweis des Zugangs oder einer gerichtlichen Zustellung.
+  topic: fristen
+  required: true
+- id: mietzahlungen
+  label_de: Nachweise über Nettokaltmiete, Vorauszahlungen, Kaution und bisherige Zahlungen
+  why_de: Die Beratung braucht nachvollziehbare Beträge und Zeiträume.
+  topic: miete
+  required: true
+- id: bisheriger_schriftwechsel
+  label_de: Bisheriger Schriftwechsel, Erklärungen und Gesprächsnotizen
+  why_de: Bereits erklärte Zustimmung oder andere Schritte können rechtliche Folgen haben.
+  topic: vertrag
+  required: true
+- id: abrechnung_belege
+  label_de: Betriebskostenabrechnung, Vorjahresabrechnung, Umlageschlüssel und verfügbare Belege
+  topic: kosten
+  required: true
+  when:
+    any_keyword:
+    - betriebskosten
+    - nebenkosten
+    - heizkosten
+    - abrechnung
+- id: mangel_nachweise
+  label_de: Fotos, Protokolle, Mängelanzeigen und Nachweise über den Zugang
+  topic: mangel
+  required: true
+  when:
+    any_keyword:
+    - mangel
+    - mängel
+    - schimmel
+    - heizung
+    - minderung
+- id: kuendigung_haerte
+  label_de: Kündigung, gerichtliche Schreiben, Härtenachweise und Unterlagen zur Wohnungssuche
+  topic: wohnen
+  required: true
+  when:
+    any_keyword:
+    - kündigung
+    - räumung
+    - härte
+    - wohnungssuche
+- id: vergleichsmiete_gebiet
+  label_de: Vergleichsmietunterlagen, Erhöhungsverlauf und amtliche örtliche Verordnung mit Geltungszeitraum
+  topic: miete
+  required: true
+  when:
+    any_keyword:
+    - mieterhöhung
+    - mietpreisbremse
+    - kappungsgrenze
+    - vergleichsmiete
+questions:
+- id: frist_pruefen
+  text_de: Welche Fristen gelten für mein Schreiben, und welche Angaben fehlen für eine verlässliche Berechnung?
+  topic: fristen
+- id: miete_pruefen
+  text_de: Welche Vergleichsmiete, örtlichen Verordnungen und Ausnahmen sind für meine Wohnung maßgeblich?
+  topic: miete
+- id: kosten_pruefen
+  text_de: Welche Kostenpositionen und Umlageschlüssel muss ich konkret beanstanden, und wie erhalte ich
+    Belegeinsicht?
+  topic: kosten
+- id: mangel_vorgehen
+  text_de: Wie dokumentiere und melde ich den Mangel, und welche Risiken bestehen vor einer Änderung meiner
+    Zahlungen?
+  topic: mangel
+- id: wohnung_sichern
+  text_de: Welche Schritte können meine Wohnung sichern, und welche Hilfen kommen bei Kündigung oder Mietschulden
+    in Betracht?
+  topic: wohnen
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

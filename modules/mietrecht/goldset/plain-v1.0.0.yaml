@@ -1,0 +1,383 @@
+format: citizen-plain-goldset-v1.0
+module: mietrecht
+version: 1.0.0
+note: Receipt and event inputs must be explicit; letter chronology never supplies them. Provisional copy
+  is checked statically.
+cases:
+- id: PL-miet_zustimmung-computed
+  kind: deadline
+  title: 'miet_zustimmung: computed'
+  facts:
+    document_type: mieterhoehung
+    zugang_tatsaechlich: '2026-11-02'
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  spec_id: miet_zustimmung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-02-01'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_zustimmung-missing
+  kind: deadline
+  title: 'miet_zustimmung: missing'
+  facts:
+    document_type: mieterhoehung
+  spec_id: miet_zustimmung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_zustimmung-not_applicable
+  kind: deadline
+  title: 'miet_zustimmung: not_applicable'
+  facts:
+    document_type: sonstiges
+  spec_id: miet_zustimmung
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_betriebskosten_einwendung-computed
+  kind: deadline
+  title: 'miet_betriebskosten_einwendung: computed'
+  facts:
+    document_type: betriebskostenabrechnung
+    zugang_tatsaechlich: '2026-11-02'
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  spec_id: miet_betriebskosten_einwendung
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-11-30'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_betriebskosten_einwendung-missing
+  kind: deadline
+  title: 'miet_betriebskosten_einwendung: missing'
+  facts:
+    document_type: betriebskostenabrechnung
+  spec_id: miet_betriebskosten_einwendung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_betriebskosten_einwendung-not_applicable
+  kind: deadline
+  title: 'miet_betriebskosten_einwendung: not_applicable'
+  facts:
+    document_type: sonstiges
+  spec_id: miet_betriebskosten_einwendung
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_sozialwiderspruch-computed
+  kind: deadline
+  title: 'miet_sozialwiderspruch: computed'
+  facts:
+    document_type: kuendigung
+    ereignis_datum: '2027-05-31'
+    bundesland: NW
+    qualifikationen:
+      widerspruchshinweis_rechtzeitig: true
+      ordentliche_kuendigung: true
+  spec_id: miet_sozialwiderspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-03-31'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_sozialwiderspruch-missing
+  kind: deadline
+  title: 'miet_sozialwiderspruch: missing'
+  facts:
+    document_type: kuendigung
+  spec_id: miet_sozialwiderspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_sozialwiderspruch-not_applicable
+  kind: deadline
+  title: 'miet_sozialwiderspruch: not_applicable'
+  facts:
+    document_type: sonstiges
+  spec_id: miet_sozialwiderspruch
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_schonfrist-computed
+  kind: deadline
+  title: 'miet_schonfrist: computed'
+  facts:
+    document_type: raeumungsklage
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    qualifikationen:
+      zahlungsverzug: true
+      keine_schonfrist_letzte_zwei_jahre: true
+      rechtshaengigkeit_bestaetigt: true
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  spec_id: miet_schonfrist
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-01-04'
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_schonfrist-missing
+  kind: deadline
+  title: 'miet_schonfrist: missing'
+  facts:
+    document_type: raeumungsklage
+  spec_id: miet_schonfrist
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-miet_schonfrist-not_applicable
+  kind: deadline
+  title: 'miet_schonfrist: not_applicable'
+  facts:
+    document_type: sonstiges
+  spec_id: miet_schonfrist
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    excludes:
+      de:
+      - '{'
+      - '[BITTE PRÜFEN'
+      en:
+      - '{'
+      - '[BITTE PRÜFEN'
+      de-LS:
+      - '{'
+      - '[BITTE PRÜFEN'
+- id: PL-guard-1
+  kind: deadline
+  title: Zugang unbekannt
+  facts:
+    document_type: mieterhoehung
+    bundesland: NW
+  spec_id: miet_zustimmung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-guard-4
+  kind: deadline
+  title: Betriebskosten ohne Zugangsdatum
+  facts:
+    document_type: betriebskostenabrechnung
+    bundesland: NW
+  spec_id: miet_betriebskosten_einwendung
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-guard-6
+  kind: deadline
+  title: Fehlender Hinweis auf Härtewiderspruch
+  facts:
+    document_type: kuendigung
+    ereignis_datum: '2027-05-31'
+    qualifikationen:
+      widerspruchshinweis_rechtzeitig: false
+      ordentliche_kuendigung: true
+  spec_id: miet_sozialwiderspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-guard-8
+  kind: deadline
+  title: Wiederholte Schonfrist ungeklärt
+  facts:
+    document_type: raeumungsklage
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    qualifikationen:
+      zahlungsverzug: true
+      rechtshaengigkeit_bestaetigt: true
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  spec_id: miet_schonfrist
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-guard-19
+  kind: deadline
+  title: Auslandszustellung einer Räumungsklage
+  facts:
+    document_type: raeumungsklage
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: ausland
+    bundesland: NW
+    qualifikationen:
+      zahlungsverzug: true
+      keine_schonfrist_letzte_zwei_jahre: true
+      rechtshaengigkeit_bestaetigt: true
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  spec_id: miet_schonfrist
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+- id: PL-F-miete_pruefen
+  kind: finding
+  title: Miete prüfen
+  ergebnis: 'Vorläufige Einordnung: Miete prüfen.'
+  expect:
+    category: miete_pruefen
+    category_source: ergebnis
+- id: PL-F-kosten_pruefen
+  kind: finding
+  title: Kosten prüfen
+  ergebnis: 'Vorläufige Einordnung: Kosten prüfen.'
+  expect:
+    category: kosten_pruefen
+    category_source: ergebnis
+- id: PL-F-frist_pruefen
+  kind: finding
+  title: Frist prüfen
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+- id: PL-F-beratung_erforderlich
+  kind: finding
+  title: Beratung erforderlich
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+- id: PL-F-einordnung_offen
+  kind: finding
+  title: Einordnung offen
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+- id: PL-F-fallback
+  kind: finding
+  title: Unbelegte Sicherheit bleibt offen
+  ergebnis: Die Kündigung ist garantiert wirksam.
+  expect:
+    category: einordnung_offen
+    category_source: fallback

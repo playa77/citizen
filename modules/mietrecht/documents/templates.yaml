@@ -1,0 +1,175 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Mietberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – zur Vorbereitung Ihrer eigenen Mietangelegenheit.
+
+        [BITTE PRÜFEN: Mietvertrag, betroffene Wohnung, Dokumentart, Zugang und Verfahrensstand]
+
+        Bewahren Sie vollständige Schreiben, Anlagen, Umschläge und Nachweise auf.
+
+        Dieses Blatt ist keine Zustimmung, kein Widerspruch und kein gerichtlicher Rechtsbehelf.
+
+        Es ersetzt keine fristwahrende Erklärung. Wählen Sie einen passenden Entwurf nach Prüfung der
+        Voraussetzungen.
+
+        Bei Kündigung, Räumungsklage oder drohendem Wohnungsverlust suchen Sie unverzüglich Mietberatung
+        oder anwaltliche Hilfe.
+
+        Ändern Sie Zahlungen nicht allein aufgrund einer automatischen Einschätzung.
+
+        '
+  mieterhoehung_antwort:
+    title: Antwort auf ein Mieterhöhungsverlangen vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Versand prüfen lassen. Diese Anfrage enthält keine Zustimmung zur Mieterhöhung.
+
+        {absender}
+
+        An [BITTE PRÜFEN: Vermieter oder bevollmächtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Wohnung und Mieterhöhungsverlangen]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte um nachvollziehbare Erläuterung des Mieterhöhungsverlangens und der zugrunde gelegten
+        Vergleichsmiete.
+
+        [BITTE PRÜFEN: Zugang, formelle Begründung, bisherige Nettokaltmiete und zeitliche Voraussetzungen]
+
+        [BITTE PRÜFEN: örtliche Verordnung, Vergleichsmiete, Kappungsgrenze und einschlägige Ausnahmen]
+
+        [BITTE PRÜFEN: konkrete fehlende Angaben und bereits erhaltene Anlagen]
+
+        Diese Anfrage ersetzt keine erforderliche Erklärung und verlängert keine Frist.
+
+        [BITTE PRÜFEN: ob nach Beratung ganz, teilweise oder nicht zugestimmt werden soll; keine automatische
+        Entscheidung]
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name, Unterschrift und nachweisbarer Zugang]
+
+        '
+  betriebskosten_belegeinsicht:
+    title: Belegeinsicht und Einwendungen zur Betriebskostenabrechnung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – konkrete Einwendungen und Fristen vor Versand prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: zuständige vermietende Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Wohnung, Abrechnungszeitraum und Betriebskostenabrechnung]
+
+        Sehr geehrte Damen und Herren,
+
+        ich bitte um Einsicht in die der bezeichneten Abrechnung zugrunde liegenden Belege.
+
+        Bitte teilen Sie mir mit, wie eine Einsicht organisiert werden kann.
+
+        [BITTE PRÜFEN: Zugang der Abrechnung und Ende der Einwendungsfrist]
+
+        [BITTE PRÜFEN: einzelne beanstandete Position, Betrag, Umlageschlüssel und tatsächliche Begründung]
+
+        [BITTE PRÜFEN: nur nach Bestätigung aufnehmen: Gegen die genau bezeichneten Positionen erhebe
+        ich die erläuterten Einwendungen]
+
+        Ein pauschaler Vorbehalt oder diese Belegeinsichtsanfrage ersetzt keine konkreten Einwendungen
+        und verlängert keine Frist.
+
+        [BITTE PRÜFEN: Nachzahlung, Fälligkeit und Zahlungen fachkundig klären; Zahlungen nicht automatisch
+        einstellen]
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und nachweisbarer Zugang]
+
+        '
+  maengelanzeige:
+    title: Mangel anzeigen und Abhilfe anfragen
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – Tatsachen und weiteres Vorgehen vor Versand prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: zuständige vermietende Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Wohnung und konkret beobachteter Mangel]
+
+        Sehr geehrte Damen und Herren,
+
+        ich zeige folgenden Mangel an:
+
+        [BITTE PRÜFEN: Ort, Art, Umfang, erstmalige Beobachtung und bisheriger Verlauf des Mangels]
+
+        [BITTE PRÜFEN: Fotos, Messungen, Zeugen und bisherige Meldungen; keine Ursache ohne Nachweis behaupten]
+
+        Ich bitte um Prüfung und Abhilfe sowie eine Nachricht zum weiteren Vorgehen.
+
+        [BITTE PRÜFEN: angemessene Frist und konkretes Datum nach Art, Dringlichkeit und Umständen]
+
+        [BITTE PRÜFEN: Zugang für Besichtigung oder Arbeiten und sichere Kontaktmöglichkeit]
+
+        Dieser Entwurf setzt keine Minderungsquote fest. Ändern Sie Zahlung, Zurückbehaltung oder Selbstvornahme
+        nicht ohne Prüfung der Voraussetzungen.
+
+        Bei unmittelbarer Gefahr veranlassen Sie geeignete Hilfe und dokumentieren die Umstände.
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und nachweisbarer Zugang]
+
+        '
+  sozialwiderspruch:
+    title: Widerspruch wegen besonderer Härte vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – Kündigung, Frist, Form und Härtegründe unverzüglich fachkundig prüfen lassen.
+
+        {absender}
+
+        An [BITTE PRÜFEN: Vermieter oder empfangsberechtigte Stelle und Anschrift]
+
+        Betreff: [BITTE PRÜFEN: Wohnung, Kündigung und behaupteter Beendigungszeitpunkt]
+
+        Sehr geehrte Damen und Herren,
+
+        [BITTE PRÜFEN: nur nach Bestätigung aufnehmen: Ich widerspreche der Kündigung nach § 574 BGB und
+        verlange die Fortsetzung des Mietverhältnisses]
+
+        [BITTE PRÜFEN: Härtegründe, konkrete Lebensumstände, Nachweise und Abwägung; sensible Daten nur
+        soweit erforderlich]
+
+        [BITTE PRÜFEN: Fortsetzungsdauer und zumutbare anderweitige Wohnmöglichkeiten]
+
+        Prüfen Sie die Textform und den rechtzeitigen Zugang. Auch die Wirksamkeit der Kündigung bleibt
+        gesondert zu prüfen.
+
+        Die Zweimonatsfrist hängt von den gesetzlichen Voraussetzungen und dem Hinweis des Vermieters
+        ab.
+
+        Fehlt der rechtzeitige Hinweis auf Möglichkeit, Form und Frist, kann ein Widerspruch noch im ersten
+        Termin des Räumungsrechtsstreits möglich sein.
+
+        Lassen Sie diese Möglichkeit unverzüglich prüfen. Sie ist keine automatische Fristverlängerung.
+
+        [BITTE PRÜFEN: Ausschluss bei berechtigter außerordentlicher fristloser Kündigung und sonstige
+        Ausnahmen]
+
+        Mit freundlichen Grüßen
+
+        [BITTE PRÜFEN: Name und nachweisbarer Zugang]
+
+        '

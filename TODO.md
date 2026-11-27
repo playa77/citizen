@@ -59,6 +59,12 @@ direction permits backend step 2 to proceed (D-069, backend continuation directi
   module API 3.3. Verification and operational limits: D-072 and its linked
   completion plan. Human reviews remain deferred until all modules are
   implemented (D-071); no verified promotion is claimed.
+- [x] WP-131 experimental backend implementation: `mietrecht` 0.2.0,
+  core 3.6.0 / module API 3.4. Regional-source coverage remains explicitly
+  partial; unknown or expired designations return unavailable results.
+  Verification and operational limits: [D-073](docs/decisions/D-073-wp131-tenancy-implementation.md).
+  No human review/promotion, deployment corpus population or live-inference
+  quality claim (D-071).
 - [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing

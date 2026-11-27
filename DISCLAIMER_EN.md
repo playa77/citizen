@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.2.0 · **Date:** 2026-11-26
+**Version:** 3.3.0 · **Date:** 2026-11-27
 
 **Author:** www.github.com/playa77
 
@@ -38,9 +38,11 @@ The first and so far only mature module, social-benefits law (Sozialrecht),
 reads German social-law benefit notices (Bescheide), binds every statement to
 the statutory text, recomputes benefit calculations deterministically, and
 determines deadlines to the exact day. Further legal areas — employment,
-inheritance, family, tenancy, criminal and contract law — exist as
-experimental modules: they route concerns and draw on the matching legal
-sources, but do not yet compute deadlines or amounts (Part D). There is a versioned golden set of verified test cases against
+inheritance, family, criminal and contract law — exist as experimental
+modules: they route concerns and draw on the matching legal sources, but do
+not yet compute deadlines or amounts. The experimental debt and tenancy
+modules provide bounded, qualified deadline and arithmetic checks with
+explicit prerequisites and limits (Part D). There is a versioned golden set of verified test cases against
 which every change is measured. Known limitations exist, and they live in the
 repository rather than under the rug. That is the honest current state:
 working, unpolished, measurable — and not yet a product.
@@ -432,7 +434,7 @@ The software is implemented as an API. Analyses and other protected operations
 are performed only when each request carries acknowledgment of the currently
 valid version (header `X-Disclaimer-Ack`, obtainable via
 `GET /api/v1/meta/disclaimer/version`; it equals this document's version
-prefixed with `v`, currently `v3.2.0`); after a version change, renewed
+prefixed with `v`, currently `v3.3.0`); after a version change, renewed
 acknowledgment is required. The acknowledged version is recorded per analysis
 run together with timestamp and application version in the local audit log.
 The acknowledged version is authoritative at any given time. Documents and
@@ -810,7 +812,7 @@ C.6.1.
 
 For the modules `arbeitsrecht` (employment), `erbrecht` (inheritance,
 including the legacy key `schenkungsrecht`), `familienrecht` (family),
-`mietrecht` (tenancy), `vertragsrecht` (contract) and `andere` (catch-all),
+`vertragsrecht` (contract) and `andere` (catch-all),
 D.1 and Parts A to C apply without an area-specific addendum. They compute
 neither deadlines nor amounts; anyone who has a deadline to meet should have
 it checked by a lawyer or an advice center. The general administrative
@@ -836,7 +838,31 @@ Seek prompt debt-advice or legal help with court documents or an attached accoun
 
 ---
 
+### D.6 Residential tenancy (`mietrecht`)
+
+**Scope.** This experimental module helps you prepare your own residential
+tenancy matter as a tenant. Deadline and amount checks require confirmed
+facts and applicable versioned parameters. A letter date or model estimate
+establishes neither receipt nor court service. Local rent-brake and
+rent-increase-cap regulations have different areas, periods and exceptions.
+Unresolved coverage is not treated as nationwide permission or proof that
+no designation exists.
+
+Arithmetic checks establish neither a valid rent increase nor the validity
+of individual operating costs. The module does not set rent-reduction
+percentages. Do not change payments solely on an automated assessment.
+Contracts, exceptions, hardship and evidence need individual review.
+Drafts require checking and are not sent. Seek prompt tenancy or legal
+advice for termination, eviction proceedings or threatened loss of housing.
+Curing arrears does not automatically remove an ordinary termination.
+Missing notice of hardship objection rights may permit later objections
+and requires separate assessment.
+
+---
+
 ## Change History
+
+- **3.3.0 (2026-11-27):** Tenancy: qualified deadline/calculation checks, explicit local source gaps and draft documents. Renewed acknowledgement required.
 
 - **3.2.0 (2026-11-26):** Debt module: bounded deadline/calculation checks, draft documents and explicit exclusions. Renewed acknowledgement required.
 - **3.1.0 (2026-11-26):** Experimental `schuldnerrecht` module with appointment preparation and area-specific limits; no deadline or amount calculations yet. Renewed acknowledgement required.

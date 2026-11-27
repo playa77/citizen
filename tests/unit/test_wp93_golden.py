@@ -74,9 +74,15 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
         "presets_route": presets_route,
         "list_presets": list_presets,
         "area_source_types": lambda: {
-            k: v for k, v in AREA_TO_SOURCE_TYPES.items() if k != "schuldnerrecht"
+            # WP-131 extends only the tenancy scope. Preserve the historical
+            # corpus comparison while new tenancy contracts test the expansion.
+            k: (("bgb",) if k == "mietrecht" else v)
+            for k, v in AREA_TO_SOURCE_TYPES.items() if k != "schuldnerrecht"
         },
-        "infer_bgb_area": corpus._infer_legal_area_for_bgb,
+        "infer_bgb_area": lambda path: (
+            None if "§" in path and 535 <= int(path.split("§")[-1].strip()) <= 580
+            else corpus._infer_legal_area_for_bgb(path)
+        ),
         "legal_regime": legal_regime,
         "regime_banner": regime_banner,
         "compute_frist": compute_widerspruchsfrist,

@@ -1,6 +1,7 @@
 # Writing a Citizen module
 
-<!-- Version: 1.2.0 | 2026-11-26 — core_api 3.3: service facts/public intake schema; D-071 deferred human review.
+<!-- Version: 1.3.0 | 2026-11-27 — WP-131: receipt/event deadlines, confirmed qualification/calendar facts.
+     1.2.0 | 2026-11-26 — core_api 3.3: service facts/public intake schema; D-071 deferred human review.
      1.1.2 | 2026-11-26 — owner directs backend continuation; GUI separately owned.
      1.1.1 | 2026-11-25 — D-069: startup/session TODO before further module implementation.
      1.1.0 | 2026-11-17 — WP-122: plain-language copy (core 3.4.0, core_api 3.2).
@@ -251,3 +252,21 @@ plain_language:
 - [ ] `DISCLAIMER_ADDENDUM.md` states the limits and the point where an
       advice centre or lawyer is indispensable
 - [ ] `CHANGELOG.md` entry for the version; errata for every correction
+
+## 11. Receipt/event deadlines (module API 3.4, WP-131)
+
+Use `trigger: zugang` with confirmed `zugang_tatsaechlich`, or `trigger:
+ereignis` with confirmed `ereignis_datum`; always declare a `document_type`
+selector. `anchor: month_end` selects the last day of the target calendar
+month; default `same_day` retains anniversary arithmetic. Negative durations
+are allowed only for event rules without rollover. Do not roll backwards
+notice periods forward. `requires_confirmed` lists module-owned qualification
+keys in dossier `facts.qualifikationen`; each must be explicitly `true`.
+
+Civil `rollover: bgb_193` requires explicit Bundesland and
+`feiertagskalender_bestaetigt: true`. Supply `feiertage_zusaetzlich` with all
+confirmed local holidays at the legally relevant place. The SDK
+`civil_is_holiday(date, land)` implements statewide holidays from 2024,
+including Gregorian Easter; local holidays remain an explicit input. This
+calendar does not alter the historical administrative calendar path. No letter
+date, postal fiction or Rechtsbehelfsbelehrung supplies a receipt/event date.

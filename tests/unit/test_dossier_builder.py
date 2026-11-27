@@ -128,8 +128,8 @@ def test_summary_only_calculation_and_no_claims() -> None:
 
 
 def test_module_without_dossier_content_is_reported() -> None:
-    dossier = build_dossier(_inputs(module_ids=["sozialrecht", "mietrecht"]))
-    assert any("mietrecht" in w for w in dossier["warnings"])
+    dossier = build_dossier(_inputs(module_ids=["sozialrecht", "arbeitsrecht"]))
+    assert any("arbeitsrecht" in w for w in dossier["warnings"])
     assert all(
         i["module_id"] == "sozialrecht" for i in dossier["sections"]["document_checklist"]["items"]
     )

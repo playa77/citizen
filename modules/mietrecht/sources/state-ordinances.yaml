@@ -1,0 +1,44 @@
+format: citizen-state-ordinance-snapshots-v1
+records:
+- bundesland: BE
+  title: Kappungsgrenzenverordnung Berlin 2023
+  official_url: https://www.berlin.de/politik-und-verwaltung/rundschreiben/download.php/4328558
+  effective_date: '2023-05-11'
+  valid_to: '2028-05-10'
+  publication: GVBl. Berlin 2023 S.112
+  retrieved_on: '2026-11-26'
+  snapshot_kind: applicability_excerpt
+  text: Diese Verordnung tritt am 11. Mai 2023 in Kraft. Mit Ablauf des 10. Mai 2028
+    tritt diese Verordnung außer Kraft.
+  sha256: ff718c635535af138a1b5502ce2cdb3a8fb35fe628988b571bb1cfa104aba11d
+- bundesland: BE
+  title: Mietenbegrenzungsverordnung Berlin 2026
+  official_url: https://www.berlin.de/sen/sbw/_assets/service/rechtsvorschriften/bereich-wohnen/abl_2025_48_auszug.pdf?ts=1765286731
+  effective_date: '2026-01-01'
+  valid_to: '2029-12-31'
+  publication: ABl. Berlin Nr.48/2025 S.3080
+  retrieved_on: '2026-11-26'
+  snapshot_kind: applicability_excerpt
+  text: Diese Verordnung tritt am 1. Januar 2026 in Kraft und mit Ablauf des 31. Dezember
+    2029 außer Kraft.
+  sha256: 0b86ffa80e1d87731675068a18a44a9a81941d270d0f3f5a3f69dbca498bed0f
+- bundesland: SN
+  title: Sächsische Mietpreisbegrenzungsverordnung 2025
+  official_url: https://www.recht.sachsen.de/vorschrift/21416.1
+  effective_date: '2026-01-01'
+  valid_to: '2027-06-30'
+  publication: SächsGVBl.2025 S.454
+  retrieved_on: '2026-11-26'
+  snapshot_kind: applicability_excerpt
+  text: Diese Verordnung tritt mit Ablauf des 30. Juni 2027 außer Kraft.
+  sha256: cc5fe6eb77f1c45f67d2f10671fc4e83e55812b5073100082144cfd3e3b07d92
+- bundesland: HE
+  title: Hessische Mieterschutzverordnung 2026
+  official_url: https://verkuendung.hessen.de/sites/verkuendung.hessen.de/files/veroeffentlichungsplattform_plugin/published/1568/GVBl_2026_Nr_78_Regelungstext.pdf
+  effective_date: '2026-11-20'
+  valid_to: '2031-11-19'
+  publication: GVBl.Hessen Nr.78 vom 19.11.2026
+  retrieved_on: '2026-11-26'
+  snapshot_kind: applicability_excerpt
+  text: Im Übrigen tritt diese Verordnung mit Ablauf des 19. November 2031 außer Kraft.
+  sha256: e6864d3d095d2798cc5458c3668ed8fa72de58ed66268ca9afe8ef952f6ac569

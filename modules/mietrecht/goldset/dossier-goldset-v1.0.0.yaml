@@ -1,0 +1,352 @@
+dossier_goldset:
+  id: dossier-goldset-mietrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.2.0.yaml
+  base_goldset_version: 0.2.0
+  dossier_schema: citizen-dossier-v1.0
+  module: mietrecht
+  provenance: synthetic
+  note: Literal expected dates are hand-derived. Plain goldset additionally asserts missing-input and
+    non-applicability statuses.
+cases:
+- id: MR-001
+  facts:
+    document_type: mieterhoehung
+    zugang_tatsaechlich: '2026-11-02'
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines:
+    - spec_id: miet_zustimmung
+      frist_ende: '2027-02-01'
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - vergleichsmiete_gebiet
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-002
+  facts:
+    document_type: mieterhoehung
+    bundesland: NW
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - vergleichsmiete_gebiet
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-003
+  facts:
+    document_type: mieterhoehung
+    zugang_tatsaechlich: '2027-12-10'
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines:
+    - spec_id: miet_zustimmung
+      frist_ende: '2028-02-29'
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - vergleichsmiete_gebiet
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-004
+  facts:
+    document_type: betriebskostenabrechnung
+    zugang_tatsaechlich: '2026-11-02'
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines:
+    - spec_id: miet_betriebskosten_einwendung
+      frist_ende: '2027-11-30'
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - abrechnung_belege
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-005
+  facts:
+    document_type: betriebskostenabrechnung
+    bundesland: NW
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - abrechnung_belege
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-006
+  facts:
+    document_type: kuendigung
+    ereignis_datum: '2027-05-31'
+    bundesland: NW
+    qualifikationen:
+      widerspruchshinweis_rechtzeitig: true
+      ordentliche_kuendigung: true
+  expected:
+    deadlines:
+    - spec_id: miet_sozialwiderspruch
+      frist_ende: '2027-03-31'
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-007
+  facts:
+    document_type: kuendigung
+    ereignis_datum: '2027-05-31'
+    qualifikationen:
+      widerspruchshinweis_rechtzeitig: false
+      ordentliche_kuendigung: true
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-008
+  facts:
+    document_type: raeumungsklage
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    qualifikationen:
+      zahlungsverzug: true
+      keine_schonfrist_letzte_zwei_jahre: true
+      rechtshaengigkeit_bestaetigt: true
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines:
+    - spec_id: miet_schonfrist
+      frist_ende: '2027-01-04'
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-009
+  facts:
+    document_type: raeumungsklage
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: inland
+    bundesland: NW
+    qualifikationen:
+      zahlungsverzug: true
+      rechtshaengigkeit_bestaetigt: true
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-010
+  facts:
+    document_type: mietvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - vergleichsmiete_gebiet
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-011
+  facts:
+    document_type: mietvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - vergleichsmiete_gebiet
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-012
+  facts:
+    document_type: mieterhoehung
+    bundesland: NW
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - abrechnung_belege
+    - vergleichsmiete_gebiet
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-013
+  facts:
+    document_type: betriebskostenabrechnung
+    bundesland: NW
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - abrechnung_belege
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-014
+  facts:
+    document_type: maengelanzeige
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - mangel_nachweise
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-015
+  facts:
+    document_type: maengelanzeige
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - mangel_nachweise
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-016
+  facts:
+    document_type: kuendigung
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-017
+  facts:
+    document_type: mietvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-018
+  facts:
+    document_type: modernisierungsankuendigung
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-019
+  facts:
+    document_type: mietvertrag
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date
+- id: MR-020
+  facts:
+    document_type: raeumungsklage
+    zustellung_tatsaechlich: '2026-11-02'
+    zustellungsart: ausland
+    bundesland: NW
+    qualifikationen:
+      zahlungsverzug: true
+      keine_schonfrist_letzte_zwei_jahre: true
+      rechtshaengigkeit_bestaetigt: true
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+  expected:
+    deadlines: []
+    checklist:
+    - mietvertrag
+    - schreiben_zugang
+    - mietzahlungen
+    - bisheriger_schriftwechsel
+    - kuendigung_haerte
+    chronology:
+    - date: '2026-11-02'
+      kind: document_date

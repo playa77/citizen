@@ -29,6 +29,7 @@ Roller = Callable[[date, str], date]
 ROLLER_LABELS: dict[str, str] = {
     "sgg_64_3": "§ 64 Abs. 3 SGG",
     "zpo_222": "§ 222 Abs. 2 ZPO",
+    "bgb_193": "§ 193 BGB",
 }
 
 _ROLLERS: dict[str, Roller] = {

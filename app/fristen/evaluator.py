@@ -20,7 +20,8 @@ spec/module data; only BGB-generic phrases are core text.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import calendar
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from app.fristen.calendar import (
@@ -54,6 +55,11 @@ class FristInput:
     zustellung_tatsaechlich: date | None = None
     document_type: str | None = None
     zustellungsart: str | None = None
+    zugang_tatsaechlich: date | None = None
+    ereignis_datum: date | None = None
+    qualifikationen: dict[str, bool] = field(default_factory=dict)
+    feiertage_zusaetzlich: tuple[date, ...] = ()
+    feiertagskalender_bestaetigt: bool = False
 
 
 def _unit_phrase(duration: Duration) -> str:
@@ -124,6 +130,10 @@ def evaluate_spec(
     spec: DeadlineSpec, frist_input: FristInput, module_id: str | None = None
 ) -> FristResult:
     """Evaluate *spec* for *frist_input* and return the deadline result."""
+    if any(frist_input.qualifikationen.get(key) is not True for key in spec.requires_confirmed):
+        raise ValueError("Rule requires explicitly confirmed qualifications")
+    if spec.trigger in ("zugang", "ereignis"):
+        return _evaluate_explicit_event(spec, frist_input, module_id)
     if spec.trigger == "zustellung":
         return _evaluate_service(spec, frist_input, module_id)
     validate_rbb_status(frist_input.rbb_status)
@@ -239,7 +249,14 @@ def _evaluate_service(spec: DeadlineSpec, facts: FristInput, module_id: str | No
         raise ValueError(f"spec {spec.id!r} declares no basis")
     served = facts.zustellung_tatsaechlich
     raw_end = _add_duration(served, spec.duration)
-    end = get_rollover(spec.rollover)(raw_end, facts.bundesland) if spec.rollover else raw_end
+    if spec.rollover == "bgb_193":
+        from app.fristen.civil_calendar import civil_next_workday
+
+        if not facts.feiertagskalender_bestaetigt:
+            raise ValueError("Civil holiday calendar requires explicit confirmation")
+        end = civil_next_workday(raw_end, facts.bundesland, facts.feiertage_zusaetzlich)
+    else:
+        end = get_rollover(spec.rollover)(raw_end, facts.bundesland) if spec.rollover else raw_end
     explanation = (
         f"Bestätigte Zustellung am {served.strftime('%d.%m.%Y')}. "
         f"Fristbeginn: {(served + timedelta(days=1)).strftime('%d.%m.%Y')} "
@@ -250,6 +267,50 @@ def _evaluate_service(spec: DeadlineSpec, facts: FristInput, module_id: str | No
         explanation += " " + rollover_explanation(spec.rollover, raw_end, end) + "."
     return FristResult(
         bekanntgabe=served,
+        frist_ende=end,
+        frist_typ=_frist_typ(spec.duration),
+        rollover_applied=end != raw_end,
+        oq1_flag=False,
+        oq1_alternate_ende=None,
+        explanation_de=explanation,
+        module_id=module_id,
+        spec_id=spec.id,
+    )
+
+
+def _evaluate_explicit_event(
+    spec: DeadlineSpec, facts: FristInput, module_id: str | None
+) -> FristResult:
+    """Receipt/event paths never inherit administrative dates or assumptions."""
+    start = facts.zugang_tatsaechlich if spec.trigger == "zugang" else facts.ereignis_datum
+    if start is None:
+        raise ValueError("Receipt/event date must be explicitly confirmed")
+    if any(getattr(facts, key, None) != value for key, value in spec.applies_when.items()):
+        raise ValueError("Rule applicability must be confirmed")
+    if not spec.basis:
+        raise ValueError("Receipt/event rule requires a legal basis")
+    raw_end = _add_duration(start, spec.duration)
+    if spec.anchor == "month_end":
+        raw_end = raw_end.replace(day=calendar.monthrange(raw_end.year, raw_end.month)[1])
+    end = raw_end
+    if spec.rollover == "bgb_193":
+        from app.fristen.civil_calendar import civil_next_workday
+
+        if not facts.feiertagskalender_bestaetigt:
+            raise ValueError("Civil holiday calendar requires explicit confirmation")
+        end = civil_next_workday(raw_end, facts.bundesland, facts.feiertage_zusaetzlich)
+    elif spec.rollover:
+        end = get_rollover(spec.rollover)(raw_end, facts.bundesland)
+    label = "Zugang" if spec.trigger == "zugang" else "Bezugsdatum"
+    anchor = "Kalendermonatsende" if spec.anchor == "month_end" else "taggenaue Berechnung"
+    explanation = (
+        f"Bestätigter {label}: {start.strftime('%d.%m.%Y')}. "
+        f"Rechnerisches Ende: {raw_end.strftime('%d.%m.%Y')} ({anchor}; {spec.basis})."
+    )
+    if end != raw_end and spec.rollover:
+        explanation += " " + rollover_explanation(spec.rollover, raw_end, end) + "."
+    return FristResult(
+        bekanntgabe=start,
         frist_ende=end,
         frist_typ=_frist_typ(spec.duration),
         rollover_applied=end != raw_end,

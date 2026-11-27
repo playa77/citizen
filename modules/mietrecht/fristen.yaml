@@ -1,0 +1,40 @@
+# WP-131: explicit triggers only; receipt is never inferred from letter dates.
+- id: miet_zustimmung
+  label_de: Zustimmung zur Mieterhöhung prüfen
+  trigger: zugang
+  duration: {months: 2}
+  anchor: month_end
+  rollover: bgb_193
+  basis: § 558b Abs. 2 BGB; §§ 187, 188, 193 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB
+  severity: high
+  applies_when: {document_type: mieterhoehung}
+- id: miet_betriebskosten_einwendung
+  label_de: Einwendungen gegen die Betriebskostenabrechnung
+  trigger: zugang
+  duration: {months: 12}
+  anchor: month_end
+  rollover: bgb_193
+  basis: § 556 Abs. 3 Sätze 5–6 BGB; § 193 BGB
+  fristbeginn_basis: § 187 Abs. 1 BGB
+  severity: high
+  applies_when: {document_type: betriebskostenabrechnung}
+- id: miet_sozialwiderspruch
+  label_de: Härtewiderspruch gegen ordentliche Kündigung prüfen
+  trigger: ereignis
+  duration: {months: -2}
+  basis: § 574b Abs. 2 BGB
+  fristbeginn_basis: Bestätigtes Ende des Mietverhältnisses; Rückwärtsfrist ohne Verlängerung
+  severity: critical
+  applies_when: {document_type: kuendigung}
+  requires_confirmed: [widerspruchshinweis_rechtzeitig, ordentliche_kuendigung]
+- id: miet_schonfrist
+  label_de: Schonfristzahlung dringend prüfen lassen
+  trigger: zustellung
+  duration: {months: 2}
+  rollover: bgb_193
+  basis: § 569 Abs. 3 Nr. 2 BGB; §§ 187, 188, 193 BGB
+  fristbeginn_basis: Bestätigter Eintritt der Rechtshängigkeit (§§ 253, 261 ZPO)
+  severity: critical
+  applies_when: {document_type: raeumungsklage, zustellungsart: inland}
+  requires_confirmed: [zahlungsverzug, keine_schonfrist_letzte_zwei_jahre, rechtshaengigkeit_bestaetigt]

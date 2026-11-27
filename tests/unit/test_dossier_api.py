@@ -359,3 +359,37 @@ async def test_analyze_persists_calculation_result_but_streams_counts(
         async with async_session_factory() as db:
             await db.execute(sa_delete(CaseRun).where(CaseRun.id == uuid.UUID(case_id)))
             await db.commit()
+
+
+async def test_tenancy_receipt_facts_persist_and_drive_scoped_deadlines(
+    client: httpx.AsyncClient, case_id: uuid.UUID
+) -> None:
+    # Reuse the synthetic case lifecycle, selecting tenancy explicitly.
+    async with async_session_factory() as db:
+        area = (
+            await db.execute(select(CaseRunArea).where(CaseRunArea.case_run_id == case_id))
+        ).scalar_one()
+        area.legal_area = "mietrecht"
+        area.module_id = "mietrecht"
+        area.module_version = "0.2.0"
+        await db.commit()
+    base = f"/api/v1/cases/{case_id}/dossier"
+    facts = {
+        "document_type": "mieterhoehung",
+        "zugang_tatsaechlich": "2026-11-02",
+        "bundesland": "BE",
+        "feiertagskalender_bestaetigt": True,
+        "feiertage_zusaetzlich": [],
+        "qualifikationen": {"ordentliche_kuendigung": None},
+    }
+    updated = await client.put(base + "/chronology", headers=HEADERS, json={"facts": facts})
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["facts"]["qualifikationen"] == {}
+    response = await client.post(base, headers=HEADERS)
+    assert response.status_code == 201, response.text
+    dossier = response.json()["dossier"]
+    deadlines = dossier["sections"]["deadlines"]["items"]
+    consent = next(item for item in deadlines if item["spec_id"] == "miet_zustimmung")
+    assert (consent["status"], consent["frist_ende"]) == ("computed", "2027-02-01")
+    assert all(item["module_id"] == "mietrecht" for item in deadlines)
+    assert dossier["provenance"]["modules"][0]["id"] == "mietrecht"

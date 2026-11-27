@@ -1,0 +1,66 @@
+format: citizen-plain-copy-v1.0
+module: mietrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Experimental; human legal and language review pending under D-071.
+findings:
+  miete_pruefen:
+    title: Miete prüfen
+    text: Die Miete muss geprüft werden. Eine Rechnung sagt nicht, ob die Erhöhung gilt.
+    next_step: Nehmen Sie den Mietvertrag und das Schreiben zur Beratung mit.
+  kosten_pruefen:
+    title: Kosten prüfen
+    text: Die Kosten müssen geprüft werden. Eine richtige Summe bedeutet keine sichere Zahlungspflicht.
+    next_step: Fragen Sie nach den Belegen. Lassen Sie einzelne Kosten prüfen.
+  frist_pruefen:
+    title: Frist prüfen
+    text: Wichtige Angaben fehlen noch. Das Datum auf dem Brief reicht nicht.
+    next_step: Heben Sie den Umschlag auf. Lassen Sie Kündigungen und Gerichtsschreiben sofort prüfen.
+  beratung_erforderlich:
+    title: Hilfe suchen
+    text: Ihr Fall braucht persönliche Beratung. Eine Zahlung beseitigt nicht immer jede Kündigung.
+    next_step: Droht der Verlust Ihrer Wohnung? Holen Sie sofort Hilfe bei einer Beratung.
+  einordnung_offen:
+    title: Ergebnis noch offen
+    text: Die Angaben reichen noch nicht. Daraus folgt keine sichere Entscheidung.
+    next_step: Sammeln Sie die Unterlagen. Lassen Sie mögliche Fristen prüfen.
+deadlines:
+  miet_zustimmung:
+    title: Mieterhöhung prüfen
+    action: Lassen Sie die Erhöhung vor Ihrer Zustimmung prüfen. Eine Nachfrage verlängert keine Frist.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Frist prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die Angaben. Lassen Sie die Frist
+        prüfen.
+      missing_input: Wichtige Angaben fehlen. Ein sicheres Datum fehlt noch. Holen Sie sofort Rat.
+      not_applicable: Diese Regel passt nicht zu Ihren Angaben. Andere Fristen können wichtig sein.
+  miet_betriebskosten_einwendung:
+    title: Abrechnung prüfen
+    action: Benennen Sie Ihre Einwände rechtzeitig. Die Frage nach Belegen verlängert keine Frist.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Frist prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die Angaben. Lassen Sie die Frist
+        prüfen.
+      missing_input: Wichtige Angaben fehlen. Ein sicheres Datum fehlt noch. Holen Sie sofort Rat.
+      not_applicable: Diese Regel passt nicht zu Ihren Angaben. Andere Fristen können wichtig sein.
+  miet_sozialwiderspruch:
+    title: Härtefall prüfen
+    action: Holen Sie sofort Rat. Lassen Sie Kündigung, Hinweis und Härtegründe prüfen.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Frist prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die Angaben. Lassen Sie die Frist
+        prüfen.
+      missing_input: Wichtige Angaben fehlen. Ein sicheres Datum fehlt noch. Holen Sie sofort Rat.
+      not_applicable: Diese Regel passt nicht zu Ihren Angaben. Andere Fristen können wichtig sein.
+  miet_schonfrist:
+    title: Zahlungsfrist prüfen
+    action: Holen Sie sofort Rat. Eine Zahlung beseitigt nicht immer jede Kündigung.
+    texts:
+      computed: 'Das berechnete Datum ist {frist_ende}. Grundlage: {basis}. Lassen Sie die Frist prüfen.'
+      provisional: Das vorläufige Datum ist {frist_ende}. Bestätigen Sie die Angaben. Lassen Sie die Frist
+        prüfen.
+      missing_input: Wichtige Angaben fehlen. Ein sicheres Datum fehlt noch. Holen Sie sofort Rat.
+      not_applicable: Diese Regel passt nicht zu Ihren Angaben. Andere Fristen können wichtig sein.

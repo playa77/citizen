@@ -92,6 +92,10 @@ SOURCE_TYPE_ALLOWED = (
     "inso",
     "rdg",
     "rvg",
+    # WP-131: tenancy statutes and explicitly imported state-source evidence.
+    "betrkv",
+    "heizkostenv",
+    "landes_mietrecht",
 )
 
 

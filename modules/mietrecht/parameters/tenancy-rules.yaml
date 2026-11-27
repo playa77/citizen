@@ -1,0 +1,30 @@
+parameters:
+- key: tenancy_rules
+  value_json:
+    cap_default_percent: 20
+    cap_reduced_percent: 15
+    brake_percent: 10
+    deposit_months: 3
+    deposit_instalments: 3
+    tenant_notice_months: 3
+    landlord_extension_years:
+    - 5
+    - 8
+    landlord_extension_months: 3
+    notice_workday: 3
+    heating_min_percent: 50
+    heating_max_percent: 70
+  unit: rules
+  valid_from: 2026-11-26
+  valid_to: null
+  review_status: proposed
+  basis: BGB §§ 551, 556d–556f, 558, 573c; BetrKV §1; HeizkostenV §§7,8,11
+  notes: '{"retrieved_on": "2026-11-26", "sources": ["https://www.gesetze-im-internet.de/bgb/__558.html",
+    "https://www.gesetze-im-internet.de/bgb/__556d.html", "https://www.gesetze-im-internet.de/bgb/__556e.html",
+    "https://www.gesetze-im-internet.de/bgb/__556f.html", "https://www.gesetze-im-internet.de/bgb/__551.html",
+    "https://www.gesetze-im-internet.de/bgb/__573c.html", "https://www.gesetze-im-internet.de/betrkv/__1.html",
+    "https://www.gesetze-im-internet.de/heizkostenv/__7.html"], "quotes": ["Die Miete
+    darf sich innerhalb von drei Jahren", "höchstens um 10 Prozent übersteigen", "nicht
+    mehr als 70 vom Hundert"], "review": "Human legal review pending. Snapshot applicability
+    before 2026-11-26 is not inferred. Ceilings are rounded down; allocations half-up
+    to cents."}'
