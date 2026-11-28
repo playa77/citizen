@@ -225,6 +225,11 @@ def _content_checks(manifest: ModuleManifest, report: ValidationReport) -> None:
     elif scope.get("own_matter_only") is not True:
         report.errors.append("scope.own_matter_only must be true (citizen-side purpose, D-035)")
 
+    if manifest.id == "steuerrecht" and (
+        not isinstance(scope, dict) or scope.get("third_party_assistance") is not False
+    ):
+        report.errors.append("scope.third_party_assistance must be false for steuerrecht (StBerG)")
+
 
 def _corpus_source_warnings(manifest: ModuleManifest, report: ValidationReport) -> None:
     # The DB CHECK list, not the corpus service catalog: importing the

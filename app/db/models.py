@@ -125,6 +125,12 @@ SOURCE_TYPE_ALLOWED = (
     "freizuegg_eu",
     "stag",
     "vwgo",
+    # WP-137: tax sources, migration 023.
+    "estg",
+    "ao",
+    "solzg",
+    "fgo",
+    "stberg",
 )
 
 

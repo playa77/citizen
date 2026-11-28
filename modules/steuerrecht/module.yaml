@@ -1,0 +1,52 @@
+id: steuerrecht
+version: 0.1.0
+core_api: '>=3.10,<4.0'
+title:
+  de: Steuerrecht
+  en: Tax law
+tier: experimental
+scope:
+  summary_de: Eigene Einkommensteuerbescheide und Fristen verstehen und persönliche Beratung vorbereiten.
+  own_matter_only: true
+  third_party_assistance: false
+  out_of_scope:
+  - Hilfeleistung für andere und Beratungsstellenbetrieb
+  - Vollständige Steuererklärung oder verbindliche Steuerfestsetzung
+  - Unternehmens-, Auslands- und Sondertarifregime; nicht dokumentierte Steuerjahre
+corpus: corpus.yaml
+intake: intake.yaml
+intake_schema: intake-schema.yaml
+dossier: dossier.yaml
+fristen: fristen.yaml
+parameters:
+  domain: steuerrecht
+  files:
+  - parameters/*.yaml
+calculators: calculators:CALCULATORS
+prompts: prompts/profile.yaml
+document_templates: documents/templates.yaml
+documents:
+- einspruch
+- aussetzung
+- aenderung
+goldset:
+  path: goldset/goldset-v0.1.0.yaml
+plain_language:
+  files:
+    de: copy/de/plain.yaml
+    en: copy/en/plain.yaml
+    de-LS: copy/de-LS/plain.yaml
+  goldset: goldset/plain-v1.0.0.yaml
+errata: errata.yaml
+compliance:
+  disclaimer_addendum: DISCLAIMER_ADDENDUM.md
+  purpose_drift_deny_file: compliance/deny-phrases.json
+  special_regimes:
+  - Nur eigene Angelegenheit; keine Hilfeleistung für andere (§2 StBerG).
+  - Einspruch hemmt die Erhebung nicht (§361 AO); Zahlung und AdV getrennt prüfen.
+  referral:
+    required: true
+    targets:
+    - Befugte Steuerberatung
+    - Geeigneter Lohnsteuerhilfeverein
+legacy_aliases: []

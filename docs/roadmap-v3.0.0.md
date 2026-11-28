@@ -1,6 +1,6 @@
 # Citizen — Roadmap v3.0.0: Free Public Path — Modular Core, Appointment Dossier, Ten Area Modules
 
-<!-- Version: 3.8.0 | 2026-11-27 — WP-136 experimental residence backend.
+<!-- Version: 3.9.0 | 2026-11-28 — WP-137 experimental tax backend.
      3.6.0 | 2026-11-27 — WP-134 experimental traffic backend.
      3.5.0 | 2026-11-27 — WP-133 experimental consumer contract backend.
      3.2.0 | 2026-11-26 — D-071: remove named approval gates; human review deferred until all modules are implemented.
@@ -425,9 +425,17 @@ Each module is one WP with the same nine sub-WPs:
 | WP-134 | M5 `verkehrsrecht` | Experimental backend implemented; shared StPO rollover and explicit partial annex coverage (D-076) |
 | WP-135 | M6 `familienrecht` | Experimental statutory backend implemented; guideline reuse OQ-7 remains open (D-077) |
 | WP-136 | M7 `aufenthaltsrecht` | Experimental backend; eight-language static copy, strongest duty-of-care; GUI/RTL separate (D-078) |
-| WP-137 | M8 `steuerrecht` | StBerG: own-matter only; no gettsim embedding (D-041) |
+| WP-137 | M8 `steuerrecht` | Experimental backend; own-matter only, AO dates and bounded 2026 checks (D-079); no gettsim embedding (D-041) |
 | WP-138 | M9 `erbrecht` | absorbs `schenkungsrecht` alias |
 | WP-139 | M10 `strafrecht` | Art. 10 DSGVO inference policy decision in .1 |
+
+**WP-137 backend implementation (2026-11-28):** `steuerrecht` 0.1.0 on
+core 3.12.0/module API 3.10 provides qualified domestic-post AO dates, bounded
+2026 tariff/allowance/comparison/filing checks, guarded drafts and DE/EN/de-LS
+static copy. Assistance for others is unsupported. Human review/promotion,
+deployment source population and live quality remain pending. Unsupported
+years, modes and special regimes return unavailable results; see
+[D-079](decisions/D-079-wp137-tax-implementation.md).
 
 **WP-136 backend implementation (2026-11-27):** `aufenthaltsrecht` 0.1.0
 on core 3.11.0/module API 3.9 provides qualified current-law dates, separate

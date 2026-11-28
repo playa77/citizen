@@ -1,0 +1,41 @@
+format: citizen-plain-copy-v1.0
+module: steuerrecht
+language: de
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist prüfen
+    text: Ein Steuerbescheid kann eine kurze Frist auslösen. Bewahren Sie Bescheid, Belehrung und Umschlag
+      auf.
+    next_step: Lassen Sie Frist, Form und Finanzamt rasch prüfen.
+  rechenwerte_pruefen:
+    title: Rechenwerte prüfen
+    text: Der Tarif braucht das bestätigte zu versteuernde Einkommen. Ein Rechenwert ist noch keine
+      vollständige Steuerfestsetzung.
+    next_step: Vergleichen Sie gleiche Jahre und Rechengrundlagen mit Ihren Belegen.
+  zahlung_pruefen:
+    title: Zahlung prüfen
+    text: Ein Einspruch stoppt die Zahlung grundsätzlich nicht. Ein Antrag auf Aussetzung braucht eine
+      eigene Entscheidung.
+    next_step: Lassen Sie Fälligkeit und Aussetzung rasch mit befugter Hilfe klären.
+  einordnung_offen:
+    title: Angaben fehlen
+    text: Bekanntgabe, Regime oder Rechengrundlagen fehlen. Es gibt noch kein verlässliches Ergebnis.
+    next_step: Klären Sie fehlende Angaben mit befugter Steuerberatung oder Lohnsteuerhilfe.
+deadlines:
+  steuerrecht_einspruch:
+    title: Einspruch prüfen
+    action: Nur für bestätigte inländische Postbekanntgabe. Andere Fälle brauchen rasche Fristprüfung.
+      Dieses Blatt reicht nichts ein.
+    referral_when_not_applicable: true
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grundlage: {basis}. Lassen Sie die Angaben prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Fehlende Angaben rasch prüfen lassen.'
+      missing_input: Bestätigte Angaben fehlen. Es gibt kein verlässliches Datum. Holen Sie rasch befugte
+        Hilfe.
+      not_applicable: Diese Regel passt nicht. Andere Fristen können gelten. Holen Sie rasch befugte
+        Hilfe.

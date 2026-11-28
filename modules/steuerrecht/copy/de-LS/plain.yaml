@@ -1,0 +1,37 @@
+format: citizen-plain-copy-v1.0
+module: steuerrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist prüfen
+    text: Sie haben einen Steuer-Bescheid bekommen. Eine Frist kann laufen.
+    next_step: Heben Sie Bescheid und Umschlag auf. Holen Sie rasch befugte Hilfe.
+  rechenwerte_pruefen:
+    title: Zahlen prüfen
+    text: Die Rechnung braucht bestätigte Zahlen. Sie ist keine fertige Steuer-Berechnung.
+    next_step: Bringen Sie die nötigen Belege zur Beratung mit.
+  zahlung_pruefen:
+    title: Zahlung prüfen
+    text: Ein Einspruch stoppt die Zahlung meist nicht. Das Finanzamt muss extra entscheiden.
+    next_step: Fragen Sie rasch nach Zahlungs-Frist und Aussetzung.
+  einordnung_offen:
+    title: Angaben fehlen
+    text: Es fehlen wichtige Angaben. Ein sicheres Ergebnis fehlt noch.
+    next_step: Klären Sie die Angaben mit befugter Steuer-Hilfe.
+deadlines:
+  steuerrecht_einspruch:
+    title: Einspruch prüfen
+    action: Hier geht es um bestätigte Post im Inland. Andere Fälle brauchen rasche Hilfe. Dieses Blatt
+      reicht nichts ein.
+    referral_when_not_applicable: true
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Grund: {basis}. Lassen Sie das prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie fehlende Angaben rasch prüfen.'
+      missing_input: Bestätigte Angaben fehlen. Ein sicheres Datum fehlt. Holen Sie rasch befugte Hilfe.
+      not_applicable: Diese Regel passt nicht. Andere Fristen können gelten. Holen Sie rasch befugte
+        Hilfe.

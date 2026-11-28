@@ -1,0 +1,37 @@
+format: citizen-plain-copy-v1.0
+module: steuerrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Check the deadline
+    text: A tax assessment may start a short deadline. Keep the assessment, appeal instructions and
+      envelope.
+    next_step: Have the deadline, form and tax office checked promptly.
+  rechenwerte_pruefen:
+    title: Check the figures
+    text: The tariff needs confirmed taxable income. A tariff figure is not a complete tax assessment.
+    next_step: Compare the same year and calculation basis with your records.
+  zahlung_pruefen:
+    title: Check payment
+    text: An objection generally does not stop collection. A suspension request needs a separate decision.
+    next_step: Have payment dates and suspension checked promptly by authorised tax assistance.
+  einordnung_offen:
+    title: Information is missing
+    text: Notification, regime or calculation facts are missing. There is no reliable result yet.
+    next_step: Clarify the missing facts with an authorised tax adviser or suitable tax assistance association.
+deadlines:
+  steuerrecht_einspruch:
+    title: Check an objection
+    action: Only confirmed domestic postal notification is supported. Other cases need prompt deadline
+      review. This sheet files nothing.
+    referral_when_not_applicable: true
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have the facts checked.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked promptly.'
+      missing_input: Confirmed facts are missing. There is no reliable date. Seek authorised help promptly.
+      not_applicable: This rule does not apply. Other deadlines may apply. Seek authorised help promptly.

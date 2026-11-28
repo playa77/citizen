@@ -1376,7 +1376,8 @@ EUR-Lex ingestion preserves article identity and official provenance, and
 rejects empty/challenge/incomplete content. Offline parser fixtures and source
 inspection do not establish successful deployment ingestion, live inference
 quality or reviewed promotion. Human review remains deferred under D-071.
-Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
+Current disclaimer acknowledgement is `v3.9.0`; prompt set is `3.10.0`.
+
 
 
 ### WP-134 traffic implementation (core 3.9.0 / module API 3.7)
@@ -1425,7 +1426,7 @@ annex rules are versioned parameters, not a complete ingested corpus.
 Exact paragraph lookup matches hierarchy segments, so §1 cannot boost §10.
 No deployment ingestion, live inference or human promotion is established.
 
-Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
+Current disclaimer acknowledgement is `v3.9.0`; prompt set is `3.10.0`.
 
 ### WP-135 family implementation (core 3.10.0 / module API 3.8)
 
@@ -1482,7 +1483,7 @@ No Düsseldorfer Tabelle, income-group or self-retention data is bundled
 Drafts `pruefhinweise`, `auskunft`, `stellungnahme`, `uvg_vorbereitung` retain
 `[BITTE PRÜFEN]`, meet no deadline and send nothing automatically. Custody,
 contact and child welfare remain referral-first; minimise third-party data.
-Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
+Current disclaimer acknowledgement is `v3.9.0`; prompt set is `3.10.0`.
 Human review/promotion and live-inference quality remain pending (D-071).
 
 ### WP-136 residence/asylum preparation (core 3.11.0 / module API 3.9)
@@ -1553,7 +1554,7 @@ their existing `lang` parameter. Additional-language dates use ISO `YYYY-MM-DD`;
 The deterministic sentence/duty-of-care checks include these scripts and
 selected discouraging phrases; they do not replace fluent human review.
 
-Current disclaimer acknowledgement is `v3.8.0`; prompt set is `3.9.0`.
+Current disclaimer acknowledgement is `v3.9.0`; prompt set is `3.10.0`.
 
 The approved WP-136 safety supplement adds optional `excludes_confirmed` to
 module deadline specs. A true excluded fact rejects direct evaluation; dossier
@@ -1576,3 +1577,37 @@ with these explicit source inputs. With no valid block, results are unavailable;
 model-generated booleans never establish confirmation. Unknown/sensitive fields
 are rejected and excluded from the extracted summary sent to explanation.
 This introduces no endpoint; pure calculator calls still take explicit facts.
+
+### WP-137 tax preparation (core 3.12.0 / module API 3.10)
+
+The experimental `steuerrecht` module supports preparation of your own
+income-tax matter. Existing REST/MCP module-detail `scope` adds optional
+`third_party_assistance`: false for this module. Other modules may omit it.
+This is supported-use metadata, not authenticated prevention of assistance
+for others. Selection remains explicit; no module is a default.
+
+The public intake schema supplies minimised calculator and procedural facts.
+The `steuerrecht_einspruch` rule supports confirmed ordinary domestic postal
+notification only, using `ao_122_2_inland` and `ao_108`. Explicit dispatch,
+document type, domestic mode, instruction status, decision status, state,
+holiday calendar and all declared qualifications are required. Missing dispatch
+never falls back to issue date. Earlier actual receipt cannot shorten the
+presumption; later/disputed/nonreceipt and special modes return no date with
+referral. `qualifikationen` includes the positive confirmations and exclusion
+flags declared in the module's public intake schema. No new HTTP endpoint,
+SSE event or generic facts field is introduced.
+
+`tax_checks` supplies parameter-backed provisional 2026 tariff, capped allowance,
+same-basis assessment-difference and ordinary mandatory unadvised filing checks.
+The filing date is narrowly precomputed as 2027-08-02 and requires explicit
+calendar/current-regime and no-special-case confirmations; it is not a payment
+deadline. Unsupported years and missing parameters return unavailable. The
+LLM path needs a single strict `CITIZEN_TAX_FACTS:` JSON object; model assertions
+alone do not establish confirmations. See the module README coverage table.
+
+Draft types are `einspruch`, `aussetzung`, `aenderung`; unconfirmed assertions
+retain `[BITTE PRÜFEN]`. An objection/request alone does not suspend collection
+or replace another remedy. Static copy is DE/EN/de-LS, review status draft.
+`estg`, `ao`, `solzg`, `fgo`, `stberg` are supported corpus types through guarded
+migration 023; parser tests do not establish deployment source population.
+Human review, promotion, live quality and GUI acceptance remain unverified.

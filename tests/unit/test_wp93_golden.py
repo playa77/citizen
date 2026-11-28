@@ -61,17 +61,17 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
     from app.services.presets import list_presets
     from app.services.prompts import get_prompts
 
-    # WP-130 adds one peer area. Preserve every historical byte by projecting
+    # WP-130/134/136/137 add peer areas. Preserve every historical byte by projecting
     # only the new catalog entry out of the original WP-93 comparison. Real
     # intake functions still run; test_schuldnerrecht covers the new route.
     historical_intake = SimpleNamespace(
-        _INTAKE_SYSTEM=intake._INTAKE_SYSTEM.replace(", schuldnerrecht", "").replace(", verkehrsrecht", "").replace(", aufenthaltsrecht", ""),
+        _INTAKE_SYSTEM=intake._INTAKE_SYSTEM.replace(", schuldnerrecht", "").replace(", verkehrsrecht", "").replace(", aufenthaltsrecht", "").replace(", steuerrecht", ""),
         _STRICT_SUFFIX=intake._STRICT_SUFFIX,
-        _LEGAL_AREAS_ENUM=tuple(k for k in intake._LEGAL_AREAS_ENUM if k not in {"schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht"}),
+        _LEGAL_AREAS_ENUM=tuple(k for k in intake._LEGAL_AREAS_ENUM if k not in {"schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht", "steuerrecht"}),
         _AREA_KEYWORDS={
             # WP-132/133 append employment/contract keywords after historical entries.
             k: (v[:9] if k == "arbeitsrecht" else v[:8] if k == "vertragsrecht" else v)
-            for k, v in intake._AREA_KEYWORDS.items() if k not in {"schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht"}
+            for k, v in intake._AREA_KEYWORDS.items() if k not in {"schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht", "steuerrecht"}
         },
         _fallback_areas_from_text=intake._fallback_areas_from_text,
         _normalise_area=intake._normalise_area,
@@ -85,7 +85,7 @@ def results() -> tuple[dict[str, Any], dict[str, Any]]:
             # WP-131–133 expand tenancy/employment/contract scope. Project only those
             # additions out; dedicated module tests cover their new contracts.
             k: (("bgb",) if k in ("mietrecht", "arbeitsrecht", "vertragsrecht", "familienrecht") else v)
-            for k, v in AREA_TO_SOURCE_TYPES.items() if k not in {"schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht"}
+            for k, v in AREA_TO_SOURCE_TYPES.items() if k not in {"schuldnerrecht", "verkehrsrecht", "aufenthaltsrecht", "steuerrecht"}
         },
         "infer_bgb_area": lambda path: (
             None if "§" in path and (535 <= int(path.split("§")[-1].strip()) <= 580

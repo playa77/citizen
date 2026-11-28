@@ -1,0 +1,42 @@
+parameters:
+- key: tax_rules
+  value_json:
+    tax_year: 2026
+    basic_allowance_eur: 12348
+    first_band_end_eur: 17799
+    second_band_end_eur: 69878
+    third_band_end_eur: 277825
+    scale: 10000
+    first_coefficient: '914.51'
+    first_linear: '1400'
+    second_coefficient: '173.10'
+    second_linear: '2397'
+    second_offset: '1034.87'
+    third_rate: '0.42'
+    third_offset: '11135.63'
+    top_rate: '0.45'
+    top_offset: '19470.38'
+    allowances_cents:
+      employee: 123000
+      pensioner: 10200
+      saver: 100000
+    filing_deadline:
+      nominal: '2027-07-31'
+      date: '2027-08-02'
+  unit: rules
+  valid_from: 2026-01-01
+  valid_to: 2026-12-31
+  review_status: proposed
+  basis: §32a Abs.1 und 5, §9a S.1 Nr.1a und Nr.3 sowie S.2, §20 Abs.9 EStG; §§149 Abs.2,108 Abs.3 AO
+  notes: '{"retrieved_on": "2026-11-28", "sources": ["https://www.gesetze-im-internet.de/estg/__32a.html",
+    "https://www.gesetze-im-internet.de/estg/__9a.html", "https://www.gesetze-im-internet.de/estg/__20.html",
+    "https://www.gesetze-im-internet.de/ao_1977/__149.html", "https://www.gesetze-im-internet.de/ao_1977/__108.html",
+    "https://www.gesetze-im-internet.de/aoeg_1977/art_97__36.html"], "coverage": "2026 only; tariff
+    excludes §§32b,32d,34,34a,34b,34c and special splitting §32a(6). Pensioner allowance only §22 Nr.1/1a/5,
+    not §19 Versorgungsbezüge. Saver income basis must already reflect qualified §20 computation; joint
+    cap requires joint assessment. No complete assessment or entitlement. Proposed pending human review.
+    Filing: mandatory unadvised calendar-year 2026 only, no special/EGAO transitional regime, no individual
+    notice/extension; explicitly confirmed local calendar including no additional holiday on 2027-08-02.
+    Dates precomputed, not general calendar engine.", "quotes": ["bis 12 348 Euro (Grundfreibetrag):
+    0", "(914,51 • y + 1 400) • y", "ein Arbeitnehmer-Pauschbetrag von 1 230 Euro", "ein Pauschbetrag
+    von insgesamt 102 Euro", "Sparer-Pauschbetrag", "spätestens sieben Monate nach Ablauf des Kalenderjahres"]}'

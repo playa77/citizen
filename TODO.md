@@ -97,6 +97,12 @@ direction permits backend step 2 to proceed (D-069, backend continuation directi
   verification: [D-078](docs/decisions/D-078-wp136-residence-implementation.md).
   State-law automation, unsupported/transition regimes, human review/promotion,
   deployment ingestion, live quality and GUI/RTL acceptance remain pending.
+- [x] WP-137 experimental backend implementation: `steuerrecht` 0.1.0,
+  core 3.12.0/module API 3.10. Qualified domestic-post AO dates, bounded 2026
+  tariff/allowance/comparison/filing checks and guarded own-matter drafts.
+  Limits and verification: [D-079](docs/decisions/D-079-wp137-tax-implementation.md).
+  Third-party assistance, unsupported regimes/years, human promotion, deployed
+  corpus population and live quality remain unsupported or pending as documented.
 - [ ] With the backend prerequisite complete and continuation approved, implement the remaining modules in the
   [module catalog](docs/module-catalog.md). Its queue describes implementation
   sequencing, not startup defaults or preselection. Keep the existing

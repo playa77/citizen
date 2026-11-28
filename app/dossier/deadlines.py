@@ -271,6 +271,9 @@ def compute_deadlines(
     items: list[dict[str, Any]] = []
     for module in modules:
         for spec in module.specs:
+            if spec.bekanntgabe_fiction == "ao_122_2_inland":
+                items.append(_ao_item(module.module_id, spec, facts, letter_date))
+                continue
             if spec.trigger in ("zugang", "ereignis", "kenntnis", "zustellung"):
                 try:
                     item = (
@@ -531,3 +534,53 @@ def _explicit_event_item(
         module_id=module_id,
     )
     return _result_item(module_id, spec, STATUS_COMPUTED, result, [], used)
+
+
+def _ao_item(
+    module_id: str, spec: DeadlineSpec, facts: Mapping[str, Any], letter_date: date | None
+) -> dict[str, Any]:
+    """Tax presumptions require confirmed facts, with no inherited dossier defaults."""
+    try:
+        if letter_date is None or any(
+            facts.get(key) is None for key in ("rbb_status", "ist_verwaltungsakt", "bundesland")
+        ):
+            raise ValueError(
+                "Schreiben, Rechtsbehelfsbelehrung, Verwaltungsakt und Bundesland bestätigen"
+            )
+        result = evaluate_spec(
+            spec,
+            FristInput(
+                bescheid_datum=letter_date,
+                aufgabe_zur_post=(
+                    date.fromisoformat(facts["aufgabe_zur_post"])
+                    if facts.get("aufgabe_zur_post")
+                    else None
+                ),
+                bekanntgabe_tatsaechlich=(
+                    date.fromisoformat(facts["bekanntgabe_tatsaechlich"])
+                    if facts.get("bekanntgabe_tatsaechlich")
+                    else None
+                ),
+                rbb_status=facts["rbb_status"],
+                ist_verwaltungsakt=facts["ist_verwaltungsakt"],
+                bundesland=facts["bundesland"],
+                document_type=facts.get("document_type"),
+                zustellungsart=facts.get("zustellungsart"),
+                qualifikationen=facts.get("qualifikationen", {}),
+                feiertagskalender_bestaetigt=facts.get("feiertagskalender_bestaetigt", False),
+                feiertage_zusaetzlich=tuple(
+                    date.fromisoformat(d) for d in facts.get("feiertage_zusaetzlich", [])
+                ),
+            ),
+            module_id=module_id,
+        )
+    except (ValueError, OverflowError) as exc:
+        return _result_item(
+            module_id,
+            spec,
+            STATUS_MISSING_INPUT,
+            None,
+            [f"AO-Frist individuell prüfen; keine sichere Datumsberechnung: {exc}"],
+            dict(facts),
+        )
+    return _result_item(module_id, spec, STATUS_COMPUTED, result, [], dict(facts))

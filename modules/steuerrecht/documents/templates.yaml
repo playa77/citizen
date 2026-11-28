@@ -1,0 +1,98 @@
+selection:
+  no_deadline: einspruch
+  open:
+    default: einspruch
+  lapsed:
+    default: einspruch
+slots: []
+templates:
+  einspruch:
+    title: Einspruch vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständiges Finanzamt und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigener Bescheid, Datum, Jahr und Aktenzeichen]
+
+
+        [BITTE PRÜFEN: Hiermit lege ich gegen meinen bezeichneten Bescheid Einspruch ein.]
+
+        [BITTE PRÜFEN: angefochtene Punkte, Umfang und belegte Begründung; notwendige Unterlagen.]
+
+        §§355,356,357 AO: Frist, Zulässigkeit, Form, zuständiges Finanzamt und wirksame Bekanntgabe
+        bestätigen. Keine Tatsachen automatisch behaupten.
+
+
+        Zahlung und Fälligkeit gesondert prüfen. Einspruch oder Antrag allein stoppt die Erhebung grundsätzlich
+        nicht. Dieses Blatt reicht nichts ein; keine automatische Versendung oder Fristwahrung.
+
+        [BITTE PRÜFEN: Voraussetzungen, Belege, Name, Datum, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  aussetzung:
+    title: Antrag auf Aussetzung der Vollziehung vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständiges Finanzamt und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigener Bescheid, Datum, Jahr und Aktenzeichen]
+
+
+        §361 AO: [BITTE PRÜFEN: Hiermit beantrage ich die Aussetzung der Vollziehung für den bezeichneten
+        angefochtenen Betrag.]
+
+        [BITTE PRÜFEN: genauer Umfang, ernstliche Zweifel oder unbillige Härte, Belege, Einspruch und
+        Zahlungslage.]
+
+        Bei bereits vollzogenem Bescheid Aufhebung statt Aussetzung prüfen. Sicherheitsleistung und
+        Zinsfolgen individuell klären. Erst eine wirksame Entscheidung kann die Vollziehung aussetzen.
+
+
+        Zahlung und Fälligkeit gesondert prüfen. Einspruch oder Antrag allein stoppt die Erhebung grundsätzlich
+        nicht. Dieses Blatt reicht nichts ein; keine automatische Versendung oder Fristwahrung.
+
+        [BITTE PRÜFEN: Voraussetzungen, Belege, Name, Datum, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  aenderung:
+    title: Antrag auf schlichte Änderung vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständiges Finanzamt und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigener Bescheid, Datum, Jahr und Aktenzeichen]
+
+
+        §172 AO: [BITTE PRÜFEN: Hiermit beantrage ich, meinen bezeichneten Bescheid hinsichtlich folgender
+        konkreter Punkte zu ändern.]
+
+        [BITTE PRÜFEN: konkrete Änderung, Betrag, rechtzeitige Antragstellung und Belege.]
+
+        Anwendungsbereich und §172 Abs.1 Nr.2a AO bestätigen. Der Antrag ersetzt keinen Einspruch und
+        verlängert dessen Frist nicht. Bei Streit über weitere Punkte Einspruch gesondert prüfen.
+
+
+        Zahlung und Fälligkeit gesondert prüfen. Einspruch oder Antrag allein stoppt die Erhebung grundsätzlich
+        nicht. Dieses Blatt reicht nichts ein; keine automatische Versendung oder Fristwahrung.
+
+        [BITTE PRÜFEN: Voraussetzungen, Belege, Name, Datum, Form und rechtzeitigen nachweisbaren Eingang.]
+
+        '

@@ -1,0 +1,192 @@
+{
+  "format": "citizen-plain-eval-v1.0",
+  "module": "steuerrecht",
+  "languages": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "categories": [
+    "frist_pruefen",
+    "rechenwerte_pruefen",
+    "zahlung_pruefen",
+    "einordnung_offen"
+  ],
+  "deadline_specs": [
+    "steuerrecht_einspruch"
+  ],
+  "review_pending": [
+    "de",
+    "de-LS",
+    "en"
+  ],
+  "core_review_pending": [
+    "ar",
+    "de",
+    "de-LS",
+    "en",
+    "fa",
+    "ru",
+    "tr",
+    "uk"
+  ],
+  "goldset": {
+    "version": "1.0.0",
+    "path": "goldset/plain-v1.0.0.yaml"
+  },
+  "cases_passed": 24,
+  "cases_total": 24,
+  "cases": [
+    {
+      "case_id": "PL-STE-001",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-002",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-003",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-004",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-005",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-006",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-007",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-008",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-009",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-010",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-011",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-012",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-013",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-014",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-015",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-016",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-017",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-018",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-019",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-STE-020",
+      "kind": "deadline",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FIND-frist_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FIND-rechenwerte_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FIND-zahlung_pruefen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "case_id": "PL-FIND-einordnung_offen",
+      "kind": "finding",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": {},
+  "subset": null,
+  "gate_passed": true,
+  "module_version": "0.1.0",
+  "core_version": "3.12.0",
+  "git_sha": "598f68d",
+  "run_timestamp": "2026-11-28T09:45:02.587266+00:00"
+}

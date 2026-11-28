@@ -1,6 +1,6 @@
 # Citizen — Rechtlicher Hinweis, Haftungsausschluss, Statement und KI-VO-Klassifizierung
 
-**Version:** 3.8.0 · **Stand:** 2026-11-27
+**Version:** 3.9.0 · **Stand:** 2026-11-28
 
 **Autor:** www.github.com/playa77
 
@@ -1006,7 +1006,13 @@ Datums- und Budgetarithmetik stellt weder Aufenthaltsstatus noch Fiktionswirkung
 
 Entwürfe wahren keine Frist. Eine Fristverlängerungsbitte verlängert keine gesetzliche Klage-/Eilantragsfrist. Menschliche Rechts- und Sprachprüfung stehen aus; auch AR/FA/UK/TR/RU-Texte sind Entwürfe. Keine Aussage über vollständige Quellenabdeckung, Live-Inferenzqualität oder GUI-Zugänglichkeit.
 
+### `steuerrecht`
+
+Dieses experimentelle Modul hilft Ihnen nur bei Ihrer eigenen Einkommensteuerangelegenheit. Es unterstützt keine Hilfeleistung für andere oder Beratungsstellenarbeit (§2 StBerG). Bestätigte Bekanntgabe und Frist müssen individuell geprüft werden; andere Versandarten und Sonderfälle bleiben offen. Tarif- und Pauschbetragswerte sind begrenzte Rechenprüfungen, keine vollständige Steuerfestsetzung oder Anspruchszusage. Ein Einspruch oder Antrag hemmt die Zahlung grundsätzlich nicht (§361 AO). Schlichte Änderung ersetzt keinen Einspruch. Entwürfe enthalten [BITTE PRÜFEN] und werden nicht automatisch eingereicht. Laden Sie keine unnötigen Steuerkennzeichen, Bank- oder Drittdaten hoch. Befugte Steuerberatung oder geeignete Lohnsteuerhilfe kann Sie beraten. Menschliche Prüfung und Freigabe stehen aus.
+
 ## Änderungshistorie
+
+- **3.9.0 (2026-11-28):** Steuerrecht: eigene Angelegenheit, qualifizierte AO-Fristen, begrenzte Rechenprüfungen und getrennte Zahlung; erneute Kenntnisnahme erforderlich.
 
 - **3.8.0 (2026-11-27):** Aufenthaltsrecht: qualifizierter Fristschutz, sensible Daten und mehrsprachige Entwürfe; erneute Kenntnisnahme erforderlich.
 - **3.7.0 (2026-11-27):** Familienrecht: qualifizierte reguläre Beschwerde und gesetzliche Rechenwerte; Kindeswohl-Verweisung, Datenminimierung und offene Leitlinienrechte. Erneute Kenntnisnahme erforderlich.

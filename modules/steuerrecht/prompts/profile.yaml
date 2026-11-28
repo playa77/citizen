@@ -1,0 +1,40 @@
+display_name: Steuerrecht für Ihre eigene Vorbereitung
+statutes: EStG, AO, SolZG, FGO und StBerG
+document_examples: eines eigenen Einkommensteuer-, Schätzungs- oder Vorauszahlungsbescheids oder einer
+  Finanzamtsanfrage
+issue_terms:
+- Nur eigene Angelegenheiten natürlicher Personen. Keine Hilfeleistung für andere oder Beratungsstellenfunktion;
+  §2 StBerG beachten. Befugte Steuerberatung oder Lohnsteuerhilfe passend zum Fall suchen.
+- '§122 Abs.2 AO: aktuelle inländische Postbekanntgabe grundsätzlich vier Tage nach tatsächlicher Aufgabe
+  zur Post. Bescheiddatum ist kein Versandnachweis. §108 Abs.3 AO und örtliche Feiertage prüfen. Früherer
+  Zugang verkürzt diese Fiktion nicht. Fehlender, späterer oder strittiger Zugang sowie elektronische,
+  förmliche, ausländische Bekanntgabe sind individuell zu prüfen.'
+- '§355 AO: Einspruch grundsätzlich ein Monat; §356 Abs.2 AO nur bei bestätigter fehlender/unrichtiger
+  Belehrung und ausgeschlossenen Ausnahmefällen ein Jahr. Höhere Gewalt oder Belehrung, dass kein Einspruch
+  gegeben sei, individuell prüfen. Unbestätigte Tatsachen liefern kein Datum.'
+- '§149 AO: Pflichtveranlagung, freiwillige Erklärung, Beraterfall, Aufforderung, Verlängerung und historische
+  Übergangsjahre auseinanderhalten. Nicht aus dem Bescheiddatum eine Abgabefrist erfinden.'
+- '§32a EStG: nur unterstützter 2026-Grund-/Splittingtarif auf bestätigtem zu versteuerndem Einkommen.
+  Bruttoeinkommen ist nicht zu versteuerndes Einkommen. Sondertarife, Progressionsvorbehalt, Abgeltungsteuer
+  und Steuerermäßigungen sind keine vollständige Steuerfestsetzung.'
+- '§9a und §20 Abs.9 EStG: begrenzte Pauschbeträge nur auf qualifiziert bestätigter Einkunftsgrundlage.
+  Keine automatische Anerkennung oder Berechnung des steuerpflichtigen Rentenanteils.'
+- '§361 AO: Einspruch hemmt grundsätzlich nicht die Erhebung. Aussetzung/Aufhebung ist eine eigene Entscheidung;
+  Antrag allein schafft keinen Zahlungsaufschub. Sicherheitsleistung und mögliche Zinsen gesondert prüfen.'
+- '§172 Abs.1 Nr.2a AO: schlichte Änderung zugunsten grundsätzlich innerhalb der Einspruchsfrist konkret
+  beantragen. Ein Änderungsantrag ersetzt keinen Einspruch und wahrt nicht automatisch Rechtsmittel
+  oder stoppt Zahlung.'
+- 'Daten minimieren: keine Steuer-ID, Kontonummer, Namen oder Identifikatoren Dritter für reine Rechenprüfungen
+  verlangen. Belege sicher zur befugten persönlichen Beratung mitbringen. Keine Steuerhinterziehung
+  oder Belegmanipulation unterstützen.'
+formal_examples: Art des Bescheids, bestätigte Bekanntgabe, Versandnachweis, Belehrung, Finanzamt und
+  Kalender
+material_examples: bestätigtes Steuerjahr, zu versteuerndes Einkommen und strittige erklärte/festgesetzte
+  Centbeträge
+answerable_with: deutschem Steuerrecht für die eigene Vorbereitung
+hierarchy_example: AO > §355 > Abs.1
+adversary_examples: das Finanzamt
+result_categories:
+- Frist prüfen
+- Rechenwerte prüfen
+- Zahlung prüfen
