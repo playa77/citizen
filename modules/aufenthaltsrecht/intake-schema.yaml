@@ -1,0 +1,213 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/aufenthaltsrecht-intake-v0.1.0
+title: Own-matter residence preparation; no persecution or sensitive narratives
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+  document_type:
+    enum:
+    - auslaender_widerspruchsbescheid
+    - auslaender_direktklage
+    - auslaender_widerspruch
+    - asyl_zwei_wochen
+    - asyl_36
+    - asyl_34a
+    - asyl_altrecht
+    - asyl_flughafen
+    - asyl_unbekannt
+    - duldung
+    - titel
+    - einbuergerung
+    - sonstiges
+  zustellungsart:
+    enum:
+    - inland
+    - ausland
+    - oeffentlich
+  bundesland:
+    enum:
+    - BB
+    - BE
+    - BW
+    - BY
+    - HB
+    - HE
+    - HH
+    - MV
+    - NI
+    - NW
+    - RP
+    - SH
+    - SL
+    - SN
+    - ST
+    - TH
+  calculation_type:
+    enum:
+    - none
+    - title_expiry
+    - residence_period
+    - livelihood_budget
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      wirksame_zustellung_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      rbb_richtig_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      aktuelles_regime_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      kein_sonderregime:
+        type:
+        - boolean
+        - 'null'
+      vorverfahren_abgeschlossen_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      direktklage_land_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      widerspruch_land_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      asyl_neues_recht_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      zweiwochenfrist_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      wochenklage_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      eilrechtsschutz_36_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      eilrechtsschutz_34a_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      wirksame_bekanntgabe_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+      inlaendische_bekanntgabe_bestaetigt:
+        type:
+        - boolean
+        - 'null'
+  feiertage_zusaetzlich:
+    type: array
+    maxItems: 366
+    items:
+      type: string
+      format: date
+  as_of:
+    type: string
+    format: date
+  zustellung_tatsaechlich:
+    type: string
+    format: date
+  title_expires_on:
+    type: string
+    format: date
+  application_received_on:
+    type: string
+    format: date
+  lawful_residence_started_on:
+    type: string
+    format: date
+  eligible_income_cents:
+    type: integer
+    minimum: 0
+  confirmed_need_cents:
+    type: integer
+    minimum: 0
+  insurance_cost_cents:
+    type: integer
+    minimum: 0
+  applicability_confirmed:
+    type:
+    - boolean
+    - 'null'
+  current_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+  title_and_expiry_confirmed:
+    type:
+    - boolean
+    - 'null'
+  application_receipt_confirmed:
+    type:
+    - boolean
+    - 'null'
+  section81_4_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_schengen_visa_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_authority_decision_confirmed:
+    type:
+    - boolean
+    - 'null'
+  continuous_lawful_ordinary_residence_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_credit_or_interruption_confirmed:
+    type:
+    - boolean
+    - 'null'
+  standard_section10_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+  need_and_income_basis_confirmed:
+    type:
+    - boolean
+    - 'null'
+  insurance_coverage_confirmed:
+    type:
+    - boolean
+    - 'null'
+  complete_household_confirmed:
+    type:
+    - boolean
+    - 'null'
+  no_special_livelihood_regime_confirmed:
+    type:
+    - boolean
+    - 'null'
+  synthetic_data_confirmed:
+    type:
+    - boolean
+    - 'null'
+  feiertagskalender_bestaetigt:
+    type:
+    - boolean
+    - 'null'
+  ereignis_datum:
+    type: string
+    format: date
+    description: Independently confirmed effective notification for asylum interim application; not the
+      lawsuit service date.

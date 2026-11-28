@@ -1,0 +1,125 @@
+format: citizen-plain-copy-v1.0
+module: aufenthaltsrecht
+language: tr
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Süreyi hemen kontrol edin
+    text: BAMF kararı veya sınır dışı edilme tehlikesinde hemen uzman yardımı alın. Dava ve geçici hukuki
+      koruma başvurusu ayrı ayrı gerekebilir.
+    next_step: Kararın tamamını, başvuru yolu bilgisini ve teslim belgesini danışma için saklayın.
+  aufenthalt_vorbereiten:
+    title: Oturum sorularınızı hazırlayın
+    text: Randevu, başvurunun alındığını kanıtlamaz. Hesaplama oturum statüsü ya da seyahat veya çalışma
+      izni sağlamaz.
+    next_step: Oturum belgesini, bitiş tarihini ve kanıtlanmış başvuru teslimini ayrı ayrı inceletin.
+  beratung_erforderlich:
+    title: Bireysel danışmanlık alın
+    text: İltica geçiş kuralları, vatandaşlık ve geçim koşulları bireysel inceleme gerektirir. İltica
+      gerekçesi yazmıyor, inandırıcılık değerlendirmiyoruz.
+    next_step: Zulüm öyküleri, din, teşhis veya başkaları hakkında gereksiz veriler yüklemeyin.
+  einordnung_offen:
+    title: Bilgiler belirsiz
+    text: Usul veya koşullar belirsiz. Tarihin bilinmemesi güvende olduğunuz anlamına gelmez.
+    next_step: Kısa sürelerde hemen uzman yardımı alın.
+deadlines:
+  auf_klage:
+    title: İtiraz kararından sonra dava
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  auf_direktklage:
+    title: Doğrudan dava
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  auf_widerspruch:
+    title: İdari itiraz
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  asyl_klage:
+    title: 'İltica davası: iki hafta'
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  asyl_36_klage:
+    title: Madde 36 kapsamında iltica davası
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  asyl_36_eil:
+    title: Madde 36 kapsamında geçici hukuki koruma
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  asyl_34a_klage:
+    title: Madde 34a kapsamında iltica davası
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true
+  asyl_34a_eil:
+    title: Madde 34a kapsamında geçici hukuki koruma
+    action: Yalnızca doğrulanmış usul ve doğru başvuru yolu bilgisi için. Dava ile geçici hukuki korumayı
+      ayrı inceletin. Hemen uzman yardımı alın.
+    texts:
+      computed: 'Hesaplanan son tarih: {frist_ende}. Dayanak: {basis}. Hemen inceletin.'
+      provisional: 'Geçici son tarih: {frist_ende}. Eksik bilgileri hemen kontrol ettirin.'
+      missing_input: Doğrulanmış bilgiler eksik. Güvenilir bir tarih verilemiyor. Hemen uzman yardımı
+        alın.
+      not_applicable: Bu kural uygulanmıyor. Başka kısa süreler geçerli olabilir. Hemen uzman yardımı
+        alın.
+    referral_when_not_applicable: true

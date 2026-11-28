@@ -1,0 +1,115 @@
+format: citizen-plain-copy-v1.0
+module: aufenthaltsrecht
+language: de-LS
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Frist sofort prüfen
+    text: Sie haben einen Brief vom BAMF? Oder Ihnen droht Abschiebung? Suchen Sie sofort fachkundige
+      Hilfe.
+    next_step: Nehmen Sie den ganzen Brief und den Umschlag zur Beratung mit.
+  aufenthalt_vorbereiten:
+    title: Aufenthalt vorbereiten
+    text: 'Ein Termin allein ist kein Antrag. Die Rechnung sagt nicht: Ihr Aufenthalt ist sicher.'
+    next_step: Lassen Sie Ihren Titel und Ihren Antrag prüfen.
+  beratung_erforderlich:
+    title: Hilfe suchen
+    text: Manchmal müssen Sie klagen und auch einen Eil-Antrag stellen. Lassen Sie das sofort prüfen.
+    next_step: Laden Sie keine Geschichte über Verfolgung oder unnötige private Daten hoch.
+  einordnung_offen:
+    title: Noch unklar
+    text: 'Wir kennen nicht alle Fakten. Ein unbekannter Tag bedeutet nicht: Sie haben Zeit.'
+    next_step: Suchen Sie sofort fachkundige Hilfe.
+deadlines:
+  auf_klage:
+    title: Klage nach Widerspruch
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  auf_direktklage:
+    title: Direkte Klage
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  auf_widerspruch:
+    title: Widerspruch
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  asyl_klage:
+    title: 'Asyl-Klage: zwei Wochen'
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  asyl_36_klage:
+    title: Asyl-Klage nach §36
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  asyl_36_eil:
+    title: Eil-Antrag nach §36
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  asyl_34a_klage:
+    title: Asyl-Klage nach §34a
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true
+  asyl_34a_eil:
+    title: Eil-Antrag nach §34a
+    action: Diese Regel gilt nur für ein bestätigtes Verfahren. Klage und Eil-Antrag sind verschieden.
+      Suchen Sie sofort fachkundige Hilfe.
+    texts:
+      computed: 'Berechnetes Ende: {frist_ende}. Regel: {basis}. Lassen Sie das sofort prüfen.'
+      provisional: 'Vorläufiges Ende: {frist_ende}. Lassen Sie die Fakten sofort prüfen.'
+      missing_input: Wichtige Fakten fehlen. Wir nennen keinen sicheren Tag. Suchen Sie sofort Hilfe.
+      not_applicable: Diese Regel passt nicht. Vielleicht gilt eine andere kurze Frist. Suchen Sie sofort
+        Hilfe.
+    referral_when_not_applicable: true

@@ -430,3 +430,17 @@ Bounded 2026 proposed parameters do not cover 2027 or establish entitlement.
 No guideline table/self-retention data is bundled while OQ-7 remains open.
 Sorge/Umgang and Kindeswohl need individual referral; human review and live
 quality gates remain deferred, not passed. See D-077 and the module README.
+
+### WP-136 experimental residence/asylum module
+
+Core 3.11.0/module API 3.9 adds `aufenthaltsrecht` 0.1.0 and migration
+`022_residence_sources`. Apply the single existing migration chain; downgrade
+refuses while new source rows exist. Deployment enablement never selects or
+loads this module for a user. No corpus population is performed by this change.
+Current disclaimer acknowledgement is `v3.8.0`, requiring renewed acknowledgement.
+
+Static AR/FA/UK/TR/RU core notices and module copy are drafts. GUI RTL,
+accessibility and P12 acceptance remain separate. State-law automatic remedy
+selection, old-law and transition asylum regimes are unavailable and require
+individual advice; source/parser support does not mean complete legal coverage.
+Do not run live inference/evaluation with developer-agent credentials.

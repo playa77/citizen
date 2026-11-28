@@ -2,12 +2,12 @@
 # Critical copy: disclaimer and KI-Hinweis. Follows the Netzwerk Leichte
 # Sprache rules as far as a draft can (short sentences, one statement per
 # sentence, explained words); needs review by a Prüfgruppe (OQ-3).
-# Pinned to DISCLAIMER 3.7.0 and disclosure 1.0 like de.yaml.
-# Semantic Version: 1.7.0 | 2026-11-27
+# Pinned to DISCLAIMER 3.8.0 and disclosure 1.0 like de.yaml.
+# Semantic Version: 1.8.0 | 2026-11-27
 
 format: citizen-plain-core-copy-v1.0
 language: de-LS
-disclaimer_version: v3.7.0
+disclaimer_version: v3.8.0
 disclosure_version: "1.0"
 review:
   status: draft

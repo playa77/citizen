@@ -9,7 +9,7 @@ passed separately by the evaluator. D-076 records the WP-134 extension.
 
 Implemented family (identical mechanics — roll to the next workday):
 ``sgg_64_3`` (§ 64 Abs. 3 SGG), the reference case. Other procedure codes
-(``vwgo_57``, ``ao_108``) are deliberately NOT
+(``ao_108``) are deliberately NOT
 pre-registered: their exact semantics (e.g. § 108 Abs. 2 AO treats
 Saturdays as Werkstage) must land together with the module that needs
 them, with golden date tests.
@@ -35,6 +35,7 @@ ROLLER_LABELS: dict[str, str] = {
     "bgb_193": "§ 193 BGB",
     "stpo_43": "§ 43 Abs. 2 StPO",
     "famfg_16": "§ 16 Abs. 2 FamFG; § 222 Abs. 2 ZPO",
+    "vwgo_57": "§ 57 Abs. 2 VwGO; § 222 Abs. 2 ZPO",
 }
 
 _ROLLERS: dict[str, Roller] = {
@@ -42,6 +43,7 @@ _ROLLERS: dict[str, Roller] = {
     "zpo_222": next_workday,
     "stpo_43": civil_next_workday,
     "famfg_16": civil_next_workday,
+    "vwgo_57": civil_next_workday,
 }
 
 

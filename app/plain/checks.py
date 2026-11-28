@@ -19,7 +19,7 @@ import re
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
 
-#: Discouraging phrases (DE/EN). Extend, never shorten without a D-entry.
+#: Discouraging phrases (DE/EN plus WP-136 languages, D-078). Extend, never shorten.
 DISCOURAGING_PHRASES: tuple[str, ...] = (
     "aussichtslos",
     "hoffnungslos",
@@ -40,9 +40,14 @@ DISCOURAGING_PHRASES: tuple[str, ...] = (
     "too late",
     "nothing you can do",
     "your own fault",
+    "لا جدوى",
+    "بی‌فایده است",
+    "немає шансів",
+    "hiç şansınız yok",  # noqa: RUF001 — Turkish dotless i is intentional.
+    "нет шансов",
 )
 
-_SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ0-9„\"(])")
+_SENTENCE_END = re.compile(r"(?<=[.!?؟])\s+(?=[A-ZÄÖÜ0-9\u0400-\u052f\u0600-\u06ff„\"(])")
 # Abbreviations whose dot does not end a sentence (kept short on purpose).
 _ABBREV = re.compile(r"\b(z\.\s?B|d\.\s?h|u\.\s?a|bzw|Abs|Nr|S|Art|ca|vgl|e\.g|i\.e)\.", re.I)
 _WORD = re.compile(r"[^\W\d_][\w'\u2019-]*|\d+", re.UNICODE)

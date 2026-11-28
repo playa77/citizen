@@ -51,6 +51,10 @@
       "properties": {
         "title": {"$ref": "#/$defs/text"},
         "action": {"$ref": "#/$defs/text"},
+        "referral_when_not_applicable": {
+          "type": "boolean",
+          "description": "Opt in to a date-free critical referral banner when no supported rule applies."
+        },
         "texts": {
           "type": "object",
           "description": "Keyed by '<status>' or '<status>.<frist_typ>' (the more specific key wins). Status: computed | provisional | missing_input | not_applicable.",

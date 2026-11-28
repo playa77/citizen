@@ -166,6 +166,7 @@ def render_deadline(
     """One deadline item (Fristen-core output) plus its plain texts."""
     texts: dict[str, Any] = {}
     missing: list[str] = []
+    referral_required = False
     available = set(copy_languages(manifest))
     for language in languages:
         if language not in available:
@@ -176,6 +177,12 @@ def render_deadline(
         if entry is None:
             missing.append(language)
             continue
+        if (
+            entry.get("referral_when_not_applicable") is True
+            and item.get("severity") == "critical"
+            and item.get("status") == "not_applicable"
+        ):
+            referral_required = True
         try:
             key, text = deadline_text(entry, item, language)
         except (PlainCopyError, MissingPlaceholderValue):
@@ -197,6 +204,7 @@ def render_deadline(
         "frist_ende": item.get("frist_ende"),
         "texts": texts,
         "missing_languages": missing,
+        **({"referral_required": True} if referral_required else {}),
     }
 
 
@@ -212,7 +220,10 @@ def deadline_banner(rendered: Sequence[Mapping[str, Any]]) -> dict[str, Any] | N
     one, because the person does not yet know how much time is left.
     """
     critical = [
-        d for d in rendered if d.get("severity") == "critical" and d.get("status") in _ACTIONABLE
+        d
+        for d in rendered
+        if d.get("severity") == "critical"
+        and (d.get("status") in _ACTIONABLE or d.get("referral_required") is True)
     ]
     if not critical:
         return None
@@ -220,6 +231,8 @@ def deadline_banner(rendered: Sequence[Mapping[str, Any]]) -> dict[str, Any] | N
     def rank(d: Mapping[str, Any]) -> tuple[int, str]:
         if d.get("status") == "missing_input":
             return (0, "")
+        if d.get("status") == "not_applicable":
+            return (2, "")
         return (1, str(d.get("frist_ende") or "9999-12-31"))
 
     first = min(critical, key=rank)

@@ -1,0 +1,50 @@
+display_name: Aufenthaltsrecht für Ihre eigene Beratungsvorbereitung
+statutes: AufenthG, AsylG, AufenthV, BeschV, FreizügG/EU, StAG, VwGO und ergänzend VwVfG/ZPO/BGB
+document_examples: eines Ausländerbehörden- oder BAMF-Bescheids, einer Ladung, Anhörung, Duldung oder
+  eines Aufenthaltstitels
+issue_terms:
+- 'Dringend: Bei BAMF-Bescheiden und drohender Abschiebung sofort qualifizierte Asyl-/Migrationsberatung
+  oder anwaltliche Hilfe suchen. Warnung auch ohne berechenbares Datum beibehalten. Keine automatische
+  Kontaktaufnahme.'
+- 'Rechtsstand 27.11.2026: §87e AsylG und Art.79 Abs.3 VO(EU)2024/1348 Übergangsrecht individuell bestätigen.
+  Kein altes/neues Regime aus Datum oder Dokumentname ableiten. §36 Eilantrag steht aktuell in Abs.2,
+  nicht pauschal Abs.3.'
+- '§74 AsylG: zwei Wochen nur im qualifiziert bestätigten regulären Regime; eine Woche nur bei bestätigter
+  Wochenklage. §36 Abs.2 / §34a Abs.3 AsylG Eilantrag separat prüfen; Klage allein schützt nicht zuverlässig
+  vor Abschiebung. Keine Schutzwirkung zusagen.'
+- 'Neues Asylrecht: fehlerhafte Belehrung nicht automatisch mit Jahresfrist behandeln; aktuelle §74 AsylG,
+  §36 AsylG und §34a AsylG verweisen auf drei Monate. Keine Ersatzfrist automatisch rechnen. Altrecht,
+  Flughafen-/Grenzverfahren, Folgeantrag und ungeklärte EU-Regime sofort individuell prüfen.'
+- '§74 VwGO Monatsfrist: Widerspruchsbescheid oder Direktklage-Regime und konkrete Landesregel qualifiziert
+  bestätigen. §70 VwGO nur bei belegter Statthaftigkeit des Vorverfahrens. Kein Land automatisch zuordnen;
+  staatliche Abdeckung ist ungeprüft. §58 Belehrung und wirksame Zustellung prüfen.'
+- Nur wirksame inländische förmliche Zustellung/Bekanntgabe mit richtig bestätigter Belehrung und Kalender
+  rechnen. Briefdatum, Postaufgabe oder vermuteter Zugang ersetzen das nicht. Örtliche Feiertage bestätigen;
+  Auslands-/öffentliche Zustellung offenlassen.
+- '§81 Abs.4 AufenthG: belegter rechtzeitiger Antragseingang, bisheriger Titel, Ausnahmen und Behördenentscheidung
+  bestätigen. Terminbuchung ist kein Antrag. Verspätung und Schengenvisum nicht automatisch erfassen;
+  §81 Abs.3 getrennt beraten. Keine Garantie zu Fiktion, Arbeit, Reisen oder Abschiebungsschutz.'
+- '§2 Abs.3 AufenthG: nur bestätigte individuelle Budgetarithmetik. Krankenversicherung, öffentliche Mittel/Ausnahmen
+  und Prognose individuell prüfen; keine Anspruchsentscheidung, keine ungeprüften SGBII-Werte oder Ausbildungsbeträge
+  einsetzen.'
+- §10 StAG aktuell fünf Jahre; Abs.3 weggefallen. Nur bestätigter ununterbrochener rechtmäßiger gewöhnlicher
+  Aufenthalt als Kalenderarithmetik. §12b Unterbrechung/Anrechnung, §40a Übergang, Miteinbürgerung und
+  weitere Voraussetzungen gesondert beraten.
+- 'Art.9-Daten minimieren: keine Verfolgungsgeschichte, Religion, ethnische Zuordnung, Diagnosen, Passnummern
+  oder Drittdaten erfragen. Nur notwendige abstrakte Daten zur eigenen Terminvorbereitung.'
+- Keine Asylbegründung, Glaubwürdigkeitsbewertung, Schutzprognose oder behördliche Migrationsentscheidung
+  erzeugen. Eigene Angelegenheit; keine Fallbewertung für Behörden.
+- Entwürfe nur Checkliste Verlängerung, Akteneinsicht und behördliche verlängerbare Fristbitte. Gesetzliche
+  Klage-/Eilfristen werden durch eine Bitte nicht verlängert. [BITTE PRÜFEN] erhalten.
+- 'Eilanträge nach §36 Abs.2 AsylG und §34a Abs.3 AsylG: unabhängig bestätigte wirksame Bekanntgabe als
+  ereignis_datum verwenden; nicht durch späteren Zustelltag der Klage ersetzen.'
+formal_examples: Verfahrensart, Übergangsrecht, Belehrung, bestätigter Zugang und örtlicher Kalender
+material_examples: bestätigte Titel-/Aufenthaltszeiträume, Antragseingang und Budgetgrundlage ohne sensible
+  Narrative
+answerable_with: deutschem Aufenthaltsrecht für Ihre eigene Vorbereitung, ohne Asylinhalte zu entwerfen
+hierarchy_example: AufenthG > § 81 > Abs. 4
+adversary_examples: die zuständige Behörde
+result_categories:
+- Frist prüfen – sofort qualifizierte Hilfe bei Asyl und drohender Abschiebung
+- Aufenthalt vorbereiten – bestätigte Daten und offene Voraussetzungen
+- Beratung erforderlich – Status, Übergangsrecht und individuelle Ansprüche

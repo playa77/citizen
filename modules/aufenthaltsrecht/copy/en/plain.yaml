@@ -1,0 +1,110 @@
+format: citizen-plain-copy-v1.0
+module: aufenthaltsrecht
+language: en
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071.
+findings:
+  frist_pruefen:
+    title: Check the deadline now
+    text: For BAMF decisions or threatened removal, seek qualified help immediately. A lawsuit and interim
+      application may both be needed.
+    next_step: Keep the complete decision, remedy notice and proof of receipt for advice.
+  aufenthalt_vorbereiten:
+    title: Prepare your residence questions
+    text: An appointment is not proof of an application. Arithmetic gives no secure status or permission
+      to travel or work.
+    next_step: Have your title, expiry date and proven application receipt checked individually.
+  beratung_erforderlich:
+    title: Get individual advice
+    text: Asylum transition rules, naturalisation and livelihood need individual review. We do not draft
+      asylum narratives or assess credibility.
+    next_step: Do not upload persecution stories, religion, diagnoses or unnecessary information about
+      other people.
+  einordnung_offen:
+    title: Facts need checking
+    text: The procedure or conditions are unclear. An unknown date does not mean safety.
+    next_step: For short deadlines, seek qualified help immediately.
+deadlines:
+  auf_klage:
+    title: Lawsuit after objection decision
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  auf_direktklage:
+    title: Direct lawsuit
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  auf_widerspruch:
+    title: Administrative objection
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  asyl_klage:
+    title: 'Asylum lawsuit: two weeks'
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  asyl_36_klage:
+    title: Asylum lawsuit under section 36
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  asyl_36_eil:
+    title: Interim application under section 36
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  asyl_34a_klage:
+    title: Asylum lawsuit under section 34a
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true
+  asyl_34a_eil:
+    title: Interim application under section 34a
+    action: Only for the confirmed procedure and correct remedy notice. Check lawsuit and interim relief
+      separately. Seek qualified help immediately.
+    texts:
+      computed: 'Calculated end: {frist_ende}. Basis: {basis}. Have this checked immediately.'
+      provisional: 'Provisional end: {frist_ende}. Have missing facts checked immediately.'
+      missing_input: Confirmed facts are missing. No reliable date is available. Seek qualified help immediately.
+      not_applicable: This rule does not apply. Other short deadlines may apply. Seek qualified help immediately.
+    referral_when_not_applicable: true

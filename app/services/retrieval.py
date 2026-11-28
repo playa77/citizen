@@ -53,6 +53,13 @@ _STATUTE_TO_SOURCE_TYPE: dict[str, list[str]] = {
     "FeV": ["fev"],
     "StPO": ["stpo"],
     "FamFG": ["famfg"],
+    "AufenthG": ["aufenthg"],
+    "AsylG": ["asylg"],
+    "AufenthV": ["aufenthv"],
+    "BeschV": ["beschv"],
+    "FreizügG/EU": ["freizuegg_eu"],
+    "StAG": ["stag"],
+    "VwGO": ["vwgo"],
     "UhVorschG": ["uvg"],
     "UVG": ["uvg"],
     "MinUhV": ["minuhv"],
@@ -80,7 +87,14 @@ _NORM_REF_RE = re.compile(
     r"(?P<para>[A-Za-z0-9]+(?:\s*/\s*[A-Za-z0-9]+)*)"
     r"(?:\s+(?:Abs\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*|S\.\s*\d+(?:[-/]\s*[A-Za-z0-9]+)*|Nr\.\s*[A-Za-z0-9]+(?:[-/]\s*[A-Za-z0-9]+)*))*"
     r"\s+"
-    r"(?P<statute>[A-Za-z\u00C0-\u024F]+(?:\s+(?![nNaA]\.F\.)[A-Za-z\u00C0-\u024F0-9]+){0,1})"
+    # Match catalogued law names rather than swallowing the following prose
+    # word ("AsylG und"), which would silently discard an otherwise exact norm.
+    r"(?P<statute>"
+    + "|".join(
+        re.escape(name).replace(r"\ ", r"\s+")
+        for name in sorted(_STATUTE_TO_SOURCE_TYPE, key=len, reverse=True)
+    )
+    + r")(?![\w/])"
 )
 
 
@@ -848,7 +862,7 @@ def _extract_norm_references(text: str) -> list[str]:
                 found.append(f"Art. {article} {law}")
     for match in _NORM_REF_RE.finditer(cleaned):
         raw_para = match.group("para").strip()
-        statute = match.group("statute").strip()
+        statute = " ".join(match.group("statute").split())
 
         # Skip if statute is not in our known mapping
         if statute not in _STATUTE_TO_SOURCE_TYPE or statute == "EGBGB":
@@ -910,7 +924,7 @@ async def retrieve_chunks_by_norm_reference(
             else:
                 assert match is not None
                 para = match.group("para").strip()
-                statute = match.group("statute").strip()
+                statute = " ".join(match.group("statute").split())
                 unit = f"§ {para}"
 
             # Map statute name → source_types, intersect with requested types

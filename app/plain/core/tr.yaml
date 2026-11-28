@@ -1,0 +1,42 @@
+format: citizen-plain-core-copy-v1.0
+language: tr
+disclaimer_version: v3.8.0
+disclosure_version: '1.0'
+review:
+  status: draft
+  reviewer: null
+  date: null
+  note: Human legal/language review pending under D-071; source summaries DE/EN.
+disclaimer:
+  title: 'Başlamadan önce: Citizen sınırları'
+  points:
+  - Citizen mektupları anlamanıza ve kendi işiniz için danışma görüşmesine hazırlanmanıza yardımcı olur.
+  - Hukuki danışmanlık değildir; danışman veya avukatın yerini tutmaz.
+  - Sonuçların bir bölümünü yapay zekâ yazar ve hata yapabilir. Kullanmadan önce her sonucu kontrol edin.
+  - Süreler ve tutarlar sabit kurallarla hesaplanır. Bunları da uzmanla kontrol edin.
+  - Citizen uygulamasını yalnızca kendi işleriniz için kullanın.
+  - Mektuplar taslaktır. Her [BITTE PRÜFEN] alanını kontrol edip tamamlayın. Neyi göndereceğinize siz
+    karar verirsiniz.
+  - Yazılım ücretsiz ve açık kaynaklıdır. Hatalara ilişkin sorumluluk, hukukun izin verdiği ölçüde sınırlıdır.
+  ack_label: Bu açıklamaları okudum. Citizen uygulamasını kendi sorumluluğumda kullanıyorum.
+  full_text_note: Tam metin DISCLAIMER_DE.md ve DISCLAIMER_EN.md dosyalarındadır. Bu özet onların yerine
+    geçmez.
+ai_notice:
+  title: 'Dikkat: yapay zekâ sonucu'
+  text: Bu analizi yapay zekâ üretti. Hukuken bağlayıcı değildir. Kullanmadan önce kontrol edin.
+privacy:
+  title: Verilerinize ne olur
+  storage: Mektuplar ve analizler siz silene kadar bu kurulumun veritabanında saklanır.
+  deletion: Her dosyayı silebilirsiniz. Yüklenen belgeleri içeren konuşmalar ayrı silinir.
+  inference:
+    eu-avv: Metinler AB içindeki yapay zekâ hizmetine gönderilir. Kimlik bilgileri önce yer tutucularla
+      değiştirilir. Teknik koruma başka hedeflere gönderimi engeller.
+    extern-openrouter: Metinler AB dışında da çalışabilen harici bir hizmete gönderilir. Adlar, adresler,
+      dosya numaraları ve banka bilgileri önce yer tutucularla değiştirilir.
+    on-prem: Analiz bu kurulumdaki bir bilgisayarda yapılır. Metinler harici yapay zekâ hizmetine gönderilmez.
+    unknown: Analiz için metinlerin nereye gönderildiğini kurulum sorumlusuna sorun.
+  deployment:
+    dev: Bu bir test kurulumudur. Yalnızca sentetik örnek belgeler yükleyin, gerçek mektuplar yüklemeyin.
+    self: Bu kurulumu siz yönetir ve erişimi siz belirlersiniz.
+    provider: Kurulumu bir kuruluş yönetir ve verilerinizden sorumludur. Gizlilik bildirimini ondan isteyin.
+  residual_risk: Yer tutucular tam koruma sağlamaz. Kalan metin bazen kişinin kimliğini gösterebilir.

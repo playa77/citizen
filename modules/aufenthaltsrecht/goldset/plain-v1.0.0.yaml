@@ -1,0 +1,570 @@
+format: citizen-plain-goldset-v1.0
+module: aufenthaltsrecht
+version: 1.0.0
+cases:
+- id: PL-AUF-001
+  kind: deadline
+  title: Monatsende nach Widerspruchsbescheid
+  facts:
+    document_type: auslaender_widerspruchsbescheid
+    zustellung_tatsaechlich: '2026-10-31'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      vorverfahren_abgeschlossen_bestaetigt: true
+  spec_id: auf_klage
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-30'
+    banner: true
+- id: PL-AUF-002
+  kind: deadline
+  title: Monatsfrist Wochenende
+  facts:
+    document_type: auslaender_widerspruchsbescheid
+    zustellung_tatsaechlich: '2026-10-21'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      vorverfahren_abgeschlossen_bestaetigt: true
+  spec_id: auf_klage
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+    banner: true
+- id: PL-AUF-003
+  kind: deadline
+  title: Direktklage Jahreswechsel
+  facts:
+    document_type: auslaender_direktklage
+    zustellung_tatsaechlich: '2026-12-01'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      direktklage_land_bestaetigt: true
+  spec_id: auf_direktklage
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-01-04'
+    banner: true
+- id: PL-AUF-004
+  kind: deadline
+  title: Widerspruch Sachsen Feiertag
+  facts:
+    document_type: auslaender_widerspruch
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: SN
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      widerspruch_land_bestaetigt: true
+  spec_id: auf_widerspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-19'
+    banner: true
+- id: PL-AUF-005
+  kind: deadline
+  title: Widerspruch Berlin kein Feiertag
+  facts:
+    document_type: auslaender_widerspruch
+    zustellung_tatsaechlich: '2026-10-18'
+    zustellungsart: inland
+    bundesland: BE
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      widerspruch_land_bestaetigt: true
+  spec_id: auf_widerspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-18'
+    banner: true
+- id: PL-AUF-006
+  kind: deadline
+  title: Asyl zwei Wochen
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+  spec_id: asyl_klage
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-27'
+    banner: true
+- id: PL-AUF-007
+  kind: deadline
+  title: Asyl lokaler Feiertag
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-10-30'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-11-13'
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+  spec_id: asyl_klage
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-16'
+    banner: true
+- id: PL-AUF-008
+  kind: deadline
+  title: Asyl 36 Klage und Eilantrag
+  facts:
+    document_type: asyl_36
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_36_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  spec_id: asyl_36_eil
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-20'
+    banner: true
+- id: PL-AUF-009
+  kind: deadline
+  title: Asyl 34a Klage und Eilantrag
+  facts:
+    document_type: asyl_34a
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_34a_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  spec_id: asyl_34a_eil
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-20'
+    banner: true
+- id: PL-AUF-010
+  kind: deadline
+  title: Asyl 34a Wochenende
+  facts:
+    document_type: asyl_34a
+    zustellung_tatsaechlich: '2026-11-14'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_34a_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-14'
+  spec_id: asyl_34a_eil
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-23'
+    banner: true
+- id: PL-AUF-011
+  kind: deadline
+  title: Altrecht nicht automatisch
+  facts:
+    document_type: asyl_altrecht
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  spec_id: asyl_klage
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    banner: true
+- id: PL-AUF-012
+  kind: deadline
+  title: Flughafenverfahren nicht automatisch
+  facts:
+    document_type: asyl_flughafen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  spec_id: asyl_klage
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    banner: true
+- id: PL-AUF-013
+  kind: deadline
+  title: Unbekannte Asylregel
+  facts:
+    document_type: asyl_unbekannt
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  spec_id: asyl_klage
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    banner: true
+- id: PL-AUF-014
+  kind: deadline
+  title: Titel und Antrag keine Klage
+  facts:
+    document_type: titel
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  spec_id: auf_klage
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    banner: true
+- id: PL-AUF-015
+  kind: deadline
+  title: Duldung individuelle Prüfung
+  facts:
+    document_type: duldung
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  spec_id: auf_direktklage
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    banner: true
+- id: PL-AUF-016
+  kind: deadline
+  title: Einbürgerung nur Vorbereitung
+  facts:
+    document_type: einbuergerung
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen: {}
+  spec_id: auf_klage
+  expect:
+    status: not_applicable
+    text_key: not_applicable
+    frist_ende: null
+    banner: true
+- id: PL-AUF-017
+  kind: deadline
+  title: Zustellung fehlt kein Briefdatum
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+    bescheid_datum: '2026-11-01'
+  spec_id: asyl_klage
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-AUF-018
+  kind: deadline
+  title: Belehrung ungeklärt keine Ersatzfrist
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: false
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+  spec_id: asyl_klage
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-AUF-019
+  kind: deadline
+  title: Übergangsrecht ungeklärt
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: false
+      zweiwochenfrist_bestaetigt: true
+  spec_id: asyl_klage
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-AUF-020
+  kind: deadline
+  title: Landesrecht ungeklärt
+  facts:
+    document_type: auslaender_widerspruch
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      widerspruch_land_bestaetigt: false
+  spec_id: auf_widerspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-AUF-021
+  kind: deadline
+  title: Öffentliche Zustellung gesondert
+  facts:
+    document_type: asyl_36
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: oeffentlich
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_36_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  spec_id: asyl_36_eil
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-AUF-022
+  kind: deadline
+  title: Kalender fehlt
+  facts:
+    document_type: asyl_34a
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_34a_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-13'
+  spec_id: asyl_34a_eil
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-frist_pruefen
+  kind: finding
+  expect:
+    category: frist_pruefen
+    category_source: ergebnis
+  ergebnis: 'Vorläufige Einordnung: Frist prüfen.'
+- id: PL-aufenthalt_vorbereiten
+  kind: finding
+  expect:
+    category: aufenthalt_vorbereiten
+    category_source: ergebnis
+  ergebnis: 'Vorläufige Einordnung: Aufenthalt vorbereiten.'
+- id: PL-beratung_erforderlich
+  kind: finding
+  expect:
+    category: beratung_erforderlich
+    category_source: ergebnis
+  ergebnis: 'Vorläufige Einordnung: Beratung erforderlich.'
+- id: PL-einordnung_offen
+  kind: finding
+  expect:
+    category: einordnung_offen
+    category_source: ergebnis
+  ergebnis: 'Vorläufige Einordnung: Einordnung offen.'
+- id: PL-unknown-category
+  kind: finding
+  ergebnis: Status garantiert.
+  expect:
+    category: einordnung_offen
+    category_source: fallback
+- id: PL-AUF-023
+  kind: deadline
+  title: Widersprüchliche Asylregime
+  facts:
+    document_type: asyl_zwei_wochen
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      zweiwochenfrist_bestaetigt: true
+      wochenklage_bestaetigt: true
+  spec_id: asyl_klage
+  expect:
+    status: missing_input
+    text_key: missing_input
+    frist_ende: null
+    banner: true
+- id: PL-AUF-024
+  kind: deadline
+  title: Bekanntgabe vor förmlicher Zustellung
+  facts:
+    document_type: asyl_36
+    zustellung_tatsaechlich: '2026-11-13'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    qualifikationen:
+      wirksame_zustellung_bestaetigt: true
+      rbb_richtig_bestaetigt: true
+      aktuelles_regime_bestaetigt: true
+      kein_sonderregime: true
+      asyl_neues_recht_bestaetigt: true
+      wochenklage_bestaetigt: true
+      eilrechtsschutz_36_bestaetigt: true
+      inlaendische_bekanntgabe_bestaetigt: true
+      wirksame_bekanntgabe_bestaetigt: true
+    ereignis_datum: '2026-11-11'
+    bekanntgabe_tatsaechlich: '2026-11-11'
+  spec_id: asyl_36_eil
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-11-18'
+    banner: true

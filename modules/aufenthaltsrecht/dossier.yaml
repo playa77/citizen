@@ -1,0 +1,50 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: bescheid
+  label_de: Vollständiger Bescheid, Belehrung, Umschlag und Zugangsnachweis
+  why_de: Verfahren, Übergangsrecht, Klage und Eilantrag zuerst mit qualifizierter Hilfe prüfen.
+  topic: frist
+  required: true
+- id: titel
+  label_de: Titel, Ablaufdatum, belegter Antragseingang und Behördenantwort
+  why_de: Terminbuchung ist kein belegter Antragseingang; Status, Arbeit und Reise getrennt prüfen.
+  topic: titel
+  required: true
+- id: vorbereitung
+  label_de: Bestätigte Aufenthaltszeiträume und geordnete Budgetnachweise zur Beratung
+  why_de: Einbürgerung, Krankenversicherung und individuelle Voraussetzungen bleiben offen.
+  topic: vorbereitung
+  required: true
+- id: datenschutz
+  label_de: Nur nötige Unterlagen sicher zur Beratung mitbringen
+  why_de: Keine Verfolgungsgeschichte, Religion, Diagnosen, Passnummern oder unnötige Drittdaten hochladen.
+  topic: datenschutz
+  required: true
+questions:
+- id: frist
+  text_de: Welche Klage- und Eilantragsfrist, Form und zuständige Stelle gelten für meinen Bescheid?
+  topic: frist
+- id: uebergang
+  text_de: Gilt nach §87e AsylG und EU-Übergangsrecht neues oder bisheriges Verfahrensrecht?
+  topic: frist
+- id: land
+  text_de: Ist nach dem konkreten Landesrecht ein Widerspruch nötig, möglich oder ausgeschlossen?
+  topic: frist
+- id: status
+  text_de: Ist mein Antrag wirksam eingegangen und welche Wirkung hat er auf Aufenthalt, Arbeit und Reisen?
+  topic: titel
+- id: sta
+  text_de: Welche Aufenthaltszeiten zählen und welche weiteren Einbürgerungsvoraussetzungen muss ich belegen?
+  topic: vorbereitung
+- id: bedarf
+  text_de: Welche Bedarfe, Abzüge, öffentlichen Mittel und Krankenversicherung sind für meinen Titel relevant?
+  topic: vorbereitung
+- id: schutz
+  text_de: Welche qualifizierte Migrations- oder Asylberatung kann mir jetzt sicher helfen?
+  topic: frist
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 0.9
+    chronology_accuracy_min: 0.8

@@ -1,0 +1,13 @@
+areas:
+  aufenthaltsrecht:
+    source_types:
+    - aufenthg
+    - asylg
+    - aufenthv
+    - beschv
+    - freizuegg_eu
+    - stag
+    - vwgo
+    - vwvfg
+    - bgb
+    - zpo

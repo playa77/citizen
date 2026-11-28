@@ -1,0 +1,127 @@
+selection:
+  no_deadline: pruefhinweise
+  open:
+    default: pruefhinweise
+  lapsed:
+    default: pruefhinweise
+slots: []
+templates:
+  pruefhinweise:
+    title: Prüfhinweise für Ihre Migrationsberatung
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigene Angelegenheit, Aktenzeichen und Datum]
+
+
+        Frist, Klage und Eilantrag sofort getrennt prüfen. Übergangsrecht, Belehrung und Zugang bestätigen.
+
+        [BITTE PRÜFEN: eigene Fragen, nötige Unterlagen und sichere Beratung.]
+
+        Keine Asylbegründung, Statusentscheidung oder Schutzgarantie.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung. Bei Asylfristen oder drohender Abschiebung sofort qualifizierte Hilfe suchen.
+
+        [BITTE PRÜFEN: Form, sichere Kontaktdaten, Vertretung und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  verlaengerung:
+    title: Verlängerungsantrag vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigene Angelegenheit, Aktenzeichen und Datum]
+
+
+        [BITTE PRÜFEN: Ich beantrage die Verlängerung meines bisherigen Aufenthaltstitels / passenden
+        anderen Titels.]
+
+        [BITTE PRÜFEN: Titelart, Ablauf, notwendige Nachweise und wirksamer Antragseingang.]
+
+        Bitte prüfen Sie die Bescheinigung über die Wirkung meiner Antragstellung. Terminbuchung allein
+        ist kein belegter Antrag. Kein Reise-/Arbeitsrecht zusagen.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung. Bei Asylfristen oder drohender Abschiebung sofort qualifizierte Hilfe suchen.
+
+        [BITTE PRÜFEN: Form, sichere Kontaktdaten, Vertretung und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  akteneinsicht:
+    title: Akteneinsicht vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigene Angelegenheit, Aktenzeichen und Datum]
+
+
+        [BITTE PRÜFEN: Rechtsgrundlage und zuständige Stelle für das konkrete Verfahren.]
+
+        [BITTE PRÜFEN: Ich bitte um Einsicht in die für meine eigene Angelegenheit erforderlichen Akten.]
+
+        [BITTE PRÜFEN: sicherer Zugang, Vertretung, Umfang und mögliche Kosten.]
+
+        Asyl- und Gerichtsverfahren gesondert prüfen; kein automatischer Verweis auf nur eine Akteneinsichtsnorm.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung. Bei Asylfristen oder drohender Abschiebung sofort qualifizierte Hilfe suchen.
+
+        [BITTE PRÜFEN: Form, sichere Kontaktdaten, Vertretung und rechtzeitigen nachweisbaren Eingang.]
+
+        '
+  fristbitte:
+    title: Bitte um verlängerbare behördliche Frist vorbereiten
+    uses_slots: true
+    parts:
+    - text: 'Entwurf – vor Verwendung prüfen lassen.
+
+
+        {absender}
+
+
+        An [BITTE PRÜFEN: zuständige Stelle und sichere Anschrift]
+
+        Betreff: [BITTE PRÜFEN: eigene Angelegenheit, Aktenzeichen und Datum]
+
+
+        Nur für eine ausdrücklich als verlängerbar bestätigte behördliche Frist verwenden. Keine gesetzliche
+        Klage- oder Eilantragsfrist.
+
+        [BITTE PRÜFEN: verlängerbare Frist, zuständige Behörde, konkreter Grund und erbetenes Datum.]
+
+        [BITTE PRÜFEN: Ich bitte um Verlängerung dieser behördlichen Frist und um schriftliche Antwort.]
+
+        Die Bitte allein verlängert nichts; ohne bestätigte Bewilligung ursprüngliche Frist beachten.
+
+
+        Dieses Vorbereitungsblatt wahrt keine Frist und stoppt keine Frist. Keine automatische Versendung
+        oder Einreichung. Bei Asylfristen oder drohender Abschiebung sofort qualifizierte Hilfe suchen.
+
+        [BITTE PRÜFEN: Form, sichere Kontaktdaten, Vertretung und rechtzeitigen nachweisbaren Eingang.]
+
+        '

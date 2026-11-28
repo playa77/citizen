@@ -117,6 +117,14 @@ SOURCE_TYPE_ALLOWED = (
     "famfg",
     "uvg",
     "minuhv",
+    # D-078 / WP-136: residence sources, migration 022.
+    "aufenthg",
+    "asylg",
+    "aufenthv",
+    "beschv",
+    "freizuegg_eu",
+    "stag",
+    "vwgo",
 )
 
 
