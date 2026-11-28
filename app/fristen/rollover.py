@@ -7,15 +7,11 @@ ids raise ``NotImplementedError`` — never silently guess an offset.
 StPO §43 uses the current statewide calendar; confirmed local holidays are
 passed separately by the evaluator. D-076 records the WP-134 extension.
 
-Implemented family (identical mechanics — roll to the next workday):
-``sgg_64_3`` (§ 64 Abs. 3 SGG), the reference case. Other procedure codes
-(``ao_108``) are deliberately NOT
-pre-registered: their exact semantics (e.g. § 108 Abs. 2 AO treats
-Saturdays as Werkstage) must land together with the module that needs
-them, with golden date tests.
+AO § 108 Abs. 3 includes Saturdays, Sundays and public holidays; it uses
+our current civil calendar, with confirmed local holidays supplied by the evaluator.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-28 — AO §108 rollover.
 
 from __future__ import annotations
 
@@ -30,6 +26,7 @@ Roller = Callable[[date, str], date]
 
 #: Human-readable legal basis per rollover id, used in explanations.
 ROLLER_LABELS: dict[str, str] = {
+    "ao_108": "§ 108 Abs. 3 AO",
     "sgg_64_3": "§ 64 Abs. 3 SGG",
     "zpo_222": "§ 222 Abs. 2 ZPO",
     "bgb_193": "§ 193 BGB",
@@ -39,6 +36,7 @@ ROLLER_LABELS: dict[str, str] = {
 }
 
 _ROLLERS: dict[str, Roller] = {
+    "ao_108": civil_next_workday,
     "sgg_64_3": next_workday,
     "zpo_222": next_workday,
     "stpo_43": civil_next_workday,

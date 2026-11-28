@@ -86,6 +86,11 @@ def public_scope(manifest: ModuleManifest) -> dict[str, Any]:
         "summary_de": scope.get("summary_de"),
         "own_matter_only": scope.get("own_matter_only"),
         "out_of_scope": list(scope.get("out_of_scope") or []),
+        **(
+            {"third_party_assistance": scope["third_party_assistance"]}
+            if "third_party_assistance" in scope
+            else {}
+        ),
     }
 
 

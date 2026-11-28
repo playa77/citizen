@@ -1,0 +1,537 @@
+format: citizen-plain-goldset-v1.0
+module: steuerrecht
+version: 1.0.0
+cases:
+- id: PL-STE-001
+  kind: deadline
+  title: Post und Sonntag
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-STE-002
+  kind: deadline
+  title: Früher Zugang
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    bekanntgabe_tatsaechlich: '2026-01-29'
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-STE-003
+  kind: deadline
+  title: Später Zugang
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    bekanntgabe_tatsaechlich: '2026-02-03'
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-004
+  kind: deadline
+  title: Versand fehlt
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-005
+  kind: deadline
+  title: Altes Recht
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2024-12-30'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-006
+  kind: deadline
+  title: Auslandsversand
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: ausland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-007
+  kind: deadline
+  title: Belehrung fehlt
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: fehlt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-01-06'
+- id: PL-STE-008
+  kind: deadline
+  title: Belehrung falsch
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: fehlerhaft
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2027-01-06'
+- id: PL-STE-009
+  kind: deadline
+  title: Samstag am Ende
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-03'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-02-09'
+- id: PL-STE-010
+  kind: deadline
+  title: Örtlicher Feiertag
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-03-02'
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-03'
+- id: PL-STE-011
+  kind: deadline
+  title: Kalender fehlt
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: false
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-012
+  kind: deadline
+  title: Zugang strittig
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_receipt_disputed: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-013
+  kind: deadline
+  title: Kein Zugang
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_nonreceipt: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-014
+  kind: deadline
+  title: Ausnahme Belehrung
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: fehlt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_356_exception: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-015
+  kind: deadline
+  title: Sonderregime
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_special_regime: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: missing_input
+    text_key: missing_input
+- id: PL-STE-016
+  kind: deadline
+  title: Tarif und Brutto
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-STE-017
+  kind: deadline
+  title: Pauschbetrag Rente
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-STE-018
+  kind: deadline
+  title: Gleiche Vergleichsbasis
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-STE-019
+  kind: deadline
+  title: Aussetzung getrennt
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-STE-020
+  kind: deadline
+  title: Änderung konkret
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  spec_id: steuerrecht_einspruch
+  expect:
+    status: computed
+    text_key: computed
+    frist_ende: '2026-03-02'
+- id: PL-FIND-frist_pruefen
+  kind: finding
+  category: frist_pruefen
+  expect: {}
+- id: PL-FIND-rechenwerte_pruefen
+  kind: finding
+  category: rechenwerte_pruefen
+  expect: {}
+- id: PL-FIND-zahlung_pruefen
+  kind: finding
+  category: zahlung_pruefen
+  expect: {}
+- id: PL-FIND-einordnung_offen
+  kind: finding
+  category: einordnung_offen
+  expect: {}

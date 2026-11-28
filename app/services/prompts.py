@@ -96,7 +96,7 @@ from typing import Any
 
 #: Version of the prompt set as a whole (every stage, shared block, endpoint
 #: and calculator prompt). Bumped on any change to prompt text.
-PROMPT_SET_VERSION = "3.9.0"
+PROMPT_SET_VERSION = "3.10.0"
 
 
 def prompt_digest(text: str) -> str:

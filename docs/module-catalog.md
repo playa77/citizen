@@ -1,6 +1,6 @@
 # Citizen — Module Catalog
 
-<!-- Version: 1.5.0 | 2026-11-27 — WP-136 experimental residence backend; multilingual safety.
+<!-- Version: 1.6.0 | 2026-11-28 — WP-137 experimental tax backend; own-matter only.
      1.3.0 | 2026-11-27 — WP-134 traffic backend.
      1.2.0 | 2026-11-27 — WP-133 consumer contract backend.
      1.1.0 | 2026-11-26 — M1 experimental foundation; owner directs backend continuation.
@@ -55,7 +55,7 @@ procurement) are out of scope by definition, as are lawyer-side features
 | M5 | `verkehrsrecht` | Bußgeld- und Verkehrsrecht | experimental backend 0.1.0 (WP-134, D-076) | high volume, compact rule set (BKatV), 2-week Einspruch; builds the OWiG procedure library reused by M10 |
 | M6 | `familienrecht` | Familienrecht (Unterhalt, Trennung, Sorge/Umgang) | experimental backend 0.3.0 (WP-135, D-077) | high stakes; Unterhalt math deterministic; crossover UVG / SGB II |
 | M7 | `aufenthaltsrecht` | Aufenthalts-, Asyl- und Staatsangehörigkeitsrecht | experimental backend 0.1.0 (WP-136, D-078) | very high necessity for M0 clientele, but very short deadlines and multilingual need → scheduled after the plain-language/i18n layer (P12) |
-| M8 | `steuerrecht` | Einkommensteuer privater Personen + AO-Verfahren | planned | Steuerbescheid Einspruch is common; StBerG constraint shapes scope (own matter only) |
+| M8 | `steuerrecht` | Einkommensteuer privater Personen + AO-Verfahren | experimental backend 0.1.0 (WP-137, D-079) | Steuerbescheid Einspruch is common; StBerG constraint shapes scope (own matter only) |
 | M9 | `erbrecht` | Erbrecht (incl. Schenkung, ErbSt) | planned (legacy key experimental) | Ausschlagungsfrist; Pflichtteil math; lower urgency than M1–M7 |
 | M10 | `strafrecht` | Straf- und Strafverfahrensrecht (Beschuldigte und Verletzte) | planned (legacy key experimental) | highest stakes; referral-first design; reuses M5's OWiG/StPO procedure library; last by design |
 
@@ -314,6 +314,17 @@ See [D-078](decisions/D-078-wp136-residence-implementation.md).
 - **Crossovers:** M0 (AsylbLG vs. SGB II), M3.
 
 ### M8 — `steuerrecht`
+
+**Backend implemented (WP-137, 2026-11-28):** experimental 0.1.0 on core
+3.12.0/module API 3.10. Qualified domestic-post AO objection dates, 2026
+basic/splitting tariff, capped allowances, same-basis differences and bounded
+mandatory unadvised filing date. Guarded objection/suspension/amendment drafts,
+minimised dossier and DE/EN/de-LS draft copy. Assistance for others unsupported;
+manifest metadata does not establish authenticated role enforcement. Unsupported
+years, special regimes, complete assessment, human promotion, deployment
+ingestion and live quality remain outside verified coverage. See
+[D-079](decisions/D-079-wp137-tax-implementation.md) and the
+[module coverage table](../modules/steuerrecht/README.md).
 
 - **Scope:** Einkommensteuer natural persons (employees, pensioners, small
   side income), Steuerbescheid check, Einspruch, Aussetzung der Vollziehung.

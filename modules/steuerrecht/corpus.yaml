@@ -1,0 +1,8 @@
+areas:
+  steuerrecht:
+    source_types:
+    - estg
+    - ao
+    - solzg
+    - fgo
+    - stberg

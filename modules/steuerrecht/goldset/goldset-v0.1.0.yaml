@@ -1,0 +1,646 @@
+goldset:
+  id: goldset-steuerrecht
+  version: 0.1.0
+  schema_version: 1.0.0
+  created: '2026-11-28'
+  rechtsstand: '2026-11-28'
+  evaluation_reference_date: '2026-11-28'
+  legal_area: steuerrecht
+  jurisdiction: DE
+  bundesland_feiertage: NW
+  language: de
+  case_count: 20
+  provenance: synthetic
+  open_questions:
+  - id: STE-HUMAN
+    topic: Human review, promotion, corpus population and live quality pending
+    note: Offline gates cannot establish complete advice, live quality or deployment readiness.
+cases:
+- id: STE-001
+  version: 1.0.0
+  title: Post und Sonntag
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Versandnachweis und gewöhnliche inländische Post sind bestätigt. Die Fiktion fällt auf einen Sonntag.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Post und Sonntag
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Versandnachweis und gewöhnliche inländische Post sind bestätigt. Die Fiktion fällt auf einen Sonntag.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-002
+  version: 1.0.0
+  title: Früher Zugang
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Früherer tatsächlicher Zugang verkürzt die bestätigte Postfiktion nicht.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Früher Zugang
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Früherer tatsächlicher Zugang verkürzt die bestätigte Postfiktion nicht.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-003
+  version: 1.0.0
+  title: Später Zugang
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Der tatsächliche Zugang war später. Keine automatische Fristfestlegung.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Später Zugang
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Der tatsächliche Zugang war später. Keine automatische Fristfestlegung.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-004
+  version: 1.0.0
+  title: Versand fehlt
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Nur das Bescheiddatum ist bekannt. Ein Versandnachweis fehlt.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Versand fehlt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Nur das Bescheiddatum ist bekannt. Ein Versandnachweis fehlt.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-005
+  version: 1.0.0
+  title: Altes Recht
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Historischer Versand ist nicht mit dem aktuellen Regime zu berechnen.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Altes Recht
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Historischer Versand ist nicht mit dem aktuellen Regime zu berechnen.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-006
+  version: 1.0.0
+  title: Auslandsversand
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Auslandsversand braucht gesonderte Bekanntgabeprüfung.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Auslandsversand
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Auslandsversand braucht gesonderte Bekanntgabeprüfung.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-007
+  version: 1.0.0
+  title: Belehrung fehlt
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Das Fehlen der Belehrung und der Ausschluss aller Jahresfrist-Ausnahmen sind qualifiziert bestätigt.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Belehrung fehlt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Das Fehlen der Belehrung und der Ausschluss aller Jahresfrist-Ausnahmen sind qualifiziert bestätigt.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-008
+  version: 1.0.0
+  title: Belehrung falsch
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Unrichtige Belehrung ist qualifiziert bestätigt; Ausnahmen sind ausgeschlossen.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Belehrung falsch
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Unrichtige Belehrung ist qualifiziert bestätigt; Ausnahmen sind ausgeschlossen.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-009
+  version: 1.0.0
+  title: Samstag am Ende
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Die bestätigte Monatsfrist fällt auf einen Samstag und rollt zum Werktag.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Samstag am Ende
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Die bestätigte Monatsfrist fällt auf einen Samstag und rollt zum Werktag.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-010
+  version: 1.0.0
+  title: Örtlicher Feiertag
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Ein zusätzlicher örtlicher Feiertag am rechnerischen Ende ist bestätigt.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Örtlicher Feiertag
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Ein zusätzlicher örtlicher Feiertag am rechnerischen Ende ist bestätigt.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-011
+  version: 1.0.0
+  title: Kalender fehlt
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Der örtliche Feiertagskalender ist nicht bestätigt.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Kalender fehlt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Der örtliche Feiertagskalender ist nicht bestätigt.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-012
+  version: 1.0.0
+  title: Zugang strittig
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Der Zugang ist bestritten. Es gibt kein belastbares berechnetes Datum.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Zugang strittig
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Der Zugang ist bestritten. Es gibt kein belastbares berechnetes Datum.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-013
+  version: 1.0.0
+  title: Kein Zugang
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Ein Nichtzugang wird angegeben. Die gewöhnliche Fiktion darf nicht einfach angesetzt werden.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Kein Zugang
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Ein Nichtzugang wird angegeben. Die gewöhnliche Fiktion darf nicht einfach angesetzt werden.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-014
+  version: 1.0.0
+  title: Ausnahme Belehrung
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Die Belehrung behauptet, es gebe keinen Einspruch. Eine einfache Jahresfrist ist nicht gesichert.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Ausnahme Belehrung
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Die Belehrung behauptet, es gebe keinen Einspruch. Eine einfache Jahresfrist ist nicht gesichert.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-015
+  version: 1.0.0
+  title: Sonderregime
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Ein Sonderverfahren ist bestätigt. Die gewöhnliche Regel darf kein Datum liefern.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Sonderregime
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Ein Sonderverfahren ist bestätigt. Die gewöhnliche Regel darf kein Datum liefern.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-016
+  version: 1.0.0
+  title: Tarif und Brutto
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Für den Tarif zählt bestätigtes zu versteuerndes Einkommen, kein Brutto. Sondertarife sind ausgeschlossen.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Tarif und Brutto
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Für den Tarif zählt bestätigtes zu versteuerndes Einkommen, kein Brutto. Sondertarife sind ausgeschlossen.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-017
+  version: 1.0.0
+  title: Pauschbetrag Rente
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Der Werbungskosten-Pauschbetrag für qualifizierte Renteneinnahmen ist keine Berechnung des steuerpflichtigen
+      Rentenanteils.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Pauschbetrag Rente
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Der Werbungskosten-Pauschbetrag für qualifizierte Renteneinnahmen ist keine Berechnung des steuerpflichtigen
+      Rentenanteils.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-018
+  version: 1.0.0
+  title: Gleiche Vergleichsbasis
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Bescheid und Erklärung können nur auf derselben Steuerart, demselben Jahr und derselben Rechengrundlage
+      verglichen werden.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Gleiche Vergleichsbasis
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Bescheid und Erklärung können nur auf derselben Steuerart, demselben Jahr und derselben Rechengrundlage
+      verglichen werden.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-019
+  version: 1.0.0
+  title: Aussetzung getrennt
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Einspruch stoppt die Erhebung grundsätzlich nicht. Aussetzung oder Aufhebung der Vollziehung braucht
+      eine gesonderte Entscheidung.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Aussetzung getrennt
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Einspruch stoppt die Erhebung grundsätzlich nicht. Aussetzung oder Aufhebung der Vollziehung braucht
+      eine gesonderte Entscheidung.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall
+- id: STE-020
+  version: 1.0.0
+  title: Änderung konkret
+  category: steuerrecht_einspruch
+  difficulty: mittel
+  input_document:
+    type: text
+    text: 'Synthetischer Testfall – keine reale Person.
+
+      Datum: 28.11.2026
+
+      Schlichte Änderung muss konkret und rechtzeitig geprüft werden. Sie ersetzt keinen Einspruch und
+      wahrt keine weiteren Rechtsmittel.
+
+      Ich bereite meine eigene Angelegenheit vor.'
+  expected:
+    legal_issues:
+    - id: steuer_pruefung
+      issue: Änderung konkret
+      assessment: Prüfbedarf; keine abschließende Feststellung
+      norm_chain:
+      - §355 AO
+      - §122 AO
+    citations:
+    - norm: §355 AO
+      must_exist_in_corpus: true
+    known_traps:
+    - Schlichte Änderung muss konkret und rechtzeitig geprüft werden. Sie ersetzt keinen Einspruch und
+      wahrt keine weiteren Rechtsmittel.
+    actionable_next_steps:
+    - Frist und Zahlung rasch mit befugter Steuerberatung klären; nötige geschwärzte Belege mitbringen.
+  negative_controls:
+  - Synthetischer Testfall

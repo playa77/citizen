@@ -16,7 +16,7 @@ Explanation text is composed so that the legal bases quoted come from the
 spec/module data; only BGB-generic phrases are core text.
 """
 
-# Semantic Version: 0.1.0
+# Semantic Version: 0.2.0 | 2026-11-28 — qualified AO notification safeguards.
 
 from __future__ import annotations
 
@@ -94,6 +94,36 @@ def _bekanntgabe(
     spec: DeadlineSpec, frist_input: FristInput
 ) -> tuple[date, str, bool, date | None]:
     """Derive Bekanntgabe; returns (date, explanation, oq1_flag, citizen_reading)."""
+    if spec.bekanntgabe_fiction == "ao_122_2_inland":
+        # Do not borrow the issue date or shorten the presumption on early receipt.
+        from app.fristen.civil_calendar import civil_next_workday
+
+        if (
+            frist_input.aufgabe_zur_post is None
+            or not frist_input.feiertagskalender_bestaetigt
+            or frist_input.document_type != "steuerbescheid"
+            or frist_input.zustellungsart != "inland"
+            or not frist_input.ist_verwaltungsakt
+        ):
+            raise ValueError("AO requires confirmed dispatch, domestic postal regime and calendar")
+        result = get_fiction(spec.bekanntgabe_fiction)(
+            frist_input.aufgabe_zur_post, frist_input.bundesland
+        )
+        presumed = civil_next_workday(
+            result.bekanntgabe, frist_input.bundesland, frist_input.feiertage_zusaetzlich
+        )
+        if (
+            frist_input.bekanntgabe_tatsaechlich is not None
+            and frist_input.bekanntgabe_tatsaechlich > presumed
+        ):
+            raise ValueError("Later AO receipt requires individual review")
+        explanation = (
+            f"Bekanntgabe am {presumed.strftime('%d.%m.%Y')} "
+            f"(bestätigte Aufgabe zur Post {frist_input.aufgabe_zur_post.strftime('%d.%m.%Y')} "
+            "+ vier Tage, § 122 Abs. 2 Nr. 1 AO; bestätigter Feiertagskalender und "
+            "Verschiebung nach § 108 Abs. 3 AO). Ein früherer Zugang verkürzt die Fiktion nicht"
+        )
+        return presumed, explanation, False, None
     if frist_input.bekanntgabe_tatsaechlich is not None:
         return (
             frist_input.bekanntgabe_tatsaechlich,
@@ -190,7 +220,16 @@ def evaluate_spec(
     rollover_expl = ""
     if spec.rollover is not None:
         roller = get_rollover(spec.rollover)
-        if not is_workday(raw_ende, frist_input.bundesland):
+        if spec.rollover == "ao_108":
+            from app.fristen.civil_calendar import civil_next_workday
+
+            frist_ende = civil_next_workday(
+                raw_ende, frist_input.bundesland, frist_input.feiertage_zusaetzlich
+            )
+            rollover_applied = frist_ende != raw_ende
+            if rollover_applied:
+                rollover_expl = rollover_explanation(spec.rollover, raw_ende, frist_ende)
+        elif not is_workday(raw_ende, frist_input.bundesland):
             raw_ende_workday = roller(raw_ende, frist_input.bundesland)
             frist_ende = raw_ende_workday
             rollover_applied = True

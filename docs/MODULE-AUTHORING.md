@@ -1,6 +1,6 @@
 # Writing a Citizen module
 
-<!-- Version: 1.8.0 | 2026-11-27 — WP-136 residence sources and opt-in safety qualifications.
+<!-- Version: 1.9.0 | 2026-11-28 — WP-137 AO safeguards and assistance scope metadata.
      1.6.0 | 2026-11-27 — WP-134: traffic/procedural sources and StPO rollover.
      1.5.0 | 2026-11-27 — WP-133: official EU article corpus support.
      1.4.0 | 2026-11-27 — WP-132: knowledge dates and qualified event applicability.
@@ -370,3 +370,23 @@ and explicit boolean confirmations are validated. A model-produced claim of
 confirmation alone returns unavailable; unknown/sensitive fields are rejected
 and are not forwarded as extracted summary. This is preparation input, not an
 independent legal verification or eligibility decision.
+
+## 17. Tax preparation (module API 3.10, WP-137)
+
+D-079 adds `estg`, `ao`, `solzg`, `fgo`, `stberg` federal source types,
+`ao_122_2_inland` fiction and `ao_108` rollover using confirmed civil/local
+calendars. Tax notification rejects absent dispatch, later/disputed/nonreceipt
+and unsupported modes; earlier receipt cannot shorten the postal presumption.
+Do not inherit issue-date/default-calendar assumptions into the AO path.
+
+Optional `scope.third_party_assistance` is exposed by REST/MCP catalog scope.
+Steuerrecht must declare false. This records supported use, not authenticated
+role enforcement. Existing modules may omit the field and preserve their scope.
+
+Tax calculations are bounded to the source-backed 2026 coverage table. The
+ordinary mandatory unadvised filing date is a versioned precomputed value,
+requiring confirmed state/local-calendar, regime and no individual extension
+or request. No general calendar or tax-return engine is introduced.
+`CITIZEN_TAX_FACTS:` is a single strict allowlisted JSON source block; the
+existing cross-check hook cannot accept model-only confirmations. Summaries
+omit amounts and identifiers. Parameters stay proposed and static copy draft.

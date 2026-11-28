@@ -1,0 +1,28 @@
+- id: steuerrecht_einspruch
+  label_de: Einspruch gegen Steuerbescheid (bestätigter Inlands-Postversand)
+  trigger: bekanntgabe
+  bekanntgabe_fiction: ao_122_2_inland
+  duration: {months: 1}
+  rollover: ao_108
+  basis: § 355 Abs. 1 AO
+  fristbeginn_basis: § 108 Abs. 1 AO; § 187 Abs. 1 BGB
+  missing_rechtsbehelfsbelehrung:
+    duration: {years: 1}
+    basis: § 356 Abs. 2 AO (Ausnahmen ausdrücklich ausgeschlossen)
+  severity: critical
+  applies_when:
+    document_type: steuerbescheid
+    zustellungsart: inland
+  requires_confirmed:
+    - ao_current_regime_confirmed
+    - ao_domestic_post_confirmed
+    - ao_dispatch_confirmed
+    - ao_no_special_regime_confirmed
+    - ao_receipt_undisputed_confirmed
+    - ao_rbb_status_confirmed
+    - ao_356_exceptions_excluded
+  excludes_confirmed:
+    - ao_receipt_disputed
+    - ao_nonreceipt
+    - ao_special_regime
+    - ao_356_exception

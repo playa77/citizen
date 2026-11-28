@@ -1,0 +1,50 @@
+format: citizen-module-dossier-v1.0
+checklist:
+- id: bescheid
+  label_de: Vollständiger Bescheid, Belehrung, Umschlag und Versand-/Zugangsnachweis
+  why_de: Bekanntgabe und Rechtsbehelfsfrist müssen bestätigt werden.
+  topic: bescheid
+  required: true
+- id: erklaerung
+  label_de: Eigene Erklärung, Berechnungsbogen und nötige Belege zum strittigen Punkt
+  why_de: Erklärte und festgesetzte Werte auf derselben Grundlage vergleichen.
+  topic: erklaerung
+  required: true
+- id: zahlung
+  label_de: Fälligkeit, geleistete Zahlungen und Schreiben zur Vollziehung
+  why_de: Einspruch und Zahlungsaufschub sind getrennte Fragen.
+  topic: zahlung
+  required: true
+- id: datenschutz
+  label_de: Nur erforderliche geschwärzte Unterlagen sicher zur persönlichen Beratung mitbringen
+  why_de: Steuer-ID, Bankverbindung und unnötige Drittdaten nicht hochladen.
+  topic: datenschutz
+  required: true
+questions:
+- id: frist
+  text_de: Welche Bekanntgabe, Einspruchsfrist, Form und zuständige Stelle gelten für mich?
+  topic: frist
+- id: zahlung
+  text_de: Muss ich trotz Einspruch zahlen, und kommt Aussetzung oder Aufhebung der Vollziehung in Betracht?
+  topic: zahlung
+- id: aenderung
+  text_de: Ist Einspruch oder schlichte Änderung passend, und welche konkreten Punkte muss ich fristgerecht
+    nennen?
+  topic: aenderung
+- id: tarif
+  text_de: Ist mein zu versteuerndes Einkommen bestätigt, und liegen Sondertarife oder Progressionsvorbehalt
+    vor?
+  topic: tarif
+- id: erklaerung
+  text_de: Bin ich zur Erklärung verpflichtet und gilt eine besondere Aufforderung, Verlängerung oder
+    Übergangsfrist?
+  topic: erklaerung
+- id: beratung
+  text_de: Darf die ausgewählte Stelle mir nach StBerG helfen und welche Belege sind dafür erforderlich?
+  topic: beratung
+goldset:
+  path: goldset/dossier-goldset-v1.0.0.yaml
+  gate:
+    deadline_completeness_min: 1.0
+    checklist_recall_min: 1.0
+    chronology_accuracy_min: 1.0

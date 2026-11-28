@@ -1,0 +1,618 @@
+dossier_goldset:
+  id: dossier-goldset-steuerrecht
+  version: 1.0.0
+  base_goldset: goldset/goldset-v0.1.0.yaml
+  base_goldset_version: 0.1.0
+  dossier_schema: citizen-dossier-v1.0
+  module: steuerrecht
+  provenance: synthetic
+  note: Literal independently derived dates; no live inference.
+cases:
+- id: STE-001
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-002
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    bekanntgabe_tatsaechlich: '2026-01-29'
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-003
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    bekanntgabe_tatsaechlich: '2026-02-03'
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-004
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-005
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2024-12-30'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-006
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: ausland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-007
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: fehlt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2027-01-06'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-008
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-02'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: fehlerhaft
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2027-01-06'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-009
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-03'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-02-09'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-010
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich:
+    - '2026-03-02'
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-03'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-011
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: false
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-012
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_receipt_disputed: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-013
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_nonreceipt: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-014
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: fehlt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_356_exception: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-015
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+      ao_special_regime: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines: []
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-016
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-017
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-018
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-019
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date
+- id: STE-020
+  facts:
+    document_type: steuerbescheid
+    bescheid_datum: '2026-01-01'
+    aufgabe_zur_post: '2026-01-28'
+    zustellungsart: inland
+    bundesland: NW
+    feiertagskalender_bestaetigt: true
+    feiertage_zusaetzlich: []
+    rbb_status: korrekt
+    qualifikationen:
+      ao_current_regime_confirmed: true
+      ao_domestic_post_confirmed: true
+      ao_dispatch_confirmed: true
+      ao_no_special_regime_confirmed: true
+      ao_receipt_undisputed_confirmed: true
+      ao_rbb_status_confirmed: true
+      ao_356_exceptions_excluded: true
+    ist_verwaltungsakt: true
+  expected:
+    deadlines:
+    - spec_id: steuerrecht_einspruch
+      frist_ende: '2026-03-02'
+    checklist:
+    - bescheid
+    - erklaerung
+    - zahlung
+    - datenschutz
+    chronology:
+    - date: '2026-11-28'
+      kind: document_date

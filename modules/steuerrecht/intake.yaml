@@ -1,0 +1,14 @@
+areas:
+  steuerrecht:
+    order: 82
+    keywords:
+    - steuerbescheid
+    - einkommensteuer
+    - finanzamt
+    - steuervorauszahlung
+    - schaetzungsbescheid
+    - schätzungsbescheid
+    - steuererklärung
+    synonyms:
+    - einkommensteuerrecht
+    - steuer

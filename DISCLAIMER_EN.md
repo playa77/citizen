@@ -1,6 +1,6 @@
 # Citizen — Legal Notice, Disclaimer, Project Statement and AI Act Classification
 
-**Version:** 3.8.0 · **Date:** 2026-11-27
+**Version:** 3.9.0 · **Date:** 2026-11-28
 
 **Author:** www.github.com/playa77
 
@@ -946,7 +946,13 @@ Date and budget arithmetic does not establish residence status, continuation eff
 
 Drafts preserve no deadline. An extension request cannot extend statutory lawsuit/interim-application periods. Human legal/language review remains pending, including AR/FA/UK/TR/RU drafts. No complete source coverage, live-inference quality or GUI accessibility is claimed.
 
+### `steuerrecht`
+
+This experimental module helps only with your own income-tax matter. Assistance for others and advice-center operation are unsupported (§2 StBerG). Notification and deadlines need individual verification; other delivery modes and special cases remain open. Tariff and allowance figures are bounded arithmetic, not a complete tax assessment or entitlement. An objection or request generally does not suspend collection (§361 AO). A simple amendment request does not replace an objection. Drafts retain [BITTE PRÜFEN] and are never filed automatically. Do not upload unnecessary tax identifiers, bank details or third-party data. Seek authorised tax advice or a suitable tax assistance association. Human review and promotion remain pending.
+
 ## Change History
+
+- **3.9.0 (2026-11-28):** Tax law: own-matter preparation, qualified AO dates, bounded arithmetic and separate payment review; renewed acknowledgement required.
 
 - **3.8.0 (2026-11-27):** Residence/asylum preparation: qualified deadline protection, sensitive-data limits and multilingual drafts; renewed acknowledgement required.
 - **3.7.0 (2026-11-27):** Family law: qualified ordinary complaints and statutory arithmetic; child-welfare referrals, data minimisation and unresolved guideline reuse. Renewed acknowledgement required.

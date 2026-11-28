@@ -1,0 +1,90 @@
+{
+  "retrieved_on": "2026-11-28",
+  "purpose": "Primary-law verification only; no corpus population or embeddings. Hashes identify fetched HTML; raw public pages remain temporary, not bundled.",
+  "snapshots": [
+    {
+      "id": "estg32a",
+      "url": "https://www.gesetze-im-internet.de/estg/__32a.html",
+      "sha256": "053bfcfc2ba961a3013eb631921957ce8a50ec3e4347bb6f0c2befaf765e0f50",
+      "bytes": 8032
+    },
+    {
+      "id": "ao108",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__108.html",
+      "sha256": "ce4e9dea16e026b397d192d5eea6d5734856e54b6406da60c3149b589a5bb0fc",
+      "bytes": 4614
+    },
+    {
+      "id": "ao122",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__122.html",
+      "sha256": "31b32688c2ce47135cee703f99af6f16142250c453f4258c897eeb07f38ef98a",
+      "bytes": 8481
+    },
+    {
+      "id": "ao355",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__355.html",
+      "sha256": "bdb50342baa0fe4700df15acfc580b8a69634964a09e64d8aeab77ac84f9db11",
+      "bytes": 3808
+    },
+    {
+      "id": "ao356",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__356.html",
+      "sha256": "7d3f1432faa4b6caec4300fd3bfd780300d51872b2d09f6f1b0205574ecfdab5",
+      "bytes": 4174
+    },
+    {
+      "id": "ao149",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__149.html",
+      "sha256": "78f8a0cabd93fe0bef479055bca5c1b3f92ed594f5cc0e66e6e67a7d6209f190",
+      "bytes": 11871
+    },
+    {
+      "id": "ao361",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__361.html",
+      "sha256": "5d9782ea939e317d7ee589c74312b16ffc8f379f11fd91fd5301179278f2a2be",
+      "bytes": 5948
+    },
+    {
+      "id": "ao172",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__172.html",
+      "sha256": "cf7e5a8e1be0c7c87ac667f57fc8853afb5ec71b9c751b838e354a687e103d9a",
+      "bytes": 6582
+    },
+    {
+      "id": "estg9a",
+      "url": "https://www.gesetze-im-internet.de/estg/__9a.html",
+      "sha256": "d345f5dfd44a9478955ec391c63f6fca4f731021153e9e2b9a49edb0c8f9ddeb",
+      "bytes": 5513
+    },
+    {
+      "id": "estg20",
+      "url": "https://www.gesetze-im-internet.de/estg/__20.html",
+      "sha256": "e77b03a7c6f4600978d136cbbf5b2e4b6b9f9699a521827bbd5f1941f6003b6c",
+      "bytes": 32643
+    },
+    {
+      "id": "stberg2",
+      "url": "https://www.gesetze-im-internet.de/stberg/__2.html",
+      "sha256": "1c7e485954b151463ffe42a25c745fe60b4025cd222249621c6ce80b0a2d2367",
+      "bytes": 4665
+    },
+    {
+      "id": "solzg",
+      "url": "https://www.gesetze-im-internet.de/solzg_1995/index.html",
+      "sha256": "a2395474320658aa713e6657588778d63e5cf7036fdb3afcb070c24edf85e8f2",
+      "bytes": 5930
+    },
+    {
+      "id": "fgo",
+      "url": "https://www.gesetze-im-internet.de/fgo/index.html",
+      "sha256": "4ef8854f4e141621977c59e132c46c85578bae68a40336d518594f5161cc0790",
+      "bytes": 31724
+    },
+    {
+      "id": "egao36",
+      "url": "https://www.gesetze-im-internet.de/aoeg_1977/art_97__36.html",
+      "sha256": "473093a055687b4f1080906450a53bfa4454856afe4a25599e1907757d5436bc",
+      "bytes": 12474
+    }
+  ]
+}

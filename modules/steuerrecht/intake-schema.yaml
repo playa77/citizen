@@ -1,0 +1,179 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://citizen.local/schemas/steuerrecht-intake-v0.2.0
+title: Own income-tax matter; minimal qualified facts only
+type: object
+additionalProperties: false
+required:
+- own_matter_confirmed
+properties:
+  own_matter_confirmed:
+    const: true
+  document_type:
+    enum:
+    - steuerbescheid
+    - schaetzungsbescheid
+    - vorauszahlungsbescheid
+    - finanzamt_anfrage
+    - sonstiges
+  bundesland:
+    enum:
+    - BB
+    - BE
+    - BW
+    - BY
+    - HB
+    - HE
+    - HH
+    - MV
+    - NI
+    - NW
+    - RP
+    - SH
+    - SL
+    - SN
+    - ST
+    - TH
+  zustellungsart:
+    enum:
+    - inland
+    - ausland
+    - oeffentlich
+    - elektronisch
+  rbb_status:
+    enum:
+    - korrekt
+    - fehlt
+    - fehlerhaft
+  calculation_type:
+    enum:
+    - none
+    - income_tax
+    - allowance
+    - assessment_difference
+    - filing_deadline
+  tax_year:
+    type: integer
+    enum:
+    - 2026
+  tariff:
+    enum:
+    - basic
+    - splitting
+  allowance_type:
+    enum:
+    - employee
+    - pensioner
+    - saver
+  bescheid_datum:
+    type: string
+    format: date
+  aufgabe_zur_post:
+    type: string
+    format: date
+  bekanntgabe_tatsaechlich:
+    type: string
+    format: date
+  applicability_confirmed:
+    type: boolean
+  current_regime_confirmed:
+    type: boolean
+  taxable_income_confirmed:
+    type: boolean
+  no_special_tariff_confirmed:
+    type: boolean
+  joint_assessment_confirmed:
+    type: boolean
+  allowance_basis_confirmed:
+    type: boolean
+  no_higher_expenses_confirmed:
+    type: boolean
+  comparison_basis_confirmed:
+    type: boolean
+  taxable_income_cents:
+    type: integer
+    minimum: 0
+    maximum: 1000000000000000
+  eligible_income_cents:
+    type: integer
+    minimum: 0
+    maximum: 1000000000000000
+  assessed_cents:
+    type: integer
+    minimum: 0
+    maximum: 1000000000000000
+  declared_cents:
+    type: integer
+    minimum: 0
+    maximum: 1000000000000000
+  qualifikationen:
+    type: object
+    additionalProperties: false
+    properties:
+      ao_current_regime_confirmed:
+        type:
+        - boolean
+        - 'null'
+      ao_domestic_post_confirmed:
+        type:
+        - boolean
+        - 'null'
+      ao_dispatch_confirmed:
+        type:
+        - boolean
+        - 'null'
+      ao_no_special_regime_confirmed:
+        type:
+        - boolean
+        - 'null'
+      ao_receipt_undisputed_confirmed:
+        type:
+        - boolean
+        - 'null'
+      ao_rbb_status_confirmed:
+        type:
+        - boolean
+        - 'null'
+      ao_356_exceptions_excluded:
+        type:
+        - boolean
+        - 'null'
+      ao_receipt_disputed:
+        type:
+        - boolean
+        - 'null'
+      ao_nonreceipt:
+        type:
+        - boolean
+        - 'null'
+      ao_special_regime:
+        type:
+        - boolean
+        - 'null'
+      ao_356_exception:
+        type:
+        - boolean
+        - 'null'
+  feiertage_zusaetzlich:
+    type: array
+    items:
+      type: string
+      format: date
+    uniqueItems: true
+  feiertagskalender_bestaetigt:
+    type:
+    - boolean
+    - 'null'
+  ist_verwaltungsakt:
+    type: boolean
+  mandatory_filing_confirmed:
+    type: boolean
+  unadvised_confirmed:
+    type: boolean
+  no_special_filing_regime_confirmed:
+    type: boolean
+    description: No special filing regime, including EGAO transitional extensions.
+  no_individual_notice_or_extension_confirmed:
+    type: boolean
+  filing_calendar_confirmed:
+    type: boolean
+    description: Explicit current regime and no additional local holiday on 2027-08-02.

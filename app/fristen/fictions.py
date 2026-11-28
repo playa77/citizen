@@ -11,7 +11,8 @@ weekend or holiday the conservative (authority-favorable) date is used as
 Bekanntgabe and the citizen-favorable reading is reported alongside.
 """
 
-# Semantic Version: 0.2.0 | 2026-11-16 — sgbx_37_2 is intertemporal: three days
+# Semantic Version: 0.3.0 | 2026-11-28 — AO domestic four-day fiction.
+# 0.2.0 | 2026-11-16 — sgbx_37_2 is intertemporal: three days
 # for dispatch before 2025-01-01, four days from then on (PostModG, D-065);
 # found by the dossier goldset (WP-104).
 # 0.1.0
@@ -87,7 +88,27 @@ def _sgbx_37_2(effective_post: date, bundesland: str) -> FictionResult:
     )
 
 
+def _ao_122_2_inland(effective_post: date, bundesland: str) -> FictionResult:
+    """Current domestic postal presumption; callers confirm regime and receipt."""
+    from app.fristen.civil_calendar import civil_next_workday
+
+    if effective_post < date(2025, 1, 1):
+        raise ValueError("Historical AO notification regime is unsupported")
+    presumed = civil_next_workday(effective_post + timedelta(days=4), bundesland)
+    return FictionResult(
+        bekanntgabe=presumed,
+        explanation=(
+            f"Bekanntgabe am {presumed.strftime('%d.%m.%Y')} "
+            f"(bestätigte Aufgabe zur Post {effective_post.strftime('%d.%m.%Y')} + vier Tage; "
+            "§ 122 Abs. 2 Nr. 1 AO, Verschiebung nach § 108 Abs. 3 AO)"
+        ),
+        ambiguous=False,
+        citizen_reading=None,
+    )
+
+
 _FICTIONS: dict[str, FictionFn] = {
+    "ao_122_2_inland": _ao_122_2_inland,
     "sgbx_37_2": _sgbx_37_2,
 }
 
